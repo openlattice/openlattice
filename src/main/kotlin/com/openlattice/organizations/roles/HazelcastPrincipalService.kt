@@ -257,7 +257,7 @@ class HazelcastPrincipalService(
         return authorizations.getAuthorizedPrincipalsOnSecurableObject(key, permissions)
     }
 
-    private fun ensurePrincipalsExist(aclKeys: Set<AclKey>) {
+    override fun ensurePrincipalsExist(aclKeys: Set<AclKey>) {
         val principalsMap = principals.executeOnKeys(aclKeys, PrincipalExistsEntryProcessor())
         val nonexistentAclKeys = principalsMap.filterValues { !(it as Boolean) }.keys
 

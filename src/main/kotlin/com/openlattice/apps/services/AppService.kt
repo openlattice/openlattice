@@ -224,7 +224,7 @@ class AppService(
         installApp(app, organizationId, entitySetCollectionId, principal, settings!!)
     }
 
-    fun installApp(
+    private fun installApp(
             app: App,
             organizationId: UUID,
             entitySetCollectionId: UUID,
@@ -354,11 +354,8 @@ class AppService(
             permissions: Map<Permission, Map<UUID, Optional<Set<UUID>>>>) {
 
         val app = getApp(appId)
+        ensureAppRolesExist(app, setOf(roleId))
 
-        Preconditions.checkState(app.appRoles.any { it.id == roleId },
-                "App {} does not contain a role with id {}.",
-                appId,
-                roleId)
         val templateTypeIds = permissions.values.flatMap { it.keys }.toSet()
         val nonexistentTemplateTypeIds = Sets.difference(templateTypeIds,
                 entityTypeCollections.getValue(app.entityTypeCollectionId).template.map { it.id }.toSet())
@@ -370,6 +367,23 @@ class AppService(
                 nonexistentTemplateTypeIds)
 
         apps.executeOnKey(appId, UpdateAppRolePermissionsProcessor(roleId, permissions))
+    }
+
+    fun updateAppConfigRoleMapping(
+            appId: UUID,
+            organizationId: UUID,
+            roleMappings: Map<UUID, AclKey>
+    ) {
+        ensureAppRolesExist(getApp(appId), roleMappings.keys)
+        principalsService.ensurePrincipalsExist(roleMappings.values.toSet())
+
+        appConfigs.executeOnKey(AppConfigKey(appId, organizationId)) {
+            val setting = it.value
+            roleMappings.forEach { (roleId, roleAclKey) ->
+                setting.addRole(roleId, roleAclKey)
+            }
+            it.setValue(setting)
+        }
     }
 
     fun updateAppMetadata(appId: UUID, metadataUpdate: MetadataUpdate) {
@@ -439,6 +453,14 @@ class AppService(
                 }
             }
         }
+    }
+
+    private fun ensureAppRolesExist(app: App, roleIds: Set<UUID>) {
+        val missingRoleIds = Sets.difference(roleIds, app.appRoles.map { it.id }.toSet())
+        Preconditions.checkState(missingRoleIds.isEmpty(),
+                    "App {} does not contain roles with ids {}.",
+                    app.id,
+                    missingRoleIds)
     }
 
 }
