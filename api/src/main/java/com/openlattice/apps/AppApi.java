@@ -1,6 +1,7 @@
 package com.openlattice.apps;
 
 import com.openlattice.apps.historical.HistoricalAppConfig;
+import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.Permission;
 import com.openlattice.edm.requests.MetadataUpdate;
 import retrofit2.http.*;
@@ -100,4 +101,10 @@ public interface AppApi {
             @Path( ID ) UUID appId,
             @Path( ORGANIZATION_ID ) UUID organizationId,
             @Body Map<String, Object> newSettings );
+
+    @POST( BASE + CONFIG_PATH + UPDATE_PATH + ID_PATH + ORGANIZATION_ID_PATH + ROLE_PATH )
+    void updateAppRoleMappingForOrganization(
+            @Path( ID ) UUID appId,
+            @Path( ORGANIZATION_ID ) UUID organizationId,
+            @Body Map<UUID, AclKey> roleMappings );
 }
