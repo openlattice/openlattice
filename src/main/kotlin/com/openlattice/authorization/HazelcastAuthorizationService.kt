@@ -24,6 +24,7 @@ import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.authorization.util.toAceKeys
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organizations.PrincipalSet
+import org.apache.commons.lang3.NotImplementedException
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.time.OffsetDateTime
@@ -64,31 +65,31 @@ class HazelcastAuthorizationService(
                     .map { Predicates.equal<AceKey, AceValue>(PermissionMapstore.PERMISSIONS_INDEX, it) }
                     .toTypedArray()
 
-            return Predicates.and<AceKey, AceValue>(*subPredicates) 
+            return Predicates.and<AceKey, AceValue>(*subPredicates)
         }
 
         private fun hasAnyPrincipals(principals: Collection<Principal>): Predicate<AceKey, AceValue> {
-            return Predicates.`in`<AceKey, AceValue>(PermissionMapstore.PRINCIPAL_INDEX, *principals.toTypedArray()) 
+            return Predicates.`in`<AceKey, AceValue>(PermissionMapstore.PRINCIPAL_INDEX, *principals.toTypedArray())
         }
 
         private fun hasAnyAclKeys(aclKeys: Collection<AclKey>): Predicate<AceKey, AceValue> {
-            return Predicates.`in`<AceKey, AceValue>(ACL_KEY_INDEX, *aclKeys.map { it.index }.toTypedArray()) 
+            return Predicates.`in`<AceKey, AceValue>(ACL_KEY_INDEX, *aclKeys.map { it.index }.toTypedArray())
         }
 
         private fun hasAclKey(aclKey: AclKey): Predicate<AceKey, AceValue> {
-            return Predicates.equal(ACL_KEY_INDEX, aclKey.index) 
+            return Predicates.equal(ACL_KEY_INDEX, aclKey.index)
         }
 
         private fun hasType(objectType: SecurableObjectType): Predicate<AceKey, AceValue> {
-            return Predicates.equal(PermissionMapstore.SECURABLE_OBJECT_TYPE_INDEX, objectType) 
+            return Predicates.equal(PermissionMapstore.SECURABLE_OBJECT_TYPE_INDEX, objectType)
         }
 
         private fun hasPrincipal(principal: Principal): Predicate<AceKey, AceValue> {
-            return Predicates.equal(PermissionMapstore.PRINCIPAL_INDEX, principal) 
+            return Predicates.equal(PermissionMapstore.PRINCIPAL_INDEX, principal)
         }
 
         private fun hasPrincipalType(type: PrincipalType): Predicate<AceKey, AceValue> {
-            return Predicates.equal(PermissionMapstore.PRINCIPAL_TYPE_INDEX, type) 
+            return Predicates.equal(PermissionMapstore.PRINCIPAL_TYPE_INDEX, type)
         }
     }
 
@@ -405,7 +406,7 @@ class HazelcastAuthorizationService(
                 hasAnyPrincipals(principals),
                 hasType(objectType),
                 hasExactPermissions(permissions),
-                additionalFilter) 
+                additionalFilter)
         return aces.keySet(p)
                 .stream()
                 .map { obj: AceKey -> obj.aclKey }
@@ -419,6 +420,11 @@ class HazelcastAuthorizationService(
                 .toSet()
 
         return Acl(key, acesWithPermissions)
+    }
+
+    @Timed
+    override fun getAllSecurableObjectPermissions(keys: Set<AclKey>): Set<Acl> {
+        throw NotImplementedException("not yet implemented - work in progress")
     }
 
     override fun getAuthorizedPrincipalsOnSecurableObject(key: AclKey, permissions: EnumSet<Permission>): Set<Principal> {
