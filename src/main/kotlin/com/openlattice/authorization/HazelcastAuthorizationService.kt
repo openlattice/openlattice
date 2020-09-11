@@ -27,7 +27,6 @@ import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.authorization.util.toAceKeys
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organizations.PrincipalSet
-import org.apache.commons.lang3.NotImplementedException
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.time.OffsetDateTime
