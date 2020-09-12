@@ -426,7 +426,10 @@ class HazelcastAuthorizationService(
 
     @Timed
     override fun getAllSecurableObjectPermissions(keys: Set<AclKey>): Set<Acl> {
-        return keys.map { key -> getAllSecurableObjectPermissions(key) }.toSet()
+        return aces.entrySet(hasAnyAclKeys(keys))
+                .groupBy { it.key.aclKey }
+                .map { entry -> Acl(entry.key, entry.value.map { Ace(it.key.principal, it.value.permissions) }.toSet()) }
+                .toSet()
     }
 
     override fun getAuthorizedPrincipalsOnSecurableObject(key: AclKey, permissions: EnumSet<Permission>): Set<Principal> {
