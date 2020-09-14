@@ -204,6 +204,9 @@ public class EntityType extends AbstractSchemaAssociatedSecurableType {
 
     @Override
     public int hashCode() {
-        return Objects.hash( super.hashCode(), key, baseType, h, shards, category, propertyTags, properties );
+        if ( h != 0 ) {
+            return h;
+        }
+        return h = Objects.hash( super.hashCode(), key, baseType, shards, category, propertyTags, properties );
     }
 }

@@ -18,12 +18,12 @@
 
 package com.openlattice.authorization;
 
-import java.util.List;
-import java.util.Objects;
-
-import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.openlattice.client.serialization.SerializationConstants;
+
+import java.util.List;
+import java.util.Objects;
 
 public class AclExplanation {
     protected final   Principal             principal;
@@ -68,7 +68,10 @@ public class AclExplanation {
     }
 
     @Override public int hashCode() {
-        return Objects.hash( principal, paths, h );
+        if ( h != 0 ) {
+            return h;
+        }
+        return h = Objects.hash( principal, paths );
     }
 
 }

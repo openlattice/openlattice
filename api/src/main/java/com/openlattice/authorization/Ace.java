@@ -86,7 +86,10 @@ public class Ace {
     }
 
     @Override public int hashCode() {
-        return Objects.hash( principal, permissions, expirationDate, hashValue );
+        if ( hashValue != 0 ) {
+            return hashValue;
+        }
+        return hashValue = Objects.hash( principal, permissions, expirationDate );
     }
 
     @Override
