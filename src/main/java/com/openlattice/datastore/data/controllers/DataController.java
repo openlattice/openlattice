@@ -980,7 +980,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                 entitySetService.getPropertyTypesForEntitySet( entitySetId ).keySet() );
         checkArgument( missingPropertyTypes.isEmpty(),
                 "Entity set " + entitySetId.toString() + " does not contain the property types: "
-                        + requiredPropertyTypes.toString() );
+                        + missingPropertyTypes.toString() );
     }
 
     private static Set<UUID> requiredEntitySetPropertyTypes( Map<UUID, Map<UUID, Set<Object>>> entities ) {
