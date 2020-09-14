@@ -429,7 +429,7 @@ class HazelcastAuthorizationService(
         return aces.entrySet(hasAnyAclKeys(keys))
                 .groupBy { it.key.aclKey }
                 .mapTo(mutableSetOf()) { entry ->
-                    Acl(entry.key, entry.value.map { Ace(it.key.principal, it.value.permissions) }.toSet())
+                    Acl(entry.key, entry.value.mapTo(mutableSetOf()) { Ace(it.key.principal, it.value.permissions) })
                 }
     }
 
