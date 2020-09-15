@@ -24,6 +24,7 @@ import com.auth0.json.mgmt.users.User;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import com.openlattice.apps.services.AppService;
 import com.openlattice.assembler.Assembler;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
@@ -77,6 +78,9 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
 
     @Inject
     private ExternalDatabaseManagementService edms;
+
+    @Inject
+    private AppService appService;
 
     @Timed
     @Override
@@ -545,6 +549,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     public Void deleteRole( @PathVariable( ID ) UUID organizationId, @PathVariable( ROLE_ID ) UUID roleId ) {
         ensureRoleAdminAccess( organizationId, roleId );
         ensureObjectCanBeDeleted( roleId );
+        ensureRoleNotUsedByApp( organizationId, roleId );
         principalService.deletePrincipal( new AclKey( organizationId, roleId ) );
         return null;
     }
@@ -637,6 +642,19 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
 
     private void ensureRead( UUID organizationId ) {
         ensureReadAccess( new AclKey( organizationId ) );
+    }
+
+    private void ensureRoleNotUsedByApp( UUID organizationId, UUID roleId ) {
+        AclKey aclKey = new AclKey( organizationId, roleId );
+        appService.getOrganizationAppsByAppId( organizationId ).forEach( ( appId, appTypeSetting ) -> {
+            appTypeSetting.getRoles().forEach( ( appRoleId, roleAclKey ) -> {
+                if ( roleAclKey.equals( aclKey ) ) {
+                    throw new IllegalArgumentException( "Role " + aclKey.toString()
+                            + " cannot be deleted because it is tied to installation of app " + appId.toString() );
+                }
+            } );
+        } );
+
     }
 
 }

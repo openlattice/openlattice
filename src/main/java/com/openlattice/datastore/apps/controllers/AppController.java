@@ -25,6 +25,7 @@ import com.openlattice.apps.App;
 import com.openlattice.apps.AppApi;
 import com.openlattice.apps.AppInstallation;
 import com.openlattice.apps.AppRole;
+import com.openlattice.apps.AppTypeSetting;
 import com.openlattice.apps.UserAppConfig;
 import com.openlattice.apps.historical.HistoricalAppConfig;
 import com.openlattice.apps.services.AppService;
@@ -189,6 +190,17 @@ public class AppController implements AppApi, AuthorizingComponent {
     @Timed
     @Override
     @RequestMapping(
+            path = ORGANIZATION_PATH + ORGANIZATION_ID_PATH,
+            method = RequestMethod.GET,
+            produces = MediaType.APPLICATION_JSON_VALUE )
+    public Map<UUID, AppTypeSetting> getOrganizationAppsByAppId( @RequestParam( ORGANIZATION_ID ) UUID organizationId ) {
+        ensureOwnerAccess( new AclKey( organizationId ) );
+        return appService.getOrganizationAppsByAppId( organizationId );
+    }
+
+    @Timed
+    @Override
+    @RequestMapping(
             path = UPDATE_PATH + ID_PATH + ROLE_ID_PATH,
             method = RequestMethod.POST,
             consumes = MediaType.APPLICATION_JSON_VALUE )
@@ -238,6 +250,19 @@ public class AppController implements AppApi, AuthorizingComponent {
             @RequestBody Map<String, Object> newSettings ) {
         ensureOwnerAccess( new AclKey( organizationId ) );
         appService.updateAppConfigSettings( appId, organizationId, newSettings );
+    }
+
+    @Timed
+    @Override
+    @RequestMapping(
+            path = CONFIG_PATH + UPDATE_PATH + ID_PATH + ORGANIZATION_ID_PATH + ROLE_PATH,
+            method = RequestMethod.POST )
+    public void updateAppRoleMappingForOrganization(
+            @PathVariable( ID ) UUID appId,
+            @PathVariable( ORGANIZATION_ID ) UUID organizationId,
+            @RequestBody Map<UUID, AclKey> roleMappings ) {
+        ensureOwnerAccess( new AclKey( organizationId ) );
+        appService.updateAppConfigRoleMapping( appId, organizationId, roleMappings );
     }
 
     @Override
