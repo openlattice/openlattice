@@ -160,6 +160,15 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
 
     @Timed
     @Override
+    @PatchMapping( value = ID_PATH + INTEGRATION, produces = MediaType.APPLICATION_JSON_VALUE )
+    public OrganizationIntegrationAccount rollOrganizationIntegrationAccount(
+            @PathVariable( ID ) UUID organizationId ) {
+        ensureOwner( organizationId );
+        return assembler.rollOrganizationIntegrationAccount( organizationId );
+    }
+
+    @Timed
+    @Override
     @GetMapping( value = ID_PATH + ENTITY_SETS, produces = MediaType.APPLICATION_JSON_VALUE )
     public Map<UUID, Set<OrganizationEntitySetFlag>> getOrganizationEntitySets(
             @PathVariable( ID ) UUID organizationId ) {
@@ -247,7 +256,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     public Map<UUID, Set<OrganizationEntitySetFlag>> assembleEntitySets(
             @PathVariable( ID ) UUID organizationId,
             @RequestBody Map<UUID, Integer> refreshRatesOfEntitySets ) {
-        throw new NotImplementedException("DBT will fill this in.");
+        throw new NotImplementedException( "DBT will fill this in." );
     }
 
     @Timed
@@ -256,7 +265,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     public Void synchronizeEdmChanges(
             @PathVariable( ID ) UUID organizationId,
             @PathVariable( SET_ID ) UUID entitySetId ) {
-        throw new NotImplementedException("DBT will fill this in.");
+        throw new NotImplementedException( "DBT will fill this in." );
     }
 
     @Timed
@@ -268,7 +277,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         // the person requesting refresh should be the owner of the organization
         ensureOwner( organizationId );
 
-        throw new NotImplementedException("DBT will fill this in.");
+        throw new NotImplementedException( "DBT will fill this in." );
     }
 
     @Override
