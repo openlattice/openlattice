@@ -109,7 +109,12 @@ public class AppController implements AppApi, AuthorizingComponent {
             produces = MediaType.APPLICATION_JSON_VALUE )
     @ResponseStatus( HttpStatus.OK )
     public App getAppByName( @PathVariable( NAME ) String name ) {
-        return appService.getApp( name );
+        App app = appService.getApp( name );
+        Set<UUID> templateTypeIds = collectionsManager.getEntityTypeCollection( app.getEntityTypeCollectionId() )
+                .getTemplate().stream().map(
+                        CollectionTemplateType::getId ).collect( Collectors.toSet() );
+        app.setAppTypeIds( templateTypeIds );
+        return app;
     }
 
     @Timed
