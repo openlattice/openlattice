@@ -34,7 +34,7 @@ class CollectionTemplatesStreamSerializer : SelfRegisteringStreamSerializer<Coll
             for (i in 0 until size) {
 
                 val entitySetCollectionId = UUIDStreamSerializerUtils.deserialize(`in`)
-                val templateMap = MapStreamSerializers.readUUIDUUIDMap(`in`) as ConcurrentMap<UUID, UUID>
+                val templateMap = MapStreamSerializers.readUUIDUUIDMap(`in`, Maps.newConcurrentMap()) as ConcurrentMap<UUID, UUID>
 
                 templates[entitySetCollectionId] = templateMap
             }
