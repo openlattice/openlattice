@@ -6,7 +6,6 @@ import com.google.common.collect.Sets
 import com.google.common.eventbus.EventBus
 import com.hazelcast.aggregation.Aggregators
 import com.hazelcast.core.HazelcastInstance
-import com.hazelcast.map.IMap
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.openlattice.authorization.*
@@ -33,7 +32,6 @@ import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.hazelcast.HazelcastMap
 import org.springframework.stereotype.Service
 import java.util.*
-import java.util.concurrent.ConcurrentMap
 
 @Service
 class CollectionsManager(
@@ -421,7 +419,7 @@ class CollectionsManager(
         return Predicates.equal(ENTITY_SET_COLLECTION_ID_INDEX, id)
     }
 
-    private fun entitySetCollectionIdsPredicate(ids: Set<UUID>): Predicate<UUID, EntitySetCollection> {
+    private fun entitySetCollectionIdsPredicate(ids: Set<UUID>): Predicate<CollectionTemplateKey, UUID> {
         return Predicates.`in`(ENTITY_SET_COLLECTION_ID_INDEX, *ids.toTypedArray())
     }
 
@@ -470,7 +468,7 @@ class CollectionsManager(
     private fun getTemplatesForIds(ids: Set<UUID>): MutableMap<UUID, MutableMap<UUID, UUID>> {
         return entitySetCollectionConfig.aggregate(
                 EntitySetCollectionConfigAggregator(CollectionTemplates()),
-                entitySetCollectionIdsPredicate(ids) as Predicate<CollectionTemplateKey, UUID>
+                entitySetCollectionIdsPredicate(ids)
         ).templates
     }
 
