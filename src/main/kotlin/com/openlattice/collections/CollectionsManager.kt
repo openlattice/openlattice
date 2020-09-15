@@ -467,7 +467,7 @@ class CollectionsManager(
         return nameAttempt
     }
 
-    private fun getTemplatesForIds(ids: Set<UUID>): ConcurrentMap<UUID, ConcurrentMap<UUID, UUID>> {
+    private fun getTemplatesForIds(ids: Set<UUID>): MutableMap<UUID, MutableMap<UUID, UUID>> {
         return entitySetCollectionConfig.aggregate(
                 EntitySetCollectionConfigAggregator(CollectionTemplates()),
                 entitySetCollectionIdsPredicate(ids) as Predicate<CollectionTemplateKey, UUID>

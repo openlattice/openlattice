@@ -29,12 +29,12 @@ class CollectionTemplatesStreamSerializer : SelfRegisteringStreamSerializer<Coll
         fun deserialize(`in`: ObjectDataInput): CollectionTemplates {
             val size = `in`.readInt()
 
-            val templates = Maps.newConcurrentMap<UUID, ConcurrentMap<UUID, UUID>>()
+            val templates = Maps.newConcurrentMap<UUID, MutableMap<UUID, UUID>>()
 
             for (i in 0 until size) {
 
                 val entitySetCollectionId = UUIDStreamSerializerUtils.deserialize(`in`)
-                val templateMap = MapStreamSerializers.readUUIDUUIDMap(`in`, Maps.newConcurrentMap()) as ConcurrentMap<UUID, UUID>
+                val templateMap = MapStreamSerializers.readUUIDUUIDMap(`in`)
 
                 templates[entitySetCollectionId] = templateMap
             }
