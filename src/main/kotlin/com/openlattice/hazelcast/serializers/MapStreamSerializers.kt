@@ -22,7 +22,6 @@ class MapStreamSerializers {
         fun readUUIDUUIDMap(`in`: ObjectDataInput): MutableMap<UUID, UUID> {
             val keys = SetStreamSerializers.fastOrderedUUIDSetDeserialize(`in`)
             val vals = SetStreamSerializers.fastOrderedUUIDSetDeserialize(`in`)
-
             return keys.zip(vals).toMap(mutableMapOf())
         }
     }
