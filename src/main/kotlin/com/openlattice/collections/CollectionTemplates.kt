@@ -12,7 +12,7 @@ import java.util.*
  * where their templates are maps from collection template type ids to entity set ids
  */
 data class CollectionTemplates(
-        val templates: MutableMap<UUID, MutableMap<UUID, UUID>> = Maps.newConcurrentMap()
+        val templates: MutableMap<UUID, MutableMap<UUID, UUID>> = mutableMapOf()
 ) {
 
     fun put(entitySetCollectionId: UUID, templateTypeId: UUID, entitySetId: UUID) {
