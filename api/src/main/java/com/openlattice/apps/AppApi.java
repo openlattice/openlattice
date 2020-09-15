@@ -90,6 +90,10 @@ public interface AppApi {
     @Deprecated
     List<HistoricalAppConfig> getAvailableAppConfigsOld( @Path( ID ) UUID appId );
 
+    @GET( BASE + "/type/bulk" )
+    @Deprecated
+    Map<UUID, AppType> getAppTypesBulk( @Body Set<UUID> collectionTemplateTypeIds );
+
     @GET( BASE + CONFIG_PATH )
     List<UserAppConfig> getAvailableAppConfigs( @Query( ID ) UUID appId );
 
