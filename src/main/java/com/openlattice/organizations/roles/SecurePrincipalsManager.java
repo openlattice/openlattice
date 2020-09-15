@@ -112,4 +112,7 @@ public interface SecurePrincipalsManager {
     SecurablePrincipal getSecurablePrincipalById( UUID id );
 
     UUID getCurrentUserId();
+
+    void ensurePrincipalsExist( Set<AclKey> aclKeys );
+
 }
