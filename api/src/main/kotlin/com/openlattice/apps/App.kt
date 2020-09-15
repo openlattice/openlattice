@@ -16,7 +16,8 @@ class App(
         @JsonProperty( SerializationConstants.URL ) var url: String,
         @JsonProperty( SerializationConstants.ENTITY_TYPE_COLLECTION_ID ) val entityTypeCollectionId: UUID,
         @JsonProperty( SerializationConstants.ROLES ) var appRoles: MutableSet<AppRole>,
-        @JsonProperty( SerializationConstants.SETTINGS ) var defaultSettings: MutableMap<String, Any> = mutableMapOf()
+        @JsonProperty( SerializationConstants.SETTINGS ) var defaultSettings: MutableMap<String, Any> = mutableMapOf(),
+        @JsonProperty( "appTypeIds" ) var appTypeIds: Set<UUID> = mutableSetOf() // TEMP FOR BACKWARDS COMPATIBILITY
 ): AbstractSecurableObject( id, title, description ) {
 
     constructor(
