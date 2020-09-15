@@ -3,7 +3,6 @@ package com.openlattice.collections
 
 import com.google.common.collect.Maps
 import java.util.*
-import java.util.concurrent.ConcurrentMap
 
 /**
  * A Hazelcast-serializable wrapper around a MutableMap<UUID, MutableMap<UUID, UUID>>
@@ -13,7 +12,7 @@ import java.util.concurrent.ConcurrentMap
  * where their templates are maps from collection template type ids to entity set ids
  */
 data class CollectionTemplates(
-        val templates: ConcurrentMap<UUID, ConcurrentMap<UUID, UUID>> = Maps.newConcurrentMap()
+        val templates: MutableMap<UUID, MutableMap<UUID, UUID>> = mutableMapOf()
 ) {
 
     fun put(entitySetCollectionId: UUID, templateTypeId: UUID, entitySetId: UUID) {
@@ -23,7 +22,7 @@ data class CollectionTemplates(
     }
 
     fun putAll(templateValues: Map<UUID, MutableMap<UUID, UUID>>) {
-        for ((key, value) in templateValues) {
+        templateValues.forEach { (key, value) ->
             val template = templates.getOrDefault(key, Maps.newConcurrentMap())
             template.putAll(value)
             templates[key] = template

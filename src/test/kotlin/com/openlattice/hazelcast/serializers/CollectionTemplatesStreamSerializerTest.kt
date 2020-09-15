@@ -14,7 +14,7 @@ class CollectionTemplatesStreamSerializerTest : AbstractStreamSerializerTest<Col
     }
 
     override fun createInput(): CollectionTemplates {
-        val templates = Maps.newConcurrentMap<UUID, ConcurrentMap<UUID, UUID>>()
+        val templates = mutableMapOf<UUID, MutableMap<UUID, UUID>>()
 
         for (i in 0..4) {
 
