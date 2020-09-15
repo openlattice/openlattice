@@ -456,7 +456,7 @@ class AppService(
     }
 
     private fun ensureAppRolesExist(app: App, roleIds: Set<UUID>) {
-        val missingRoleIds = Sets.difference(roleIds, app.appRoles.map { it.id }.toSet())
+        val missingRoleIds = roleIds - app.appRoles.map { it.id }
         Preconditions.checkState(missingRoleIds.isEmpty(),
                     "App {} does not contain roles with ids {}.",
                     app.id,
