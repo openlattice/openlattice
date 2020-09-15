@@ -18,14 +18,14 @@ class MapStreamSerializers {
         }
 
         @Throws(IOException::class)
-        fun readUUIDUUIDMap(`in`: ObjectDataInput, defaultMap: MutableMap<UUID, UUID>?): Map<UUID, UUID> {
+        fun readUUIDUUIDMap(`in`: ObjectDataInput): Map<UUID, UUID> {
             val keys = SetStreamSerializers.fastOrderedUUIDSetDeserialize(`in`)
             val vals = SetStreamSerializers.fastOrderedUUIDSetDeserialize(`in`)
 
             val keyIt = keys.iterator()
             val valIt = vals.iterator()
 
-            val map = defaultMap ?: Maps.newHashMapWithExpectedSize(keys.size)
+            val map = Maps.newHashMapWithExpectedSize<UUID, UUID>(keys.size)
             while (keyIt.hasNext()) {
                 map[keyIt.next()] = valIt.next()
             }
