@@ -78,7 +78,7 @@ class CollectionsManager(
     fun getEntitySetCollections(ids: Set<UUID>): Map<UUID, EntitySetCollection> {
         val templates = getTemplatesForIds(ids)
         val collections = entitySetCollections.getAll(ids)
-        collections.mapValues { it.value.template = templates[it.key] ?: mutableMapOf() }
+        collections.forEach { it.value.template = templates[it.key] ?: mutableMapOf() }
 
         return collections
     }
