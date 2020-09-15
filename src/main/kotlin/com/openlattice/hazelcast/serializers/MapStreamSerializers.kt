@@ -5,6 +5,7 @@ import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.hazelcast.serializers.ListStreamSerializers
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers
+import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.util.*
 
@@ -22,6 +23,10 @@ class MapStreamSerializers {
         fun readUUIDUUIDMap(`in`: ObjectDataInput): MutableMap<UUID, UUID> {
             val keys = SetStreamSerializers.fastOrderedUUIDSetDeserialize(`in`)
             val vals = SetStreamSerializers.fastOrderedUUIDSetDeserialize(`in`)
+            if( keys.size!= vals.size ) {
+                LoggerFactory.getLogger(MapStreamSerializers::class.java).error("${keys.size} keys but only ${vals.size} values.")
+                throw IllegalStateException("THIS SHOULD NOT HAPPEN")
+            }
             return keys.zip(vals).toMap(mutableMapOf())
         }
     }
