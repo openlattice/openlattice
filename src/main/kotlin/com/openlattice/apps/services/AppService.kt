@@ -296,7 +296,9 @@ class AppService(
 
 
         val entitySetCollectionTemplates: Map<UUID, Map<String, UUID>> = entitySetCollectionsById.values.associate {
-            it.id to entityTypeCollectionsById.getValue(it.entityTypeCollectionId).template.associate { type -> type.name to it.template.getValue(type.id) }
+            it.id to entityTypeCollectionsById.getValue(it.entityTypeCollectionId).template.associate { type ->
+                type.name to it.template.getValue(type.id)
+            }
         }
 
         return userAppConfigs.map {
