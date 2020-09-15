@@ -374,7 +374,7 @@ class CollectionsManager(
     private fun ensureEntityTypeCollectionNotInUse(id: UUID) {
         val numEntitySetCollectionsOfType = entitySetCollections.aggregate(
                 Aggregators.count(),
-                entityTypeCollectionIdPredicate(id) as Predicate<UUID, EntitySetCollection>
+                entityTypeCollectionIdPredicate(id)
         )
 
         checkState(
@@ -413,10 +413,6 @@ class CollectionsManager(
 
     private fun entityTypeCollectionIdPredicate(entityTypeCollectionId: UUID): Predicate<UUID, EntitySetCollection> {
         return Predicates.equal(ENTITY_TYPE_COLLECTION_ID_INDEX, entityTypeCollectionId)
-    }
-
-    private fun entitySetCollectionIdPredicate(id: UUID): Predicate<UUID, EntitySetCollection> {
-        return Predicates.equal(ENTITY_SET_COLLECTION_ID_INDEX, id)
     }
 
     private fun entitySetCollectionIdsPredicate(ids: Set<UUID>): Predicate<CollectionTemplateKey, UUID> {
