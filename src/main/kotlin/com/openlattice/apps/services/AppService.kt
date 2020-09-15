@@ -377,9 +377,10 @@ class AppService(
         ensureAppRolesExist(getApp(appId), roleMappings.keys)
         principalsService.ensurePrincipalsExist(roleMappings.values.toSet())
 
+        val serializableRoleMappings = roleMappings.toMap()
         appConfigs.executeOnKey(AppConfigKey(appId, organizationId)) {
             val setting = it.value
-            roleMappings.forEach { (roleId, roleAclKey) ->
+            serializableRoleMappings.forEach { (roleId, roleAclKey) ->
                 setting.addRole(roleId, roleAclKey)
             }
             it.setValue(setting)
