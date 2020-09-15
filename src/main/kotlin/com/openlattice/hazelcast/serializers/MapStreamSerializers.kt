@@ -15,15 +15,15 @@ class MapStreamSerializers {
 
         @Throws(IOException::class)
         fun writeUUIDUUIDMap(out: ObjectDataOutput, `object`: Map<UUID, UUID>) {
-            SetStreamSerializers.fastUUIDSetSerialize(out, `object`.keys)
-            SetStreamSerializers.fastUUIDSetSerialize(out, `object`.values)
+            val (keys, values) = `object`.asSequence().map { it.toPair() }.unzip()
+            ListStreamSerializers.fastUUIDListSerialize(out, keys)
+            ListStreamSerializers.fastUUIDListSerialize(out, values)
         }
-
         @Throws(IOException::class)
         fun readUUIDUUIDMap(`in`: ObjectDataInput): MutableMap<UUID, UUID> {
-            val keys = SetStreamSerializers.fastOrderedUUIDSetDeserialize(`in`)
-            val vals = SetStreamSerializers.fastOrderedUUIDSetDeserialize(`in`)
-            if( keys.size!= vals.size ) {
+            val keys = ListStreamSerializers.fastUUIDListDeserialize(`in`)
+            val vals = ListStreamSerializers.fastUUIDListDeserialize(`in`)
+            if (keys.size != vals.size) {
                 LoggerFactory.getLogger(MapStreamSerializers::class.java).error("${keys.size} keys but only ${vals.size} values.")
                 throw IllegalStateException("THIS SHOULD NOT HAPPEN")
             }
