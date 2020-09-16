@@ -25,7 +25,9 @@ import com.google.common.collect.ListMultimap
 import com.google.common.collect.SetMultimap
 import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
 import com.openlattice.analysis.requests.FilteredNeighborsRankingAggregation
+import com.openlattice.data.storage.MetadataOption
 import com.openlattice.edm.type.PropertyType
+import com.openlattice.analysis.requests.AggregationResult
 import com.openlattice.graph.core.NeighborSets
 import com.openlattice.graph.edge.Edge
 import com.openlattice.postgres.streams.BasePostgresIterable
@@ -53,8 +55,6 @@ interface DataGraphManager {
             linking: Boolean
     ): EntitySetData<FullQualifiedName>
 
-    fun getEntitySetSize(entitySetId: UUID): Long
-
     /*
      * CRUD methods for entity
      */
@@ -74,6 +74,12 @@ interface DataGraphManager {
             linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>
     ): Map<UUID, Map<UUID, Map<UUID, Map<FullQualifiedName, Set<Any>>>>>
+
+    fun getEntitiesWithMetadata(
+            entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
+            metadataOptions: EnumSet<MetadataOption>
+    ): Iterable<MutableMap<FullQualifiedName, MutableSet<Any>>>
 
     /**
      * Clears property data, id, edges of association entities of the provided DataEdgeKeys in batches.
@@ -146,7 +152,7 @@ interface DataGraphManager {
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             linked: Boolean,
             linkingEntitySetId: Optional<UUID>
-    ): Iterable<Map<String, Any>>
+    ): AggregationResult
 
     fun getNeighborEntitySets(entitySetIds: Set<UUID>): List<NeighborSets>
 
@@ -174,13 +180,31 @@ interface DataGraphManager {
     fun getEdgesConnectedToEntities(
             entitySetId: UUID, entityKeyIds: Set<UUID>, includeClearedEdges: Boolean
     ): PostgresIterable<DataEdgeKey>
-    fun getExpiringEntitiesFromEntitySet(entitySetId: UUID,
-                                         expirationPolicy: DataExpiration,
-                                         dateTime: OffsetDateTime,
-                                         deleteType: DeleteType,
-                                         expirationPropertyType: Optional<PropertyType>
+
+    fun getExpiringEntitiesFromEntitySet(
+            entitySetId: UUID,
+            expirationPolicy: DataExpiration,
+            dateTime: OffsetDateTime,
+            deleteType: DeleteType,
+            expirationPropertyType: Optional<PropertyType>
     ): BasePostgresIterable<UUID>
 
     fun getEdgeEntitySetsConnectedToEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): Set<UUID>
     fun getEdgeEntitySetsConnectedToEntitySet(entitySetId: UUID): Set<UUID>
+
+    /**
+     * Re-partitions the data for an entity set.
+     *
+     * NOTE: This function is a bit of a layer violation. It only migrates data from the provided partitions, which
+     * must be known by the caller. It assumes that new partitions have been properly assigned to the entity set and
+     * have been persisted to the database by the caller.
+     *
+     * @param entitySetId The id of the entity set to repartition
+     * @param oldPartitions The previous data partitions for the entity set.
+     */
+    fun repartitionEntitySet(
+            entitySetId: UUID,
+            oldPartitions: Set<Int>,
+            newPartitions: Set<Int>
+    ): UUID
 }

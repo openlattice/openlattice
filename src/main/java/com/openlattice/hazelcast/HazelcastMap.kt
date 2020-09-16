@@ -22,10 +22,9 @@ package com.openlattice.hazelcast
 import com.auth0.json.mgmt.users.User
 import com.geekbeast.rhizome.hazelcast.DelegatedIntList
 import com.hazelcast.core.HazelcastInstance
-import com.hazelcast.core.IMap
+import com.hazelcast.map.IMap
 import com.openlattice.apps.App
 import com.openlattice.apps.AppConfigKey
-import com.openlattice.apps.AppType
 import com.openlattice.apps.AppTypeSetting
 import com.openlattice.assembler.EntitySetAssemblyKey
 import com.openlattice.assembler.MaterializedEntitySet
@@ -33,12 +32,11 @@ import com.openlattice.assembler.OrganizationAssembly
 import com.openlattice.auditing.AuditRecordEntitySetConfiguration
 import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
+import com.openlattice.codex.Base64Media
 import com.openlattice.collections.CollectionTemplateKey
 import com.openlattice.collections.EntitySetCollection
 import com.openlattice.collections.EntityTypeCollection
 import com.openlattice.data.EntityDataKey
-import com.openlattice.data.EntityKey
-import com.openlattice.data.TicketKey
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetPropertyKey
 import com.openlattice.edm.set.EntitySetPropertyMetadata
@@ -57,6 +55,7 @@ import com.openlattice.postgres.mapstores.TypedMapIdentifier
 import com.openlattice.requests.Status
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
+import com.openlattice.scheduling.ScheduledTask
 import com.openlattice.shuttle.Integration
 import com.openlattice.shuttle.IntegrationJob
 import com.openlattice.transporter.types.TransporterColumnSet
@@ -92,18 +91,17 @@ class HazelcastMap<K, V> internal constructor(val name: String) : TypedMapIdenti
         // When adding new entries to this list, please make sure to keep it sorted and keep the name in sync
         @JvmField val ACL_KEYS = HazelcastMap<String, UUID>("ACL_KEYS")
         @JvmField val APPS = HazelcastMap<UUID, App>("APPS")
-        @JvmField val APP_TYPES = HazelcastMap<UUID, AppType>("APP_TYPES")
         @JvmField val APP_CONFIGS = HazelcastMap<AppConfigKey, AppTypeSetting>("APP_CONFIGS")
         @JvmField val ASSEMBLIES = HazelcastMap<UUID, OrganizationAssembly>("ASSEMBLIES")
         @JvmField val ASSOCIATION_TYPES = HazelcastMap<UUID, AssociationType>("ASSOCIATION_TYPES")
         @JvmField val AUDIT_RECORD_ENTITY_SETS = HazelcastMap<AclKey, AuditRecordEntitySetConfiguration>("AUDIT_RECORD_ENTITY_SETS")
+        @JvmField val CODEX_LOCKS = HazelcastMap<SmsInformationKey, Long>("CODEX_LOCKS")
+        @JvmField val CODEX_MEDIA = HazelcastMap<UUID, Base64Media>("CODEX_MEDIA")
         @JvmField val DB_CREDS = HazelcastMap<String, String>("DB_CREDS")
         @JvmField val DELETION_LOCKS = HazelcastMap<UUID, Long>("DELETION_LOCKS")
         @JvmField val ENTITY_SET_COLLECTION_CONFIG = HazelcastMap<CollectionTemplateKey, UUID>("ENTITY_SET_COLLECTION_CONFIG")
         @JvmField val ENTITY_SET_COLLECTIONS = HazelcastMap<UUID, EntitySetCollection>("ENTITY_SET_COLLECTIONS")
-        @JvmField val ENTITY_SET_PROPERTIES_TICKETS = HazelcastMap<TicketKey, DelegatedUUIDSet>("ENTITY_SET_PROPERTIES_TICKETS")
         @JvmField val ENTITY_SET_PROPERTY_METADATA = HazelcastMap<EntitySetPropertyKey, EntitySetPropertyMetadata>("ENTITY_SET_PROPERTY_METADATA")
-        @JvmField val ENTITY_SET_TICKETS = HazelcastMap<TicketKey, UUID>("ENTITY_SET_TICKETS")
         @JvmField val ENTITY_SETS = HazelcastMap<UUID, EntitySet>("ENTITY_SETS")
         @JvmField val ENTITY_TYPE_COLLECTIONS = HazelcastMap<UUID, EntityTypeCollection>("ENTITY_TYPE_COLLECTIONS")
         @JvmField val ENTITY_TYPE_PROPERTY_METADATA = HazelcastMap<EntityTypePropertyKey, EntityTypePropertyMetadata>("ENTITY_TYPE_PROPERTY_METADATA")
@@ -111,8 +109,6 @@ class HazelcastMap<K, V> internal constructor(val name: String) : TypedMapIdenti
         @JvmField val EXPIRATION_LOCKS = HazelcastMap<UUID, Long>("EXPIRATION_LOCKS")
         @JvmField val HBA_AUTHENTICATION_RECORDS = HazelcastMap<String, PostgresAuthenticationRecord>("HBA_AUTHENTICATION_RECORDS")
         @JvmField val ID_GENERATION = HazelcastMap<Long, Range>("ID_GENERATION")
-        @JvmField val ID_REF_COUNTS = HazelcastMap<EntityKey, Long>("ID_REF_COUNTS")
-        @JvmField val ID_CACHE = HazelcastMap<EntityKey, UUID>("ID_CACHE")
         @JvmField val INDEXING_JOBS = HazelcastMap<UUID, DelegatedUUIDSet>("INDEXING_JOBS")
         @JvmField val INDEXING_LOCKS = HazelcastMap<UUID, Long>("INDEXING_LOCKS")
         @JvmField val INDEXING_PROGRESS = HazelcastMap<UUID, UUID>("INDEXING_PROGRESS")
@@ -146,6 +142,8 @@ class HazelcastMap<K, V> internal constructor(val name: String) : TypedMapIdenti
         @JvmField val ORGANIZATION_EXTERNAL_DATABASE_TABLE = HazelcastMap<UUID, OrganizationExternalDatabaseTable>("ORGANIZATION_EXTERNAL_DATABASE_TABLE")
         @JvmField val SECURABLE_PRINCIPALS = HazelcastMap<String, SecurablePrincipal>("SECURABLE_PRINCIPALS")
         @JvmField val RESOLVED_PRINCIPAL_TREES = HazelcastMap<String, SortedPrincipalSet>("RESOLVED_PRINCIPAL_TREES")
+        @JvmField val SCHEDULED_TASKS = HazelcastMap<UUID, ScheduledTask>("SCHEDULED_TASKS")
+        @JvmField val SCHEDULED_TASK_LOCKS = HazelcastMap<UUID, Long>("SCHEDULED_TASK_LOCKS")
 
         @JvmStatic
         fun values(): Array<HazelcastMap<*, *>> {

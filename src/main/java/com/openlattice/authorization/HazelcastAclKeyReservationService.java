@@ -28,7 +28,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableSet;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IMap;
+import com.hazelcast.map.IMap;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.AbstractSecurableType;
 import com.openlattice.authorization.securable.SecurableObjectType;
@@ -82,6 +82,10 @@ public class HazelcastAclKeyReservationService {
 
     public Collection<UUID> getIds(Set<String> names) {
         return Util.getSafely( aclKeys, names ).values();
+    }
+
+    public Map<String, UUID> getIdsByFqn(Set<String> names) {
+        return Util.getSafely( aclKeys, names);
     }
 
     public boolean isReserved( String name ) {

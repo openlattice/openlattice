@@ -26,7 +26,6 @@ import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.openlattice.authorization.*
-import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EntitySet
@@ -34,7 +33,7 @@ import com.openlattice.edm.processors.CreateOrUpdateAuditRecordEntitySetsProcess
 import com.openlattice.edm.processors.UpdateAuditEdgeEntitySetIdProcessor
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.organizations.Organization
+import com.openlattice.organization.OrganizationExternalDatabaseTable
 import com.openlattice.postgres.mapstores.AuditRecordEntitySetConfigurationMapstore.ANY_AUDITING_ENTITY_SETS
 import com.openlattice.postgres.mapstores.AuditRecordEntitySetConfigurationMapstore.ANY_EDGE_AUDITING_ENTITY_SETS
 import org.slf4j.LoggerFactory
@@ -57,13 +56,13 @@ class AuditRecordEntitySetsManager(
         private val entitySetManager: EntitySetManager,
         private val partitionManager: PartitionManager,
         private val authorizationManager: AuthorizationManager,
-        private val hazelcastInstance: HazelcastInstance
+        hazelcastInstance: HazelcastInstance
 
 ) {
-    private val securableObjectTypes = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap( hazelcastInstance )
-    private val auditRecordEntitySetConfigurations = HazelcastMap.AUDIT_RECORD_ENTITY_SETS.getMap( hazelcastInstance )
+    private val securableObjectTypes = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap(hazelcastInstance)
+    private val auditRecordEntitySetConfigurations = HazelcastMap.AUDIT_RECORD_ENTITY_SETS.getMap(hazelcastInstance)
 
-    private val organizations = HazelcastMap.ORGANIZATIONS.getMap( hazelcastInstance )
+    private val organizations = HazelcastMap.ORGANIZATIONS.getMap(hazelcastInstance)
 
     private val edmAuditTypes = setOf(
             AuditEventType.CREATE_PROPERTY_TYPE,
@@ -90,7 +89,7 @@ class AuditRecordEntitySetsManager(
 
         if (auditingTypes.isAuditingInitialized()) {
             val name = auditedEntitySet.name
-            createAuditEntitySet(
+            createAuditEntitySets(
                     name,
                     AclKey(auditedEntitySet.id),
                     auditedEntitySet.contacts,
@@ -104,30 +103,38 @@ class AuditRecordEntitySetsManager(
     fun createAuditEntitySetForOrganization(organizationId: UUID) {
         if (auditingTypes.isAuditingInitialized()) {
             val name = organizations[organizationId]!!.title
-            createAuditEntitySet(name, AclKey(organizationId), ImmutableSet.of(), organizationId)
+            createAuditEntitySets(name, AclKey(organizationId), ImmutableSet.of(), organizationId)
         }
     }
 
-    private fun createAuditEntitySet(
+    fun createAuditEntitySetForExternalDBTable(table: OrganizationExternalDatabaseTable) {
+        if (auditingTypes.isAuditingInitialized()) {
+            val name = table.name
+            createAuditEntitySets(name, AclKey(table.id), setOf(), table.organizationId)
+        }
+    }
+
+    private fun createAuditEntitySets(
             name: String,
             aclKey: AclKey,
             contacts: Set<String>,
             organizationId: UUID,
-            partitions: Set<Int> = LinkedHashSet()) {
-        createAuditEntitySet(
+            partitions: Set<Int> = LinkedHashSet()
+    ) {
+        createAuditEntitySets(
                 aclKey,
                 buildAuditEntitySet(name, aclKey, contacts, organizationId, partitions),
                 buildAuditEdgeEntitySet(name, aclKey, contacts, organizationId, partitions)
         )
     }
 
-    fun createAuditEntitySet(aclKey: AclKey, entitySet: EntitySet, edgeEntitySet: EntitySet) {
+    private fun createAuditEntitySets(aclKey: AclKey, entitySet: EntitySet, edgeEntitySet: EntitySet) {
 
         val ownerPrincipals = authorizationManager.getAuthorizedPrincipalsOnSecurableObject(
                 aclKey, EnumSet.of(Permission.OWNER)
         )
 
-        var firstUserPrincipal: Principal
+        val firstUserPrincipal: Principal
 
         try {
             firstUserPrincipal = ownerPrincipals.first { it.type == PrincipalType.USER }
@@ -183,7 +190,7 @@ class AuditRecordEntitySetsManager(
                     aclKey, EnumSet.of(Permission.OWNER)
             )
 
-            var firstUserPrincipal: Principal
+            val firstUserPrincipal: Principal
 
             try {
                 firstUserPrincipal = ownerPrincipals.first { it.type == PrincipalType.USER }
@@ -304,7 +311,7 @@ class AuditRecordEntitySetsManager(
                 auditEntitySet.partitions
         )
 
-        createAuditEntitySet(aclKey, newAuditEntitySet, newAuditEdgeEntitySet)
+        createAuditEntitySets(aclKey, newAuditEntitySet, newAuditEdgeEntitySet)
 
         val newAclKey = AclKey(newAuditEntitySet.id)
         val newEdgeAclKey = AclKey(newAuditEdgeEntitySet.id)
@@ -348,19 +355,18 @@ class AuditRecordEntitySetsManager(
         val auditingEdgeEntityTypeId = auditingTypes.auditingEdgeEntityTypeId
 
         val entitySet = EntitySet(
-                auditingEdgeEntityTypeId,
-                entitySetName,
-                "Audit edge entity set for $name ($aclKey)",
-                Optional.of("This is an automatically generated auditing entity set."),
-                contacts,
-                Optional.empty(),
-                organizationId,
-                Optional.of(EnumSet.of(EntitySetFlag.AUDIT)),
-                Optional.of(partitions as LinkedHashSet<Int>)
+                entityTypeId = auditingEdgeEntityTypeId,
+                name = entitySetName,
+                _title = "Audit edge entity set for $name ($aclKey)",
+                _description = "This is an automatically generated auditing entity set.",
+                contacts = contacts.toMutableSet(),
+                organizationId = organizationId,
+                flags = EnumSet.of(EntitySetFlag.AUDIT),
+                partitions = partitions as LinkedHashSet<Int>
         )
 
         if (partitions.isEmpty()) {
-            return partitionManager.allocatePartitions(entitySet, partitionManager.getPartitionCount())
+            return partitionManager.allocateAllPartitions(entitySet)
         }
 
         return entitySet
@@ -377,19 +383,18 @@ class AuditRecordEntitySetsManager(
         val auditingEntityTypeId = auditingTypes.auditingEntityTypeId
 
         val entitySet = EntitySet(
-                auditingEntityTypeId,
-                entitySetName,
-                "Audit entity set for $name ($aclKey)",
-                Optional.of("This is an automatically generated auditing entity set."),
-                contacts,
-                Optional.empty(),
-                organizationId,
-                Optional.of(EnumSet.of(EntitySetFlag.AUDIT)),
-                Optional.of(partitions as LinkedHashSet<Int>)
+                entityTypeId = auditingEntityTypeId,
+                name = entitySetName,
+                _title = "Audit entity set for $name ($aclKey)",
+                _description = "This is an automatically generated auditing entity set.",
+                contacts = contacts.toMutableSet(),
+                organizationId = organizationId,
+                flags = EnumSet.of(EntitySetFlag.AUDIT),
+                partitions = partitions as LinkedHashSet<Int>
         )
 
         if (partitions.isEmpty()) {
-            return partitionManager.allocatePartitions(entitySet, partitionManager.getPartitionCount())
+            return partitionManager.allocateAllPartitions(entitySet)
         }
 
         return entitySet
@@ -411,9 +416,9 @@ class AuditRecordEntitySetsManager(
 
 }
 
-private fun isAnAuditEntitySetPredicate(entitySetId: UUID): Predicate<*, *> {
+private fun isAnAuditEntitySetPredicate(entitySetId: UUID): Predicate<AclKey, AuditRecordEntitySetConfiguration> {
     return Predicates.or(
-            Predicates.equal(ANY_AUDITING_ENTITY_SETS, entitySetId),
-            Predicates.equal(ANY_EDGE_AUDITING_ENTITY_SETS, entitySetId)
+            Predicates.equal<AclKey, AuditRecordEntitySetConfiguration>(ANY_AUDITING_ENTITY_SETS, entitySetId),
+            Predicates.equal<AclKey, AuditRecordEntitySetConfiguration>(ANY_EDGE_AUDITING_ENTITY_SETS, entitySetId)
     )
 }

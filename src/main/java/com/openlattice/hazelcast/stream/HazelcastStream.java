@@ -4,10 +4,10 @@ import static com.openlattice.hazelcast.stream.HazelcastStreamSink.EOF;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.hazelcast.collection.IQueue;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.ILock;
-import com.hazelcast.core.IMap;
-import com.hazelcast.core.IQueue;
+import com.hazelcast.cp.lock.FencedLock;
+import com.hazelcast.map.IMap;
 import com.hazelcast.query.Predicate;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -30,11 +30,11 @@ public abstract class HazelcastStream<T, K, V> implements Iterable<T> {
     private final Logger logger = subclassLoggers.computeIfAbsent( getClass(), LoggerFactory::getLogger );
 
     private UUID                     streamId;
-    private ILock                    streamLock;
+    private FencedLock               streamLock;
     private IQueue<StreamElement<T>> stream;
 
     protected HazelcastStream( HazelcastInstance hazelcastInstance ) {
-        Pair<UUID, ILock> idAndLock = acquireSafeId( hazelcastInstance );
+        Pair<UUID, FencedLock> idAndLock = acquireSafeId( hazelcastInstance );
         this.streamId = idAndLock.getLeft();
         this.streamLock = idAndLock.getRight();
         this.stream = hazelcastInstance.getQueue( streamId.toString() );
@@ -59,7 +59,7 @@ public abstract class HazelcastStream<T, K, V> implements Iterable<T> {
         return streamId;
     }
 
-    public ILock getStreamLock() {
+    public FencedLock getStreamLock() {
         return streamLock;
     }
 
@@ -67,12 +67,12 @@ public abstract class HazelcastStream<T, K, V> implements Iterable<T> {
         return stream;
     }
 
-    private Pair<UUID, ILock> acquireSafeId( HazelcastInstance hazelcastInstance ) {
+    private Pair<UUID, FencedLock> acquireSafeId( HazelcastInstance hazelcastInstance ) {
         UUID id;
-        ILock maybeStreamLock;
+        FencedLock maybeStreamLock;
         do {
             id = UUID.randomUUID();
-            maybeStreamLock = hazelcastInstance.getLock( getStreamLockName( id ) );
+            maybeStreamLock = hazelcastInstance.getCPSubsystem().getLock( getStreamLockName( id ) );
         } while ( !maybeStreamLock.tryLock() );
 
         return Pair.of( id, maybeStreamLock );
@@ -83,15 +83,15 @@ public abstract class HazelcastStream<T, K, V> implements Iterable<T> {
     }
 
     public static class HazelcastIterator<T> implements Iterator<T> {
-        private static final Logger logger = LoggerFactory.getLogger( HazelcastIterator.class );
-        private final ILock  streamLock;
-        private final UUID   streamId;
-        private final IQueue stream;
-        private final Lock lock = new ReentrantLock();
-        private Object next;
+        private static final Logger     logger = LoggerFactory.getLogger( HazelcastIterator.class );
+        private final        FencedLock streamLock;
+        private final        UUID       streamId;
+        private final        IQueue     stream;
+        private final        Lock       lock   = new ReentrantLock();
+        private              Object     next;
 
         public HazelcastIterator(
-                ILock streamLock,
+                FencedLock streamLock,
                 UUID streamId,
                 IQueue stream ) throws InterruptedException {
             this.streamLock = streamLock;

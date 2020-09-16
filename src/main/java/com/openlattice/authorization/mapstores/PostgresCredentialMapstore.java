@@ -22,19 +22,17 @@ package com.openlattice.authorization.mapstores;
 
 import com.hazelcast.config.MapStoreConfig;
 import com.hazelcast.config.MapStoreConfig.InitialLoadMode;
-import com.openlattice.authorization.PostgresUserApi;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.postgres.PostgresColumn;
 import com.openlattice.postgres.PostgresTable;
 import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore;
 import com.zaxxer.hikari.HikariDataSource;
-import org.apache.commons.lang.RandomStringUtils;
+import org.apache.commons.lang3.RandomStringUtils;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collection;
-import java.util.Map;
 
 /**
  * This mapstore assumes that initial first time creation of user in postgres is handled externally.
@@ -42,11 +40,10 @@ import java.util.Map;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class PostgresCredentialMapstore extends AbstractBasePostgresMapstore<String, String> {
-    private final PostgresUserApi dcqs;
+//    private final PostgresUserApi dcqs;
 
-    public PostgresCredentialMapstore( HikariDataSource hds, PostgresUserApi pgUserApi ) {
+    public PostgresCredentialMapstore( HikariDataSource hds) {
         super( HazelcastMap.DB_CREDS, PostgresTable.DB_CREDS, hds );
-        this.dcqs = pgUserApi;
     }
 
     @Override public String generateTestKey() {
@@ -71,21 +68,14 @@ public class PostgresCredentialMapstore extends AbstractBasePostgresMapstore<Str
 
     @Override public void store( String key, String value ) {
         super.store( key, value );
-        dcqs.setUserCredential( key, value );
     }
 
-    @Override public void storeAll( Map<String, String> map ) {
-        super.storeAll( map );
-        map.forEach( ( key, value ) -> dcqs.setUserCredential( key, value ) );
-    }
 
     @Override public void delete( String key ) {
-        dcqs.deleteUser( key );
         super.delete( key );
     }
 
     @Override public void deleteAll( Collection<String> keys ) {
-        keys.forEach( dcqs::deleteUser );
         super.deleteAll( keys );
     }
 

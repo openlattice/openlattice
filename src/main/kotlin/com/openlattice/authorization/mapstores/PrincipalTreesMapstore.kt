@@ -183,7 +183,7 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
     override fun getMapConfig(): MapConfig {
         return MapConfig(mapName)
                 .setMapStoreConfig(mapStoreConfig)
-                .addMapIndexConfig(MapIndexConfig(INDEX, false))
+                .addIndexConfig(IndexConfig(IndexType.HASH,INDEX))
     }
 
     companion object {

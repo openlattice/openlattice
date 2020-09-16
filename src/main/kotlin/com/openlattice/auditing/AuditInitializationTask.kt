@@ -1,6 +1,5 @@
 package com.openlattice.auditing
 
-import com.google.common.collect.ImmutableSet
 import com.hazelcast.core.HazelcastInstance
 import com.openlattice.IdConstants
 import com.openlattice.assembler.tasks.UsersAndRolesInitializationTask
@@ -25,10 +24,10 @@ class AuditInitializationTask(
         val hazelcastInstance: HazelcastInstance
 ) : HazelcastInitializationTask<AuditTaskDependencies> {
 
-    private val entityTypes = HazelcastMap.ENTITY_TYPES.getMap( hazelcastInstance )
-    private val entitySets = HazelcastMap.ENTITY_SETS.getMap( hazelcastInstance )
-    private val organizations = HazelcastMap.ORGANIZATIONS.getMap( hazelcastInstance )
-    private val auditRecordEntitySetConfigurations = HazelcastMap.AUDIT_RECORD_ENTITY_SETS.getMap( hazelcastInstance )
+    private val entityTypes = HazelcastMap.ENTITY_TYPES.getMap(hazelcastInstance)
+    private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
+    private val organizations = HazelcastMap.ORGANIZATIONS.getMap(hazelcastInstance)
+    private val auditRecordEntitySetConfigurations = HazelcastMap.AUDIT_RECORD_ENTITY_SETS.getMap(hazelcastInstance)
 
     override fun getInitialDelay(): Long {
         return 0
@@ -41,10 +40,11 @@ class AuditInitializationTask(
         }
         dependencies.entitySetManager.getAuditRecordEntitySetsManager().auditingTypes.intialize()
         logger.info("Creating any missing audit entity sets")
+        val auditedAclKeys = auditRecordEntitySetConfigurations.keys.toSet()
         ensureEdmEntitySetExists(dependencies)
-        ensureAllEntitySetsHaveAuditEntitySets(dependencies)
+        ensureAllEntitySetsHaveAuditEntitySets(dependencies, auditedAclKeys)
         ensureAllEntitySetsHaveAuditEdgeEntitySets(dependencies)
-        ensureAllOrganizationsHaveAuditEntitySets(dependencies)
+        ensureAllOrganizationsHaveAuditEntitySets(dependencies, auditedAclKeys)
     }
 
     override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
@@ -78,19 +78,16 @@ class AuditInitializationTask(
 
             if (dependencies.entitySetManager.getAuditRecordEntitySetsManager().auditingTypes.isAuditingInitialized()) {
 
-                edmAuditEntitySet = dependencies.partitionManager.allocatePartitions(
-                        EntitySet(
-                                dependencies.entitySetManager.getAuditRecordEntitySetsManager().auditingTypes
-                                        .auditingEntityTypeId,
-                                EDM_AUDIT_ENTITY_SET_NAME,
-                                "EDM Audit Entity Set",
-                                Optional.of("Audit entity set for the entity data model"),
-                                ImmutableSet.of(),
-                                Optional.empty(),
-                                IdConstants.GLOBAL_ORGANIZATION_ID.id,
-                                Optional.of(EnumSet.of(EntitySetFlag.AUDIT)),
-                                Optional.empty()),
-                        dependencies.partitionManager.getPartitionCount()
+                edmAuditEntitySet = EntitySet(
+                        entityTypeId = dependencies.entitySetManager.getAuditRecordEntitySetsManager().auditingTypes
+                                .auditingEntityTypeId,
+                        name = EDM_AUDIT_ENTITY_SET_NAME,
+                        _title = "EDM Audit Entity Set",
+                        _description = "Audit entity set for the entity data model",
+                        contacts = mutableSetOf(),
+                        organizationId = IdConstants.GLOBAL_ORGANIZATION_ID.id,
+                        flags = EnumSet.of(EntitySetFlag.AUDIT),
+                        partitions = LinkedHashSet(dependencies.partitionManager.getAllPartitions())
                 )
 
                 dependencies.entitySetManager.createEntitySet(admins.first(), edmAuditEntitySet)
@@ -111,10 +108,12 @@ class AuditInitializationTask(
         }
     }
 
-    private fun ensureAllEntitySetsHaveAuditEntitySets(dependencies: AuditTaskDependencies) {
+    private fun ensureAllEntitySetsHaveAuditEntitySets(
+            dependencies: AuditTaskDependencies, auditedAclKeys: Set<AclKey>
+    ) {
         entitySets.entries
                 .filter {
-                    !auditRecordEntitySetConfigurations.keys.contains(AclKey(it.key)) && !it.value.flags.contains(
+                    !auditedAclKeys.contains(AclKey(it.key)) && !it.value.flags.contains(
                             EntitySetFlag.AUDIT
                     )
                 }
@@ -136,9 +135,11 @@ class AuditInitializationTask(
 
     }
 
-    private fun ensureAllOrganizationsHaveAuditEntitySets(dependencies: AuditTaskDependencies) {
+    private fun ensureAllOrganizationsHaveAuditEntitySets(
+            dependencies: AuditTaskDependencies, auditedAclKeys: Set<AclKey>
+    ) {
         organizations.keys
-                .filter { !auditRecordEntitySetConfigurations.keys.contains(AclKey(it)) }
+                .filter { !auditedAclKeys.contains(AclKey(it)) }
                 .forEach {
                     dependencies.entitySetManager.getAuditRecordEntitySetsManager()
                             .createAuditEntitySetForOrganization(it)

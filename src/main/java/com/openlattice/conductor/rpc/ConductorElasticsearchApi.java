@@ -36,7 +36,11 @@ import com.openlattice.search.requests.EntityDataKeySearchResult;
 import com.openlattice.search.requests.SearchConstraints;
 import com.openlattice.search.requests.SearchResult;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 
 public interface ConductorElasticsearchApi {
 
@@ -106,10 +110,6 @@ public interface ConductorElasticsearchApi {
     // app_index setup consts
     String APP_INDEX = "app_index";
     String APP       = "app";
-
-    // app_type_index setup consts
-    String APP_TYPE_INDEX = "app_type_index";
-    String APP_TYPE       = "app_type";
 
     // entity set field consts
     String ENTITY_SET     = "entitySet";
@@ -260,8 +260,6 @@ public interface ConductorElasticsearchApi {
     /**
      * Re-indexing
      **/
-
-    boolean clearAllData();
 
     boolean triggerEntitySetIndex( Map<EntitySet, Set<UUID>> entitySets, Map<UUID, PropertyType> propertyTypes );
 

@@ -2,8 +2,9 @@ package com.openlattice.notifications.sms
 
 import com.google.common.collect.ImmutableSet
 import com.hazelcast.config.InMemoryFormat
+import com.hazelcast.config.IndexConfig
+import com.hazelcast.config.IndexType
 import com.hazelcast.config.MapConfig
-import com.hazelcast.config.MapIndexConfig
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresTable.SMS_INFORMATION
@@ -29,8 +30,8 @@ class SmsInformationMapstore(
         hds
 ) {
     companion object {
-        const val ORGANIZATION_ID_INDEX = "__key#organizationId"
-        const val PHONE_NUMBER_INDEX = "__key#phoneNumber"
+        const val ORGANIZATION_ID_INDEX = "__key.organizationId"
+        const val PHONE_NUMBER_INDEX = "__key.phoneNumber"
         const val ANY_ENTITY_SET_ID_INDEX = "entitySetIds[any]"
         const val ANY_TAG_INDEX = "entitySetIds[any]"
     }
@@ -51,10 +52,10 @@ class SmsInformationMapstore(
     override fun getMapConfig(): MapConfig {
         return super.getMapConfig()
                 .setInMemoryFormat(InMemoryFormat.OBJECT)
-                .addMapIndexConfig(MapIndexConfig(ORGANIZATION_ID_INDEX, false))
-                .addMapIndexConfig(MapIndexConfig(PHONE_NUMBER_INDEX, false))
-                .addMapIndexConfig(MapIndexConfig(ANY_ENTITY_SET_ID_INDEX, false))
-                .addMapIndexConfig(MapIndexConfig(ANY_TAG_INDEX, false))
+                .addIndexConfig(IndexConfig(IndexType.HASH, ORGANIZATION_ID_INDEX))
+                .addIndexConfig(IndexConfig(IndexType.HASH,PHONE_NUMBER_INDEX))
+                .addIndexConfig(IndexConfig(IndexType.HASH, ANY_ENTITY_SET_ID_INDEX))
+                .addIndexConfig(IndexConfig(IndexType.HASH,ANY_TAG_INDEX))
     }
 
     override fun bind(ps: PreparedStatement, key: SmsInformationKey, value: SmsEntitySetInformation) {
@@ -62,10 +63,12 @@ class SmsInformationMapstore(
 
         ps.setArray(offset++, PostgresArrays.createUuidArray(ps.connection, value.entitySetIds))
         ps.setArray(offset++, PostgresArrays.createTextArray(ps.connection, value.tags))
+        ps.setObject(offset++, value.lastSync)
 
         //For update clause
         ps.setArray(offset++, PostgresArrays.createUuidArray(ps.connection, value.entitySetIds))
-        ps.setArray(offset, PostgresArrays.createTextArray(ps.connection, value.tags))
+        ps.setArray(offset++, PostgresArrays.createTextArray(ps.connection, value.tags))
+        ps.setObject(offset, value.lastSync)
     }
 
     override fun mapToKey(rs: ResultSet): SmsInformationKey {

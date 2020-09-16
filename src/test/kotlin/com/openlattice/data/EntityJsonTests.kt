@@ -92,8 +92,8 @@ class EntityJsonTests {
         builder.put(p4, TestDataFactory.propertyType(EdmPrimitiveTypeKind.String))
 
         val details = JsonDeserializer.validateFormatAndNormalize(entity.details, builder.build())
-        Assert.assertTrue(details.get(p1).all { it != null })
-        Assert.assertTrue(details.get(p2).all { it != null })
+        Assert.assertTrue(details.getValue(p1).isNotEmpty())
+        Assert.assertTrue(details.getValue(p2).isNotEmpty())
     }
 
     @Test
@@ -111,7 +111,7 @@ class EntityJsonTests {
         entity.details.put( p1 , null )
 
         val details = JsonDeserializer.validateFormatAndNormalize(entity.details, builder.build())
-        Assert.assertTrue(details.get(p1).all { it != null })
-        Assert.assertTrue(details.get(p2).all { it != null })
+        Assert.assertTrue(details.getValue(p1).isEmpty())
+        Assert.assertTrue(details.getValue(p2).isNotEmpty())
     }
 }

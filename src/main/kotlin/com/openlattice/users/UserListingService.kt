@@ -22,11 +22,21 @@
 package com.openlattice.users
 
 import com.auth0.json.mgmt.users.User
+import java.time.Instant
 
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 interface UserListingService {
-    fun getUsers() : Sequence<User>
+    /**
+     * Retrieves all users as a sequence.
+     */
+    fun getAllUsers() : Sequence<User>
+
+    /**
+     * Retrieves updated users where update was happening after [from] (exclusive) and at or before [to] (inclusive)
+     * as a sequence.
+     */
+    fun getUpdatedUsers(from: Instant, to: Instant) : Sequence<User>
 }

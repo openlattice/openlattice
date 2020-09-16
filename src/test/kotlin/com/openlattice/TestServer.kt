@@ -63,7 +63,7 @@ open class TestServer {
 
             hazelcastInstance = testServer.context.getBean(HazelcastInstance::class.java)
             hds = testServer.context.getBean(HikariDataSource::class.java)
-            val edm = PostgresEdmManager(hds, hazelcastInstance)
+            val edm = PostgresEdmManager(hds)
 
             testServer.context.getBean(EventBus::class.java)
                     .register(edm)

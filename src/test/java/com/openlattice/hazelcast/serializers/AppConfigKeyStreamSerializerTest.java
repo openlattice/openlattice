@@ -20,11 +20,9 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.openlattice.hazelcast.serializers.AppConfigKeyStreamSerializer;
-import com.openlattice.apps.AppConfigKey;
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest;
-
-import java.util.UUID;
+import com.openlattice.apps.AppConfigKey;
+import com.openlattice.mapstores.TestDataFactory;
 
 public class AppConfigKeyStreamSerializerTest
         extends AbstractStreamSerializerTest<AppConfigKeyStreamSerializer, AppConfigKey> {
@@ -33,6 +31,6 @@ public class AppConfigKeyStreamSerializerTest
     }
 
     @Override protected AppConfigKey createInput() {
-        return new AppConfigKey( UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID() );
+        return TestDataFactory.appConfigKey();
     }
 }

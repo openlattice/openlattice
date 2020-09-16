@@ -1,0 +1,81 @@
+<!doctype html>
+<html>
+<head>
+    <title>CARE Issue{{subtitle}}</title>
+    <style>
+
+      @import url("//fonts.googleapis.com/css?family=Inter:400,600");
+
+      h1 {
+        font-family: 'Inter', Arial, sans-serif;
+        font-weight: 600;
+        font-size: 18px;
+        line-height: normal;
+        color: #555e6f;
+        text-transform: uppercase;
+      }
+
+      .header {
+        font-size: 16px;
+        text-transform: uppercase;
+        line-height: normal;
+        color: #8e929b;
+        padding-top: 10px;
+      }
+
+      body {
+        font-family: 'Inter', Arial, sans-serif;
+        line-height: 1.5;
+        color: #333;
+      }
+
+      .divider {
+        width: 100%;
+        background-color: #e1e1eb;
+        height: 1px;
+        margin: 20px 0;
+      }
+
+      .detail {
+        font-family: 'Inter', Arial, sans-serif;
+        padding-top: 5px;
+      }
+
+      .footer {
+        padding-top: 10px;
+        border-top: 1px solid #e1e1eb;
+        margin-top: 30px;
+        color: #717175;
+      }
+
+    </style>
+</head>
+
+<body>
+    <div>
+        <h1>{{title}}</h1>
+        <div class="detail">
+            {{{viewIssueTag}}}
+        </div>
+
+        <div class="divider" />
+        <div class="detail"><b>Title:</b> {{title}}</div>
+        <div class="detail"><b>Priority:</b> {{priority}}</div>
+        <div class="detail"><b>Status:</b> {{status}}</div>
+        <div class="detail"><b>Reporter:</b> {{reporter}}</div>
+        <div class="detail"><b>Created:</b> {{createdDateTime}}</div>
+        <div class="detail"><b>Updated:</b> {{updatedDateTime}}</div>
+        <div class="detail"><b>Assignee:</b> {{assignee}}</div>
+        <div class="detail"><b>Subject:</b> {{formattedName}}</div>
+        <div class="detail"><b>Category:</b> {{category}}</div>
+        <div class="detail"><b>Description:</b> {{description}}</div>
+
+        <div class="divider" />
+        <div class="footer">
+            <span>This subscription was created by {{subscriber}}.</span>
+            <span>To report an issue, go to <a href="https://support.openlattice.com/servicedesk/customer/portal/1">https://support.openlattice.com/servicedesk/customer/portal/1</a></span>
+        </div>
+
+    </div>
+</body>
+</html>

@@ -29,7 +29,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IMap;
+import com.hazelcast.map.IMap;
+import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor;
 import com.openlattice.authorization.securable.AbstractSchemaAssociatedSecurableType;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.edm.Schema;
@@ -153,7 +154,7 @@ public class HazelcastSchemaManager {
             IMap<UUID, T> m,
             Set<UUID> typeUuids,
             Collection<FullQualifiedName> schemaNames ) {
-        AddSchemasToType ep = new AddSchemasToType( schemaNames );
+        final var ep = new AddSchemasToType( schemaNames );
         m.executeOnKeys( typeUuids, ep );
     }
 

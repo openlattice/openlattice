@@ -260,6 +260,16 @@ class AssemblerConnectionManager(
         }
     }
 
+    fun updateCredentialInDatabase(organizationId: UUID, userId: String, credential: String) {
+        val updateSql = updateUserCredentialSql(userId, credential)
+
+        connect(buildOrganizationDatabaseName(organizationId)).connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                stmt.execute(updateSql)
+            }
+        }
+    }
+
     private fun createOrganizationDatabase(organizationId: UUID, dbName: String) {
         val db = quote(dbName)
         val dbRole = buildOrganizationRoleName(dbName)
@@ -755,6 +765,10 @@ internal fun createUserIfNotExistsSql(dbUser: String, dbUserPassword: String): S
             "   END IF;\n" +
             "END\n" +
             "\$do\$;"
+}
+
+internal fun updateUserCredentialSql(dbUser: String, credential: String): String {
+    return "ALTER ROLE $dbUser WITH ENCRYPTED PASSWORD '$credential'"
 }
 
 

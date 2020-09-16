@@ -44,7 +44,7 @@ class HazelcastQueuePod {
     @Bean
     fun idGenerationQueueConfigurer(): QueueConfigurer {
         return QueueConfigurer(HazelcastQueue.ID_GENERATION.name) { config ->
-            config.setMaxSize(HazelcastIdGenerationService.NUM_PARTITIONS * 3).backupCount = 1
+            config.setMaxSize(HazelcastIdGenerationService.NUM_PARTITIONS * 10).backupCount = 1
         }
     }
 

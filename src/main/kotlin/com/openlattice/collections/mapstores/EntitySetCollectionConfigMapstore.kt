@@ -1,8 +1,6 @@
 package com.openlattice.collections.mapstores
 
-import com.hazelcast.config.InMemoryFormat
-import com.hazelcast.config.MapConfig
-import com.hazelcast.config.MapIndexConfig
+import com.hazelcast.config.*
 import com.openlattice.collections.CollectionTemplateKey
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.postgres.PostgresTable
@@ -13,13 +11,14 @@ import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.util.*
 
-const val ENTITY_SET_COLLECTION_ID_INDEX = "__key#entitySetCollectionId"
+const val ENTITY_SET_COLLECTION_ID_INDEX = "__key.entitySetCollectionId"
 const val ENTITY_SET_ID_INDEX = "this"
 
 open class EntitySetCollectionConfigMapstore(
         val hds: HikariDataSource
 ) : AbstractBasePostgresMapstore<CollectionTemplateKey, UUID>(
-        HazelcastMap.ENTITY_SET_COLLECTION_CONFIG, PostgresTable.ENTITY_SET_COLLECTION_CONFIG, hds) {
+        HazelcastMap.ENTITY_SET_COLLECTION_CONFIG, PostgresTable.ENTITY_SET_COLLECTION_CONFIG, hds
+) {
 
     override fun bind(ps: PreparedStatement, key: CollectionTemplateKey, value: UUID) {
         var index = bind(ps, key, 1)
@@ -49,8 +48,8 @@ open class EntitySetCollectionConfigMapstore(
 
     override fun getMapConfig(): MapConfig {
         return super.getMapConfig()
-                .addMapIndexConfig(MapIndexConfig(ENTITY_SET_COLLECTION_ID_INDEX, false))
-                .addMapIndexConfig(MapIndexConfig(ENTITY_SET_ID_INDEX, false))
+                .addIndexConfig(IndexConfig(IndexType.HASH, ENTITY_SET_COLLECTION_ID_INDEX))
+                .addIndexConfig(IndexConfig(IndexType.HASH, ENTITY_SET_ID_INDEX))
                 .setInMemoryFormat(InMemoryFormat.OBJECT)
     }
 

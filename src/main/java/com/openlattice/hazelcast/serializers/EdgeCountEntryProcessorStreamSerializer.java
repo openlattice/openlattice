@@ -23,7 +23,7 @@ package com.openlattice.hazelcast.serializers;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.kryptnostic.rhizome.hazelcast.serializers.AbstractUUIDStreamSerializer;
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.graph.core.objects.EdgeCountEntryProcessor;
@@ -44,13 +44,13 @@ public class EdgeCountEntryProcessorStreamSerializer
 
     @Override public void write(
             ObjectDataOutput out, EdgeCountEntryProcessor object ) throws IOException {
-        AbstractUUIDStreamSerializer.serialize( out, object.getAssociationTypeId() );
+        UUIDStreamSerializerUtils.serialize( out, object.getAssociationTypeId() );
         SetStreamSerializers.fastUUIDSetSerialize( out, object.getNeighborTypeIds() );
 
     }
 
     @Override public EdgeCountEntryProcessor read( ObjectDataInput in ) throws IOException {
-        UUID associationTypeId = AbstractUUIDStreamSerializer.deserialize( in );
+        UUID associationTypeId = UUIDStreamSerializerUtils.deserialize( in );
         Set<UUID> neighorhoodTypeIds = SetStreamSerializers.fastUUIDSetDeserialize( in );
 
         return new EdgeCountEntryProcessor( associationTypeId, neighorhoodTypeIds );

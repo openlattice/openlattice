@@ -22,6 +22,9 @@
 
 package com.openlattice.hazelcast.pods;
 
+import com.kryptnostic.rhizome.hazelcast.serializers.ListStreamSerializers.DelegatedUUIDListStreamSerializer;
+import com.openlattice.hazelcast.StreamSerializerTypeIds;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.FilterType;
@@ -35,4 +38,14 @@ import com.openlattice.hazelcast.serializers.SharedStreamSerializers;
     includeFilters = @ComponentScan.Filter(
         value = { Component.class },
         type = FilterType.ANNOTATION ) )
-public class SharedStreamSerializersPod {}
+public class SharedStreamSerializersPod {
+    @Bean
+    public DelegatedUUIDListStreamSerializer delegatedUUIDListStreamSerializer() {
+        return new DelegatedUUIDListStreamSerializer() {
+            @Override public int getTypeId() {
+                return StreamSerializerTypeIds.DELEGATED_UUID_LIST.ordinal();
+            }
+        };
+    }
+}
+

@@ -26,8 +26,7 @@ import com.google.common.base.Preconditions.checkState
 import com.google.common.collect.Sets
 import com.google.common.eventbus.EventBus
 import com.hazelcast.core.HazelcastInstance
-import com.hazelcast.core.IMap
-import com.hazelcast.query.Predicate
+import com.hazelcast.map.IMap
 import com.hazelcast.query.Predicates
 import com.hazelcast.query.QueryConstants
 import com.openlattice.assembler.events.MaterializedEntitySetEdmChangeEvent
@@ -37,13 +36,16 @@ import com.openlattice.auditing.AuditingConfiguration
 import com.openlattice.auditing.AuditingTypes
 import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
+import com.openlattice.authorization.securable.SecurableObjectType.PropertyTypeInEntitySet
+import com.openlattice.controllers.exceptions.ResourceNotFoundException
+import com.openlattice.data.storage.PostgresEntitySetSizesInitializationTask
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.util.Util
 import com.openlattice.edm.EntitySet
-import com.openlattice.edm.PostgresEdmManager
 import com.openlattice.edm.events.*
 import com.openlattice.edm.processors.EntitySetsFlagFilteringAggregator
 import com.openlattice.edm.processors.GetEntityTypeFromEntitySetEntryProcessor
+import com.openlattice.edm.processors.GetNormalEntitySetIdsEntryProcessor
 import com.openlattice.edm.processors.GetPropertiesFromEntityTypeEntryProcessor
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.edm.set.EntitySetFlag
@@ -58,19 +60,24 @@ import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.processors.AddEntitySetsToLinkingEntitySetProcessor
 import com.openlattice.hazelcast.processors.RemoveDataExpirationPolicyProcessor
 import com.openlattice.hazelcast.processors.RemoveEntitySetsFromLinkingEntitySetProcessor
+import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.mapstores.EntitySetMapstore
-import edu.umd.cs.findbugs.classfile.ResourceNotFoundException
+import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
+import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Service
 import java.util.*
+import kotlin.collections.LinkedHashSet
 
-open class EntitySetService(
+@Service
+class EntitySetService(
         hazelcastInstance: HazelcastInstance,
         private val eventBus: EventBus,
-        private val edmManager: PostgresEdmManager,
         private val aclKeyReservations: HazelcastAclKeyReservationService,
         private val authorizations: AuthorizationManager,
         private val partitionManager: PartitionManager,
         private val edm: EdmManager,
+        private val hds: HikariDataSource,
         auditingConfiguration: AuditingConfiguration
 ) : EntitySetManager {
 
@@ -82,29 +89,29 @@ open class EntitySetService(
             hazelcastInstance
     )
 
-
     companion object {
         private val logger = LoggerFactory.getLogger(EntitySetManager::class.java)
     }
 
-    private val entitySets = HazelcastMap.ENTITY_SETS.getMap( hazelcastInstance )
-    private val entityTypes = HazelcastMap.ENTITY_TYPES.getMap( hazelcastInstance )
+    private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
+    private val entityTypes = HazelcastMap.ENTITY_TYPES.getMap(hazelcastInstance)
     private val associationTypes: IMap<UUID, AssociationType> =
-            HazelcastMap.ASSOCIATION_TYPES.getMap( hazelcastInstance )
-    private val propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap( hazelcastInstance )
+            HazelcastMap.ASSOCIATION_TYPES.getMap(hazelcastInstance)
+    private val propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap(hazelcastInstance)
     private val entitySetPropertyMetadata: IMap<EntitySetPropertyKey, EntitySetPropertyMetadata> =
-            HazelcastMap.ENTITY_SET_PROPERTY_METADATA.getMap( hazelcastInstance )
+            HazelcastMap.ENTITY_SET_PROPERTY_METADATA.getMap(hazelcastInstance)
 
-    private val aclKeys = HazelcastMap.ACL_KEYS.getMap( hazelcastInstance )
-
+    private val aclKeys = HazelcastMap.ACL_KEYS.getMap(hazelcastInstance)
 
     override fun createEntitySet(principal: Principal, entitySet: EntitySet): UUID {
-        val entityType = Util.getSafely(entityTypes, entitySet.entityTypeId)
         ensureValidEntitySet(entitySet)
+        Principals.ensureUser(principal)
 
         if (entitySet.partitions.isEmpty()) {
-            partitionManager.allocatePartitions(entitySet)
+            partitionManager.allocateEntitySetPartitions(entitySet)
         }
+
+        val entityType = entityTypes.getValue(entitySet.entityTypeId)
 
         if (entityType.category == SecurableObjectType.AssociationType) {
             entitySet.addFlag(EntitySetFlag.ASSOCIATION)
@@ -112,106 +119,116 @@ open class EntitySetService(
             entitySet.removeFlag(EntitySetFlag.ASSOCIATION)
         }
 
-        return createEntitySet(principal, entitySet, entityType.properties)
-    }
-
-    override fun createEntitySet(principal: Principal, entitySet: EntitySet, ownablePropertyTypeIds: Set<UUID>): UUID {
-        Principals.ensureUser(principal)
-        val esid = createEntitySet(entitySet)
+        val entitySetId = reserveEntitySetIfNotExists(entitySet)
 
         try {
-            setupDefaultEntitySetPropertyMetadata(entitySet.id, entitySet.entityTypeId)
+            setupDefaultEntitySetPropertyMetadata(entitySetId, entitySet.entityTypeId)
 
-            authorizations.setSecurableObjectType(AclKey(entitySet.id), SecurableObjectType.EntitySet)
+            val aclKey = AclKey(entitySetId)
 
-            authorizations.addPermission(
-                    AclKey(entitySet.id),
+            authorizations.setSecurableObjectType(aclKey, SecurableObjectType.EntitySet)
+            authorizations.addPermission(aclKey, principal, EnumSet.allOf(Permission::class.java))
+
+            val aclKeys = entityType.properties.mapTo(mutableSetOf()) { propertyTypeId ->
+                AclKey(
+                        entitySetId,
+                        propertyTypeId
+                )
+            }
+
+            authorizations.setSecurableObjectTypes(aclKeys, PropertyTypeInEntitySet)
+            authorizations.addPermissions(
+                    aclKeys,
                     principal,
-                    EnumSet.allOf(Permission::class.java)
+                    EnumSet.allOf(Permission::class.java),
+                    PropertyTypeInEntitySet
             )
 
-            ownablePropertyTypeIds
-                    .map { propertyTypeId -> AclKey(entitySet.id, propertyTypeId) }
-                    .onEach { aclKey ->
-                        authorizations.setSecurableObjectType(aclKey, SecurableObjectType.PropertyTypeInEntitySet)
-                    }
-                    .forEach { aclKey ->
-                        authorizations.addPermission(aclKey, principal, EnumSet.allOf(Permission::class.java))
-                    }
+            aresManager.createAuditEntitySetForEntitySet(entitySet)
 
-            val ownablePropertyTypes = propertyTypes.getAll(ownablePropertyTypeIds).values.toList()
-
+            val ownablePropertyTypes = propertyTypes.getAll(entityType.properties).values.toList()
             eventBus.post(EntitySetCreatedEvent(entitySet, ownablePropertyTypes))
 
-            if (!entitySet.flags.contains(EntitySetFlag.AUDIT)) {
-                aresManager.createAuditEntitySetForEntitySet(entitySet)
-            }
-
         } catch (e: Exception) {
-            logger.error("Unable to create entity set $entitySet for principal $principal", e)
-            Util.deleteSafely(entitySets, entitySet.id)
-            aclKeyReservations.release(entitySet.id)
-            throw IllegalStateException("Unable to create entity set: ${entitySet.id}")
+            logger.error("Unable to create entity set ${entitySet.name} (${entitySet.id}) for principal $principal", e)
+            deleteEntitySet(entitySet, entityType)
+            throw IllegalStateException("Unable to create entity set ${entitySet.id}. $e")
         }
-        return esid
+
+        return entitySetId
     }
 
-    private fun ensureValidEntitySet(entitySet: EntitySet) {
-        if (entitySet.isLinking) {
-            entitySet.linkedEntitySets.forEach { linkedEntitySetId ->
-                checkArgument(getEntityTypeByEntitySetId(linkedEntitySetId).id == entitySet.entityTypeId,
-                        "Entity type of linked entity sets must be the same as of the linking entity set")
-            }
-        }
-    }
-
-    private fun setupDefaultEntitySetPropertyMetadata(entitySetId: UUID, entityTypeId: UUID) {
-        val et = edm.getEntityType(entityTypeId)
-        val propertyTags = et.propertyTags
-        et.properties.forEach { propertyTypeId ->
-            val key = EntitySetPropertyKey(entitySetId, propertyTypeId)
-            val property = edm.getPropertyType(propertyTypeId)
-            val metadata = EntitySetPropertyMetadata(
-                    property.title,
-                    property.description,
-                    LinkedHashSet(propertyTags.get(propertyTypeId)),
-                    true)
-            entitySetPropertyMetadata[key] = metadata
-        }
-    }
-
-    private fun createEntitySet(entitySet: EntitySet): UUID {
+    private fun reserveEntitySetIfNotExists(entitySet: EntitySet): UUID {
         aclKeyReservations.reserveIdAndValidateType(entitySet)
 
         checkState(entitySets.putIfAbsent(entitySet.id, entitySet) == null, "Entity set already exists.")
         return entitySet.id
     }
 
-    override fun deleteEntitySet(entitySetId: UUID) {
-        val entitySet = Util.getSafely(entitySets, entitySetId)
-        val entityType = edm.getEntityType(entitySet.entityTypeId)
+    private fun setupDefaultEntitySetPropertyMetadata(entitySetId: UUID, entityTypeId: UUID) {
+        val et = edm.getEntityType(entityTypeId)
+        val propertyTags = et.propertyTags
+        entitySetPropertyMetadata.putAll(edm.getPropertyTypes(et.properties).associate { property ->
+            val key = EntitySetPropertyKey(entitySetId, property.id)
+            val metadata = EntitySetPropertyMetadata(
+                    property.title,
+                    property.description,
+                    propertyTags.getOrDefault(property.id, LinkedHashSet()),
+                    true
+            )
 
+            key to metadata
+        })
+    }
+
+    private fun ensureValidEntitySet(entitySet: EntitySet) {
+        checkArgument(
+                entityTypes.containsKey(entitySet.entityTypeId),
+                "Entity Set Type does not exists."
+        )
+
+        if (entitySet.isLinking) {
+            entitySet.linkedEntitySets.forEach { linkedEntitySetId ->
+                checkArgument(
+                        getEntityTypeByEntitySetId(linkedEntitySetId).id == entitySet.entityTypeId,
+                        "Entity type of linked entity sets must be the same as of the linking entity set."
+                )
+                checkArgument(
+                        !getEntitySet(linkedEntitySetId)!!.isLinking,
+                        "Cannot add linking entity set as linked entity set."
+                )
+            }
+        }
+    }
+
+    override fun deleteEntitySet(entitySet: EntitySet) {
         // If this entity set is linked to a linking entity set, we need to collect all the linking ids of the entity
         // set first in order to be able to reindex those, before entity data is unavailable
         if (!entitySet.isLinking) {
-            checkAndRemoveEntitySetLinks(entitySetId)
+            checkAndRemoveEntitySetLinks(entitySet.id)
         }
 
+        val entityType = edm.getEntityType(entitySet.entityTypeId)
+        deleteEntitySet(entitySet, entityType)
+
+        eventBus.post(EntitySetDeletedEvent(entitySet.id, entityType.id))
+        logger.info("Entity set ${entitySet.name} (${entitySet.id}) deleted successfully.")
+    }
+
+    private fun deleteEntitySet(entitySet: EntitySet, entityType: EntityType) {
         /*
          * We cleanup permissions first as this will make entity set unavailable, even if delete fails.
          */
-        authorizations.deletePermissions(AclKey(entitySetId))
+        authorizations.deletePermissions(AclKey(entitySet.id))
         entityType.properties
-                .map { propertyTypeId -> AclKey(entitySetId, propertyTypeId) }
+                .map { propertyTypeId -> AclKey(entitySet.id, propertyTypeId) }
                 .forEach { aclKey ->
                     authorizations.deletePermissions(aclKey)
                     entitySetPropertyMetadata.delete(EntitySetPropertyKey(aclKey[0], aclKey[1]))
                 }
 
-        Util.deleteSafely(entitySets, entitySetId)
-        aclKeyReservations.release(entitySetId)
-        eventBus.post(EntitySetDeletedEvent(entitySetId, entityType.id))
-        logger.info("Entity set ${entitySet.name}($entitySetId) deleted successfully")
+        aclKeyReservations.release(entitySet.id)
+        Util.deleteSafely(entitySets, entitySet.id)
     }
 
     /**
@@ -220,12 +237,33 @@ open class EntitySetService(
      * @param entitySetId the id of the deleted entity set
      */
     private fun checkAndRemoveEntitySetLinks(entitySetId: UUID) {
-        edmManager.getAllLinkingEntitySetIdsForEntitySet(entitySetId).forEach { linkingEntitySetId ->
+        edm.getAllLinkingEntitySetIdsForEntitySet(entitySetId).forEach { linkingEntitySetId ->
             removeLinkedEntitySets(linkingEntitySetId, setOf(entitySetId))
             logger.info(
                     "Removed link between linking entity set ($linkingEntitySetId) and deleted entity set " +
                             "($entitySetId)"
             )
+        }
+    }
+
+    private val GET_ENTITY_SET_COUNT = """
+        SELECT ${PostgresColumn.COUNT} 
+            FROM ${PostgresEntitySetSizesInitializationTask.ENTITY_SET_SIZES_VIEW} 
+            WHERE ${PostgresColumn.ENTITY_SET_ID.name} = ?
+    """.trimIndent()
+
+    override fun getEntitySetSize(entitySetId: UUID): Long {
+        return hds.connection.use { connection ->
+            connection.prepareStatement(GET_ENTITY_SET_COUNT).use { ps ->
+                ps.setObject(1, entitySetId)
+                ps.executeQuery().use { rs ->
+                    if (rs.next()) {
+                        rs.getLong(1)
+                    } else {
+                        0
+                    }
+                }
+            }
         }
     }
 
@@ -247,7 +285,7 @@ open class EntitySetService(
     }
 
     override fun getEntitySets(): Iterable<EntitySet> {
-        return edmManager.allEntitySets
+        return entitySets.values
     }
 
     override fun getEntitySetsOfType(entityTypeIds: Set<UUID>): Collection<EntitySet> {
@@ -262,10 +300,14 @@ open class EntitySetService(
         return entitySets.keySet(Predicates.equal(EntitySetMapstore.ENTITY_TYPE_ID_INDEX, entityTypeId))
     }
 
+    @Suppress("UNCHECKED_CAST")
     override fun getEntitySetIdsWithFlags(entitySetIds: Set<UUID>, filteringFlags: Set<EntitySetFlag>): Set<UUID> {
         return entitySets.aggregate(
                 EntitySetsFlagFilteringAggregator(filteringFlags),
-                Predicates.`in`(QueryConstants.KEY_ATTRIBUTE_NAME.value(), *entitySetIds.toTypedArray()) as Predicate<UUID, EntitySet>
+                Predicates.`in`(
+                        QueryConstants.KEY_ATTRIBUTE_NAME.value(),
+                        *entitySetIds.toTypedArray()
+                )
         )
     }
 
@@ -278,6 +320,7 @@ open class EntitySetService(
         return edm.getEntityType(entityTypeId)
     }
 
+    @Suppress("UNCHECKED_CAST")
     override fun getEntityTypeIdsByEntitySetIds(entitySetIds: Set<UUID>): Map<UUID, UUID> {
         return entitySets.executeOnKeys(entitySetIds, GetEntityTypeFromEntitySetEntryProcessor()) as Map<UUID, UUID>
     }
@@ -308,17 +351,67 @@ open class EntitySetService(
     }
 
     override fun entitySetsContainFlag(entitySetIds: Set<UUID>, flag: EntitySetFlag): Boolean {
-        return entitySets.executeOnKeys(entitySetIds, EntitySetContainsFlagEntryProcessor(flag)).values.any { it as Boolean }
+        return entitySets.executeOnKeys(
+                entitySetIds,
+                EntitySetContainsFlagEntryProcessor(flag)
+        ).values.any { it as Boolean }
     }
 
     @Timed
+    @Suppress("UNCHECKED_CAST")
+    override fun filterToAuthorizedNormalEntitySets(
+            entitySetIds: Set<UUID>,
+            permissions: EnumSet<Permission>,
+            principals: Set<Principal>
+    ): Set<UUID> {
+
+        val accessChecks = mutableMapOf<AclKey, EnumSet<Permission>>()
+
+        val entitySetIdToNormalEntitySetIds = entitySets.executeOnKeys(
+                entitySetIds,
+                GetNormalEntitySetIdsEntryProcessor()
+        ).mapValues {
+            val set = (it.value as DelegatedUUIDSet).unwrap()
+            set.forEach {
+                accessChecks.putIfAbsent(AclKey(it), permissions)
+            }
+            set
+        }
+
+        val entitySetsToAuthorizedStatus = authorizations.authorize(accessChecks, principals)
+                .map { it.key.first() to it.value.values.all { bool -> bool } }.toMap()
+
+        return entitySetIdToNormalEntitySetIds.filterValues { it.all { id -> entitySetsToAuthorizedStatus.getValue(id) } }.keys
+    }
+
+    @Timed
+    override fun getPropertyTypesOfEntitySets(entitySetIds: Set<UUID>): Map<UUID, Map<UUID, PropertyType>> {
+        val entityTypesOfEntitySets = getEntityTypeIdsByEntitySetIds(entitySetIds)
+        val missingEntitySetIds = entitySetIds - entityTypesOfEntitySets.keys
+
+        check(missingEntitySetIds.isEmpty()) { "Missing the following entity set ids: $missingEntitySetIds" }
+
+        val entityTypesAsMap = edm.getEntityTypesAsMap(entityTypesOfEntitySets.values.toSet())
+        val propertyTypesAsMap = edm.getPropertyTypesAsMap(entityTypesAsMap.values.map { it.properties }.flatten().toSet())
+
+        return entitySetIds.associateWith {
+            entityTypesAsMap.getValue(entityTypesOfEntitySets.getValue(it))
+                    .properties
+                    .associateWith { ptId -> propertyTypesAsMap.getValue(ptId) }
+        }
+    }
+
+    override fun exists(entitySetId: UUID): Boolean = entitySets.containsKey(entitySetId)
+
+    @Timed
+    @Suppress("UNCHECKED_CAST")
     override fun getPropertyTypesForEntitySet(entitySetId: UUID): Map<UUID, PropertyType> {
         val maybeEtId = entitySets.executeOnKey(entitySetId, GetEntityTypeFromEntitySetEntryProcessor())
                 as? UUID
                 ?: throw  ResourceNotFoundException("Entity set $entitySetId does not exist.")
 
         val maybeEtProps = entityTypes.executeOnKey(maybeEtId, GetPropertiesFromEntityTypeEntryProcessor())
-                as? Set<UUID>
+                as? DelegatedUUIDSet
                 ?: throw  ResourceNotFoundException("Entity type $maybeEtId does not exist.")
 
         return propertyTypes.getAll(maybeEtProps)
@@ -339,10 +432,14 @@ open class EntitySetService(
         }
     }
 
+    @Suppress("UNCHECKED_CAST")
     override fun getAllEntitySetPropertyMetadataForIds(
             entitySetIds: Set<UUID>
     ): Map<UUID, Map<UUID, EntitySetPropertyMetadata>> {
-        val entityTypesByEntitySetId = entitySets.executeOnKeys(entitySetIds, GetEntityTypeFromEntitySetEntryProcessor()) as Map<UUID, UUID>
+        val entityTypesByEntitySetId = entitySets.executeOnKeys(
+                entitySetIds,
+                GetEntityTypeFromEntitySetEntryProcessor()
+        ) as Map<UUID, UUID>
         val entityTypesById = entityTypes.getAll(entityTypesByEntitySetId.values.toSet())
 
         val keys = entitySetIds
@@ -364,7 +461,7 @@ open class EntitySetService(
         missingKeys.forEach { newKey ->
             val propertyType = missingPropertyTypesById.getValue(newKey.propertyTypeId)
             val propertyTags = entityTypesById.getValue(entityTypesByEntitySetId.getValue(newKey.entitySetId))
-                    .propertyTags.get(newKey.propertyTypeId)
+                    .propertyTags.getOrDefault(newKey.propertyTypeId, LinkedHashSet())
 
             val defaultMetadata = EntitySetPropertyMetadata(
                     propertyType.title,
@@ -469,12 +566,12 @@ open class EntitySetService(
     }
 
     override fun getLinkedEntitySets(entitySetId: UUID): Set<EntitySet> {
-        val linkedEntitySetIds = getEntitySet(entitySetId)!!.linkedEntitySets ?: setOf()
+        val linkedEntitySetIds = getEntitySet(entitySetId)!!.linkedEntitySets
         return entitySets.getAll(linkedEntitySetIds).values.toSet()
     }
 
     override fun getLinkedEntitySetIds(entitySetId: UUID): Set<UUID> {
-        return getEntitySet(entitySetId)!!.linkedEntitySets ?: setOf()
+        return entitySets.executeOnKey(entitySetId) { DelegatedUUIDSet.wrap(it.value?.linkedEntitySets ?: mutableSetOf()) }
     }
 
     override fun removeDataExpirationPolicy(entitySetId: UUID) {

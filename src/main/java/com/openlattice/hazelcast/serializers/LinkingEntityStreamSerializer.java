@@ -20,6 +20,7 @@
 
 package com.openlattice.hazelcast.serializers;
 
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -49,7 +50,7 @@ public class LinkingEntityStreamSerializer implements SelfRegisteringStreamSeria
         Map<UUID, DelegatedStringSet> entity = object.getEntity();
         out.writeInt( entity.size() );
         for ( Map.Entry<UUID, DelegatedStringSet> entry : entity.entrySet() ) {
-            UUIDStreamSerializer.serialize( out, entry.getKey() );
+            UUIDStreamSerializerUtils.serialize( out, entry.getKey() );
             int setSize = entry.getValue().size();
             out.writeInt( setSize );
             for ( String str : entry.getValue() ) {
@@ -62,7 +63,7 @@ public class LinkingEntityStreamSerializer implements SelfRegisteringStreamSeria
         Map<UUID, DelegatedStringSet> result = Maps.newHashMap();
         int mapSize = in.readInt();
         for ( int i = 0; i < mapSize; i++ ) {
-            UUID id = UUIDStreamSerializer.deserialize( in );
+            UUID id = UUIDStreamSerializerUtils.deserialize( in );
             Set<String> strings = Sets.newHashSet();
             int setSize = in.readInt();
             for ( int j = 0; j < setSize; j++ ) {

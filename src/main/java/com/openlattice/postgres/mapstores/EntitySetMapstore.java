@@ -3,8 +3,9 @@ package com.openlattice.postgres.mapstores;
 import static com.openlattice.postgres.PostgresTable.ENTITY_SETS;
 
 import com.hazelcast.config.InMemoryFormat;
+import com.hazelcast.config.IndexConfig;
+import com.hazelcast.config.IndexType;
 import com.hazelcast.config.MapConfig;
-import com.hazelcast.config.MapIndexConfig;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.hazelcast.HazelcastMap;
@@ -12,8 +13,11 @@ import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.postgres.PostgresArrays;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.zaxxer.hikari.HikariDataSource;
-
-import java.sql.*;
+import java.sql.Array;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Types;
 import java.util.UUID;
 
 public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, EntitySet> {
@@ -45,6 +49,7 @@ public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, Entity
         ps.setObject( index++, value.getOrganizationId() );
         ps.setArray( index++, flags );
         ps.setArray( index++, partitions );
+        ps.setString( index++, value.getStorageType().name() );
         if ( value.getExpiration() == null ) {
             ps.setNull( index++, Types.NULL );
             ps.setNull( index++, Types.NULL );
@@ -71,6 +76,7 @@ public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, Entity
         ps.setObject( index++, value.getOrganizationId() );
         ps.setArray( index++, flags );
         ps.setArray( index++, partitions );
+        ps.setString( index++, value.getStorageType().name() );
         if ( value.getExpiration() == null ) {
             ps.setNull( index++, Types.NULL );
             ps.setNull( index++, Types.NULL );
@@ -113,10 +119,10 @@ public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, Entity
         return super
                 .getMapConfig()
                 .setInMemoryFormat( InMemoryFormat.OBJECT )
-                .addMapIndexConfig( new MapIndexConfig( ENTITY_TYPE_ID_INDEX, false ) )
-                .addMapIndexConfig( new MapIndexConfig( ID_INDEX, false ) )
-                .addMapIndexConfig( new MapIndexConfig( LINKED_ENTITY_SET_INDEX, false ) )
-                .addMapIndexConfig( new MapIndexConfig( ORGANIZATION_INDEX, false ) )
-                .addMapIndexConfig( new MapIndexConfig( FLAGS_INDEX, false ) );
+                .addIndexConfig( new IndexConfig( IndexType.HASH, ENTITY_TYPE_ID_INDEX) )
+                .addIndexConfig( new IndexConfig( IndexType.HASH, ID_INDEX) )
+                .addIndexConfig( new IndexConfig( IndexType.HASH, LINKED_ENTITY_SET_INDEX) )
+                .addIndexConfig( new IndexConfig( IndexType.HASH, ORGANIZATION_INDEX) )
+                .addIndexConfig( new IndexConfig( IndexType.HASH, FLAGS_INDEX  ) );
     }
 }

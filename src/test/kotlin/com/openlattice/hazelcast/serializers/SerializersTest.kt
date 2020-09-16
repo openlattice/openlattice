@@ -56,5 +56,4 @@ class SerializersTest(val serializer: TestableSelfRegisteringStreamSerializer<An
             throw e
         }
     }
-
 }

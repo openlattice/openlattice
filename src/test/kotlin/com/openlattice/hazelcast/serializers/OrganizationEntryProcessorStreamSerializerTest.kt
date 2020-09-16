@@ -4,9 +4,8 @@ import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTes
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.organizations.Organization
 import com.openlattice.organizations.processors.OrganizationEntryProcessor
-import org.apache.commons.lang.RandomStringUtils
+import org.apache.commons.lang3.RandomStringUtils
 import org.junit.Assert
-import java.io.Serializable
 import java.util.*
 
 /**
@@ -36,7 +35,7 @@ class OrganizationEntryProcessorStreamSerializerTest : AbstractStreamSerializerT
         return OrganizationEntryProcessor {
             it.emailDomains.add(t)
             it.grants.getOrPut(UUID.randomUUID()) { mutableMapOf() }[grant.grantType] = grant
-            null
+            OrganizationEntryProcessor.Result(null)
         }
     }
 

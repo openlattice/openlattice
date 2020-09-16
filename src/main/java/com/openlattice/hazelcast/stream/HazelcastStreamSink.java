@@ -1,10 +1,10 @@
 package com.openlattice.hazelcast.stream;
 
 import com.hazelcast.aggregation.Aggregator;
+import com.hazelcast.collection.IQueue;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.HazelcastInstanceAware;
-import com.hazelcast.core.ILock;
-import com.hazelcast.core.IQueue;
+import com.hazelcast.cp.lock.FencedLock;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -15,11 +15,11 @@ import org.slf4j.LoggerFactory;
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public abstract class HazelcastStreamSink<K, V, R, E> extends Aggregator<Entry<K, V>, R>
-        implements HazelcastInstanceAware {
+public abstract class HazelcastStreamSink<K, V, R, E> implements Aggregator<Entry<K, V>, R>, HazelcastInstanceAware {
     public static final  Eof                   EOF             = new Eof();
     private static final Map<Class<?>, Logger> subclassLoggers = new HashMap<>();
-    private final Logger logger = subclassLoggers.computeIfAbsent( getClass(), LoggerFactory::getLogger );
+    private final        Logger                logger          = subclassLoggers
+            .computeIfAbsent( getClass(), LoggerFactory::getLogger );
 
     private final     UUID              streamId;
     private transient HazelcastInstance hazelcastInstance;
@@ -48,7 +48,7 @@ public abstract class HazelcastStreamSink<K, V, R, E> extends Aggregator<Entry<K
         } catch ( InterruptedException e ) {
             logger.error( "Unable to close stream {}. Destroying to avoid leak.", streamId, e );
             stream.destroy();
-            ILock streamLock = hazelcastInstance.getLock( HazelcastStream.getStreamLockName( streamId ) );
+            FencedLock streamLock = hazelcastInstance.getCPSubsystem().getLock( HazelcastStream.getStreamLockName( streamId ) );
             streamLock.unlock();
             streamLock.destroy();
             throw new IllegalStateException( "Unable to close the stream." );

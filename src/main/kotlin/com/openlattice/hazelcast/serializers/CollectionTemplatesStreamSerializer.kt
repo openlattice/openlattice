@@ -3,6 +3,7 @@ package com.openlattice.hazelcast.serializers
 import com.google.common.collect.Maps
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.collections.CollectionTemplates
 import com.openlattice.hazelcast.StreamSerializerTypeIds
@@ -19,8 +20,7 @@ class CollectionTemplatesStreamSerializer : SelfRegisteringStreamSerializer<Coll
 
             out.writeInt(`object`.templates.size)
             `object`.templates.forEach {
-
-                UUIDStreamSerializer.serialize(out, it.key)
+                UUIDStreamSerializerUtils.serialize(out, it.key)
                 MapStreamSerializers.writeUUIDUUIDMap(out, it.value)
             }
         }
@@ -28,12 +28,11 @@ class CollectionTemplatesStreamSerializer : SelfRegisteringStreamSerializer<Coll
         fun deserialize(`in`: ObjectDataInput): CollectionTemplates {
             val size = `in`.readInt()
 
-            val templates = Maps.newConcurrentMap<UUID, ConcurrentMap<UUID, UUID>>()
+            val templates = mutableMapOf<UUID, MutableMap<UUID, UUID>>()
 
             for (i in 0 until size) {
-
-                val entitySetCollectionId = UUIDStreamSerializer.deserialize(`in`)
-                val templateMap = MapStreamSerializers.readUUIDUUIDMap(`in`, Maps.newConcurrentMap()) as ConcurrentMap<UUID, UUID>
+                val entitySetCollectionId = UUIDStreamSerializerUtils.deserialize(`in`)
+                val templateMap = MapStreamSerializers.readUUIDUUIDMap(`in`)
 
                 templates[entitySetCollectionId] = templateMap
             }

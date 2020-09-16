@@ -15,12 +15,12 @@ class EntitySetCollectionConfigAggregatorStreamSerializerTest : AbstractStreamSe
     }
 
     override fun createInput(): EntitySetCollectionConfigAggregator {
-        val templates = Maps.newConcurrentMap<UUID, ConcurrentMap<UUID, UUID>>()
+        val templates = mutableMapOf<UUID, MutableMap<UUID, UUID>>()
 
         for (i in 0..4) {
 
             val size = RandomUtils.nextInt(1, 5)
-            val map = Maps.newConcurrentMap<UUID, UUID>()
+            val map = mutableMapOf<UUID, UUID>()
 
             for (j in 0 until size) {
                 map[UUID.randomUUID()] = UUID.randomUUID()

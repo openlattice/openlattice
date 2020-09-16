@@ -21,12 +21,13 @@
 package com.openlattice.organizations.roles.processors;
 
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor;
+import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.SecurablePrincipal;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.UUID;
 
-public class PrincipalDescriptionUpdater extends AbstractRhizomeEntryProcessor<List<UUID>, SecurablePrincipal, Object> {
+public class PrincipalDescriptionUpdater extends AbstractRhizomeEntryProcessor<AclKey, SecurablePrincipal, Object> {
     private static final long serialVersionUID = -1888534083122168784L;
     private final String newDescription;
 
@@ -35,7 +36,7 @@ public class PrincipalDescriptionUpdater extends AbstractRhizomeEntryProcessor<L
     }
 
     @Override
-    public Object process( Entry<List<UUID>, SecurablePrincipal> entry ) {
+    public Object process( Entry<AclKey, SecurablePrincipal> entry ) {
         SecurablePrincipal principal = entry.getValue();
         if ( principal != null ) {
             principal.setDescription( newDescription );

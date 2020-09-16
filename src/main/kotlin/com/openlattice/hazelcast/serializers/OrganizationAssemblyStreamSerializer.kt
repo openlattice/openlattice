@@ -23,6 +23,7 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.assembler.OrganizationAssembly
 import com.openlattice.hazelcast.StreamSerializerTypeIds
@@ -51,12 +52,12 @@ class OrganizationAssemblyStreamSerializer : SelfRegisteringStreamSerializer<Org
     }
 
     override fun write(out: ObjectDataOutput, obj: OrganizationAssembly) {
-        UUIDStreamSerializer.serialize(out, obj.organizationId)
+        UUIDStreamSerializerUtils.serialize(out, obj.organizationId)
         out.writeBoolean(obj.initialized)
 
         out.writeInt(obj.materializedEntitySets.size)
         obj.materializedEntitySets.forEach { entitySetId, flags ->
-            UUIDStreamSerializer.serialize(out, entitySetId)
+            UUIDStreamSerializerUtils.serialize(out, entitySetId)
 
             out.writeInt(flags.size)
             flags.forEach {
@@ -66,12 +67,12 @@ class OrganizationAssemblyStreamSerializer : SelfRegisteringStreamSerializer<Org
     }
 
     override fun read(input: ObjectDataInput): OrganizationAssembly {
-        val organizationId = UUIDStreamSerializer.deserialize(input)
+        val organizationId = UUIDStreamSerializerUtils.deserialize(input)
         val initialized = input.readBoolean()
 
         val materializedEntitySets = mutableMapOf<UUID, EnumSet<OrganizationEntitySetFlag>>()
         (0 until input.readInt()).forEach { _ ->
-            val entitySetId = UUIDStreamSerializer.deserialize(input)
+            val entitySetId = UUIDStreamSerializerUtils.deserialize(input)
 
             val flags = EnumSet.noneOf(OrganizationEntitySetFlag::class.java)
             (0 until input.readInt()).forEach { _ ->

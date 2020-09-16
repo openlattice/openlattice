@@ -2,6 +2,7 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.collections.processors.UpdateEntitySetCollectionTemplateProcessor
 import com.openlattice.hazelcast.StreamSerializerTypeIds
@@ -22,8 +23,8 @@ class UpdateEntitySetCollectionTemplateProcessorStreamSerializer : SelfRegisteri
         val template = `object`.template
         out.writeInt(template.size)
         template.entries.forEach {
-            UUIDStreamSerializer.serialize(out, it.key)
-            UUIDStreamSerializer.serialize(out, it.value)
+            UUIDStreamSerializerUtils.serialize(out, it.key)
+            UUIDStreamSerializerUtils.serialize(out, it.value)
         }
     }
 
@@ -33,8 +34,8 @@ class UpdateEntitySetCollectionTemplateProcessorStreamSerializer : SelfRegisteri
         val template = mutableMapOf<UUID, UUID>()
 
         for (i in 0 until size) {
-            val id = UUIDStreamSerializer.deserialize(`in`)
-            val entitySetId = UUIDStreamSerializer.deserialize(`in`)
+            val id = UUIDStreamSerializerUtils.deserialize(`in`)
+            val entitySetId = UUIDStreamSerializerUtils.deserialize(`in`)
 
             template[id] = entitySetId
         }

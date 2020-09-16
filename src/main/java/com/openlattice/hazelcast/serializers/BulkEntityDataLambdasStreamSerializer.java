@@ -26,8 +26,9 @@ import java.util.UUID;
 
 @Component
 public class BulkEntityDataLambdasStreamSerializer extends Serializer<BulkEntityDataLambdas> {
-    private static final Logger        logger = LoggerFactory.getLogger( EntityDataLambdasStreamSerializer.class );
-    private              TypeReference ref    = new TypeReference<SetMultimap<UUID, Object>>() {
+    private static final Logger                                   logger = LoggerFactory
+            .getLogger( EntityDataLambdasStreamSerializer.class );
+    private              TypeReference<SetMultimap<UUID, Object>> ref    = new TypeReference<>() {
     };
 
     private ObjectMapper mapper;
@@ -79,12 +80,14 @@ public class BulkEntityDataLambdasStreamSerializer extends Serializer<BulkEntity
             UUID entityId = readUUID( input );
 
             int numBytes = input.readInt();
-            HashMultimap<UUID, Object> entityData;
+            final SetMultimap<UUID, Object> entityData;
             try {
                 entityData = mapper.readValue( input.readBytes( numBytes ), ref );
                 entitiesById.put( entityId, entityData );
             } catch ( IOException e ) {
                 logger.debug( "Unable to deserialize entities for entity set: {}", entitySetId );
+                throw new IllegalStateException(
+                        "Unable to deserialize entities for entity set: " + entitySetId.toString() );
             }
         }
 

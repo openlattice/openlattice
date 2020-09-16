@@ -22,6 +22,7 @@
 
 package com.openlattice.hazelcast.serializers;
 
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -37,13 +38,13 @@ public class TicketKeyStreamSerializer implements SelfRegisteringStreamSerialize
     @Override
     public void write( ObjectDataOutput out, TicketKey object ) throws IOException {
         out.writeUTF( object.getPrincipalId() );
-        UUIDStreamSerializer.serialize( out, object.getTicket() );
+        UUIDStreamSerializerUtils.serialize( out, object.getTicket() );
     }
 
     @Override
     public TicketKey read( ObjectDataInput in ) throws IOException {
         String principalId = in.readUTF();
-        UUID ticket = UUIDStreamSerializer.deserialize( in );
+        UUID ticket = UUIDStreamSerializerUtils.deserialize( in );
         return new TicketKey( principalId, ticket );
     }
 

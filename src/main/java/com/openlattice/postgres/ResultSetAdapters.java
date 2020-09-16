@@ -24,46 +24,64 @@ import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.MoreObjects;
-import com.google.common.collect.*;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.openlattice.apps.App;
 import com.openlattice.apps.AppConfigKey;
-import com.openlattice.apps.AppType;
+import com.openlattice.apps.AppRole;
 import com.openlattice.apps.AppTypeSetting;
 import com.openlattice.assembler.EntitySetAssemblyKey;
 import com.openlattice.assembler.MaterializedEntitySet;
 import com.openlattice.auditing.AuditRecordEntitySetConfiguration;
-import com.openlattice.authorization.*;
+import com.openlattice.authorization.AceKey;
+import com.openlattice.authorization.AclKey;
+import com.openlattice.authorization.Permission;
+import com.openlattice.authorization.Principal;
+import com.openlattice.authorization.PrincipalType;
+import com.openlattice.authorization.SecurablePrincipal;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.collections.CollectionTemplateKey;
 import com.openlattice.collections.CollectionTemplateType;
 import com.openlattice.collections.EntitySetCollection;
 import com.openlattice.collections.EntityTypeCollection;
-import com.openlattice.data.*;
+import com.openlattice.data.DataEdgeKey;
+import com.openlattice.data.DataExpiration;
+import com.openlattice.data.DeleteType;
+import com.openlattice.data.EntityDataKey;
+import com.openlattice.data.EntityKey;
+import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.data.storage.MetadataOption;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.edm.set.EntitySetPropertyKey;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
 import com.openlattice.edm.set.ExpirationBase;
-import com.openlattice.edm.type.*;
+import com.openlattice.edm.type.Analyzer;
+import com.openlattice.edm.type.AssociationType;
+import com.openlattice.edm.type.EntityType;
+import com.openlattice.edm.type.EntityTypePropertyKey;
+import com.openlattice.edm.type.EntityTypePropertyMetadata;
+import com.openlattice.edm.type.PropertyType;
+import com.openlattice.entitysets.StorageType;
 import com.openlattice.graph.NeighborhoodQuery;
 import com.openlattice.graph.NeighborhoodSelection;
 import com.openlattice.graph.edge.Edge;
-import com.openlattice.graph.query.GraphQueryState;
-import com.openlattice.graph.query.GraphQueryState.State;
 import com.openlattice.ids.Range;
 import com.openlattice.linking.EntityKeyPair;
 import com.openlattice.linking.EntityLinkingFeedback;
 import com.openlattice.notifications.sms.SmsEntitySetInformation;
 import com.openlattice.notifications.sms.SmsInformationKey;
+import com.openlattice.organization.OrganizationEntitySetFlag;
 import com.openlattice.organization.OrganizationExternalDatabaseColumn;
 import com.openlattice.organization.OrganizationExternalDatabaseTable;
-import com.openlattice.organization.OrganizationEntitySetFlag;
 import com.openlattice.organization.roles.Role;
-import com.openlattice.organizations.PrincipalSet;
 import com.openlattice.requests.Request;
 import com.openlattice.requests.RequestStatus;
 import com.openlattice.requests.Status;
+import com.openlattice.scheduling.RunnableTask;
+import com.openlattice.scheduling.ScheduledTask;
 import com.openlattice.search.PersistentSearchNotificationType;
 import com.openlattice.search.requests.PersistentSearch;
 import com.openlattice.search.requests.SearchConstraints;
@@ -79,34 +97,157 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.sql.*;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.util.*;
-import java.util.Base64.Decoder;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
-import static com.openlattice.postgres.DataTables.*;
+import static com.openlattice.postgres.DataTables.LAST_INDEX;
+import static com.openlattice.postgres.DataTables.LAST_LINK;
+import static com.openlattice.postgres.DataTables.LAST_WRITE;
 import static com.openlattice.postgres.PostgresArrays.getTextArray;
-import static com.openlattice.postgres.PostgresColumn.*;
+import static com.openlattice.postgres.PostgresColumn.ACL_KEY_FIELD;
+import static com.openlattice.postgres.PostgresColumn.ALERT_METADATA_FIELD;
+import static com.openlattice.postgres.PostgresColumn.ALERT_TYPE_FIELD;
+import static com.openlattice.postgres.PostgresColumn.ANALYZER;
+import static com.openlattice.postgres.PostgresColumn.APP_ID;
+import static com.openlattice.postgres.PostgresColumn.AUDIT_EDGE_ENTITY_SET_IDS_FIELD;
+import static com.openlattice.postgres.PostgresColumn.AUDIT_EDGE_ENTITY_SET_ID_FIELD;
+import static com.openlattice.postgres.PostgresColumn.AUDIT_RECORD_ENTITY_SET_IDS_FIELD;
+import static com.openlattice.postgres.PostgresColumn.AUDIT_RECORD_ENTITY_SET_ID_FIELD;
+import static com.openlattice.postgres.PostgresColumn.AUTHENTICATION_METHOD;
+import static com.openlattice.postgres.PostgresColumn.BASE_TYPE;
+import static com.openlattice.postgres.PostgresColumn.BIDIRECTIONAL;
+import static com.openlattice.postgres.PostgresColumn.CATEGORY;
+import static com.openlattice.postgres.PostgresColumn.CLASS_NAME;
+import static com.openlattice.postgres.PostgresColumn.CLASS_PROPERTIES;
+import static com.openlattice.postgres.PostgresColumn.COLUMN_NAME;
+import static com.openlattice.postgres.PostgresColumn.CONFIG_ID;
+import static com.openlattice.postgres.PostgresColumn.CONNECTION_TYPE;
+import static com.openlattice.postgres.PostgresColumn.CONSTRAINT_TYPE;
+import static com.openlattice.postgres.PostgresColumn.CONTACTS;
+import static com.openlattice.postgres.PostgresColumn.CONTACT_INFO;
+import static com.openlattice.postgres.PostgresColumn.COUNT;
+import static com.openlattice.postgres.PostgresColumn.DATABASE;
+import static com.openlattice.postgres.PostgresColumn.DATATYPE;
+import static com.openlattice.postgres.PostgresColumn.DESCRIPTION;
+import static com.openlattice.postgres.PostgresColumn.DST;
+import static com.openlattice.postgres.PostgresColumn.DST_ENTITY_KEY_ID;
+import static com.openlattice.postgres.PostgresColumn.DST_ENTITY_KEY_ID_FIELD;
+import static com.openlattice.postgres.PostgresColumn.DST_ENTITY_SET_ID;
+import static com.openlattice.postgres.PostgresColumn.DST_ENTITY_SET_ID_FIELD;
+import static com.openlattice.postgres.PostgresColumn.DST_SELECTS;
+import static com.openlattice.postgres.PostgresColumn.EDGE_ENTITY_KEY_ID;
+import static com.openlattice.postgres.PostgresColumn.EDGE_ENTITY_SET_ID;
+import static com.openlattice.postgres.PostgresColumn.EMAILS;
+import static com.openlattice.postgres.PostgresColumn.ENTITY_ID_FIELD;
+import static com.openlattice.postgres.PostgresColumn.ENTITY_KEY_IDS_COL;
+import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_COLLECTION_ID;
+import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_FLAGS_FIELD;
+import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID;
+import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_IDS_FIELD;
+import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID_FIELD;
+import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_NAME_FIELD;
+import static com.openlattice.postgres.PostgresColumn.ENTITY_TYPE_COLLECTION_ID;
+import static com.openlattice.postgres.PostgresColumn.ENTITY_TYPE_ID;
+import static com.openlattice.postgres.PostgresColumn.ENTITY_TYPE_ID_FIELD;
+import static com.openlattice.postgres.PostgresColumn.ENUM_VALUES_FIELD;
+import static com.openlattice.postgres.PostgresColumn.EXPIRATION_BASE_FLAG_FIELD;
+import static com.openlattice.postgres.PostgresColumn.EXPIRATION_DATE_FIELD;
+import static com.openlattice.postgres.PostgresColumn.EXPIRATION_DELETE_FLAG_FIELD;
+import static com.openlattice.postgres.PostgresColumn.EXPIRATION_START_ID_FIELD;
+import static com.openlattice.postgres.PostgresColumn.FLAGS;
+import static com.openlattice.postgres.PostgresColumn.ID;
+import static com.openlattice.postgres.PostgresColumn.INDEX_TYPE;
+import static com.openlattice.postgres.PostgresColumn.INITIALIZED;
+import static com.openlattice.postgres.PostgresColumn.IP_ADDRESS;
+import static com.openlattice.postgres.PostgresColumn.IS_PRIMARY_KEY;
+import static com.openlattice.postgres.PostgresColumn.KEY;
+import static com.openlattice.postgres.PostgresColumn.LAST_NOTIFIED_FIELD;
+import static com.openlattice.postgres.PostgresColumn.LAST_READ_FIELD;
+import static com.openlattice.postgres.PostgresColumn.LAST_REFRESH;
+import static com.openlattice.postgres.PostgresColumn.LAST_SYNC;
+import static com.openlattice.postgres.PostgresColumn.LINKED_ENTITY_SETS;
+import static com.openlattice.postgres.PostgresColumn.LINKED_FIELD;
+import static com.openlattice.postgres.PostgresColumn.LINKING;
+import static com.openlattice.postgres.PostgresColumn.LINKING_ID;
+import static com.openlattice.postgres.PostgresColumn.LSB_FIELD;
+import static com.openlattice.postgres.PostgresColumn.MEMBERS;
+import static com.openlattice.postgres.PostgresColumn.MSB_FIELD;
+import static com.openlattice.postgres.PostgresColumn.MULTI_VALUED;
+import static com.openlattice.postgres.PostgresColumn.NAME;
+import static com.openlattice.postgres.PostgresColumn.NAMESPACE;
+import static com.openlattice.postgres.PostgresColumn.NULLABLE_TITLE;
+import static com.openlattice.postgres.PostgresColumn.ORDINAL_POSITION;
+import static com.openlattice.postgres.PostgresColumn.ORGANIZATION_ID;
+import static com.openlattice.postgres.PostgresColumn.ORGANIZATION_ID_FIELD;
+import static com.openlattice.postgres.PostgresColumn.ORIGIN_ID;
+import static com.openlattice.postgres.PostgresColumn.PARTITION;
+import static com.openlattice.postgres.PostgresColumn.PARTITIONS_FIELD;
+import static com.openlattice.postgres.PostgresColumn.PARTITION_INDEX_FIELD;
+import static com.openlattice.postgres.PostgresColumn.PERMISSIONS_FIELD;
+import static com.openlattice.postgres.PostgresColumn.PHONE_NUMBER_FIELD;
+import static com.openlattice.postgres.PostgresColumn.PII;
+import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_ID_FIELD;
+import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_OF_ACL_KEY;
+import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_TYPE_FIELD;
+import static com.openlattice.postgres.PostgresColumn.PRIVILEGE_TYPE;
+import static com.openlattice.postgres.PostgresColumn.PROPERTIES;
+import static com.openlattice.postgres.PostgresColumn.PROPERTY_TAGS_FIELD;
+import static com.openlattice.postgres.PostgresColumn.PROPERTY_TYPE_ID;
+import static com.openlattice.postgres.PostgresColumn.REASON;
+import static com.openlattice.postgres.PostgresColumn.REFRESH_RATE;
+import static com.openlattice.postgres.PostgresColumn.SCHEDULED_DATE;
+import static com.openlattice.postgres.PostgresColumn.SCHEMAS;
+import static com.openlattice.postgres.PostgresColumn.SCORE_FIELD;
+import static com.openlattice.postgres.PostgresColumn.SEARCH_CONSTRAINTS_FIELD;
+import static com.openlattice.postgres.PostgresColumn.SECURABLE_OBJECTID;
+import static com.openlattice.postgres.PostgresColumn.SECURABLE_OBJECT_TYPE;
+import static com.openlattice.postgres.PostgresColumn.SHARDS;
+import static com.openlattice.postgres.PostgresColumn.SHOW;
+import static com.openlattice.postgres.PostgresColumn.SRC;
+import static com.openlattice.postgres.PostgresColumn.SRC_ENTITY_KEY_ID;
+import static com.openlattice.postgres.PostgresColumn.SRC_ENTITY_KEY_ID_FIELD;
+import static com.openlattice.postgres.PostgresColumn.SRC_ENTITY_SET_ID;
+import static com.openlattice.postgres.PostgresColumn.SRC_ENTITY_SET_ID_FIELD;
+import static com.openlattice.postgres.PostgresColumn.SRC_SELECTS;
+import static com.openlattice.postgres.PostgresColumn.STATUS;
+import static com.openlattice.postgres.PostgresColumn.STORAGE_TYPE_FIELD;
+import static com.openlattice.postgres.PostgresColumn.TABLE_ID;
+import static com.openlattice.postgres.PostgresColumn.TAGS_FIELD;
+import static com.openlattice.postgres.PostgresColumn.TEMPLATE;
+import static com.openlattice.postgres.PostgresColumn.TEMPLATE_TYPE_ID;
+import static com.openlattice.postgres.PostgresColumn.TIME_TO_EXPIRATION_FIELD;
+import static com.openlattice.postgres.PostgresColumn.TITLE;
+import static com.openlattice.postgres.PostgresColumn.URL;
+import static com.openlattice.postgres.PostgresColumn.USER;
+import static com.openlattice.postgres.PostgresColumn.USERNAME;
+import static com.openlattice.postgres.PostgresColumn.VERSION;
+import static com.openlattice.postgres.PostgresColumn.VERSIONS;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public final class ResultSetAdapters {
 
-    private static final Logger                                               logger               = LoggerFactory
+    private static final Logger         logger  = LoggerFactory
             .getLogger( ResultSetAdapters.class );
-    private static final Decoder                                              DECODER              = Base64
+    private static final Base64.Decoder DECODER = Base64
             .getMimeDecoder();
-    private static final ObjectMapper                                         mapper               = ObjectMappers
+    private static final ObjectMapper   mapper  = ObjectMappers
             .newJsonMapper();
-    private static final TypeReference<Map<String, Object>>                   alertMetadataTypeRef =
-            new TypeReference<>() {
-            };
-    private static final TypeReference<LinkedHashSet<CollectionTemplateType>> templateTypeRef      =
-            new TypeReference<>() {
-            };
+
+    private static final TypeReference<Map<String, Object>>                   alertMetadataTypeRef = new TypeReference<>() {
+    };
+    private static final TypeReference<LinkedHashSet<CollectionTemplateType>> templateTypeRef      = new TypeReference<>() {
+    };
+    private static final TypeReference<Map<String, Object>>                   appSettingsTypeRef   = new TypeReference<>() {
+    };
+    private static final TypeReference<Set<AppRole>>                          appRoleTypeRef       = new TypeReference<>() {
+    };
+    private static final TypeReference<Map<UUID, AclKey>>                     rolesTypeRef         = new TypeReference<>() {
+    };
 
     @NotNull
     public static SmsInformationKey smsInformationKey(
@@ -123,7 +264,8 @@ public final class ResultSetAdapters {
         final var organizationId = organizationId( rs );
         final var entitySetIds = entitySetIds( rs );
         final var tags = tags( rs );
-        return new SmsEntitySetInformation( phoneNumber, organizationId, entitySetIds, tags );
+        final var lastSync = rs.getObject( LAST_SYNC.getName(), OffsetDateTime.class );
+        return new SmsEntitySetInformation( phoneNumber, organizationId, entitySetIds, tags, lastSync );
     }
 
     @NotNull
@@ -148,22 +290,6 @@ public final class ResultSetAdapters {
         return rs.getString( PHONE_NUMBER_FIELD );
     }
 
-    public static UUID clusterId( ResultSet rs ) throws SQLException {
-        return (UUID) rs.getObject( LINKING_ID_FIELD );
-    }
-
-    public static GraphQueryState graphQueryState( ResultSet rs ) throws SQLException {
-        final UUID queryId = (UUID) rs.getObject( QUERY_ID.getName() );
-        final State state = State.valueOf( rs.getString( STATE.getName() ) );
-        final long startTime = rs.getLong( START_TIME.getName() );
-        return new GraphQueryState(
-                queryId,
-                state,
-                Optional.empty(),
-                System.currentTimeMillis() - startTime,
-                Optional.empty() );
-    }
-
     public static EntityDataKey entityDataKey( ResultSet rs ) throws SQLException {
         return new EntityDataKey( entitySetId( rs ), id( rs ) );
     }
@@ -182,12 +308,6 @@ public final class ResultSetAdapters {
 
     public static Double score( ResultSet rs ) throws SQLException {
         return rs.getDouble( SCORE_FIELD );
-    }
-
-    public static NeighborhoodSelection neighborhoodSelection( ResultSet rs, String colName )
-            throws SQLException, IOException {
-        String neighborhoodSelectionJson = rs.getString( colName );
-        return mapper.readValue( neighborhoodSelectionJson, NeighborhoodSelection.class );
     }
 
     public static NeighborhoodSelection[] neighborhoodSelections( ResultSet rs, String colName )
@@ -331,10 +451,6 @@ public final class ResultSetAdapters {
         return flags;
     }
 
-    public static UUID idValue( ResultSet rs ) throws SQLException {
-        return rs.getObject( ID_VALUE.getName(), UUID.class );
-    }
-
     public static UUID id( ResultSet rs ) throws SQLException {
         return rs.getObject( ID.getName(), UUID.class );
     }
@@ -469,12 +585,8 @@ public final class ResultSetAdapters {
         return rs.getObject( APP_ID.getName(), UUID.class );
     }
 
-    public static UUID appTypeId( ResultSet rs ) throws SQLException {
-        return rs.getObject( CONFIG_TYPE_ID.getName(), UUID.class );
-    }
-
-    public static LinkedHashSet<UUID> appTypeIds( ResultSet rs ) throws SQLException {
-        return linkedHashSetUUID( rs, CONFIG_TYPE_IDS.getName() );
+    public static UUID configId( ResultSet rs ) throws SQLException {
+        return rs.getObject( CONFIG_ID.getName(), UUID.class );
     }
 
     public static Set<UUID> entityKeyIds( ResultSet rs ) throws SQLException {
@@ -552,11 +664,13 @@ public final class ResultSetAdapters {
         Set<FullQualifiedName> schemas = schemas( rs );
         LinkedHashSet<UUID> key = key( rs );
         LinkedHashSet<UUID> properties = properties( rs );
-        LinkedHashMultimap<UUID, String> propertyTags;
+        LinkedHashMap<UUID, LinkedHashSet<String>> propertyTags;
         try {
-            propertyTags = mapper.readValue( rs.getString( PROPERTY_TAGS_FIELD ),
-                    new TypeReference<LinkedHashMultimap<UUID, String>>() {
-                    } );
+            propertyTags = mapper.readValue(
+                    rs.getString( PROPERTY_TAGS_FIELD ),
+                    new TypeReference<LinkedHashMap<UUID, LinkedHashSet<String>>>() {
+                    }
+            );
         } catch ( IOException e ) {
             String errMsg =
                     "Unable to deserialize json from entity type " + fqn.getFullQualifiedNameAsString() + " with id "
@@ -568,8 +682,9 @@ public final class ResultSetAdapters {
         Optional<SecurableObjectType> category = Optional.of( category( rs ) );
         Optional<Integer> shards = Optional.of( shards( rs ) );
 
-        return new EntityType( id, fqn, title, description, schemas, key, properties,
-                propertyTags, baseType, category, shards );
+        return new EntityType(
+                id, fqn, title, description, schemas, key, properties, propertyTags, baseType, category, shards
+        );
     }
 
     public static EntitySet entitySet( ResultSet rs ) throws SQLException {
@@ -584,6 +699,7 @@ public final class ResultSetAdapters {
         final var flags = entitySetFlags( rs );
         final var partitions = partitions( rs );
         final var expirationData = dataExpiration( rs );
+        final var storageType = storageType( rs );
         return new EntitySet( id,
                 entityTypeId,
                 name,
@@ -594,7 +710,12 @@ public final class ResultSetAdapters {
                 organization,
                 flags,
                 new LinkedHashSet<>( Arrays.asList( partitions ) ),
-                expirationData );
+                expirationData,
+                storageType );
+    }
+
+    public static StorageType storageType( ResultSet rs ) throws SQLException {
+        return StorageType.valueOf( rs.getString( STORAGE_TYPE_FIELD ) );
     }
 
     public static Integer[] partitions( ResultSet rs ) throws SQLException {
@@ -697,46 +818,42 @@ public final class ResultSetAdapters {
         return new Status( request, principal, status );
     }
 
-    public static PrincipalSet principalSet( ResultSet rs ) throws SQLException {
-        Array usersArray = rs.getArray( PRINCIPAL_IDS.getName() );
-        if ( usersArray == null ) {
-            return PrincipalSet.wrap( ImmutableSet.of() );
-        }
-        Stream<String> users = Arrays.stream( (String[]) usersArray.getArray() );
-        return PrincipalSet
-                .wrap( users.map( user -> new Principal( PrincipalType.USER, user ) ).collect( Collectors.toSet() ) );
-    }
-
     public static AppConfigKey appConfigKey( ResultSet rs ) throws SQLException {
         UUID appId = appId( rs );
         UUID organizationId = organizationId( rs );
-        UUID appTypeId = appTypeId( rs );
-        return new AppConfigKey( appId, organizationId, appTypeId );
+        return new AppConfigKey( appId, organizationId );
     }
 
-    public static AppTypeSetting appTypeSetting( ResultSet rs ) throws SQLException {
-        UUID entitySetId = entitySetId( rs );
-        EnumSet<Permission> permissions = permissions( rs );
-        return new AppTypeSetting( entitySetId, permissions );
+    public static AppTypeSetting appTypeSetting( ResultSet rs ) throws SQLException, IOException {
+        UUID id = configId( rs );
+        UUID entitySetCollectionId = entitySetCollectionId( rs );
+        Map<UUID, AclKey> roles = roles( rs );
+        Map<String, Object> settings = appSettings( rs );
+        return new AppTypeSetting( id, entitySetCollectionId, roles, settings );
     }
 
-    public static App app( ResultSet rs ) throws SQLException {
+    public static Set<AppRole> appRoles( ResultSet rs ) throws SQLException, IOException {
+        return mapper.readValue( rs.getString( PostgresColumn.ROLES.getName() ), appRoleTypeRef );
+    }
+
+    public static Map<UUID, AclKey> roles( ResultSet rs ) throws SQLException, IOException {
+        return mapper.readValue( rs.getString( PostgresColumn.ROLES.getName() ), rolesTypeRef );
+    }
+
+    public static Map<String, Object> appSettings( ResultSet rs ) throws SQLException, IOException {
+        return mapper.readValue( rs.getString( PostgresColumn.SETTINGS.getName() ), appSettingsTypeRef );
+    }
+
+    public static App app( ResultSet rs ) throws SQLException, IOException {
         UUID id = id( rs );
         String name = name( rs );
         String title = title( rs );
         Optional<String> description = Optional.ofNullable( description( rs ) );
-        LinkedHashSet<UUID> appTypeIds = appTypeIds( rs );
+        UUID entityTypeCollectionId = entityTypeCollectionId( rs );
         String url = url( rs );
-        return new App( id, name, title, description, appTypeIds, url );
-    }
-
-    public static AppType appType( ResultSet rs ) throws SQLException {
-        UUID id = id( rs );
-        FullQualifiedName type = fqn( rs );
-        String title = title( rs );
-        Optional<String> description = Optional.ofNullable( description( rs ) );
-        UUID entityTypeId = entityTypeId( rs );
-        return new AppType( id, type, title, description, entityTypeId );
+        Set<AppRole> appRoles = appRoles( rs );
+        Map<String, Object> settings = appSettings( rs );
+        return new App( id, name, title, description, url, entityTypeCollectionId, appRoles, settings );
     }
 
     public static UUID linkingId( ResultSet rs ) throws SQLException {
@@ -788,6 +905,10 @@ public final class ResultSetAdapters {
         return mapper.readValue( rs.getString( ALERT_METADATA_FIELD ), alertMetadataTypeRef );
     }
 
+    public static Set<String> emails( ResultSet rs ) throws SQLException {
+        return Sets.newHashSet( (String[]) rs.getArray( EMAILS.getName() ).getArray() );
+    }
+
     public static PersistentSearch persistentSearch( ResultSet rs ) throws SQLException, IOException {
         UUID id = id( rs );
         OffsetDateTime lastRead = lastRead( rs );
@@ -795,8 +916,9 @@ public final class ResultSetAdapters {
         PersistentSearchNotificationType alertType = alertType( rs );
         SearchConstraints searchConstraints = searchConstraints( rs );
         Map<String, Object> alertMetadata = alertMetadata( rs );
+        Set<String> emails = emails( rs );
 
-        return new PersistentSearch( id, lastRead, expiration, alertType, searchConstraints, alertMetadata );
+        return new PersistentSearch( id, lastRead, expiration, alertType, searchConstraints, alertMetadata, emails );
     }
 
     public static EntityLinkingFeedback entityLinkingFeedback( ResultSet rs ) throws SQLException {
@@ -961,7 +1083,7 @@ public final class ResultSetAdapters {
         UUID tableId = tableId( rs );
         UUID organizationId = organizationId( rs );
         PostgresDatatype dataType = sqlDataType( rs );
-        Boolean isPrimaryKey = rs.getBoolean( IS_PRIMARY_KEY.getName() );
+        boolean isPrimaryKey = rs.getBoolean( IS_PRIMARY_KEY.getName() );
         Integer ordinalPosition = ordinalPosition( rs );
 
         return new OrganizationExternalDatabaseColumn( id,
@@ -980,8 +1102,8 @@ public final class ResultSetAdapters {
     }
 
     public static PostgresDatatype sqlDataType( ResultSet rs ) throws SQLException {
-        String dataType =  rs.getString( DATATYPE.getName() ).toUpperCase();
-        return PostgresDatatype.valueOf( dataType );
+        String dataType = rs.getString( DATATYPE.getName() ).toUpperCase();
+        return PostgresDatatype.getEnum( dataType );
     }
 
     public static Integer ordinalPosition( ResultSet rs ) throws SQLException {
@@ -1017,19 +1139,34 @@ public final class ResultSetAdapters {
                 authorizationMethod );
     }
 
-    public static String username(ResultSet rs) throws SQLException {
+    public static String username( ResultSet rs ) throws SQLException {
         return rs.getString( USERNAME.getName() );
     }
 
-    public static PostgresConnectionType connectionType(ResultSet rs) throws SQLException {
+    public static PostgresConnectionType connectionType( ResultSet rs ) throws SQLException {
         String connectionType = rs.getString( CONNECTION_TYPE.getName() );
-        return PostgresConnectionType.valueOf(connectionType);
+        return PostgresConnectionType.valueOf( connectionType );
     }
 
-    public static IntegrationJob integrationJob(ResultSet rs) throws SQLException {
+    public static IntegrationJob integrationJob( ResultSet rs ) throws SQLException {
         String name = name( rs );
         IntegrationStatus status = IntegrationStatus.valueOf( rs.getString( STATUS.getName() ).toUpperCase() );
         return new IntegrationJob( name, status );
+    }
+
+    public static ScheduledTask scheduledTask( ResultSet rs )
+            throws SQLException, ClassNotFoundException, IOException {
+
+        UUID id = id( rs );
+        OffsetDateTime scheduledDateTime = rs.getObject( SCHEDULED_DATE.getName(), OffsetDateTime.class );
+
+        Class<? extends RunnableTask> taskClass = (Class<? extends RunnableTask>) Class
+                .forName( rs.getString( CLASS_NAME.getName() ) );
+        String taskJson = rs.getString( CLASS_PROPERTIES.getName() );
+        RunnableTask task = mapper.readValue( taskJson, taskClass );
+
+        return new ScheduledTask( id, scheduledDateTime, task );
+
     }
 
 }

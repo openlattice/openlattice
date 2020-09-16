@@ -20,6 +20,9 @@
 
 package com.openlattice.postgres;
 
+import com.openlattice.IdConstants;
+import com.openlattice.edm.type.Analyzer;
+
 import static com.openlattice.postgres.PostgresDatatype.BIGINT;
 import static com.openlattice.postgres.PostgresDatatype.BIGINT_ARRAY;
 import static com.openlattice.postgres.PostgresDatatype.BOOLEAN;
@@ -32,9 +35,6 @@ import static com.openlattice.postgres.PostgresDatatype.TEXT_ARRAY;
 import static com.openlattice.postgres.PostgresDatatype.TIMESTAMPTZ;
 import static com.openlattice.postgres.PostgresDatatype.UUID;
 import static com.openlattice.postgres.PostgresDatatype.UUID_ARRAY;
-
-import com.openlattice.IdConstants;
-import com.openlattice.edm.type.Analyzer;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -96,6 +96,12 @@ public final class PostgresColumn {
     public static final String                   CATEGORY_FIELD                    = "category";
     public static final PostgresColumnDefinition CATEGORY                          =
             new PostgresColumnDefinition( CATEGORY_FIELD, TEXT ).notNull();
+    public static final String                   CLASS_NAME_FIELD                  = "class_name";
+    public static final PostgresColumnDefinition CLASS_NAME                        =
+            new PostgresColumnDefinition( CLASS_NAME_FIELD, TEXT );
+    public static final String                   CLASS_PROPERTIES_FIELD            = "class_properties";
+    public static final PostgresColumnDefinition CLASS_PROPERTIES                  =
+            new PostgresColumnDefinition( CLASS_PROPERTIES_FIELD, JSONB );
     public static final PostgresColumnDefinition CLAUSES                           =
             new PostgresColumnDefinition( "clauses", INTEGER_ARRAY );
     public static final String                   COLUMN_NAME_FIELD                 = "column_name";
@@ -105,6 +111,9 @@ public final class PostgresColumn {
     public static final PostgresColumnDefinition COMPONENT_TYPES                   =
             new PostgresColumnDefinition( COMPONENT_TYPES_FIELD, INTEGER )
                     .notNull();
+    public static final String                   CONFIG_ID_FIELD                   = "configId";
+    public static final PostgresColumnDefinition CONFIG_ID                         = new PostgresColumnDefinition(
+            CONFIG_ID_FIELD, UUID ).notNull().unique();
     public static final String                   CONFIG_TYPE_IDS_FIELD             = "config_type_ids";
     public static final PostgresColumnDefinition CONFIG_TYPE_IDS                   =
             new PostgresColumnDefinition( CONFIG_TYPE_IDS_FIELD, UUID_ARRAY );
@@ -151,9 +160,6 @@ public final class PostgresColumn {
     public static final String                   DST_FIELD                         = "dst";
     public static final PostgresColumnDefinition DST                               =
             new PostgresColumnDefinition( DST_FIELD, UUID_ARRAY );
-    public static final String                   DST_LINKING_VERTEX_ID_FIELD       = "dst_linking_vertex_id";
-    public static final PostgresColumnDefinition DST_LINKING_VERTEX_ID             =
-            new PostgresColumnDefinition( DST_LINKING_VERTEX_ID_FIELD, UUID );
     // filters applied to outgoing edges
     public static final String                   DST_SELECTS_FIELD                 = "dst_selections";
     public static final PostgresColumnDefinition DST_SELECTS                       = new PostgresColumnDefinition(
@@ -173,6 +179,9 @@ public final class PostgresColumn {
     public static final String                   EDGE_ENTITY_SET_ID_FIELD          = "edge_entity_set_id";
     public static final PostgresColumnDefinition EDGE_ENTITY_SET_ID                =
             new PostgresColumnDefinition( EDGE_ENTITY_SET_ID_FIELD, UUID );
+    public static final String                   EMAILS_FIELD                      = "emails";
+    public static final PostgresColumnDefinition EMAILS                            =
+            new PostgresColumnDefinition( EMAILS_FIELD, TEXT_ARRAY ).withDefault( "'{}'" ).notNull();
     public static final String                   ENTITY_ID_FIELD                   = "entity_id";
     public static final PostgresColumnDefinition ENTITY_ID                         =
             new PostgresColumnDefinition( ENTITY_ID_FIELD, TEXT );
@@ -243,6 +252,10 @@ public final class PostgresColumn {
             new PostgresColumnDefinition( ID_MAP_FIELD, JSONB );
     public static final PostgresColumnDefinition ID_VALUE                          =
             new PostgresColumnDefinition( ID_FIELD, UUID );
+    public static final String                   ID_WRITTEN_FIELD                  = "id_written";
+    public static final PostgresColumnDefinition ID_WRITTEN                        = new PostgresColumnDefinition(
+            ID_WRITTEN_FIELD,
+            BOOLEAN ).notNull().withDefault( "false" );
     public static final String                   INDEX_TYPE_FIELD                  = "index_type";
     public static final PostgresColumnDefinition INDEX_TYPE                        = new PostgresColumnDefinition(
             INDEX_TYPE_FIELD,
@@ -267,12 +280,6 @@ public final class PostgresColumn {
     public static final String                   LAST_LINK_INDEX_FIELD             = "last_link_index";
     public static final PostgresColumnDefinition LAST_LINK_INDEX                   = new PostgresColumnDefinition(
             LAST_LINK_INDEX_FIELD,
-            TIMESTAMPTZ )
-            .withDefault( "'-infinity'" )
-            .notNull();
-    public static final String                   LAST_MARK_FIELD                   = "last_mark";
-    public static final PostgresColumnDefinition LAST_MARK                         = new PostgresColumnDefinition(
-            LAST_MARK_FIELD,
             TIMESTAMPTZ )
             .withDefault( "'-infinity'" )
             .notNull();
@@ -307,6 +314,12 @@ public final class PostgresColumn {
             .withDefault( "'-infinity'" )
             .notNull();
     public static final String                   LAST_WRITE_FIELD                  = "last_write";
+    public static final String                   LAST_SYNC_FIELD                   = "last_sync";
+    public static final PostgresColumnDefinition LAST_SYNC                         = new PostgresColumnDefinition(
+            LAST_SYNC_FIELD,
+            TIMESTAMPTZ )
+            .withDefault( "'-infinity'" )
+            .notNull();
     public static final String                   LINKED_ENTITY_SETS_FIELD          = "linked_entity_sets";
     public static final PostgresColumnDefinition LINKED_ENTITY_SETS                =
             new PostgresColumnDefinition( LINKED_ENTITY_SETS_FIELD, UUID_ARRAY );
@@ -346,9 +359,6 @@ public final class PostgresColumn {
     public static final String                   NAME_SET_FIELD                    = "name_set";
     public static final PostgresColumnDefinition NAME_SET                          =
             new PostgresColumnDefinition( NAME_SET_FIELD, TEXT_ARRAY ).notNull();
-    public static final String                   NEW_VERTEX_ID_FIELD               = "new_vertex_id";
-    public static final PostgresColumnDefinition NEW_VERTEX_ID                     =
-            new PostgresColumnDefinition( NEW_VERTEX_ID_FIELD, UUID ).notNull();
     public static final String                   NULLABLE_TITLE_FIELD              = "title";
     public static final PostgresColumnDefinition NULLABLE_TITLE                    =
             new PostgresColumnDefinition( NULLABLE_TITLE_FIELD, TEXT );
@@ -388,9 +398,6 @@ public final class PostgresColumn {
             new PostgresColumnDefinition( PII_FIELD, BOOLEAN )
                     .withDefault( false )
                     .notNull();
-    public static final String                   PRINCIPAL_IDS_FIELD               = "principal_ids";
-    public static final PostgresColumnDefinition PRINCIPAL_IDS                     =
-            new PostgresColumnDefinition( PRINCIPAL_IDS_FIELD, TEXT_ARRAY );
     public static final String                   PRINCIPAL_ID_FIELD                = "principal_id";
     public static final PostgresColumnDefinition PRINCIPAL_ID                      =
             new PostgresColumnDefinition( PRINCIPAL_ID_FIELD, TEXT );
@@ -424,6 +431,13 @@ public final class PostgresColumn {
     public static final String                   REFRESH_RATE_FIELD                = "refresh_rate";
     public static final PostgresColumnDefinition REFRESH_RATE                      =
             new PostgresColumnDefinition( REFRESH_RATE_FIELD, BIGINT );
+    public static final String                   ROLES_FIELD                       = "roles";
+    public static final PostgresColumnDefinition ROLES                             =
+            new PostgresColumnDefinition( ROLES_FIELD, JSONB ).notNull().withDefault( "'{}'" );
+    public static final String                   SCHEDULED_DATE_FIELD              = "scheduled_date";
+    public static final PostgresColumnDefinition SCHEDULED_DATE                    = new PostgresColumnDefinition(
+            SCHEDULED_DATE_FIELD,
+            TIMESTAMPTZ ).notNull();
     public static final String                   SCHEMAS_FIELD                     = "schemas";
     public static final PostgresColumnDefinition SCHEMAS                           =
             new PostgresColumnDefinition( SCHEMAS_FIELD, TEXT_ARRAY ).notNull();
@@ -444,6 +458,10 @@ public final class PostgresColumn {
     public static final String                   SECURABLE_OBJECT_TYPE_FIELD       = "securable_object_type";
     public static final PostgresColumnDefinition SECURABLE_OBJECT_TYPE             =
             new PostgresColumnDefinition( SECURABLE_OBJECT_TYPE_FIELD, TEXT ).notNull();
+    public static final String                   SETTINGS_FIELD                    = "settings";
+    public static final PostgresColumnDefinition SETTINGS                          = new PostgresColumnDefinition(
+            SETTINGS_FIELD,
+            JSONB ).notNull().withDefault( "'{}'" );
     public static final String                   SHARDS_FIELD                      = "shards";
     public static final PostgresColumnDefinition SHARDS                            = new PostgresColumnDefinition(
             SHARDS_FIELD,
@@ -478,6 +496,10 @@ public final class PostgresColumn {
     public static final String                   STATUS_FIELD                      = "status";
     public static final PostgresColumnDefinition STATUS                            =
             new PostgresColumnDefinition( STATUS_FIELD, TEXT ).notNull();
+    public static final String                   STORAGE_TYPE_FIELD                = "storage_type";
+    public static final PostgresColumnDefinition STORAGE_TYPE                      = new PostgresColumnDefinition(
+            STORAGE_TYPE_FIELD,
+            TEXT );
     public static final String                   TABLE_ID_FIELD                    = "table_id";
     public static final PostgresColumnDefinition TABLE_ID                          =
             new PostgresColumnDefinition( TABLE_ID_FIELD, UUID ).notNull();

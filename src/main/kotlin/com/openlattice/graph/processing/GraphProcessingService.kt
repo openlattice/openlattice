@@ -2,8 +2,8 @@ package com.openlattice.graph.processing
 
 import com.google.common.base.Preconditions.checkState
 import com.google.common.base.Stopwatch
+import com.hazelcast.config.IndexType
 import com.hazelcast.core.HazelcastInstance
-import com.hazelcast.core.IMap
 import com.hazelcast.query.QueryConstants
 import com.openlattice.analysis.requests.ValueFilter
 import com.openlattice.data.storage.entityKeyIdColumns
@@ -20,7 +20,7 @@ import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresColumn.*
-import com.openlattice.postgres.PostgresTable.EDGES
+import com.openlattice.postgres.PostgresTable.E
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -52,7 +52,7 @@ class GraphProcessingService(
         if(propagationGraphProcessor.hasCycle()) {
             throw IllegalStateException("There is a cycle in the background graph processing")
         }
-        processingLocks.addIndex(QueryConstants.THIS_ATTRIBUTE_NAME.value(), true)
+        processingLocks.addIndex(IndexType.HASH,QueryConstants.THIS_ATTRIBUTE_NAME.value())
     }
 
     private val taskLock = ReentrantLock()
@@ -538,7 +538,7 @@ internal fun buildFilteredEdges(srcEntitySetIds: Collection<UUID>, edgeEntitySet
     return "SELECT ${SRC_ENTITY_SET_ID.name}, ${SRC_ENTITY_KEY_ID.name}, " +
             "${EDGE_ENTITY_SET_ID.name}, ${EDGE_ENTITY_KEY_ID.name}, " +
             "${DST_ENTITY_SET_ID.name}, ${DST_ENTITY_KEY_ID.name} " +
-            "FROM ${EDGES.name} WHERE $srcFilter $edgeFilter $dstFilter"
+            "FROM ${E.name} WHERE $srcFilter $edgeFilter $dstFilter"
 }
 
 
@@ -548,12 +548,12 @@ internal fun buildFilteredEdgesSqlForEntities(inputEntitySetIds:Collection<UUID>
     //Only select entity sets participating in prop
     val srcEdgesSql = "SELECT ${SRC_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${SRC_ENTITY_KEY_ID.name} as ${ID_VALUE.name}, " +
             "${DST_ENTITY_SET_ID.name} as $TARGET_ENTITY_SET_ID, ${DST_ENTITY_KEY_ID.name} as $TARGET_ENTITY_KEY_ID " +
-            "FROM ${EDGES.name} " +
+            "FROM ${E.name} " +
             "WHERE ${DST_ENTITY_SET_ID.name} IN ($outputEntitySetsClause) AND ${SRC_ENTITY_SET_ID.name} IN ($inputEntitySetsClause)"
 
     val dstEdgesSql = "SELECT ${DST_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${DST_ENTITY_KEY_ID.name} as ${ID_VALUE.name}, " +
             "${SRC_ENTITY_SET_ID.name} as $TARGET_ENTITY_SET_ID, ${SRC_ENTITY_KEY_ID.name} as $TARGET_ENTITY_KEY_ID " +
-            "FROM ${EDGES.name} " +
+            "FROM ${E.name} " +
             "WHERE ${SRC_ENTITY_SET_ID.name} IN ($outputEntitySetsClause) AND ${DST_ENTITY_SET_ID.name} IN ($inputEntitySetsClause) "
 
     return listOf(srcEdgesSql, dstEdgesSql)
@@ -565,12 +565,12 @@ internal fun buildFilteredEdgesSqlForAssociations(inputEntitySetIds: Collection<
     val outputEntitySetsClause = outputEntitySetIds.joinToString(",") { "'$it'" }
     val edgeSrcEdgesSql = "SELECT ${EDGE_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${EDGE_ENTITY_KEY_ID.name} as ${ID_VALUE.name}, " +
             "${SRC_ENTITY_SET_ID.name} as $TARGET_ENTITY_SET_ID, ${SRC_ENTITY_KEY_ID.name} as $TARGET_ENTITY_KEY_ID " +
-            "FROM ${EDGES.name} " +
+            "FROM ${E.name} " +
             "WHERE ${EDGE_ENTITY_SET_ID.name} IN ($inputEntitySetsClause) AND ${SRC_ENTITY_SET_ID.name} IN ($outputEntitySetsClause)"
 
     val edgeDstEdgesSql = "SELECT ${EDGE_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${EDGE_ENTITY_KEY_ID.name} as ${ID_VALUE.name}, " +
             "${DST_ENTITY_SET_ID.name} as $TARGET_ENTITY_SET_ID, ${DST_ENTITY_KEY_ID.name} as $TARGET_ENTITY_KEY_ID " +
-            "FROM ${EDGES.name} " +
+            "FROM ${E.name} " +
             "WHERE ${EDGE_ENTITY_SET_ID.name} IN ($inputEntitySetsClause) AND ${DST_ENTITY_SET_ID.name} IN ($outputEntitySetsClause)"
 
     return listOf(edgeSrcEdgesSql, edgeDstEdgesSql)

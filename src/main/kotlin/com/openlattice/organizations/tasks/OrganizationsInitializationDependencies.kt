@@ -22,7 +22,7 @@
 package com.openlattice.organizations.tasks
 
 import com.openlattice.conductor.rpc.ConductorConfiguration
-import com.openlattice.datastore.configuration.DatastoreConfiguration
+import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.tasks.HazelcastTaskDependencies
@@ -31,5 +31,6 @@ import com.openlattice.tasks.HazelcastTaskDependencies
 data class OrganizationsInitializationDependencies @JvmOverloads constructor(
         val organizationService: HazelcastOrganizationService,
         val spm: SecurePrincipalsManager,
+        val partitionManager: PartitionManager,
         val configuration: ConductorConfiguration
 ) : HazelcastTaskDependencies

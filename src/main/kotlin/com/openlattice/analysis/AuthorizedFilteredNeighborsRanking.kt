@@ -28,11 +28,13 @@ import java.util.*
 /**
  * Contains the results of authorizing a filteredAggregation ranking.
  */
-class AuthorizedFilteredNeighborsRanking(
+data class AuthorizedFilteredNeighborsRanking(
         val filteredNeighborsRanking: FilteredNeighborsRankingAggregation,
         val associationSets: Map<UUID, Set<UUID>>,
+        @Deprecated("Will be removed soon")
         val associationPropertyTypes: Map<UUID, PropertyType>,
         val entitySets: Map<UUID, Set<UUID>>,
+        @Deprecated("Will be removed soon")
         val entitySetPropertyTypes: Map<UUID, PropertyType>
 )
 

@@ -2,30 +2,17 @@ package com.openlattice.users
 
 import com.auth0.json.mgmt.users.User
 import com.dataloom.mappers.ObjectMappers
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.hazelcast.core.HazelcastInstance
-import com.hazelcast.core.IMap
-import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.openlattice.IdConstants
 import com.openlattice.authorization.*
 import com.openlattice.authorization.mapstores.PrincipalMapstore
-import com.openlattice.authorization.mapstores.ReadSecurablePrincipalAggregator
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.organizations.SortedPrincipalSet
 import com.openlattice.organizations.roles.SecurePrincipalsManager
-import com.openlattice.postgres.PostgresColumn.*
-import com.openlattice.postgres.PostgresTable.USERS
-import com.openlattice.postgres.streams.BasePostgresIterable
-import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
-import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import java.util.*
-
-const val DELETE_BATCH_SIZE = 1024
-private val markUserSql = "UPDATE ${USERS.name} SET ${EXPIRATION.name} = ? WHERE ${USER_ID.name} = ?"
-private val expiredUsersSql = "SELECT ${USER_DATA.name} from ${USERS.name} WHERE ${EXPIRATION.name} < ? "
 
 /**
  *
@@ -33,77 +20,161 @@ private val expiredUsersSql = "SELECT ${USER_DATA.name} from ${USERS.name} WHERE
  */
 class Auth0SyncService(
         hazelcastInstance: HazelcastInstance,
-        private val hds: HikariDataSource,
         private val spm: SecurePrincipalsManager,
         private val orgService: HazelcastOrganizationService
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(Auth0SyncService::class.java)
     }
-    private val users = HazelcastMap.USERS.getMap( hazelcastInstance )
-    private val principals = HazelcastMap.PRINCIPALS.getMap( hazelcastInstance )
-    private val authnPrincipalCache = HazelcastMap.SECURABLE_PRINCIPALS.getMap( hazelcastInstance )
-    private val authnRolesCache = HazelcastMap.RESOLVED_PRINCIPAL_TREES.getMap( hazelcastInstance )
-    private val principalTrees = HazelcastMap.PRINCIPAL_TREES.getMap( hazelcastInstance )
+
+    private val users = HazelcastMap.USERS.getMap(hazelcastInstance)
+    private val principals = HazelcastMap.PRINCIPALS.getMap(hazelcastInstance)
+    private val authnPrincipalCache = HazelcastMap.SECURABLE_PRINCIPALS.getMap(hazelcastInstance)
+    private val authnRolesCache = HazelcastMap.RESOLVED_PRINCIPAL_TREES.getMap(hazelcastInstance)
+    private val principalTrees = HazelcastMap.PRINCIPAL_TREES.getMap(hazelcastInstance)
     private val mapper = ObjectMappers.newJsonMapper()
 
+    /**
+     * Returns true, if the user initialization task has ran at and
+     * [com.openlattice.authorization.mapstores.SecurablePrincipalsMapLoader] is populated.
+     */
+    fun usersInitialized(): Boolean {
+        return authnPrincipalCache.isNotEmpty()
+    }
+
+    fun getCachedUsers(): Sequence<User> {
+        return users.values.asSequence()
+    }
+
     fun syncUser(user: User) {
+        updateUser(user)
+        syncUserEnrollmentsAndAuthentication(user)
+    }
+
+    fun createOrUpdateUsers(usersToUpdate: Collection<User>) {
+
+        val usersByPrincipal = usersToUpdate.associateBy { getPrincipal(it) }.toMutableMap()
+
+        val existingUserPrincipals = spm.getSecurablePrincipals(usersByPrincipal.keys).map { it.principal }
+        val principalsToCreate = usersByPrincipal.keys - existingUserPrincipals
+
+        logger.debug("Creating users {} and updating principals {}",
+                     principalsToCreate.map { it.id },
+                     existingUserPrincipals.map { it.id }
+        )
+
+        val newlyCreatedUsers = principalsToCreate.filter {
+            val wasSuccessfullyCreated = tryCreateNewUserPrincipal(usersByPrincipal.getValue(it), it)
+
+            if (!wasSuccessfullyCreated) {
+                usersByPrincipal.remove(it)
+            }
+
+            wasSuccessfullyCreated
+        }.associateWith { usersByPrincipal.getValue(it) }
+
+        processGlobalEnrollments(newlyCreatedUsers)
+
+        users.putAll(usersToUpdate.associateBy { it.id })
+
+    }
+
+    private fun updateUser(user: User) {
+        logger.info("Updating user ${user.id}")
+        ensureSecurablePrincipalExists(user)
+
+        //Update the user in the users table
+        users.set(user.id, user)
+    }
+
+    private fun syncUserEnrollmentsAndAuthentication(user: User) {
         //Figure out which users need to be added to which organizations.
         //Since we don't want to do O( # organizations ) for each user, we need to lookup organizations on a per user
         //basis and see if the user needs to be added.
-        logger.info("Synchronizing user ${user.id}")
-        ensureSecurablePrincipalExists(user)
+        logger.info("Synchronizing enrollments and authentication cache for user ${user.id}")
         val principal = getPrincipal(user)
 
-        //Update the user in the users table before attempting processing.
-        users.putIfAbsent( principal.id, user)
-        processGlobalEnrollments( principal, user )
-        processOrganizationEnrollments(user, principal, user.email ?: "")
-        logger.info("Syncing authentication cache for ${principal.id}")
+        processGlobalEnrollments(mapOf(principal to user))
+        processOrganizationEnrollments(principal, user)
+
         syncAuthenticationCache(principal.id)
-        markUser(user)
     }
 
-    /**
-     * @param user The user for which to read the identities.
-     * @return A map of providers to connections for the specified user.
-     */
-    private fun getConnections(user: User): Map<String, String> {
-        return user.identities.associateBy({ it.provider }, { it.connection })
+    fun syncAuthenticationCacheForPrincipalIds(principalIds: Set<String>) {
+        val principalsById = principalIds.associateWith { Principal(PrincipalType.USER, it) }
+        val securablePrincipals = principals.entrySet(
+                Predicates.`in`(
+                        PrincipalMapstore.PRINCIPAL_INDEX,
+                        *principalsById.values.toTypedArray()
+                )
+        ).associate { it.value.principal.id to it.value }
+        authnPrincipalCache.putAll(securablePrincipals)
+        authnRolesCache.putAll(getPrincipalTreesByPrincipalId(securablePrincipals.values.toSet()))
     }
 
-    private fun markUser(user: User) {
-        val userId = user.id
-        markUser(userId)
-        users.set(userId, user)
-    }
-
-    private fun markUser(userId: String) {
-        hds.connection.use { connection ->
-            connection.prepareStatement(markUserSql).use { ps ->
-                ps.setLong(1, System.currentTimeMillis())
-                ps.setString(2, userId)
-                ps.executeUpdate()
-            }
-        }
-    }
-
-    private fun syncAuthenticationCache( principalId: String ) {
-        val sp = getPrincipal(principalId) ?: return
-        authnPrincipalCache.set( principalId, sp )
+    private fun syncAuthenticationCache(principalId: String) {
+        val sp = principals.values(
+                Predicates.equal(
+                        PrincipalMapstore.PRINCIPAL_INDEX,
+                        Principal(PrincipalType.USER, principalId)
+                )
+        ).firstOrNull() ?: return
+        authnPrincipalCache.set(principalId, sp)
         val securablePrincipals = getAllPrincipals(sp) ?: return
 
         val currentPrincipals: NavigableSet<Principal> = TreeSet()
         currentPrincipals.add(sp.principal)
-        securablePrincipals.stream()
+        securablePrincipals
+                .asSequence()
                 .map(SecurablePrincipal::getPrincipal)
                 .forEach { currentPrincipals.add(it) }
 
-        authnRolesCache.set( principalId, SortedPrincipalSet(currentPrincipals))
+        authnRolesCache.set(principalId, SortedPrincipalSet(currentPrincipals))
     }
 
     private fun getLayer(aclKeys: Set<AclKey>): AclKeySet {
-        return AclKeySet( principalTrees.getAll(aclKeys).values.flatMap { it.value } )
+        return AclKeySet(principalTrees.getAll(aclKeys).values.flatMap { it.value })
+    }
+
+    private fun getPrincipalTreesByPrincipalId(sps: Set<SecurablePrincipal>): Map<String, SortedPrincipalSet> {
+        val aclKeyPrincipals = mutableMapOf<AclKey,AclKeySet>()
+
+        // Bulk load all relevant principal trees from hazelcast
+        var nextLayer = sps.mapTo(mutableSetOf()) { it.aclKey }
+        while (nextLayer.isNotEmpty()) {
+            //Don't load what's already been loaded.
+            val nextLayerMap = principalTrees.getAll(nextLayer - aclKeyPrincipals.keys)
+            nextLayer = nextLayerMap.values.flatMapTo(mutableSetOf()) { it.value }
+            aclKeyPrincipals.putAll(nextLayerMap)
+        }
+
+        // Map all loaded principals to SecurablePrincipals
+        val aclKeysToPrincipals = principals.getAll(aclKeyPrincipals.keys + aclKeyPrincipals.values.flatten())
+
+        // Map each SecurablePrincipal to all its aclKey children from the in-memory map, and from there a SortedPrincipalSet
+        return sps.associate { sp ->
+            val childAclKeys = mutableSetOf<AclKey>(sp.aclKey) //Need to include self.
+            aclKeyPrincipals.getOrDefault(sp.aclKey, AclKeySet()).forEach { childAclKeys.add(it) }
+
+            var nextAclKeyLayer : Set<AclKey> = childAclKeys
+
+            while (nextAclKeyLayer.isNotEmpty()) {
+                nextAclKeyLayer = (nextAclKeyLayer.flatMapTo(mutableSetOf<AclKey>()) {
+                    aclKeyPrincipals[it] ?: setOf()
+                }) - childAclKeys
+                childAclKeys += nextAclKeyLayer
+            }
+
+            val sortedPrincipals = SortedPrincipalSet(TreeSet(childAclKeys.mapNotNull { aclKey ->
+                aclKeysToPrincipals[aclKey]?.principal
+            }))
+
+            if (childAclKeys.size != sortedPrincipals.size) {
+                logger.warn("Unable to retrieve principals for acl keys: ${childAclKeys - aclKeysToPrincipals.keys}")
+            }
+
+            sp.principal.id to sortedPrincipals
+        }
     }
 
     private fun getAllPrincipals(sp: SecurablePrincipal): Collection<SecurablePrincipal>? {
@@ -118,79 +189,55 @@ class Auth0SyncService(
         return principals.getAll(roles).values
     }
 
-
-    private fun getPrincipal(principalId: String): SecurablePrincipal? {
-        return principals.aggregate(
-                ReadSecurablePrincipalAggregator(),
-                Predicates.equal(
-                        PrincipalMapstore.PRINCIPAL_INDEX, Principals.getUserPrincipal(principalId)
-                ) as Predicate<AclKey, SecurablePrincipal>
-        )
-
-    }
-
-    private fun processGlobalEnrollments(principal: Principal, user: User) {
+    private fun processGlobalEnrollments(principalMap: Map<Principal, User>) {
         orgService.addMembers(
                 IdConstants.GLOBAL_ORGANIZATION_ID.id,
-                setOf(principal),
-                mapOf(principal to getAppMetadata(user))
+                principalMap.keys,
+                principalMap.mapValues { getAppMetadata(it.value) }
         )
     }
 
-    private fun processOrganizationEnrollments(
-            user: User,
-            principal: Principal,
-            emailDomain: String
-    ) {
+    private fun processOrganizationEnrollments(principal: Principal, user: User) {
         val connections = getConnections(user).values
-
-        val missingOrgsForEmailDomains = if (emailDomain.isNotBlank()) {
-            orgService.getOrganizationsWithoutUserAndWithConnectionsAndDomains(
-                    principal,
-                    connections,
-                    emailDomain
-            )
-        } else setOf()
 
         val missingOrgsForConnections = orgService.getOrganizationsWithoutUserAndWithConnection(connections, principal)
 
-
-        (missingOrgsForEmailDomains + missingOrgsForConnections).forEach { orgId ->
+        missingOrgsForConnections.forEach { orgId ->
             orgService.addMembers(orgId, setOf(principal))
         }
 
     }
 
-
-    fun getExpiredUsers(): BasePostgresIterable<User> {
-        val expirationThreshold = System.currentTimeMillis() - 6 * REFRESH_INTERVAL_MILLIS
-        return BasePostgresIterable<User>(
-                PreparedStatementHolderSupplier(hds, expiredUsersSql, DELETE_BATCH_SIZE) { ps ->
-                    ps.setLong(1, expirationThreshold)
-                }) { rs -> mapper.readValue(rs.getString(USER_DATA.name)) }
-    }
-
-    private fun ensureSecurablePrincipalExists(user: User): Principal {
-        val principal = getPrincipal(user)
-        if (!spm.principalExists(principal)) {
-            val principal = Principal(PrincipalType.USER, user.id)
-            val title = if (user.nickname != null && user.nickname.isNotEmpty())
+    private fun tryCreateNewUserPrincipal(user: User, principal: Principal): Boolean {
+        try {
+            val title = if (!user.nickname.isNullOrEmpty()) {
                 user.nickname
-            else
+            } else {
                 user.email
+            }
 
             spm.createSecurablePrincipalIfNotExists(
                     principal,
                     SecurablePrincipal(Optional.empty(), principal, title, Optional.empty())
             )
+
+        } catch (e: Exception) {
+            logger.error("Unable to create user {} with principal {}", user, principal, e)
+            return false
         }
+
+        return true
+    }
+
+    private fun ensureSecurablePrincipalExists(user: User): Principal {
+        val principal = getPrincipal(user)
+
+        if (!spm.principalExists(principal)) {
+            tryCreateNewUserPrincipal(user, principal)
+        }
+
         return principal
     }
-
-    fun remove(userId: String) {
-        users.delete(userId)
-    }
-
 
 }
 

@@ -12,8 +12,8 @@ import com.openlattice.data.EntitySetData
 import com.openlattice.data.WriteEvent
 import com.openlattice.data.events.EntitiesDeletedEvent
 import com.openlattice.data.events.EntitiesUpsertedEvent
+import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
-import com.openlattice.edm.PostgresEdmManager
 import com.openlattice.edm.events.EntitySetDataDeletedEvent
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.edm.type.PropertyType
@@ -27,7 +27,6 @@ import org.springframework.stereotype.Service
 import java.nio.ByteBuffer
 import java.util.*
 import java.util.stream.Stream
-import javax.inject.Inject
 import kotlin.streams.asSequence
 
 /**
@@ -37,24 +36,18 @@ import kotlin.streams.asSequence
 @Service
 class PostgresEntityDatastore(
         private val dataQueryService: PostgresEntityDataQueryService,
-        private val postgresEdmManager: PostgresEdmManager,
+        private val edmManager: EdmManager,
         private val entitySetManager: EntitySetManager,
-        metricRegistry: MetricRegistry
+        private val metricRegistry: MetricRegistry,
+        private val eventBus: EventBus,
+        private val feedbackQueryService: PostgresLinkingFeedbackService,
+        private val linkingQueryService: LinkingQueryService
 ) : EntityDatastore {
 
     companion object {
         private val logger = LoggerFactory.getLogger(PostgresEntityDatastore::class.java)
         const val BATCH_INDEX_THRESHOLD = 256
     }
-
-    @Inject
-    private lateinit var eventBus: EventBus
-
-    @Inject
-    private lateinit var feedbackQueryService: PostgresLinkingFeedbackService
-
-    @Inject
-    private lateinit var linkingQueryService: LinkingQueryService
 
     private val getEntitiesTimer = metricRegistry.timer(
             MetricRegistry.name(
@@ -66,7 +59,6 @@ class PostgresEntityDatastore(
                     PostgresEntityDatastore::class.java, "getEntities(linked)"
             )
     )
-
 
     @Timed
     override fun createOrUpdateEntities(
@@ -125,7 +117,7 @@ class PostgresEntityDatastore(
 
         markMaterializedEntitySetDirty(entitySetId) // mark entityset as unsync with data
         // mark all involved linking entitysets as unsync with data
-        postgresEdmManager.getAllLinkingEntitySetIdsForEntitySet(entitySetId)
+        edmManager.getAllLinkingEntitySetIdsForEntitySet(entitySetId)
                 .forEach { this.markMaterializedEntitySetDirty(it) }
     }
 
@@ -134,7 +126,7 @@ class PostgresEntityDatastore(
         markMaterializedEntitySetDirty(entitySetId) // mark entityset as unsync with data
 
         // mark all involved linking entitysets as unsync with data
-        postgresEdmManager.getAllLinkingEntitySetIdsForEntitySet(entitySetId)
+        edmManager.getAllLinkingEntitySetIdsForEntitySet(entitySetId)
                 .forEach { this.markMaterializedEntitySetDirty(it) }
     }
 
@@ -146,7 +138,7 @@ class PostgresEntityDatastore(
         markMaterializedEntitySetDirty(entitySetId) // mark entityset as unsync with data
 
         // mark all involved linking entitysets as unsync with data
-        postgresEdmManager.getAllLinkingEntitySetIdsForEntitySet(entitySetId)
+        edmManager.getAllLinkingEntitySetIdsForEntitySet(entitySetId)
                 .forEach { this.markMaterializedEntitySetDirty(it) }
     }
 
