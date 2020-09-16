@@ -1,17 +1,20 @@
 package com.openlattice.transporter.types
 
 import com.geekbeast.configuration.postgres.PostgresConfiguration
-import com.google.common.base.Strings
 import com.kryptnostic.rhizome.configuration.RhizomeConfiguration
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
-import org.postgresql.util.PSQLException
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
-import java.sql.Statement
 
+/**
+ * TransporterDatastore configures entries in [rhizome] postgres configuration
+ */
 @Component
-class TransporterDatastore(private val configuration: TransporterConfiguration, rhizome: RhizomeConfiguration) {
+class TransporterDatastore(
+        private val configuration: TransporterConfiguration,
+        rhizome: RhizomeConfiguration
+) {
     companion object {
         private val logger = LoggerFactory.getLogger(TransporterDatastore::class.java)
         private val PAT = Regex("""([\w:]+)://([\w_.]*):(\d+)/(\w+)""")

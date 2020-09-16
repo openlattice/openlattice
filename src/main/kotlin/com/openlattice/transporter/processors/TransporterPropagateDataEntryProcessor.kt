@@ -16,8 +16,13 @@ import io.prometheus.client.Counter
 import org.slf4j.LoggerFactory
 import java.util.*
 
-class TransporterPropagateDataEntryProcessor(val entitySets: Set<EntitySet>, val partitions: Collection<Int>):
-        AbstractReadOnlyRhizomeEntryProcessor<UUID, TransporterColumnSet, Void?>(),
+/**
+ * Transport data from enterprise into entity_type tables on atlas
+ */
+class TransporterPropagateDataEntryProcessor(
+        val entitySets: Set<EntitySet>,
+        val partitions: Collection<Int>
+): AbstractReadOnlyRhizomeEntryProcessor<UUID, TransporterColumnSet, Void?>(),
         Offloadable
 {
     companion object {

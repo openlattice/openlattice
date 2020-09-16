@@ -8,7 +8,7 @@ import java.util.concurrent.TimeUnit
 
 class TransporterRunSyncTaskDependencies(
         val service: DataTransporterService
-) : HazelcastTaskDependencies
+): HazelcastTaskDependencies
 
 class TransporterRunSyncTask : HazelcastFixedRateTask<TransporterRunSyncTaskDependencies> {
     val interval = 30L

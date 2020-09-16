@@ -10,7 +10,11 @@ import com.openlattice.postgres.IndexType
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresTableManager
 import com.openlattice.transporter.processors.TransporterSynchronizeTableDefinitionEntryProcessor
-import com.openlattice.transporter.types.*
+import com.openlattice.transporter.types.TransporterColumn
+import com.openlattice.transporter.types.TransporterColumnSet
+import com.openlattice.transporter.types.TransporterConfiguration
+import com.openlattice.transporter.types.TransporterDatastore
+import com.openlattice.transporter.types.TransporterDependent
 import com.zaxxer.hikari.HikariDataSource
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -21,7 +25,12 @@ import org.postgresql.util.PSQLException
 import java.util.*
 
 fun pretty(query: String, e: PSQLException): String {
-    val buffer = Strings.repeat(" ", e.serverErrorMessage.position-1) + "^"
+    val errorMessage = e.serverErrorMessage
+    val buffer = if ( errorMessage == null ) {
+        ""
+    } else {
+        Strings.repeat(" ", errorMessage.position-1) + "^"
+    }
     return "Query failed:\n$query\n$buffer\n${e.message}"
 }
 

@@ -2,13 +2,25 @@ package com.openlattice.transporter
 
 import com.openlattice.ApiUtil
 import com.openlattice.IdConstants
-import com.openlattice.postgres.*
-import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.DataTables
+import com.openlattice.postgres.PostgresArrays
+import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.ID_VALUE
+import com.openlattice.postgres.PostgresColumn.LAST_TRANSPORT
+import com.openlattice.postgres.PostgresColumn.LINKING_ID
+import com.openlattice.postgres.PostgresColumn.ORIGIN_ID
+import com.openlattice.postgres.PostgresColumn.PARTITION
+import com.openlattice.postgres.PostgresColumn.PROPERTY_TYPE_ID
+import com.openlattice.postgres.PostgresColumn.VERSION
+import com.openlattice.postgres.PostgresColumnDefinition
+import com.openlattice.postgres.PostgresExpressionIndexDefinition
+import com.openlattice.postgres.PostgresTable
+import com.openlattice.postgres.PostgresTableDefinition
 import com.openlattice.transporter.types.TransporterColumn
 import com.zaxxer.hikari.HikariDataSource
 import java.util.*
 
-private val transportTimestampColumn: PostgresColumnDefinition = LAST_PROPAGATE
+private val transportTimestampColumn: PostgresColumnDefinition = LAST_TRANSPORT
 
 fun unquotedTableName(entityTypeId: UUID): String {
     return "et_$entityTypeId"

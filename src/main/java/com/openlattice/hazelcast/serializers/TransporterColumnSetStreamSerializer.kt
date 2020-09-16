@@ -2,7 +2,7 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
-import com.kryptnostic.rhizome.hazelcast.serializers.AbstractUUIDStreamSerializer
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.postgres.IndexType
@@ -38,7 +38,7 @@ class TransporterColumnSetStreamSerializer : TestableSelfRegisteringStreamSerial
     override fun write(out: ObjectDataOutput, `object`: TransporterColumnSet) {
         out.writeInt(`object`.size)
         `object`.entries.forEach { (id, col) ->
-            AbstractUUIDStreamSerializer.serialize(out, id)
+            UUIDStreamSerializerUtils.serialize(out, id)
             serializeColumn(out, col)
         }
     }
@@ -46,7 +46,7 @@ class TransporterColumnSetStreamSerializer : TestableSelfRegisteringStreamSerial
     override fun read(`in`: ObjectDataInput): TransporterColumnSet {
         val size = `in`.readInt()
         val columns = (1..size).map { _ ->
-            val uuid = AbstractUUIDStreamSerializer.deserialize(`in`)
+            val uuid = UUIDStreamSerializerUtils.deserialize(`in`)
             uuid to deserializeColumn(`in`)
         }.toMap()
         return TransporterColumnSet(columns)

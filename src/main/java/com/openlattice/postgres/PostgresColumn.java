@@ -320,6 +320,12 @@ public final class PostgresColumn {
             TIMESTAMPTZ )
             .withDefault( "'-infinity'" )
             .notNull();
+    public static final String                   LAST_TRANSPORT_FIELD              = "last_transport";
+    public static final PostgresColumnDefinition LAST_TRANSPORT                    = new PostgresColumnDefinition(
+            LAST_TRANSPORT_FIELD,
+            TIMESTAMPTZ )
+            .withDefault( "'-infinity'" )
+            .notNull();
     public static final String                   LINKED_ENTITY_SETS_FIELD          = "linked_entity_sets";
     public static final PostgresColumnDefinition LINKED_ENTITY_SETS                =
             new PostgresColumnDefinition( LINKED_ENTITY_SETS_FIELD, UUID_ARRAY );

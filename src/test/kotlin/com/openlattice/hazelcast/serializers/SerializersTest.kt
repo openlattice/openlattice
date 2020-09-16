@@ -1,12 +1,13 @@
 package com.openlattice.hazelcast.serializers
 
-import com.google.common.collect.ImmutableSet
 import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.openlattice.TestServer.Companion.testServer
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.AssemblerConnectionManagerDependent
+import com.openlattice.transporter.types.TransporterDatastore
+import com.openlattice.transporter.types.TransporterDependent
 import org.junit.Assert
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -21,17 +22,19 @@ class SerializersTest(val serializer: TestableSelfRegisteringStreamSerializer<An
     companion object {
         private val logger = LoggerFactory.getLogger(SerializersTest::class.java)
 
-        private val excluded: Set<Class<Any>> = ImmutableSet.of()
-
         @JvmStatic
         @Parameterized.Parameters(name = "{1}")
         fun getSerializers(): Array<Array<Any>> {
             val serializers: MutableCollection<TestableSelfRegisteringStreamSerializer<*>> = testServer.context.getBeansOfType(TestableSelfRegisteringStreamSerializer::class.java).values
             val acm = Mockito.mock(AssemblerConnectionManager::class.java)
+            val tds = Mockito.mock(TransporterDatastore::class.java)
             return serializers
                     .map { ss ->
                         if (ss is AssemblerConnectionManagerDependent<*>) {
                             ss.init(acm)
+                        }
+                        if (ss is TransporterDependent) {
+                            ss.init(tds)
                         }
                         ss
                     }
@@ -55,5 +58,6 @@ class SerializersTest(val serializer: TestableSelfRegisteringStreamSerializer<An
             logger.error("Unable to serialize/deserialize type {}", serializer.clazz, e)
             throw e
         }
+        logger.info("Serializer {} passed", serializer.clazz)
     }
 }

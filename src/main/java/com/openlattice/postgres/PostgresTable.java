@@ -90,6 +90,7 @@ import static com.openlattice.postgres.PostgresColumn.LAST_PROPAGATE;
 import static com.openlattice.postgres.PostgresColumn.LAST_READ;
 import static com.openlattice.postgres.PostgresColumn.LAST_REFRESH;
 import static com.openlattice.postgres.PostgresColumn.LAST_SYNC;
+import static com.openlattice.postgres.PostgresColumn.LAST_TRANSPORT;
 import static com.openlattice.postgres.PostgresColumn.LINKED;
 import static com.openlattice.postgres.PostgresColumn.LINKED_ENTITY_SETS;
 import static com.openlattice.postgres.PostgresColumn.LINKING_ID;
@@ -331,7 +332,8 @@ public final class PostgresTable {
                             LAST_LINK,
                             LAST_PROPAGATE,
                             LAST_MIGRATE,
-                            LAST_LINK_INDEX )
+                            LAST_LINK_INDEX,
+                            LAST_TRANSPORT )
                     .primaryKey( ID_VALUE, PARTITION )
                     .distributionColumn( PARTITION );
     public static final PostgresTableDefinition ID_GENERATION    =
@@ -619,6 +621,11 @@ public final class PostgresTable {
                                 + ",(" + LAST_PROPAGATE.getName() + " < " + LAST_WRITE.getName() + ")"
                                 + ",(" + VERSION.getName() + " > 0)" )
                         .name( "ids_needing_propagation_idx" )
+                        .ifNotExists(),
+                new PostgresExpressionIndexDefinition( IDS,
+                        ENTITY_SET_ID.getName()
+                                + ",(" + LAST_WRITE.getName() + " > " + LAST_PROPAGATE.getName() + ")" )
+                        .name( "ids_needing_transport_idx" )
                         .ifNotExists()
         );
 

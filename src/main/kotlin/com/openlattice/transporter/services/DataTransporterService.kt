@@ -3,7 +3,6 @@ package com.openlattice.transporter.services
 import com.google.common.eventbus.EventBus
 import com.google.common.eventbus.Subscribe
 import com.google.common.util.concurrent.ListeningExecutorService
-import com.hazelcast.core.ExecutionCallback
 import com.hazelcast.core.HazelcastInstance
 import com.openlattice.data.events.EntitiesDeletedEvent
 import com.openlattice.data.events.EntitiesUpsertedEvent
@@ -11,7 +10,10 @@ import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EntitySet
-import com.openlattice.edm.events.*
+import com.openlattice.edm.events.AssociationTypeCreatedEvent
+import com.openlattice.edm.events.EntityTypeCreatedEvent
+import com.openlattice.edm.events.EntityTypeDeletedEvent
+import com.openlattice.edm.events.PropertyTypesAddedToEntityTypeEvent
 import com.openlattice.edm.type.EntityType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.transporter.processors.TransporterPropagateDataEntryProcessor
@@ -31,7 +33,7 @@ import java.util.concurrent.Future
 
 @Service
 final class DataTransporterService(
-        private val eventBus: EventBus,
+        eventBus: EventBus,
         private val dataModelService: EdmManager,
         private val partitionManager: PartitionManager,
         private val entitySetService: EntitySetManager,
@@ -77,6 +79,9 @@ final class DataTransporterService(
 
     private val transporterState = HazelcastMap.TRANSPORTER_DB_COLUMNS.getMap( hazelcastInstance )
 
+    /**
+     *  Sync [et] from enterprise to table in atlas
+     */
     private fun syncTable(et: EntityType): Optional<Future<*>> {
         val prev = transporterState.putIfAbsent(et.id, TransporterColumnSet(emptyMap()))
         if (prev != null) {
@@ -85,20 +90,31 @@ final class DataTransporterService(
         val props = dataModelService.getPropertyTypes(et.properties)
         return Optional.of(
                 transporterState.submitToKey(et.id, TransporterSynchronizeTableDefinitionEntryProcessor(props).init(data))
+                        .toCompletableFuture()
         )
     }
 
+    /**
+     * Get all partitions for [entitySetIds]
+     */
     private fun partitions(entitySetIds: Set<UUID>): Collection<Int> {
         return partitionManager.getPartitionsByEntitySetId(entitySetIds).values.flatten().toSet()
     }
 
+    /**
+     * Regular poll executed by [TransporterRunSyncTask]
+     */
     fun pollOnce() {
         val timer = pollTimer.startTimer()
         val futures = this.transporterState.keys.map { entityTypeId ->
             val relevantEntitySets = validEntitySets(entityTypeId)
             val entitySetIds = relevantEntitySets.map { it.id }.toSet()
             val partitions = partitions(entitySetIds)
-            val ft = transporterState.submitToKey(entityTypeId, TransporterPropagateDataEntryProcessor(relevantEntitySets, partitions).init(data))
+            val ft = transporterState.submitToKey(
+                    entityTypeId,
+                    TransporterPropagateDataEntryProcessor(relevantEntitySets, partitions).init(data)
+            ).toCompletableFuture()
+
             entitySetIds.count() to ft
         }
         val setsPolled = futures.map { it.first }.sum()
@@ -117,23 +133,17 @@ final class DataTransporterService(
         exception.ifExceptionThrow()
     }
 
-    private class TimestampExecutionCallback(val timer: Histogram.Timer) : ExecutionCallback<Any> {
-        override fun onFailure(t: Throwable?) {
-            timer.observeDuration()
-            errorCount.inc()
-        }
-
-        override fun onResponse(response: Any?) {
-            timer.observeDuration()
-        }
-    }
-
     private fun refreshDataForEntitySet(entitySetId: UUID) {
         val es = this.entitySetService.getEntitySet(entitySetId) ?: return
         val partitions = partitions(setOf(entitySetId))
         val refreshTimer = refreshTimer.startTimer()
         transporterState.submitToKey(es.entityTypeId, TransporterPropagateDataEntryProcessor(setOf(es), partitions))
-                .andThen(TimestampExecutionCallback(refreshTimer))
+                .whenCompleteAsync { _, throwable ->
+                    refreshTimer.observeDuration()
+                    if ( throwable != null ){
+                        errorCount.inc()
+                    }
+                }
     }
 
     private fun validEntitySets(entityTypeId: UUID): Set<EntitySet> {
@@ -175,15 +185,15 @@ final class DataTransporterService(
         }
     }
 
-    @Subscribe
-    fun handleClearAllData(e: ClearAllDataEvent) {
-        data.datastore().connection.use {conn ->
-            val st = conn.createStatement()
-            this.transporterState.keys.forEach { etId ->
-                st.execute("TRUNCATE TABLE ${tableName(etId)}")
-            }
-        }
-    }
+//    @Subscribe
+//    fun handleClearAllData(e: ClearAllDataEvent) {
+//        data.datastore().connection.use {conn ->
+//            val st = conn.createStatement()
+//            this.transporterState.keys.forEach { etId ->
+//                st.execute("TRUNCATE TABLE ${tableName(etId)}")
+//            }
+//        }
+//    }
 
     @Subscribe
     fun handlePropertyTypesAddedToEntityTypeEvent(e: PropertyTypesAddedToEntityTypeEvent) {

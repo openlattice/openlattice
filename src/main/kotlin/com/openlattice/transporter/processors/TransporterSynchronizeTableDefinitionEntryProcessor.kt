@@ -11,6 +11,9 @@ import com.openlattice.transporter.types.TransporterDependent
 import org.slf4j.LoggerFactory
 import java.util.*
 
+/**
+ * Synchronizes property table definitions for [newProperties]
+ */
 data class TransporterSynchronizeTableDefinitionEntryProcessor(val newProperties: Collection<PropertyType>):
         AbstractRhizomeEntryProcessor<UUID, TransporterColumnSet, Void?>(),
         Offloadable
