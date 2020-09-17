@@ -121,7 +121,7 @@ class CAREIssueAlertEmailRenderer {
                     "description" to (issue[DESCRIPTION_FQN] ?: emptySet()).joinToString(", "),
                     "category" to (issue[CATEGORY_FQN] ?: emptySet()).joinToString(", "),
                     "priority" to (issue[PRIORITY_FQN] ?: emptySet()).joinToString(", "),
-                    "viewIssueTag" to "<a href=\"http://openlattice.com/care/#/issue/$issueId\">View issue</a>"
+                    "viewIssueTag" to "<a href=\"http://openlattice.com/care/#/issues/$issueId\">View issue</a>"
             )
         }
 
