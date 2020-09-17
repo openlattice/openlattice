@@ -6,7 +6,6 @@ import com.google.common.collect.Sets
 import com.google.common.eventbus.EventBus
 import com.hazelcast.aggregation.Aggregators
 import com.hazelcast.core.HazelcastInstance
-import com.hazelcast.map.IMap
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.openlattice.authorization.*
@@ -33,7 +32,6 @@ import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.hazelcast.HazelcastMap
 import org.springframework.stereotype.Service
 import java.util.*
-import java.util.concurrent.ConcurrentMap
 
 @Service
 class CollectionsManager(
@@ -78,7 +76,7 @@ class CollectionsManager(
     fun getEntitySetCollections(ids: Set<UUID>): Map<UUID, EntitySetCollection> {
         val templates = getTemplatesForIds(ids)
         val collections = entitySetCollections.getAll(ids)
-        collections.mapValues { it.value.template = templates[it.key] ?: mutableMapOf() }
+        collections.forEach { it.value.template = templates[it.key] ?: mutableMapOf() }
 
         return collections
     }
@@ -376,7 +374,7 @@ class CollectionsManager(
     private fun ensureEntityTypeCollectionNotInUse(id: UUID) {
         val numEntitySetCollectionsOfType = entitySetCollections.aggregate(
                 Aggregators.count(),
-                entityTypeCollectionIdPredicate(id) as Predicate<UUID, EntitySetCollection>
+                entityTypeCollectionIdPredicate(id)
         )
 
         checkState(
@@ -417,11 +415,7 @@ class CollectionsManager(
         return Predicates.equal(ENTITY_TYPE_COLLECTION_ID_INDEX, entityTypeCollectionId)
     }
 
-    private fun entitySetCollectionIdPredicate(id: UUID): Predicate<UUID, EntitySetCollection> {
-        return Predicates.equal(ENTITY_SET_COLLECTION_ID_INDEX, id)
-    }
-
-    private fun entitySetCollectionIdsPredicate(ids: Set<UUID>): Predicate<UUID, EntitySetCollection> {
+    private fun entitySetCollectionIdsPredicate(ids: Set<UUID>): Predicate<CollectionTemplateKey, UUID> {
         return Predicates.`in`(ENTITY_SET_COLLECTION_ID_INDEX, *ids.toTypedArray())
     }
 
@@ -467,10 +461,10 @@ class CollectionsManager(
         return nameAttempt
     }
 
-    private fun getTemplatesForIds(ids: Set<UUID>): ConcurrentMap<UUID, ConcurrentMap<UUID, UUID>> {
+    private fun getTemplatesForIds(ids: Set<UUID>): MutableMap<UUID, MutableMap<UUID, UUID>> {
         return entitySetCollectionConfig.aggregate(
                 EntitySetCollectionConfigAggregator(CollectionTemplates()),
-                entitySetCollectionIdsPredicate(ids) as Predicate<CollectionTemplateKey, UUID>
+                entitySetCollectionIdsPredicate(ids)
         ).templates
     }
 

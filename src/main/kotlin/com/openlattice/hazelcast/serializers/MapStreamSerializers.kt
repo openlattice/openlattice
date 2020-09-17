@@ -3,7 +3,9 @@ package com.openlattice.hazelcast.serializers
 import com.google.common.collect.Maps
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
+import com.kryptnostic.rhizome.hazelcast.serializers.ListStreamSerializers
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers
+import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.util.*
 
@@ -13,24 +15,19 @@ class MapStreamSerializers {
 
         @Throws(IOException::class)
         fun writeUUIDUUIDMap(out: ObjectDataOutput, `object`: Map<UUID, UUID>) {
-            SetStreamSerializers.fastUUIDSetSerialize(out, `object`.keys)
-            SetStreamSerializers.fastUUIDSetSerialize(out, `object`.values)
+            val (keys, values) = `object`.asSequence().map { it.toPair() }.unzip()
+            ListStreamSerializers.fastUUIDListSerialize(out, keys)
+            ListStreamSerializers.fastUUIDListSerialize(out, values)
         }
-
         @Throws(IOException::class)
-        fun readUUIDUUIDMap(`in`: ObjectDataInput, defaultMap: MutableMap<UUID, UUID>?): Map<UUID, UUID> {
-            val keys = SetStreamSerializers.fastOrderedUUIDSetDeserialize(`in`)
-            val vals = SetStreamSerializers.fastOrderedUUIDSetDeserialize(`in`)
-
-            val keyIt = keys.iterator()
-            val valIt = vals.iterator()
-
-            val map = defaultMap ?: Maps.newHashMapWithExpectedSize(keys.size)
-            while (keyIt.hasNext()) {
-                map[keyIt.next()] = valIt.next()
+        fun readUUIDUUIDMap(`in`: ObjectDataInput): MutableMap<UUID, UUID> {
+            val keys = ListStreamSerializers.fastUUIDListDeserialize(`in`)
+            val vals = ListStreamSerializers.fastUUIDListDeserialize(`in`)
+            if (keys.size != vals.size) {
+                LoggerFactory.getLogger(MapStreamSerializers::class.java).error("${keys.size} keys but only ${vals.size} values.")
+                throw IllegalStateException("THIS SHOULD NOT HAPPEN")
             }
-
-            return map
+            return keys.zip(vals).toMap(mutableMapOf())
         }
     }
 }

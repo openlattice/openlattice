@@ -224,7 +224,7 @@ class AppService(
         installApp(app, organizationId, entitySetCollectionId, principal, settings!!)
     }
 
-    fun installApp(
+    private fun installApp(
             app: App,
             organizationId: UUID,
             entitySetCollectionId: UUID,
@@ -296,7 +296,9 @@ class AppService(
 
 
         val entitySetCollectionTemplates: Map<UUID, Map<String, UUID>> = entitySetCollectionsById.values.associate {
-            it.id to entityTypeCollectionsById.getValue(it.entityTypeCollectionId).template.associate { type -> type.name to it.template.getValue(type.id) }
+            it.id to entityTypeCollectionsById.getValue(it.entityTypeCollectionId).template.associate { type ->
+                type.name to it.template.getValue(type.id)
+            }
         }
 
         return userAppConfigs.map {
@@ -312,6 +314,12 @@ class AppService(
                     entitySetCollectionTemplates.getValue(it.entitySetCollectionId).mapValues { setting -> HistoricalAppTypeSetting(setting.value, EnumSet.noneOf(Permission::class.java)) }
             )
         }
+    }
+
+    fun getOrganizationAppsByAppId(organizationId: UUID): Map<UUID, AppTypeSetting> {
+        return appConfigs
+                .entrySet(Predicates.equal(AppConfigMapstore.ORGANIZATION_ID, organizationId))
+                .associate { it.key.appId to it.value }
     }
 
     fun getAvailableConfigs(appId: UUID, principals: Set<Principal>): List<UserAppConfig> {
@@ -348,11 +356,8 @@ class AppService(
             permissions: Map<Permission, Map<UUID, Optional<Set<UUID>>>>) {
 
         val app = getApp(appId)
+        ensureAppRolesExist(app, setOf(roleId))
 
-        Preconditions.checkState(app.appRoles.any { it.id == roleId },
-                "App {} does not contain a role with id {}.",
-                appId,
-                roleId)
         val templateTypeIds = permissions.values.flatMap { it.keys }.toSet()
         val nonexistentTemplateTypeIds = Sets.difference(templateTypeIds,
                 entityTypeCollections.getValue(app.entityTypeCollectionId).template.map { it.id }.toSet())
@@ -364,6 +369,24 @@ class AppService(
                 nonexistentTemplateTypeIds)
 
         apps.executeOnKey(appId, UpdateAppRolePermissionsProcessor(roleId, permissions))
+    }
+
+    fun updateAppConfigRoleMapping(
+            appId: UUID,
+            organizationId: UUID,
+            roleMappings: Map<UUID, AclKey>
+    ) {
+        ensureAppRolesExist(getApp(appId), roleMappings.keys)
+        principalsService.ensurePrincipalsExist(roleMappings.values.toSet())
+
+        val serializableRoleMappings = roleMappings.toMap()
+        appConfigs.executeOnKey(AppConfigKey(appId, organizationId)) {
+            val setting = it.value
+            serializableRoleMappings.forEach { (roleId, roleAclKey) ->
+                setting.addRole(roleId, roleAclKey)
+            }
+            it.setValue(setting)
+        }
     }
 
     fun updateAppMetadata(appId: UUID, metadataUpdate: MetadataUpdate) {
@@ -433,6 +456,14 @@ class AppService(
                 }
             }
         }
+    }
+
+    private fun ensureAppRolesExist(app: App, roleIds: Set<UUID>) {
+        val missingRoleIds = roleIds - app.appRoles.map { it.id }
+        Preconditions.checkState(missingRoleIds.isEmpty(),
+                    "App {} does not contain roles with ids {}.",
+                    app.id,
+                    missingRoleIds)
     }
 
 }

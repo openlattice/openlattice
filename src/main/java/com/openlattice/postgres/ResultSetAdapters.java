@@ -845,7 +845,7 @@ public final class ResultSetAdapters {
     }
 
     public static App app( ResultSet rs ) throws SQLException, IOException {
-        Optional<UUID> id = Optional.of( id( rs ) );
+        UUID id = id( rs );
         String name = name( rs );
         String title = title( rs );
         Optional<String> description = Optional.ofNullable( description( rs ) );
