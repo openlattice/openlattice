@@ -21,11 +21,8 @@
 package com.openlattice.datastore.apps.controllers;
 
 import com.codahale.metrics.annotation.Timed;
-import com.openlattice.apps.App;
-import com.openlattice.apps.AppApi;
-import com.openlattice.apps.AppInstallation;
-import com.openlattice.apps.AppRole;
-import com.openlattice.apps.UserAppConfig;
+import com.google.common.collect.Maps;
+import com.openlattice.apps.*;
 import com.openlattice.apps.historical.HistoricalAppConfig;
 import com.openlattice.apps.services.AppService;
 import com.openlattice.authorization.AclKey;
@@ -33,8 +30,11 @@ import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.AuthorizingComponent;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principals;
+import com.openlattice.collections.CollectionTemplateType;
+import com.openlattice.collections.CollectionsManager;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.organizations.HazelcastOrganizationService;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -45,6 +45,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping( AppApi.CONTROLLER )
@@ -58,6 +59,9 @@ public class AppController implements AppApi, AuthorizingComponent {
 
     @Inject
     private HazelcastOrganizationService organizations;
+
+    @Inject
+    private CollectionsManager collectionsManager;
 
     @Timed
     @Override
@@ -89,7 +93,12 @@ public class AppController implements AppApi, AuthorizingComponent {
             produces = MediaType.APPLICATION_JSON_VALUE )
     @ResponseStatus( HttpStatus.OK )
     public App getApp( @PathVariable( ID ) UUID id ) {
-        return appService.getApp( id );
+        App app = appService.getApp( id );
+        Set<UUID> templateTypeIds = collectionsManager.getEntityTypeCollection( app.getEntityTypeCollectionId() )
+                .getTemplate().stream().map(
+                        CollectionTemplateType::getId ).collect( Collectors.toSet() );
+        app.setAppTypeIds( templateTypeIds );
+        return app;
     }
 
     @Timed
@@ -100,7 +109,12 @@ public class AppController implements AppApi, AuthorizingComponent {
             produces = MediaType.APPLICATION_JSON_VALUE )
     @ResponseStatus( HttpStatus.OK )
     public App getAppByName( @PathVariable( NAME ) String name ) {
-        return appService.getApp( name );
+        App app = appService.getApp( name );
+        Set<UUID> templateTypeIds = collectionsManager.getEntityTypeCollection( app.getEntityTypeCollectionId() )
+                .getTemplate().stream().map(
+                        CollectionTemplateType::getId ).collect( Collectors.toSet() );
+        app.setAppTypeIds( templateTypeIds );
+        return app;
     }
 
     @Timed
@@ -176,6 +190,32 @@ public class AppController implements AppApi, AuthorizingComponent {
         return appService.getAvailableConfigsOld( appId, Principals.getCurrentPrincipals() );
     }
 
+    @Override
+    @RequestMapping(
+            path = "/type/bulk",
+            method = RequestMethod.POST,
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public Map<UUID, AppType> getAppTypesBulk( @RequestBody Set<UUID> collectionTemplateTypeIds ) {
+        Map<UUID, AppType> result = Maps.newHashMapWithExpectedSize(collectionTemplateTypeIds.size());
+        collectionsManager.getAllEntityTypeCollections().forEach( collection -> {
+            collection.getTemplate().forEach( templateType -> {
+                
+                if (collectionTemplateTypeIds.contains( templateType.getId() )) {
+                    result.put( templateType.getId(), new AppType(
+                            templateType.getId(),
+                            templateType.getName(),
+                            templateType.getTitle(),
+                            templateType.getDescription(),
+                            templateType.getEntityTypeId(),
+                            "AppType"
+                    ) );
+                }
+            } );
+        } );
+        return result;
+    }
+
     @Timed
     @Override
     @RequestMapping(
@@ -184,6 +224,18 @@ public class AppController implements AppApi, AuthorizingComponent {
             produces = MediaType.APPLICATION_JSON_VALUE )
     public List<UserAppConfig> getAvailableAppConfigs( @RequestParam( ID ) UUID appId ) {
         return appService.getAvailableConfigs( appId, Principals.getCurrentPrincipals() );
+    }
+
+    @Timed
+    @Override
+    @RequestMapping(
+            path = ORGANIZATION_PATH + ORGANIZATION_ID_PATH,
+            method = RequestMethod.GET,
+            produces = MediaType.APPLICATION_JSON_VALUE )
+    public Map<UUID, AppTypeSetting> getOrganizationAppsByAppId(
+            @RequestParam( ORGANIZATION_ID ) UUID organizationId ) {
+        ensureOwnerAccess( new AclKey( organizationId ) );
+        return appService.getOrganizationAppsByAppId( organizationId );
     }
 
     @Timed
@@ -238,6 +290,19 @@ public class AppController implements AppApi, AuthorizingComponent {
             @RequestBody Map<String, Object> newSettings ) {
         ensureOwnerAccess( new AclKey( organizationId ) );
         appService.updateAppConfigSettings( appId, organizationId, newSettings );
+    }
+
+    @Timed
+    @Override
+    @RequestMapping(
+            path = CONFIG_PATH + UPDATE_PATH + ID_PATH + ORGANIZATION_ID_PATH + ROLE_PATH,
+            method = RequestMethod.POST )
+    public void updateAppRoleMappingForOrganization(
+            @PathVariable( ID ) UUID appId,
+            @PathVariable( ORGANIZATION_ID ) UUID organizationId,
+            @RequestBody Map<UUID, AclKey> roleMappings ) {
+        ensureOwnerAccess( new AclKey( organizationId ) );
+        appService.updateAppConfigRoleMapping( appId, organizationId, roleMappings );
     }
 
     @Override

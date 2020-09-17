@@ -92,6 +92,7 @@ class CodexService(
 
     val appConfigs: IMap<AppConfigKey, AppTypeSetting> = HazelcastMap.APP_CONFIGS.getMap(hazelcast)
 
+    val appId = reservationService.getId(CodexConstants.APP_NAME)
     val entityTypeCollectionId = reservationService.getId(CodexConstants.COLLECTION_FQN.fullQualifiedNameAsString)
     val typesByFqn = collectionsManager.getEntityTypeCollection(entityTypeCollectionId).template.map {
         CodexConstants.CollectionTemplateType.values().firstOrNull { ctt -> it.name == ctt.typeName } to it
@@ -548,7 +549,7 @@ class CodexService(
 
     private fun getEntitySetId(organizationId: UUID, type: CodexConstants.CollectionTemplateType): UUID {
         val templateTypeId = typesByFqn.getValue(type).id
-        val ack = AppConfigKey(entityTypeCollectionId, organizationId)
+        val ack = AppConfigKey(appId, organizationId)
         val entitySetCollectionId = appConfigs[ack]!!.entitySetCollectionId
         return collectionsManager.getEntitySetCollection(entitySetCollectionId).template.getValue(templateTypeId)
     }
