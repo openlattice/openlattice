@@ -49,7 +49,7 @@ public interface OrganizationsApi {
     String PRINCIPALS        = "/principals";
     String PRINCIPAL_ID      = "pid";
     String PRINCIPAL_ID_PATH = "/{" + PRINCIPAL_ID + "}";
-    String PUBLISH           = "/publish";
+    String PROMOTE           = "/promote";
     String REFRESH           = "/refresh";
     String REFRESH_RATE      = "/refresh-rate";
     String ROLES             = "/roles";
@@ -292,6 +292,6 @@ public interface OrganizationsApi {
      * @param tableName
      * @return
      */
-    @POST( BASE + PUBLISH )
-    Void publishStagingTable( @Path( ID ) UUID organizationId, @Body String tableName );
+    @POST( BASE + PROMOTE )
+    Void promoteStagingTable( @Path( ID ) UUID organizationId, @Body String tableName );
 }
