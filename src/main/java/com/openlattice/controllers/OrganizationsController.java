@@ -623,11 +623,11 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     }
 
     @Timed
-    @PostMapping( value = PUBLISH + ID_PATH, consumes = MediaType.APPLICATION_JSON_VALUE )
+    @PostMapping( value = PROMOTE + ID_PATH, consumes = MediaType.APPLICATION_JSON_VALUE )
     @Override
-    public Void publishStagingTable( @PathVariable( ID ) UUID organizationId, @RequestBody String tableName ) {
+    public Void promoteStagingTable( @PathVariable( ID ) UUID organizationId, @RequestBody String tableName ) {
         ensureOwner( organizationId );
-        edms.publishStagingTable( organizationId, tableName );
+        edms.promoteStagingTable( organizationId, tableName );
         return null;
     }
 
