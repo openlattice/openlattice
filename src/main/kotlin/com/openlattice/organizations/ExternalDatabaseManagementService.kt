@@ -588,7 +588,7 @@ class ExternalDatabaseManagementService(
     /**
      * Moves a table from the [MATERIALIZED_VIEWS_SCHEMA] schema to the [STAGING_SCHEMA] schema
      */
-    fun publishStagingTable(organizationId: UUID, tableName: String) {
+    fun promoteStagingTable(organizationId: UUID, tableName: String) {
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(organizationId)
 
         acm.connect(dbName).use { hds ->
