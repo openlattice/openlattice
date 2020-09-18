@@ -224,6 +224,12 @@ class AdminController : AdminApi, AuthorizingComponent {
         return jobService.getJobs(listOf(jobId))
     }
 
+    @Timed
+    @PatchMapping(
+            value = [JOBS + ID_PATH],
+            produces = [MediaType.APPLICATION_JSON_VALUE],
+            consumes = [MediaType.APPLICATION_JSON_VALUE]
+    )
     override fun updateJob(jobId: UUID, update: JobUpdate): Map<UUID, AbstractDistributedJob<*, *>> {
         ensureAdminAccess()
         val jobs = setOf(jobId)
