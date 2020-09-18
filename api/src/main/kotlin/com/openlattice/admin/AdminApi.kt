@@ -92,5 +92,5 @@ interface AdminApi {
     fun getJob(@Path(ID) jobId: UUID): Map<UUID, DistributableJob<*>>
 
     @PATCH(BASE + JOBS + ID_PATH)
-    fun updateJob(@Path(ID) jobId: UUID,@Body update: JobUpdate): Map<UUID, com.geekbeast.rhizome.jobs.AbstractDistributedJob<*, *>>
+    fun updateJob(@Path(ID) jobId: UUID,@Body update: JobUpdate): Map<UUID, DistributableJob<*>>
 }
