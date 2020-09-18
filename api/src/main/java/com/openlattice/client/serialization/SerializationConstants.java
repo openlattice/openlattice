@@ -122,6 +122,7 @@ public final class SerializationConstants {
     public static final String ENTITY_SET_FIELD                 = "entitySet";
     public static final String ENTITY_SET_ID                    = "entitySetId";
     public static final String ENTITY_SET_IDS                   = "entitySetIds";
+    public static final String ENTITY_SET_COLLECTION_ID         = "entitySetCollectionId";
     public static final String ENTITY_SET_NAME                  = "entitySetName";
     public static final String ENTITY_TYPE                      = "entityType";
     public static final String ENTITY_TYPES                     = "entityTypes";
@@ -214,6 +215,7 @@ public final class SerializationConstants {
     public static final String PHONE_NUMBER                     = "phoneNumber";
     public static final String PHONE_NUMBERS                    = "phoneNumbers";
     public static final String PII_FIELD                        = "pii";
+    public static final String PREFIX                           = "prefix";
     public static final String PRESENT                          = "present";
     public static final String PRIMARY_KEY                      = "primaryKey";
     public static final String PRINCIPAL                        = "principal";
