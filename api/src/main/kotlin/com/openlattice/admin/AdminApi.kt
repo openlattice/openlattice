@@ -3,6 +3,7 @@ package com.openlattice.admin
 import com.geekbeast.rhizome.jobs.DistributableJob
 import com.geekbeast.rhizome.jobs.JobStatus
 import com.openlattice.authorization.Principal
+import com.openlattice.jobs.JobUpdate
 import com.openlattice.notifications.sms.SmsEntitySetInformation
 import com.openlattice.organizations.Organization
 import retrofit2.http.*
@@ -89,4 +90,7 @@ interface AdminApi {
 
     @GET(BASE + JOBS + ID_PATH)
     fun getJob(@Path(ID) jobId: UUID): Map<UUID, DistributableJob<*>>
+
+    @PATCH(BASE + JOBS + ID_PATH)
+    fun updateJob(@Path(ID) jobId: UUID, @Body update: JobUpdate): Map<UUID, DistributableJob<*>>
 }
