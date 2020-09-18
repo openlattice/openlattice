@@ -1441,6 +1441,32 @@ paths:
             application/json:
               schema:
                 type: integer
+  /datastore/entity-sets/{entitySetId}/partitions:
+    put:
+      summary: Used to repartition an entity set. This will shuffle corresponding ids, edges, and data table rows for the entity set.
+      operationId: repartitionEntitySet
+      parameters:
+        - name: entitySetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: integer
+      tags: [entitySets]
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
             
   ###################
   ## DATA SET APIs ##
@@ -1674,7 +1700,7 @@ paths:
         "200":
           description: Success
 
-  /datastore/organization-database/{organizationId}/{tableName}/external-database-table:
+  /datastore/organization-database/{organizationId}/{tableId}/external-database-table:
     get:
       summary: Gets an OrganizationExternalDatabaseTable object, which represents an organization's table in an external database. 
       operationId: getExternalDatabaseTable
@@ -1685,11 +1711,12 @@ paths:
           schema:
             type: string
             format: uuid
-        - name: tableName
+        - name: tableId
           in: path
           required: true
           schema:
             type: string
+            format: uuid
       tags:
         - dataset
       security:
@@ -1702,6 +1729,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/OrganizationExternalDatabaseTable"      
+  /datastore/organization-database/{organizationId}/{tableName}/external-database-table:
     patch:
       summary: Updates an OrganizationExternalDatabaseTable object's fields that are included within the given metadata.
       operationId: updateExternalDatabaseTable
@@ -1778,7 +1806,43 @@ paths:
       responses:
         "200":
           description: Success
-
+  /datastore/organization-database/{organizationId}/{tableId}/{rowCount}/data:
+    get:
+      summary: Gets an OrganizationExternalDatabaseTable object with user specified number of rows of raw data for an organization
+      operationId: getExternalDatabaseTableData
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: tableId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: rowCount
+          in: path
+          required: true
+          schema:
+            type: integer
+      tags:
+        - dataset
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object    
+      
 
 
 
@@ -4667,6 +4731,244 @@ paths:
                 additionalProperties:
                   $ref: "#/components/schemas/IntegrationJob"
 
+  ###############
+  ## APP API"s ##
+  ###############
+
+  /datastore/app:
+    get:
+      summary: Get all apps
+      operationId: getApps
+      tags:
+        - app
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/App"
+    post:
+      summary: Create an app if it doesn't exist.
+      operationId: createApp
+      tags:
+        - app
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/App"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: string
+                format: uuid
+  /datastore/app/{appId}:
+    get:
+      summary: Get an app based on the ID
+      operationId: getApp
+      tags:
+        - app
+      parameters:
+        - name: appId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/App"
+    delete:
+      summary: Delete an app
+      operationId: deleteApp
+      tags:
+        - app
+      parameters:
+        - name: appId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+  /datastore/app/lookup/{name}:
+    get:
+      summary: Get an app based on the name
+      operationId: getAppByName
+      tags:
+        - app
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/App"
+  /datastore/app/update/{appId}/role:
+    post:
+      summary: Create an app role
+      operationId: createAppRole
+      tags:
+        - app
+      parameters:
+        - name: appId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppRole"
+  
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: string
+                format: uuid
+  /datastore/app/update/{appId}/role/{roleId}:
+    delete: 
+      summary: Delete an app role
+      operationId: deleteRoleFromApp
+      tags:
+        - app
+      parameters:
+        - name: appId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: roleId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+  # /datastore/app/update/{appId}/{roleId}:
+  #   post:
+  #     summary: Update App Entity Set Permissions Configuration
+  #     operationId: updateAppEntitySetPermissionsConfig
+  # /datastore/app/update/{appId}:
+  #   post:
+  #     summary: Update App Metadata
+  #     operationId: updateAppMetadata
+  #   patch:
+  #     summary: Updates default App settings
+  #     operationId: updateDefaultAppSettings
+  # /datastore/app/install/{appId}/{organizationId}:
+  #   post:
+  #     summary: Install an app for an organization
+  #     operationId: installApp
+  #   delete:
+  #     summary: Uninstall an app for an organization
+  #     operationId: uninstallApp
+  /datastore/app/config:
+    get:
+      summary: Get available app configurations
+      operationId: getAvailableAppConfigs
+      tags:
+        - app
+      parameters:
+        - name: appId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserAppConfig"
+                  
+      
+  # /datastore/app/config/update/{appId}/{organizationId}:
+  #   post:
+  #     summary: Update the App Configuration Settings
+  #     operationId: updateAppConfigSettings
+  /datastore/app/config/{appId}:
+    get:
+      summary: Get historical app configurations for an app
+      operationId: getAvailableAppConfigsOld
+      tags:
+        - app
+      parameters:
+        - name: appId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HistoricalAppConfig"
+      
 components:
   securitySchemes:
     http_auth:
@@ -6041,8 +6343,104 @@ components:
           format: uuid
           description: The id of the organization that this entity set collection belongs to.
         
-      
-      
+    App:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        url:
+          type: string
+        entityTypeCollectionId:
+          type: string
+          format: uuid
+        appRoles:
+          type: array
+          items:
+            $ref: "#/components/AppRole"
+        defaultSettings:
+          type: object
+          additionalProperties:
+            type: object
+    AppRole:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        permissions:
+          type: object
+          description: "A map from permissions, eg. {'READ': '<UUID>': [<UUID>, <UUID>]}"
+          properties:
+            additionalProperties:
+              type: object
+              additionalProperties:
+                type: array
+                items:
+                  type: string
+                  format: uuid
+    HistoricalAppConfig:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        principal:
+          $ref: "#/components/Principal"
+        title:
+          type: string
+        description:
+          type: string
+        appId:
+          type: string
+          format: uuid
+        organization:
+          $ref: "#/components/Organization"
+        config:
+          type: object
+          additionalProperties:
+            $ref: "#/components/HistoricalAppTypeSetting"
+    HistoricalAppTypeSetting:
+      type: object
+      properties:
+        entitySetId:
+          type: string
+          format: uuid
+        permissions:
+          type: array
+          items:
+            type: string
+    UserAppConfig:
+      type: object
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        entitySetCollectionId:
+          type: string
+          format: uuid
+        roles:
+          type: array
+          items:
+            type: string
+            format: uuid
+        settings:
+          type: object
+          additionalProperties:
+            type: object
+
 tags:
   - name: edm
     description: API endpoints to the entity data model.
