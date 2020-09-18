@@ -14,8 +14,11 @@ import com.hazelcast.query.Predicates
 import com.openlattice.assembler.events.MaterializePermissionChangeEvent
 import com.openlattice.authorization.aggregators.AuthorizationSetAggregator
 import com.openlattice.authorization.aggregators.PrincipalAggregator
-import com.openlattice.authorization.mapstores.PermissionMapstore
 import com.openlattice.authorization.mapstores.PermissionMapstore.ACL_KEY_INDEX
+import com.openlattice.authorization.mapstores.PermissionMapstore.PRINCIPAL_INDEX
+import com.openlattice.authorization.mapstores.PermissionMapstore.PERMISSIONS_INDEX
+import com.openlattice.authorization.mapstores.PermissionMapstore.SECURABLE_OBJECT_TYPE_INDEX
+import com.openlattice.authorization.mapstores.PermissionMapstore.PRINCIPAL_TYPE_INDEX
 import com.openlattice.authorization.processors.AuthorizationEntryProcessor
 import com.openlattice.authorization.processors.PermissionMerger
 import com.openlattice.authorization.processors.PermissionRemover
@@ -61,34 +64,34 @@ class HazelcastAuthorizationService(
         private fun hasExactPermissions(permissions: EnumSet<Permission>): Predicate<AceKey, AceValue> {
 
             val subPredicates = permissions
-                    .map { Predicates.equal<AceKey, AceValue>(PermissionMapstore.PERMISSIONS_INDEX, it) }
+                    .map { Predicates.equal<AceKey, AceValue>(PERMISSIONS_INDEX, it) }
                     .toTypedArray()
 
-            return Predicates.and<AceKey, AceValue>(*subPredicates) 
+            return Predicates.and<AceKey, AceValue>(*subPredicates)
         }
 
         private fun hasAnyPrincipals(principals: Collection<Principal>): Predicate<AceKey, AceValue> {
-            return Predicates.`in`<AceKey, AceValue>(PermissionMapstore.PRINCIPAL_INDEX, *principals.toTypedArray()) 
+            return Predicates.`in`<AceKey, AceValue>(PRINCIPAL_INDEX, *principals.toTypedArray())
         }
 
         private fun hasAnyAclKeys(aclKeys: Collection<AclKey>): Predicate<AceKey, AceValue> {
-            return Predicates.`in`<AceKey, AceValue>(ACL_KEY_INDEX, *aclKeys.map { it.index }.toTypedArray()) 
+            return Predicates.`in`<AceKey, AceValue>(ACL_KEY_INDEX, *aclKeys.map { it.index }.toTypedArray())
         }
 
         private fun hasAclKey(aclKey: AclKey): Predicate<AceKey, AceValue> {
-            return Predicates.equal(ACL_KEY_INDEX, aclKey.index) 
+            return Predicates.equal(ACL_KEY_INDEX, aclKey.index)
         }
 
         private fun hasType(objectType: SecurableObjectType): Predicate<AceKey, AceValue> {
-            return Predicates.equal(PermissionMapstore.SECURABLE_OBJECT_TYPE_INDEX, objectType) 
+            return Predicates.equal(SECURABLE_OBJECT_TYPE_INDEX, objectType)
         }
 
         private fun hasPrincipal(principal: Principal): Predicate<AceKey, AceValue> {
-            return Predicates.equal(PermissionMapstore.PRINCIPAL_INDEX, principal) 
+            return Predicates.equal(PRINCIPAL_INDEX, principal)
         }
 
         private fun hasPrincipalType(type: PrincipalType): Predicate<AceKey, AceValue> {
-            return Predicates.equal(PermissionMapstore.PRINCIPAL_TYPE_INDEX, type) 
+            return Predicates.equal(PRINCIPAL_TYPE_INDEX, type)
         }
     }
 
@@ -405,7 +408,7 @@ class HazelcastAuthorizationService(
                 hasAnyPrincipals(principals),
                 hasType(objectType),
                 hasExactPermissions(permissions),
-                additionalFilter) 
+                additionalFilter)
         return aces.keySet(p)
                 .stream()
                 .map { obj: AceKey -> obj.aclKey }
@@ -419,6 +422,15 @@ class HazelcastAuthorizationService(
                 .toSet()
 
         return Acl(key, acesWithPermissions)
+    }
+
+    @Timed
+    override fun getAllSecurableObjectPermissions(keys: Set<AclKey>): Set<Acl> {
+        return aces.entrySet(hasAnyAclKeys(keys))
+                .groupBy { it.key.aclKey }
+                .mapTo(mutableSetOf()) { entry ->
+                    Acl(entry.key, entry.value.mapTo(mutableSetOf()) { Ace(it.key.principal, it.value.permissions) })
+                }
     }
 
     override fun getAuthorizedPrincipalsOnSecurableObject(key: AclKey, permissions: EnumSet<Permission>): Set<Principal> {
