@@ -44,7 +44,8 @@ import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresColumn.*
-import com.openlattice.postgres.PostgresTable.*
+import com.openlattice.postgres.PostgresTable.E
+import com.openlattice.postgres.PostgresTable.PRINCIPALS
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
@@ -96,13 +97,19 @@ class AssemblerConnectionManager(
     }
 
     companion object {
-        const val INTEGRATIONS_SCHEMA = "integrations"
         const val PUBLIC_ROLE = "public"
 
         @JvmStatic
+        val INTEGRATIONS_SCHEMA = "integrations"
+
+        @JvmStatic
         val MATERIALIZED_VIEWS_SCHEMA = "openlattice"
+
         @JvmStatic
         val PUBLIC_SCHEMA = "public"
+
+        @JvmStatic
+        val STAGING_SCHEMA = "staging"
 
         @JvmStatic
         fun entitySetNameTableName(entitySetName: String): String {
@@ -169,26 +176,19 @@ class AssemblerConnectionManager(
 
         connect(dbName).let { dataSource ->
             configureRolesInDatabase(dataSource)
-            createOpenlatticeSchema(dataSource)
-            createIntegrationsSchema(dataSource)
+            createSchema(dataSource, MATERIALIZED_VIEWS_SCHEMA)
+            createSchema(dataSource, INTEGRATIONS_SCHEMA)
+            createSchema(dataSource, STAGING_SCHEMA)
             configureOrganizationUser(organizationId, dataSource)
             addMembersToOrganization(dbName, dataSource, organization.members)
             configureServerUser(dataSource)
         }
     }
 
-    private fun createOpenlatticeSchema(dataSource: HikariDataSource) {
+    private fun createSchema(dataSource: HikariDataSource, schemaName: String) {
         dataSource.connection.use { connection ->
             connection.createStatement().use { statement ->
-                statement.execute("CREATE SCHEMA IF NOT EXISTS $MATERIALIZED_VIEWS_SCHEMA")
-            }
-        }
-    }
-
-    private fun createIntegrationsSchema(dataSource: HikariDataSource) {
-        dataSource.connection.use { connection ->
-            connection.createStatement().use { statement ->
-                statement.execute("CREATE SCHEMA IF NOT EXISTS $INTEGRATIONS_SCHEMA")
+                statement.execute("CREATE SCHEMA IF NOT EXISTS $schemaName")
             }
         }
     }
@@ -197,7 +197,14 @@ class AssemblerConnectionManager(
         dataSource.connection.use { connection ->
             connection.createStatement().use { statement ->
                 statement.execute(
-                        "ALTER ROLE ${assemblerConfiguration.server["username"]} SET search_path to $INTEGRATIONS_SCHEMA,$MATERIALIZED_VIEWS_SCHEMA,$PUBLIC_SCHEMA"
+                        setSearchPathSql(
+                                assemblerConfiguration.server["username"].toString(),
+                                false,
+                                INTEGRATIONS_SCHEMA,
+                                MATERIALIZED_VIEWS_SCHEMA,
+                                PUBLIC_SCHEMA,
+                                STAGING_SCHEMA
+                        )
                 )
             }
         }
@@ -207,8 +214,9 @@ class AssemblerConnectionManager(
         val dbOrgUser = quote(buildOrganizationUserId(organizationId))
         dataSource.connection.createStatement().use { statement ->
             //Allow usage and create on schema openlattice to organization user
-            statement.execute("GRANT USAGE, CREATE ON SCHEMA $MATERIALIZED_VIEWS_SCHEMA TO $dbOrgUser")
-            statement.execute("ALTER USER $dbOrgUser SET search_path TO $MATERIALIZED_VIEWS_SCHEMA")
+            statement.execute(grantOrgUserPrivilegesOnSchemaSql(MATERIALIZED_VIEWS_SCHEMA, dbOrgUser))
+            statement.execute(grantOrgUserPrivilegesOnSchemaSql(STAGING_SCHEMA, dbOrgUser))
+            statement.execute(setSearchPathSql(dbOrgUser, true, MATERIALIZED_VIEWS_SCHEMA, STAGING_SCHEMA))
         }
     }
 
@@ -616,21 +624,6 @@ class AssemblerConnectionManager(
         }
     }
 
-    fun dropUserIfExists(user: SecurablePrincipal) {
-        target.connection.use { connection ->
-            connection.createStatement().use { statement ->
-                //TODO: Go through every database and for old users clean them out.
-//                    logger.info("Attempting to drop owned by old name {}", user.name)
-//                    statement.execute(dropOwnedIfExistsSql(user.name))
-                logger.info("Attempting to drop user {}", user.name)
-                statement.execute(dropUserIfExistsSql(user.name)) //Clean out the old users.
-                dbCredentialService.deleteUserCredential(user.name)
-                //Don't allow users to access public schema which will contain foreign data wrapper tables.
-                logger.info("Revoking $PUBLIC_SCHEMA schema right from user {}", user)
-            }
-        }
-    }
-
     fun createRole(role: Role) {
         val dbRole = buildPostgresRoleName(role)
 
@@ -687,13 +680,18 @@ class AssemblerConnectionManager(
         dataSource.connection.use { connection ->
             connection.createStatement().use { statement ->
                 logger.info(
-                        "Granting usage on $MATERIALIZED_VIEWS_SCHEMA schema and revoking from $PUBLIC_SCHEMA schema for users: $userIds"
+                        "Granting USAGE on {} schema, and granting USAGE and CREATE on {} schema for users: {}",
+                        MATERIALIZED_VIEWS_SCHEMA,
+                        STAGING_SCHEMA,
+                        PUBLIC_SCHEMA,
+                        userIds
                 )
                 statement.execute("GRANT USAGE ON SCHEMA $MATERIALIZED_VIEWS_SCHEMA TO $userIdsSql")
+                statement.execute("GRANT USAGE, CREATE ON SCHEMA $STAGING_SCHEMA TO $userIdsSql")
                 //Set the search path for the user
                 logger.info("Setting search_path to $MATERIALIZED_VIEWS_SCHEMA for users $userIds")
                 userIds.forEach { userId ->
-                    statement.addBatch("ALTER USER $userId SET search_path TO $MATERIALIZED_VIEWS_SCHEMA")
+                    statement.addBatch(setSearchPathSql(userId, true, MATERIALIZED_VIEWS_SCHEMA, STAGING_SCHEMA))
                 }
                 statement.executeBatch()
             }
@@ -704,34 +702,51 @@ class AssemblerConnectionManager(
         val userIdsSql = userIds.joinToString(", ")
 
         logger.info(
-                "Removing users $userIds from database $dbName, schema usage and all privileges on all tables in schema $MATERIALIZED_VIEWS_SCHEMA"
+                "Removing users $userIds from database $dbName, schema usage and all privileges on all tables in schemas {} and {}",
+                MATERIALIZED_VIEWS_SCHEMA,
+                STAGING_SCHEMA
         )
 
         dataSource.connection.use { conn ->
             conn.createStatement().use { stmt ->
-                stmt.execute(
-                        "REVOKE ${MEMBER_ORG_DATABASE_PERMISSIONS.joinToString(", ")} " +
-                                "ON DATABASE ${quote(dbName)} FROM $userIdsSql"
-                )
-                stmt.execute("REVOKE ALL PRIVILEGES ON SCHEMA $MATERIALIZED_VIEWS_SCHEMA FROM $userIdsSql")
-                stmt.execute(
-                        "REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA $MATERIALIZED_VIEWS_SCHEMA FROM $userIdsSql"
-                )
+                stmt.execute(revokePrivilegesOnDatabaseSql(dbName, userIdsSql))
+
+                stmt.execute(revokePrivilegesOnSchemaSql(MATERIALIZED_VIEWS_SCHEMA, userIdsSql))
+                stmt.execute(revokePrivilegesOnTablesInSchemaSql(MATERIALIZED_VIEWS_SCHEMA, userIdsSql))
+
+                stmt.execute(revokePrivilegesOnSchemaSql(STAGING_SCHEMA, userIdsSql))
+                stmt.execute(revokePrivilegesOnTablesInSchemaSql(STAGING_SCHEMA, userIdsSql))
             }
         }
-    }
-
-    private fun entitySetIdTableName(entitySetId: UUID): String {
-        return quote(entitySetId.toString())
     }
 }
 
 val MEMBER_ORG_DATABASE_PERMISSIONS = setOf("CREATE", "CONNECT", "TEMPORARY", "TEMP")
-val PUBLIC_TABLES = setOf(E.name, PROPERTY_TYPES.name, ENTITY_TYPES.name, ENTITY_SETS.name)
 
 
-private val PRINCIPALS_SQL = "SELECT acl_key FROM principals WHERE ${PRINCIPAL_TYPE.name} = ?"
+private val PRINCIPALS_SQL = "SELECT ${ACL_KEY.name} FROM ${PRINCIPALS.name} WHERE ${PRINCIPAL_TYPE.name} = ?"
 
+private fun grantOrgUserPrivilegesOnSchemaSql(schemaName: String, orgUserId: String): String {
+    return "GRANT USAGE, CREATE ON SCHEMA $schemaName TO $orgUserId"
+}
+
+private fun setSearchPathSql(granteeId: String, isUser: Boolean, vararg schemas: String): String {
+    val schemasSql = schemas.joinToString()
+    val granteeType = if (isUser) "USER" else "ROLE"
+    return "ALTER $granteeType $granteeId SET search_path TO $schemasSql"
+}
+
+private fun revokePrivilegesOnDatabaseSql(dbName: String, usersSql: String): String {
+    return "REVOKE ${MEMBER_ORG_DATABASE_PERMISSIONS.joinToString(", ")} ON DATABASE ${quote(dbName)} FROM $usersSql"
+}
+
+private fun revokePrivilegesOnSchemaSql(schemaName: String, usersSql: String): String {
+    return "REVOKE ALL PRIVILEGES ON SCHEMA $schemaName FROM $usersSql"
+}
+
+private fun revokePrivilegesOnTablesInSchemaSql(schemaName: String, usersSql: String): String {
+    return "REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA $schemaName FROM $usersSql"
+}
 
 internal fun createRoleIfNotExistsSql(dbRole: String): String {
     return "DO\n" +
@@ -767,11 +782,6 @@ internal fun createUserIfNotExistsSql(dbUser: String, dbUserPassword: String): S
             "\$do\$;"
 }
 
-internal fun updateUserCredentialSql(dbUser: String, credential: String): String {
-    return "ALTER ROLE $dbUser WITH ENCRYPTED PASSWORD '$credential'"
-}
-
-
 internal fun dropOwnedIfExistsSql(dbUser: String): String {
     return "DO\n" +
             "\$do\$\n" +
@@ -787,6 +797,10 @@ internal fun dropOwnedIfExistsSql(dbUser: String): String {
             "   END IF;\n" +
             "END\n" +
             "\$do\$;"
+}
+
+internal fun updateUserCredentialSql(dbUser: String, credential: String): String {
+    return "ALTER ROLE $dbUser WITH ENCRYPTED PASSWORD '$credential'"
 }
 
 internal fun dropUserIfExistsSql(dbUser: String): String {
