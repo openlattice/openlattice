@@ -26,7 +26,9 @@ import com.geekbeast.rhizome.jobs.DistributableJob
 import com.google.common.annotations.VisibleForTesting
 import com.hazelcast.nio.ObjectDataInput
 import com.openlattice.hazelcast.StreamSerializerTypeIds
+import com.openlattice.hazelcast.serializers.decorators.IdGenerationAware
 import com.openlattice.hazelcast.serializers.decorators.MetastoreAware
+import com.openlattice.ids.HazelcastIdGenerationService
 import com.zaxxer.hikari.HikariDataSource
 import org.springframework.stereotype.Component
 import javax.inject.Inject
@@ -40,17 +42,23 @@ class DistributableJobStreamSerializer : AbstractDistributableJobStreamSerialize
     @Inject
     private lateinit var hds: HikariDataSource
 
+    @Inject
+    private lateinit var idService: HazelcastIdGenerationService
+
     override fun getTypeId(): Int = StreamSerializerTypeIds.DISTRIBUTABLE_JOB.ordinal
     override fun read(`in`: ObjectDataInput): DistributableJob<*> {
         val job = super.read(`in`)
         if (job is MetastoreAware) {
             job.setHikariDataSource(hds)
         }
+        if (job is IdGenerationAware) {
+            job.setIdGenerationService(idService)
+        }
         return job
     }
 
     @VisibleForTesting
-    internal fun setHikariDataSource( hds:HikariDataSource ) {
+    internal fun setHikariDataSource(hds: HikariDataSource) {
         this.hds = hds
     }
 }
