@@ -27,6 +27,7 @@ import com.openlattice.authorization.AuthorizationsApi;
 import com.openlattice.authorization.PermissionsApi;
 import com.openlattice.client.RetrofitFactory.Environment;
 import com.openlattice.client.serialization.SerializableSupplier;
+import com.openlattice.collections.CollectionsApi;
 import com.openlattice.data.DataApi;
 import com.openlattice.data.DataIntegrationApi;
 import com.openlattice.data.S3Api;
@@ -105,6 +106,10 @@ public class ApiClient implements ApiFactoryFactory {
 
     public OrganizationsApi getOrganizationsApi() throws ExecutionException {
         return get().create( OrganizationsApi.class );
+    }
+
+    public CollectionsApi getCollectionsApi() throws ExecutionException {
+        return get().create( CollectionsApi.class );
     }
 
     public SearchApi getSearchApi() {
