@@ -744,7 +744,7 @@ public final class TestDataFactory {
 
     public static App app() {
         return new App(
-                Optional.empty(),
+                UUID.randomUUID(),
                 randomAlphanumeric( 5 ),
                 randomAlphanumeric( 5 ),
                 Optional.of( randomAlphanumeric( 5 ) ),

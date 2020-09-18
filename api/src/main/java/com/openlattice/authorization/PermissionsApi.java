@@ -27,16 +27,14 @@ import java.util.*;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public interface PermissionsApi {
-    /*
-     * These determine the service routing for the LB
-     */
+
     String SERVICE    = "/datastore";
     String CONTROLLER = "/permissions";
     String BASE       = SERVICE + CONTROLLER;
 
-    String EXPLAIN       = "/explain";
-    String UPDATE        = "/update";
-
+    String BULK    = "/bulk";
+    String EXPLAIN = "/explain";
+    String UPDATE  = "/update";
 
     /**
      * Adds, removes, or sets the ace for a particular acl key. Successful only if user is the owner of acl key.
@@ -62,6 +60,15 @@ public interface PermissionsApi {
      */
     @POST( BASE )
     Acl getAcl( @Body AclKey aclKey );
+
+    /**
+     * Retrieves the set of Acls for the given set of AclKeys, only if the user is OWNER of all AclKeys.
+     *
+     * @param aclKeys the set of AclKeys to operate on
+     * @return the set of Acls corresponding to the given set of AclKeys
+     */
+    @POST( BASE + BULK )
+    Set<Acl> getAcls( @Body Set<AclKey> aclKeys );
 
     /**
      * Retrieves the acl for a particular acl key, with explanation of where the permissions come from. Only return if
