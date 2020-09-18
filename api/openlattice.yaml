@@ -1441,6 +1441,32 @@ paths:
             application/json:
               schema:
                 type: integer
+  /datastore/entity-sets/{entitySetId}/partitions:
+    put:
+      summary: Used to repartition an entity set. This will shuffle corresponding ids, edges, and data table rows for the entity set.
+      operationId: repartitionEntitySet
+      parameters:
+        - name: entitySetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: integer
+      tags: [entitySets]
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
             
   ###################
   ## DATA SET APIs ##
