@@ -622,6 +622,15 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         return null;
     }
 
+    @Timed
+    @PostMapping( value = PROMOTE + ID_PATH, consumes = MediaType.APPLICATION_JSON_VALUE )
+    @Override
+    public Void promoteStagingTable( @PathVariable( ID ) UUID organizationId, @RequestBody String tableName ) {
+        ensureOwner( organizationId );
+        edms.promoteStagingTable( organizationId, tableName );
+        return null;
+    }
+
     private void ensureRoleAdminAccess( UUID organizationId, UUID roleId ) {
         ensureOwner( organizationId );
 
