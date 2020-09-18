@@ -32,6 +32,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.maps.GeoApiContext;
 import com.hazelcast.core.HazelcastInstance;
 import com.kryptnostic.rhizome.configuration.ConfigurationConstants;
+import com.openlattice.apps.services.AppService;
 import com.openlattice.assembler.Assembler;
 import com.openlattice.assembler.AssemblerConfiguration;
 import com.openlattice.assembler.AssemblerConnectionManager;
@@ -64,7 +65,6 @@ import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.data.storage.*;
 import com.openlattice.data.storage.aws.AwsDataSinkService;
 import com.openlattice.data.storage.partitions.PartitionManager;
-import com.openlattice.datastore.apps.services.AppService;
 import com.openlattice.datastore.configuration.DatastoreConfiguration;
 import com.openlattice.datastore.configuration.ReadonlyDatasourceSupplier;
 import com.openlattice.datastore.services.AnalysisService;
@@ -429,6 +429,7 @@ public class DatastoreServicesPod {
                         authorizationManager(),
                         principalService(),
                         aclKeyReservationService(),
+                        collectionsManager(),
                         entitySetManager()
                 ), "Checkpoint app service"
         );
@@ -606,14 +607,15 @@ public class DatastoreServicesPod {
     @Bean
     public CodexService codexService() {
         return new CodexService(
+                aclKeyReservationService(),
                 twilioConfiguration,
                 hazelcastInstance,
-                appService(),
                 dataModelService(),
                 dataGraphService(),
                 idService(),
                 principalService(),
                 organizationsManager(),
+                collectionsManager(),
                 executor,
                 hikariDataSource,
                 searchService()
