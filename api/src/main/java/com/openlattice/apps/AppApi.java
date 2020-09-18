@@ -1,6 +1,7 @@
 package com.openlattice.apps;
 
 import com.openlattice.apps.historical.HistoricalAppConfig;
+import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.Permission;
 import com.openlattice.edm.requests.MetadataUpdate;
 import retrofit2.http.*;
@@ -17,11 +18,12 @@ public interface AppApi {
     String CONTROLLER = "/app";
     String BASE       = SERVICE + CONTROLLER;
 
-    String INSTALL_PATH = "/install";
-    String CONFIG_PATH  = "/config";
-    String LOOKUP_PATH  = "/lookup";
-    String UPDATE_PATH  = "/update";
-    String ROLE_PATH    = "/role";
+    String INSTALL_PATH      = "/install";
+    String CONFIG_PATH       = "/config";
+    String LOOKUP_PATH       = "/lookup";
+    String ORGANIZATION_PATH = "/organization";
+    String UPDATE_PATH       = "/update";
+    String ROLE_PATH         = "/role";
 
     String ID              = "id";
     String ORGANIZATION_ID = "organizationId";
@@ -88,12 +90,25 @@ public interface AppApi {
     @Deprecated
     List<HistoricalAppConfig> getAvailableAppConfigsOld( @Path( ID ) UUID appId );
 
+    @GET( BASE + "/type/bulk" )
+    @Deprecated
+    Map<UUID, AppType> getAppTypesBulk( @Body Set<UUID> collectionTemplateTypeIds );
+
     @GET( BASE + CONFIG_PATH )
     List<UserAppConfig> getAvailableAppConfigs( @Query( ID ) UUID appId );
+
+    @GET( BASE + ORGANIZATION_PATH + ORGANIZATION_ID_PATH )
+    Map<UUID, AppTypeSetting> getOrganizationAppsByAppId( @Path( ORGANIZATION_ID ) UUID organizationId );
 
     @POST( BASE + CONFIG_PATH + UPDATE_PATH + ID_PATH + ORGANIZATION_ID_PATH )
     void updateAppConfigSettings(
             @Path( ID ) UUID appId,
             @Path( ORGANIZATION_ID ) UUID organizationId,
             @Body Map<String, Object> newSettings );
+
+    @POST( BASE + CONFIG_PATH + UPDATE_PATH + ID_PATH + ORGANIZATION_ID_PATH + ROLE_PATH )
+    void updateAppRoleMappingForOrganization(
+            @Path( ID ) UUID appId,
+            @Path( ORGANIZATION_ID ) UUID organizationId,
+            @Body Map<UUID, AclKey> roleMappings );
 }
