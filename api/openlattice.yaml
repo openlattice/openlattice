@@ -1674,7 +1674,7 @@ paths:
         "200":
           description: Success
 
-  /datastore/organization-database/{organizationId}/{tableName}/external-database-table:
+  /datastore/organization-database/{organizationId}/{tableId}/external-database-table:
     get:
       summary: Gets an OrganizationExternalDatabaseTable object, which represents an organization's table in an external database. 
       operationId: getExternalDatabaseTable
@@ -1685,11 +1685,12 @@ paths:
           schema:
             type: string
             format: uuid
-        - name: tableName
+        - name: tableId
           in: path
           required: true
           schema:
             type: string
+            format: uuid
       tags:
         - dataset
       security:
@@ -1702,6 +1703,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/OrganizationExternalDatabaseTable"      
+  /datastore/organization-database/{organizationId}/{tableName}/external-database-table:
     patch:
       summary: Updates an OrganizationExternalDatabaseTable object's fields that are included within the given metadata.
       operationId: updateExternalDatabaseTable
@@ -1778,7 +1780,43 @@ paths:
       responses:
         "200":
           description: Success
-
+  /datastore/organization-database/{organizationId}/{tableId}/{rowCount}/data:
+    get:
+      summary: Gets an OrganizationExternalDatabaseTable object with user specified number of rows of raw data for an organization
+      operationId: getExternalDatabaseTableData
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: tableId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: rowCount
+          in: path
+          required: true
+          schema:
+            type: integer
+      tags:
+        - dataset
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object    
+      
 
 
 
