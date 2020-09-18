@@ -30,5 +30,5 @@ postgres:
         jdbcUrl: jdbc:postgresql://localhost:5432/openlattice
         username: "oltest"
         password: "test"
-        maximumPoolSize: 32
+        maximumPoolSize: 10
         connectionTimeout: 12000000 #20 minutes
