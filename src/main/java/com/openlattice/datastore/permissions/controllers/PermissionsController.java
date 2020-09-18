@@ -158,6 +158,19 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
     @Override
     @Timed
     @RequestMapping(
+            path = { BULK },
+            method = RequestMethod.POST,
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public Set<Acl> getAcls( @RequestBody Set<AclKey> keys ) {
+        ensureOwnerAccess( keys );
+        return authorizations.getAllSecurableObjectPermissions( keys );
+    }
+
+    @Override
+    @Timed
+    @RequestMapping(
             path = { EXPLAIN },
             method = RequestMethod.POST,
             consumes = MediaType.APPLICATION_JSON_VALUE,
