@@ -219,7 +219,7 @@ class AdminController : AdminApi, AuthorizingComponent {
 
     @Timed
     @GetMapping(value = [JOBS + ID_PATH], produces = [MediaType.APPLICATION_JSON_VALUE])
-    override fun getJob(@PathVariable(ID) jobId: UUID): Map<UUID,DistributableJob<*>> {
+    override fun getJob(@PathVariable(ID) jobId: UUID): Map<UUID, DistributableJob<*>> {
         ensureAdminAccess()
         return jobService.getJobs(listOf(jobId))
     }
@@ -230,12 +230,15 @@ class AdminController : AdminApi, AuthorizingComponent {
             produces = [MediaType.APPLICATION_JSON_VALUE],
             consumes = [MediaType.APPLICATION_JSON_VALUE]
     )
-    override fun updateJob(jobId: UUID, update: JobUpdate): Map<UUID, AbstractDistributedJob<*, *>> {
+    override fun updateJob(
+            @PathVariable(ID) jobId: UUID,
+            @RequestBody update: JobUpdate
+    ): Map<UUID, AbstractDistributedJob<*, *>> {
         ensureAdminAccess()
         val jobs = setOf(jobId)
-        jobService.updateJob( jobId, update.status )
+        jobService.updateJob(jobs, update.status)
 
-        if( update.reload ) jobService.reload(jobs, true)
+        if (update.reload) jobService.reload(jobs, true)
 
         return jobService.getJobs(jobs)
     }
