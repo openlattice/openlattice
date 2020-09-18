@@ -91,5 +91,5 @@ interface AdminApi {
     fun getJob(@Path(ID) jobId: UUID): Map<UUID, DistributableJob<*>>
 
     @PATCH(BASE + JOBS )
-    fun createJobs( @Body jobs: List<DistributableJob<*>>)
+    fun createJobs( @Body jobs: List<DistributableJob<*>>): List<UUID>
 }
