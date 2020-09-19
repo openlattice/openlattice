@@ -7,4 +7,4 @@ import java.util.*
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-data class FixDuplicateIdAssignmentJobState( var id: UUID) : JobState
+data class FixDuplicateIdAssignmentJobState( var id: UUID , internal var idCount : Long ) : JobState
