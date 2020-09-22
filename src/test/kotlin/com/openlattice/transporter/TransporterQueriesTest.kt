@@ -114,7 +114,7 @@ class TransporterQueriesTest {
         val entitySetId = es.id
         val table = tableName(entityType.id)
         sync(entityType.id, listOf(prop))
-        val query = updateIdsForEntitySets(table)
+        val query = updatePrimaryKeyForEntitySets(table)
         transporter.connection.use {conn ->
             conn.prepareStatement(query).use {ps ->
                 ps.setArray(1, PostgresArrays.createIntArray(conn, listOf(1)))

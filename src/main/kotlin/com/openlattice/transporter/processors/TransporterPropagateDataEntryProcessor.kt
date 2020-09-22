@@ -13,6 +13,7 @@ import com.openlattice.transporter.types.TransporterDatastore
 import com.openlattice.transporter.types.TransporterDependent
 import com.openlattice.transporter.updateIdsForEntitySets
 import com.openlattice.transporter.updateOneBatchForProperty
+import com.openlattice.transporter.updatePrimaryKeyForEntitySets
 import io.prometheus.client.Counter
 import org.slf4j.LoggerFactory
 import java.util.*
@@ -76,14 +77,14 @@ class TransporterPropagateDataEntryProcessor(
         if (!hasModifiedData(transporter, partitions, entitySetIds)) {
             return
         }
+
         transporter.connection.use { conn ->
-            conn.autoCommit = false
             var lastSql = ""
             try {
-                val entitySetArray = PostgresArrays.createUuidArray(conn, entitySetIds)
                 val partitions = PostgresArrays.createIntArray(conn, partitions)
-                lastSql = updateIdsForEntitySets(tableName)
-                val idUpdates = conn.prepareStatement(lastSql).use {ps ->
+                val entitySetArray = PostgresArrays.createUuidArray(conn, entitySetIds)
+                lastSql = updatePrimaryKeyForEntitySets(tableName)
+                val pkeyUpdates = conn.prepareStatement(lastSql).use {ps ->
                     ps.setArray(1, partitions)
                     ps.setArray(2, entitySetArray)
                     ps.executeUpdate()
@@ -96,10 +97,16 @@ class TransporterPropagateDataEntryProcessor(
                         generateSequence { ps.executeUpdate() }.takeWhile { it > 0 }.sum()
                     }
                 }.sum()
+                lastSql = updateIdsForEntitySets()
+                val idUpdates = conn.prepareStatement(lastSql).use {ps ->
+                    ps.setArray(1, partitions)
+                    ps.setArray(2, entitySetArray)
+                    ps.executeUpdate()
+                }
 //                val edgeUpdates =
                 logger.debug("Updated {} values in entity type table {}", colUpdates, tableName)
                 conn.commit()
-                idCounter.inc(idUpdates.toDouble())
+                idCounter.inc(pkeyUpdates.toDouble())
                 valueCounter.inc(colUpdates.toDouble())
 //                edgesCounter.inc(edgeUpdates.toDouble())
             } catch (ex: Exception) {

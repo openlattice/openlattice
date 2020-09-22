@@ -90,13 +90,16 @@ val ids = "$pk,${ORIGIN_ID.name}"
  * 2 - entity set ids array
  *
  */
-fun updateOneBatchForProperty(destTable: String, propId: UUID, column: TransporterColumn): String {
+fun updateOneBatchForProperty(
+        destTable: String,
+        propId: UUID,
+        column: TransporterColumn): String {
     val dataColumn = column.dataTableColumnName
     val destinationColumn = column.transporterTableColumnName
     // if data is deleted (version <= 0, use null, otherwise use the value from source
     val dataView = "CASE WHEN VERSION > 0 THEN $dataColumn else null END as $destinationColumn"
 
-    val updateLastPropagate = "UPDATE ${PostgresTable.DATA.name} " +
+    val updateLastTransport = "UPDATE ${PostgresTable.DATA.name} " +
             "SET ${transportTimestampColumn.name} = ${DataTables.LAST_WRITE.name} " +
             "WHERE ${PARTITION.name} = ANY(?) " +
             " AND ${ENTITY_SET_ID.name} = ANY(?) " +
@@ -116,25 +119,22 @@ fun updateOneBatchForProperty(destTable: String, propId: UUID, column: Transport
             "FROM src " +
             "WHERE " + pkCols.joinToString(" AND ") { "t." + it.name + " = src." + it.name}
 
-    return "WITH src as (${updateLastPropagate}), inserted as ($createMissingRows) $modifyDestination"
+    return "WITH src as ($updateLastTransport), inserted as ($createMissingRows) $modifyDestination"
 }
 
 /**
- * Update [IDS] set last transport = last write
  * Update transported [destTable] entity type table
  *
  * column bindings are
  * 1 - partitions array
  * 2 - entity set ids array
- *
  */
-fun updateIdsForEntitySets(destTable: String): String {
-    val updateLastTransport = "UPDATE ${PostgresTable.IDS.name} " +
-            "SET ${transportTimestampColumn.name} = ${DataTables.LAST_WRITE.name} " +
+fun updatePrimaryKeyForEntitySets(destTable: String): String {
+    val selectFromIds = "SELECT ${ENTITY_SET_ID.name}, ${ID_VALUE.name},${LINKING_ID.name},${VERSION.name} " +
+            "FROM ${PostgresTable.IDS.name} " +
             "WHERE ${PARTITION.name} = ANY(?) " +
             " AND ${ENTITY_SET_ID.name} = ANY(?) " +
-            " AND ${DataTables.LAST_WRITE.name} > ${transportTimestampColumn.name} " +
-            "RETURNING ${ENTITY_SET_ID.name}, ${ID_VALUE.name},${LINKING_ID.name},${VERSION.name}"
+            " AND ${DataTables.LAST_WRITE.name} > ${transportTimestampColumn.name} LIMIT 10000"
     val createMissingRows = "INSERT INTO $destTable ($pk) " +
             "SELECT $pk " +
             "FROM src " +
@@ -153,10 +153,25 @@ fun updateIdsForEntitySets(destTable: String): String {
             "WHERE src.${VERSION.name} <= 0 " +
             " AND t.${ENTITY_SET_ID.name} = src.${ENTITY_SET_ID.name} " +
             " AND t.${ID_VALUE.name} in (src.${ID_VALUE.name},src.${LINKING_ID.name})"
-    return "WITH src as ($updateLastTransport), " +
+    return "WITH src as ($selectFromIds), " +
             "inserts as ($createMissingRows)," +
             "insertLinks as ($createMissingLinkedRows) " +
             deleteRows
+}
+
+/**
+ * Update [IDS] with new transport time
+ *
+ * column bindings are
+ * 1 - partitions array
+ * 2 - entity set ids array
+ */
+fun updateIdsForEntitySets(): String {
+    return "UPDATE ${PostgresTable.IDS.name} " +
+            "SET ${transportTimestampColumn.name} = ${DataTables.LAST_WRITE.name} " +
+            "WHERE ${PARTITION.name} = ANY(?) " +
+            " AND ${ENTITY_SET_ID.name} = ANY(?) " +
+            " AND ${DataTables.LAST_WRITE.name} > ${transportTimestampColumn.name} "
 }
 
 fun addAllMissingColumnsQuery(table: PostgresTableDefinition): String =
