@@ -59,6 +59,8 @@ interface EntitySetManager {
 
     fun getEntitySetsForOrganization(organizationId: UUID): Set<UUID>
 
+    fun filterEntitySetsForOrganization(organizationId: UUID, entitySetIds: Collection<UUID>): Set<UUID>
+
     fun getEntityTypeByEntitySetId(entitySetId: UUID): EntityType
 
     fun getEntityTypeIdsByEntitySetIds(entitySetIds: Set<UUID>): Map<UUID, UUID>
