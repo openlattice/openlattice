@@ -17,9 +17,9 @@ import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.transporter.processors.TransporterPropagateDataEntryProcessor
 import com.openlattice.transporter.processors.TransporterSynchronizeTableDefinitionEntryProcessor
 import com.openlattice.transporter.tableName
+import com.openlattice.transporter.transporterNamespace
 import com.openlattice.transporter.types.TransporterColumnSet
 import com.openlattice.transporter.types.TransporterDatastore
-import com.openlattice.transporter.types.transporterNamespace
 import io.prometheus.client.Counter
 import io.prometheus.client.Histogram
 import org.eclipse.jetty.util.MultiException
