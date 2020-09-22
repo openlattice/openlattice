@@ -153,7 +153,7 @@ fun updateIdsForEntitySets(destTable: String): String {
             "WHERE src.${VERSION.name} <= 0 " +
             " AND t.${ENTITY_SET_ID.name} = src.${ENTITY_SET_ID.name} " +
             " AND t.${ID_VALUE.name} in (src.${ID_VALUE.name},src.${LINKING_ID.name})"
-    return "WITH src as ($updateLastPropagate), " +
+    return "WITH src as ($updateLastTransport), " +
             "inserts as ($createMissingRows)," +
             "insertLinks as ($createMissingLinkedRows) " +
             deleteRows
