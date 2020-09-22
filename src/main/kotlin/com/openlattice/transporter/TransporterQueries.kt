@@ -118,13 +118,16 @@ fun updateOneBatchForProperty(destTable: String, propId: UUID, column: Transport
 }
 
 /**
+ * Update [IDS] set last transport = last write
+ * Update transported [destTable] entity type table
+ *
  * column bindings are
  * 1 - partitions array
  * 2 - entity set ids array
  *
  */
 fun updateIdsForEntitySets(destTable: String): String {
-    val updateLastPropagate = "UPDATE ${PostgresTable.IDS.name} " +
+    val updateLastTransport = "UPDATE ${PostgresTable.IDS.name} " +
             "SET ${transportTimestampColumn.name} = ${DataTables.LAST_WRITE.name} " +
             "WHERE ${PARTITION.name} = ANY(?) " +
             " AND ${ENTITY_SET_ID.name} = ANY(?) " +

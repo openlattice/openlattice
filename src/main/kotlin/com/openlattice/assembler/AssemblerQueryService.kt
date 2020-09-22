@@ -20,7 +20,12 @@
  */
 package com.openlattice.assembler
 
-import com.openlattice.analysis.requests.*
+import com.openlattice.analysis.requests.AggregationType
+import com.openlattice.analysis.requests.BaseCalculationTypes
+import com.openlattice.analysis.requests.Calculation
+import com.openlattice.analysis.requests.CalculationType
+import com.openlattice.analysis.requests.Filter
+import com.openlattice.analysis.requests.Orientation
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.PostgresColumn
@@ -39,9 +44,9 @@ class AssemblerQueryService(
     companion object {
         private val logger = LoggerFactory.getLogger(AssemblerQueryService::class.java)
 
-        const val SRC_TABLE_ALIAS = "SRC_TABLE"
-        const val EDGE_TABLE_ALIAS = "EDGE_TABLE"
-        const val DST_TABLE_ALIAS = "DST_TABLE"
+        private const val SRC_TABLE_ALIAS = "SRC_TABLE"
+        private const val EDGE_TABLE_ALIAS = "EDGE_TABLE"
+        private const val DST_TABLE_ALIAS = "DST_TABLE"
     }
 
     fun simpleAggregation(
@@ -194,8 +199,7 @@ class AssemblerQueryService(
         })
     }
 
-
-    fun simpleAggregationJoinSql(srcEntitySetName: String, edgeEntitySetName: String, dstEntitySetName: String,
+    private fun simpleAggregationJoinSql(srcEntitySetName: String, edgeEntitySetName: String, dstEntitySetName: String,
                                  cols: String, groupingColAliases: String, aggregateCols: String, calculationCols: String,
                                  filtersSql: String): String {
         return "SELECT $cols, $aggregateCols $calculationCols FROM ${AssemblerConnectionManager.MATERIALIZED_VIEWS_SCHEMA}.${PostgresTable.E.name} " +
@@ -222,7 +226,7 @@ class AssemblerQueryService(
         }
     }
 
-    class DurationCalculator(private val endColumn: String, private val startColumn: String) {
+    private class DurationCalculator(private val endColumn: String, private val startColumn: String) {
         fun firstStart(): String {
             return "(SELECT unnest($startColumn) ORDER BY 1 LIMIT 1)"
         }

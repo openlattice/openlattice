@@ -37,6 +37,9 @@ data class TransporterSynchronizeTableDefinitionEntryProcessor(val newProperties
         if (newProps.isEmpty()) {
             return
         }
+        /**
+         * TODO: drop and create new view when columns added
+         */
         val transporter = data.datastore()
         val newColumns = entry.value.withProperties(newProps)
         val table = tableDefinition(entry.key, newColumns.columns.values.map { it.transporterColumn() })

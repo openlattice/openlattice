@@ -2,6 +2,7 @@ package com.openlattice.transporter.processors
 
 import com.hazelcast.core.Offloadable
 import com.openlattice.edm.EntitySet
+import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
 import com.openlattice.transporter.hasModifiedData
@@ -37,6 +38,11 @@ class TransporterPropagateDataEntryProcessor(
                 .name("updated_values")
                 .help("Rows updated in the transporter database")
                 .register()
+        val edgesCounter: Counter = Counter.build()
+                .namespace(transporterNamespace)
+                .name("updated_edges")
+                .help("Rows updated in the transporter edges table")
+                .register()
         val errorCounter: Counter = Counter.build()
                 .namespace(transporterNamespace)
                 .name("errors")
@@ -63,7 +69,7 @@ class TransporterPropagateDataEntryProcessor(
             logger.error("Skipping linking entity set {} ({})", it.name, it.id)
         }
         val entitySetIds = entitySets
-                .filterNot { it.isLinking }
+                .filter{ !it.isLinking && it.flags.contains(EntitySetFlag.MATERIALIZED) }
                 .map { it.id }
                 .toSet()
         val transporter = data.datastore()
@@ -90,10 +96,12 @@ class TransporterPropagateDataEntryProcessor(
                         generateSequence { ps.executeUpdate() }.takeWhile { it > 0 }.sum()
                     }
                 }.sum()
+//                val edgeUpdates =
                 logger.debug("Updated {} values in entity type table {}", colUpdates, tableName)
                 conn.commit()
                 idCounter.inc(idUpdates.toDouble())
-                valueCounter.inc((colUpdates).toDouble())
+                valueCounter.inc(colUpdates.toDouble())
+//                edgesCounter.inc(edgeUpdates.toDouble())
             } catch (ex: Exception) {
                 errorCounter.inc()
                 logger.error("Unable to update transporter: SQL: {}", lastSql, ex)

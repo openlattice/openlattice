@@ -4,8 +4,6 @@ import com.google.common.eventbus.EventBus
 import com.google.common.eventbus.Subscribe
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
-import com.openlattice.data.events.EntitiesDeletedEvent
-import com.openlattice.data.events.EntitiesUpsertedEvent
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
@@ -137,7 +135,7 @@ final class DataTransporterService(
         val es = this.entitySetService.getEntitySet(entitySetId) ?: return
         val partitions = partitions(setOf(entitySetId))
         val refreshTimer = refreshTimer.startTimer()
-        transporterState.submitToKey(es.entityTypeId, TransporterPropagateDataEntryProcessor(setOf(es), partitions))
+        transporterState.submitToKey(es.entityTypeId, TransporterPropagateDataEntryProcessor(setOf(es), partitions).init(data))
                 .whenCompleteAsync { _, throwable ->
                     refreshTimer.observeDuration()
                     if ( throwable != null ){
@@ -164,15 +162,15 @@ final class DataTransporterService(
         }
     }
 
-    @Subscribe
-    fun handleEntitiesUpserted(e: EntitiesUpsertedEvent) {
-        this.refreshDataForEntitySet(e.entitySetId)
-    }
+//    @Subscribe
+//    fun handleEntitiesUpserted(e: EntitiesUpsertedEvent) {
+//        this.refreshDataForEntitySet(e.entitySetId)
+//    }
 
-    @Subscribe
-    fun handleEntities(e: EntitiesDeletedEvent) {
-        this.refreshDataForEntitySet(e.entitySetId)
-    }
+//    @Subscribe
+//    fun handleEntities(e: EntitiesDeletedEvent) {
+//        this.refreshDataForEntitySet(e.entitySetId)
+//    }
 
     @Subscribe
     fun handleEntityTypeDeleted(e: EntityTypeDeletedEvent) {

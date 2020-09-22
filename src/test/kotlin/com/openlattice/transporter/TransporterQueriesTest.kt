@@ -4,6 +4,7 @@ import com.google.common.base.Strings
 import com.kryptnostic.rhizome.configuration.RhizomeConfiguration
 import com.kryptnostic.rhizome.pods.ConfigurationLoader
 import com.openlattice.TestServer
+import com.openlattice.assembler.AssemblerConfiguration
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.postgres.IndexType
@@ -43,7 +44,7 @@ class TransporterQueriesTest {
         fun init() {
             val context = TestServer.testServer.context
             val configurationLoader = context.getBean(ConfigurationLoader::class.java)
-            val config = configurationLoader.load(TransporterConfiguration::class.java)
+            val config = configurationLoader.load(AssemblerConfiguration::class.java)
             val rhizome = context.getBean(RhizomeConfiguration::class.java)
             context.getBean(PostgresTableManager::class.java)
 

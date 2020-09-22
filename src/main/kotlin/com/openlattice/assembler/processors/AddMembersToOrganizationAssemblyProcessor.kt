@@ -28,7 +28,6 @@ import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcesso
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.AssemblerConnectionManagerDependent
 import com.openlattice.assembler.OrganizationAssembly
-import com.openlattice.assembler.PostgresDatabases
 import com.openlattice.authorization.SecurablePrincipal
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
@@ -53,10 +52,7 @@ data class AddMembersToOrganizationAssemblyProcessor(
         }
 
         check(::acm.isInitialized) { AssemblerConnectionManagerDependent.NOT_INITIALIZED }
-        val dbName = PostgresDatabases.buildOrganizationDatabaseName(organizationId)
-        acm.connect(dbName).let { dataSource ->
-            acm.addMembersToOrganization(dbName, dataSource, authorizedPropertyTypesOfEntitySetsByPrincipal)
-        }
+        acm.addMembersToOrganization(organizationId, authorizedPropertyTypesOfEntitySetsByPrincipal)
 
         return null
     }

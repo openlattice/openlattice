@@ -24,9 +24,6 @@ package com.openlattice.assembler
 import com.codahale.metrics.MetricRegistry
 import com.codahale.metrics.MetricRegistry.name
 import com.codahale.metrics.Timer
-import com.google.common.cache.CacheBuilder
-import com.google.common.cache.CacheLoader
-import com.google.common.cache.LoadingCache
 import com.google.common.eventbus.EventBus
 import com.google.common.eventbus.Subscribe
 import com.openlattice.assembler.PostgresDatabases.Companion.buildOrganizationDatabaseName
@@ -34,8 +31,11 @@ import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationRoleNa
 import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationUserId
 import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresRoleName
 import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresUsername
-import com.openlattice.authorization.*
-import com.openlattice.directory.MaterializedViewAccount
+import com.openlattice.authorization.DbCredentialService
+import com.openlattice.authorization.Principal
+import com.openlattice.authorization.PrincipalType
+import com.openlattice.authorization.SecurablePrincipal
+import com.openlattice.authorization.SystemRole
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.organization.OrganizationEntitySetFlag
@@ -43,21 +43,26 @@ import com.openlattice.organization.roles.Role
 import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.DataTables.quote
-import com.openlattice.postgres.PostgresColumn.*
-import com.openlattice.postgres.PostgresTable.*
+import com.openlattice.postgres.PostgresColumn.ENTITY_KEY_IDS_COL
+import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.ID_VALUE
+import com.openlattice.postgres.PostgresColumn.PRINCIPAL_TYPE
+import com.openlattice.postgres.PostgresTable.E
+import com.openlattice.postgres.PostgresTable.ENTITY_SETS
+import com.openlattice.postgres.PostgresTable.ENTITY_TYPES
+import com.openlattice.postgres.PostgresTable.PROPERTY_TYPES
 import com.openlattice.postgres.ResultSetAdapters
+import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
 import com.openlattice.principals.RoleCreatedEvent
 import com.openlattice.principals.UserCreatedEvent
-import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.sql.Connection
 import java.sql.Statement
 import java.util.*
-import java.util.concurrent.TimeUnit
 import java.util.function.Function
 import java.util.function.Supplier
 import kotlin.NoSuchElementException
@@ -71,6 +76,7 @@ private val logger = LoggerFactory.getLogger(AssemblerConnectionManager::class.j
 @Component
 class AssemblerConnectionManager(
         private val assemblerConfiguration: AssemblerConfiguration,
+        private val extDbManager: ExternalDatabaseConnectionManager,
         private val hds: HikariDataSource,
         private val securePrincipalsManager: SecurePrincipalsManager,
         private val organizations: HazelcastOrganizationService,
@@ -79,11 +85,7 @@ class AssemblerConnectionManager(
         metricRegistry: MetricRegistry
 ) {
 
-    private val perDbCache: LoadingCache<String, HikariDataSource> = CacheBuilder
-            .newBuilder()
-            .expireAfterAccess(1, TimeUnit.HOURS)
-            .build(cacheLoader())
-    private val target: HikariDataSource = connect("postgres")
+    private val atlas: HikariDataSource = extDbManager.connect("postgres")
     private val materializeAllTimer: Timer =
             metricRegistry.timer(name(AssemblerConnectionManager::class.java, "materializeAll"))
     private val materializeEntitySetsTimer: Timer =
@@ -102,48 +104,14 @@ class AssemblerConnectionManager(
         @JvmStatic
         val MATERIALIZED_VIEWS_SCHEMA = "openlattice"
         @JvmStatic
+        val TRANSPORTED_VIEWS_SCHEMA = "ol"
+        @JvmStatic
         val PUBLIC_SCHEMA = "public"
 
         @JvmStatic
         fun entitySetNameTableName(entitySetName: String): String {
             return "$MATERIALIZED_VIEWS_SCHEMA.${quote(entitySetName)}"
         }
-
-        @JvmStatic
-        fun createDataSource(dbName: String, config: Properties, useSsl: Boolean): HikariDataSource {
-            config.computeIfPresent("jdbcUrl") { _, jdbcUrl ->
-                "${(jdbcUrl as String).removeSuffix(
-                        "/"
-                )}/$dbName" + if (useSsl) {
-                    "?sslmode=require"
-                } else {
-                    ""
-                }
-            }
-            return HikariDataSource(HikariConfig(config))
-        }
-    }
-
-    fun cacheLoader(): CacheLoader<String, HikariDataSource> {
-        return CacheLoader.from { dbName ->
-            createDataSource(dbName!!, assemblerConfiguration.server.clone() as Properties, assemblerConfiguration.ssl)
-        }
-    }
-
-    fun connect(dbName: String): HikariDataSource {
-        return perDbCache.get(dbName)
-    }
-
-    @Deprecated(
-            message = "doesn't use the connection pool cache",
-            replaceWith = ReplaceWith(expression = "#connect(String)")
-    )
-    fun connect(dbName: String, account: MaterializedViewAccount): HikariDataSource {
-        val config = assemblerConfiguration.server.clone() as Properties
-        config["username"] = account.username
-        config["password"] = account.credential
-
-        return createDataSource(dbName, config, assemblerConfiguration.ssl)
     }
 
     @Subscribe
@@ -167,7 +135,7 @@ class AssemblerConnectionManager(
         val dbName = buildOrganizationDatabaseName(organizationId)
         createOrganizationDatabase(organizationId, dbName)
 
-        connect(dbName).let { dataSource ->
+        extDbManager.connect(dbName).let { dataSource ->
             configureRolesInDatabase(dataSource)
             createOpenlatticeSchema(dataSource)
             createIntegrationsSchema(dataSource)
@@ -197,7 +165,7 @@ class AssemblerConnectionManager(
         dataSource.connection.use { connection ->
             connection.createStatement().use { statement ->
                 statement.execute(
-                        "ALTER ROLE ${assemblerConfiguration.server["username"]} SET search_path to $INTEGRATIONS_SCHEMA,$MATERIALIZED_VIEWS_SCHEMA,$PUBLIC_SCHEMA"
+                        "ALTER ROLE ${assemblerConfiguration.server["username"]} SET search_path to $INTEGRATIONS_SCHEMA,$MATERIALIZED_VIEWS_SCHEMA,$PUBLIC_SCHEMA,$TRANSPORTED_VIEWS_SCHEMA"
                 )
             }
         }
@@ -208,7 +176,7 @@ class AssemblerConnectionManager(
         dataSource.connection.createStatement().use { statement ->
             //Allow usage and create on schema openlattice to organization user
             statement.execute("GRANT USAGE, CREATE ON SCHEMA $MATERIALIZED_VIEWS_SCHEMA TO $dbOrgUser")
-            statement.execute("ALTER USER $dbOrgUser SET search_path TO $MATERIALIZED_VIEWS_SCHEMA")
+            statement.execute("ALTER USER $dbOrgUser SET search_path TO $MATERIALIZED_VIEWS_SCHEMA,$TRANSPORTED_VIEWS_SCHEMA")
         }
     }
 
@@ -234,6 +202,16 @@ class AssemblerConnectionManager(
     }
 
     fun addMembersToOrganization(
+            organizationId: UUID,
+            authorizedPropertyTypesOfEntitySetsByPrincipal: Map<SecurablePrincipal, Map<EntitySet, Collection<PropertyType>>>
+    ) {
+        val dbName = buildOrganizationDatabaseName(organizationId)
+        extDbManager.connect(dbName).let { dataSource ->
+            addMembersToOrganization(dbName, dataSource, authorizedPropertyTypesOfEntitySetsByPrincipal)
+        }
+    }
+
+    fun addMembersToOrganization(
             dbName: String,
             dataSource: HikariDataSource,
             authorizedPropertyTypesOfEntitySetsByPrincipal: Map<SecurablePrincipal, Map<EntitySet, Collection<PropertyType>>>
@@ -246,6 +224,16 @@ class AssemblerConnectionManager(
             dataSource.connection.use { connection ->
                 grantSelectForNewMembers(connection, authorizedPropertyTypesOfEntitySetsByPostgresUser)
             }
+        }
+    }
+
+    fun removeMembersFromOrganization(
+            organizationId: UUID,
+            principals: Collection<SecurablePrincipal>
+    ) {
+        val dbName = buildOrganizationDatabaseName(organizationId)
+        extDbManager.connect(dbName).let { dataSource ->
+            removeMembersFromOrganization( dbName, dataSource, principals )
         }
     }
 
@@ -263,7 +251,7 @@ class AssemblerConnectionManager(
     fun updateCredentialInDatabase(organizationId: UUID, userId: String, credential: String) {
         val updateSql = updateUserCredentialSql(userId, credential)
 
-        connect(buildOrganizationDatabaseName(organizationId)).connection.use { connection ->
+        extDbManager.connect(buildOrganizationDatabaseName(organizationId)).connection.use { connection ->
             connection.createStatement().use { stmt ->
                 stmt.execute(updateSql)
             }
@@ -286,7 +274,7 @@ class AssemblerConnectionManager(
 
         //We connect to default db in order to do initial db setup
 
-        target.connection.use { connection ->
+        atlas.connection.use { connection ->
             connection.createStatement().use { statement ->
                 statement.execute(createOrgDbRole)
                 statement.execute(createOrgDbUser)
@@ -322,7 +310,7 @@ class AssemblerConnectionManager(
 
         //We connect to default db in order to do initial db setup
 
-        target.connection.use { connection ->
+        atlas.connection.use { connection ->
             connection.createStatement().use { statement ->
                 statement.execute(dropDb)
                 statement.execute(dropDbUser)
@@ -343,7 +331,7 @@ class AssemblerConnectionManager(
         )
 
         materializeAllTimer.time().use {
-            connect(buildOrganizationDatabaseName(organizationId)).let { datasource ->
+            extDbManager.connect(buildOrganizationDatabaseName(organizationId)).let { datasource ->
                 materializeEntitySets(
                         datasource,
                         authorizedPropertyTypesByEntitySet,
@@ -523,7 +511,7 @@ class AssemblerConnectionManager(
         logger.info("Refreshing entity set ${entitySet.id} in organization $organizationId database")
         val tableName = entitySetNameTableName(entitySet.name)
 
-        connect(buildOrganizationDatabaseName(organizationId)).let { dataSource ->
+        extDbManager.connect(buildOrganizationDatabaseName(organizationId)).let { dataSource ->
             dataSource.connection.use { connection ->
                 connection.createStatement().use {
                     it.execute("REFRESH MATERIALIZED VIEW $tableName")
@@ -539,7 +527,7 @@ class AssemblerConnectionManager(
      * @param oldName The old name of the entity set.
      */
     fun renameMaterializedEntitySet(organizationId: UUID, newName: String, oldName: String) {
-        connect(buildOrganizationDatabaseName(organizationId)).let { dataSource ->
+        extDbManager.connect(buildOrganizationDatabaseName(organizationId)).let { dataSource ->
             dataSource.connection.createStatement().use { stmt ->
                 val newTableName = quote(newName)
                 val oldTableName = entitySetNameTableName(oldName)
@@ -558,14 +546,14 @@ class AssemblerConnectionManager(
      */
     fun dematerializeEntitySets(organizationId: UUID, entitySetIds: Set<UUID>) {
         val dbName = buildOrganizationDatabaseName(organizationId)
-        connect(dbName).let { dataSource ->
+        extDbManager.connect(dbName).let { dataSource ->
             //TODO: Implement de-materialization code here.
         }
         logger.info("Removed materialized entity sets $entitySetIds from organization $organizationId")
     }
 
     internal fun exists(dbName: String): Boolean {
-        target.connection.use { connection ->
+        atlas.connection.use { connection ->
             connection.createStatement().use { stmt ->
                 stmt.executeQuery("select count(*) from pg_database where datname = '$dbName'").use { rs ->
                     rs.next()
@@ -599,7 +587,6 @@ class AssemblerConnectionManager(
         )
     }
 
-
     private fun configureRolesInDatabase(dataSource: HikariDataSource) {
         val roles = getAllRoles()
         if (roles.iterator().hasNext()) {
@@ -617,7 +604,7 @@ class AssemblerConnectionManager(
     }
 
     fun dropUserIfExists(user: SecurablePrincipal) {
-        target.connection.use { connection ->
+        atlas.connection.use { connection ->
             connection.createStatement().use { statement ->
                 //TODO: Go through every database and for old users clean them out.
 //                    logger.info("Attempting to drop owned by old name {}", user.name)
@@ -634,7 +621,7 @@ class AssemblerConnectionManager(
     fun createRole(role: Role) {
         val dbRole = buildPostgresRoleName(role)
 
-        target.connection.use { connection ->
+        atlas.connection.use { connection ->
             connection.createStatement().use { statement ->
                 statement.execute(createRoleIfNotExistsSql(dbRole))
                 //Don't allow users to access public schema which will contain foreign data wrapper tables.
@@ -651,7 +638,7 @@ class AssemblerConnectionManager(
         //user.name
         val dbUserPassword = dbCredentialService.getOrCreateUserCredentials(dbUser)
 
-        target.connection.use { connection ->
+        atlas.connection.use { connection ->
             connection.createStatement().use { statement ->
                 //TODO: Go through every database and for old users clean them out.
 //                    logger.info("Attempting to drop owned by old name {}", user.name)
@@ -675,7 +662,7 @@ class AssemblerConnectionManager(
 
         logger.info("Configuring users $userIds in database $dbName")
         //First we will grant all privilege which for database is connect, temporary, and create schema
-        target.connection.use { connection ->
+        atlas.connection.use { connection ->
             connection.createStatement().use { statement ->
                 statement.execute(
                         "GRANT ${MEMBER_ORG_DATABASE_PERMISSIONS.joinToString(", ")} " +
@@ -691,9 +678,9 @@ class AssemblerConnectionManager(
                 )
                 statement.execute("GRANT USAGE ON SCHEMA $MATERIALIZED_VIEWS_SCHEMA TO $userIdsSql")
                 //Set the search path for the user
-                logger.info("Setting search_path to $MATERIALIZED_VIEWS_SCHEMA for users $userIds")
+                logger.info("Setting search_path to $MATERIALIZED_VIEWS_SCHEMA,$TRANSPORTED_VIEWS_SCHEMA for users $userIds")
                 userIds.forEach { userId ->
-                    statement.addBatch("ALTER USER $userId SET search_path TO $MATERIALIZED_VIEWS_SCHEMA")
+                    statement.addBatch("ALTER USER $userId SET search_path TO $MATERIALIZED_VIEWS_SCHEMA,$TRANSPORTED_VIEWS_SCHEMA")
                 }
                 statement.executeBatch()
             }

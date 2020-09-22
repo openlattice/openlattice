@@ -34,7 +34,12 @@ import com.openlattice.assembler.processors.EntitySetContainsFlagEntryProcessor
 import com.openlattice.auditing.AuditRecordEntitySetsManager
 import com.openlattice.auditing.AuditingConfiguration
 import com.openlattice.auditing.AuditingTypes
-import com.openlattice.authorization.*
+import com.openlattice.authorization.AclKey
+import com.openlattice.authorization.AuthorizationManager
+import com.openlattice.authorization.HazelcastAclKeyReservationService
+import com.openlattice.authorization.Permission
+import com.openlattice.authorization.Principal
+import com.openlattice.authorization.Principals
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.authorization.securable.SecurableObjectType.PropertyTypeInEntitySet
 import com.openlattice.controllers.exceptions.ResourceNotFoundException
@@ -62,6 +67,7 @@ import com.openlattice.hazelcast.processors.RemoveDataExpirationPolicyProcessor
 import com.openlattice.hazelcast.processors.RemoveEntitySetsFromLinkingEntitySetProcessor
 import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.mapstores.EntitySetMapstore
+import com.openlattice.projector.ProjectEntitySetEntryProcessor
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
@@ -102,6 +108,25 @@ class EntitySetService(
             HazelcastMap.ENTITY_SET_PROPERTY_METADATA.getMap(hazelcastInstance)
 
     private val aclKeys = HazelcastMap.ACL_KEYS.getMap(hazelcastInstance)
+
+    private val transporterState = HazelcastMap.TRANSPORTER_DB_COLUMNS.getMap( hazelcastInstance )
+
+    override fun materializeEntitySet( entitySetId: UUID ) {
+        // Access checks
+        // materialize entity set
+        entitySets.submitToKey(
+                entitySetId,
+                GetEntityTypeFromEntitySetEntryProcessor()
+        ).thenApplyAsync {
+            transporterState.getValue(it)
+        }.whenCompleteAsync { columns, throwable ->
+            if ( columns == null ) {
+                // exceptional
+                throw Exception()
+            }
+            entitySets.submitToKey( entitySetId, ProjectEntitySetEntryProcessor( columns ))
+        }
+    }
 
     override fun createEntitySet(principal: Principal, entitySet: EntitySet): UUID {
         ensureValidEntitySet(entitySet)

@@ -23,8 +23,10 @@ package com.openlattice.authorization.mapstores
 
 import com.codahale.metrics.annotation.Timed
 import com.google.common.collect.ImmutableList
-import com.google.common.collect.ImmutableSortedSet
-import com.hazelcast.config.*
+import com.hazelcast.config.IndexConfig
+import com.hazelcast.config.IndexType
+import com.hazelcast.config.MapConfig
+import com.hazelcast.config.MapStoreConfig
 import com.kryptnostic.rhizome.mapstores.TestableSelfRegisteringMapStore
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.AclKeySet
@@ -40,7 +42,6 @@ import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.sql.ResultSet
-import java.util.*
 import java.util.function.Function
 import java.util.function.Supplier
 
