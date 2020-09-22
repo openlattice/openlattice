@@ -4,6 +4,9 @@ import com.hazelcast.core.Offloadable
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.postgres.PostgresArrays
+import com.openlattice.postgres.ResultSetAdapters
+import com.openlattice.postgres.streams.BasePostgresIterable
+import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.openlattice.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
 import com.openlattice.transporter.hasModifiedData
 import com.openlattice.transporter.tableName
@@ -78,37 +81,52 @@ class TransporterPropagateDataEntryProcessor(
             return
         }
 
+
         transporter.connection.use { conn ->
             var lastSql = ""
             try {
                 val partitions = PostgresArrays.createIntArray(conn, partitions)
                 val entitySetArray = PostgresArrays.createUuidArray(conn, entitySetIds)
                 lastSql = updatePrimaryKeyForEntitySets(tableName)
-                val pkeyUpdates = conn.prepareStatement(lastSql).use {ps ->
-                    ps.setArray(1, partitions)
-                    ps.setArray(2, entitySetArray)
-                    ps.executeUpdate()
+
+                val idsToLastWrites = BasePostgresIterable(PreparedStatementHolderSupplier(transporter, lastSql ) {
+                    it.setArray(1, partitions)
+                    it.setArray(2, entitySetArray)
+                }) {
+                    ResultSetAdapters.id(it) to ResultSetAdapters.lastWriteTyped(it)
                 }
-                val colUpdates = entry.value.map { (id, col) ->
-                    lastSql = updateOneBatchForProperty(tableName, id, col)
-                    conn.prepareStatement(lastSql).use { ps ->
-                        ps.setArray(1, partitions)
-                        ps.setArray(2, entitySetArray)
-                        generateSequence { ps.executeUpdate() }.takeWhile { it > 0 }.sum()
+
+                val colUpdates = entry.value.map { (ptId, col) ->
+                    val ptBatch = conn.prepareStatement(updateOneBatchForProperty(tableName, ptId, col))
+//                    val edgeBatch = conn.prepareStatement(updateOneBatchForEdges(tableName, ptId, col))
+                    val idsCommit = conn.prepareStatement(updateIdsForEntitySets())
+
+                    idsToLastWrites.asSequence().map {
+                        ptBatch.setArray(1, partitions)
+                        ptBatch.setArray(2, entitySetArray)
+                        ptBatch.setObject(3, it.first)
+                        ptBatch.setObject(4, it.second)
+                        ptBatch.addBatch()
+
+//                        edgeBatch.setArray(1, partitions)
+//                        edgeBatch.setArray(2, entitySetArray)
+//                        edgeBatch.setObject(3, it.first)
+//                        edgeBatch.setObject(4, it.second)
+//                        edgeBatch.addBatch()
+
+                        idsCommit.setArray(1, partitions)
+                        idsCommit.setArray(2, entitySetArray)
+                        idsCommit.setObject(3, it.first)
+                        idsCommit.setObject(4, it.second)
+                        idsCommit.addBatch()
                     }
-                }.sum()
-                lastSql = updateIdsForEntitySets()
-                val idUpdates = conn.prepareStatement(lastSql).use {ps ->
-                    ps.setArray(1, partitions)
-                    ps.setArray(2, entitySetArray)
-                    ps.executeUpdate()
+                    valueCounter.inc( ptBatch.executeBatch().sum().toDouble())
+//                    edgesCounter.inc( edgeBatch.executeBatch().sum().toDouble())
+                    idCounter.inc( idsCommit.executeBatch().sum().toDouble())
                 }
-//                val edgeUpdates =
+
                 logger.debug("Updated {} values in entity type table {}", colUpdates, tableName)
                 conn.commit()
-                idCounter.inc(pkeyUpdates.toDouble())
-                valueCounter.inc(colUpdates.toDouble())
-//                edgesCounter.inc(edgeUpdates.toDouble())
             } catch (ex: Exception) {
                 errorCounter.inc()
                 logger.error("Unable to update transporter: SQL: {}", lastSql, ex)

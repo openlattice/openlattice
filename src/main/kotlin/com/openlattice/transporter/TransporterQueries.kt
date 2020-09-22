@@ -3,6 +3,7 @@ package com.openlattice.transporter
 import com.openlattice.ApiUtil
 import com.openlattice.IdConstants
 import com.openlattice.postgres.DataTables
+import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
 import com.openlattice.postgres.PostgresColumn.ID_VALUE
@@ -93,18 +94,19 @@ val ids = "$pk,${ORIGIN_ID.name}"
 fun updateOneBatchForProperty(
         destTable: String,
         propId: UUID,
-        column: TransporterColumn): String {
+        column: TransporterColumn
+): String {
     val dataColumn = column.dataTableColumnName
     val destinationColumn = column.transporterTableColumnName
     // if data is deleted (version <= 0, use null, otherwise use the value from source
     val dataView = "CASE WHEN VERSION > 0 THEN $dataColumn else null END as $destinationColumn"
 
     val updateLastTransport = "UPDATE ${PostgresTable.DATA.name} " +
-            "SET ${transportTimestampColumn.name} = ${DataTables.LAST_WRITE.name} " +
+            "SET ${transportTimestampColumn.name} = ${LAST_WRITE.name} " +
             "WHERE ${PARTITION.name} = ANY(?) " +
             " AND ${ENTITY_SET_ID.name} = ANY(?) " +
             " AND ${PROPERTY_TYPE_ID.name} = '${propId}' " +
-            " AND ${DataTables.LAST_WRITE.name} > ${transportTimestampColumn.name} " +
+            " AND ${LAST_WRITE.name} > ${transportTimestampColumn.name} " +
             "RETURNING $ids,${VERSION.name},$dataView"
 
     // this seems unnecessary but it's good to be sure
@@ -130,11 +132,13 @@ fun updateOneBatchForProperty(
  * 2 - entity set ids array
  */
 fun updatePrimaryKeyForEntitySets(destTable: String): String {
-    val selectFromIds = "SELECT ${ENTITY_SET_ID.name}, ${ID_VALUE.name},${LINKING_ID.name},${VERSION.name} " +
+    val selectFromIds = "SELECT " +
+            "${ENTITY_SET_ID.name},${ID_VALUE.name},${LINKING_ID.name}," +
+            "${VERSION.name},${LAST_WRITE.name} " +
             "FROM ${PostgresTable.IDS.name} " +
             "WHERE ${PARTITION.name} = ANY(?) " +
             " AND ${ENTITY_SET_ID.name} = ANY(?) " +
-            " AND ${DataTables.LAST_WRITE.name} > ${transportTimestampColumn.name} LIMIT 10000"
+            " AND ${LAST_WRITE.name} > ${transportTimestampColumn.name} LIMIT 10000"
     val createMissingRows = "INSERT INTO $destTable ($pk) " +
             "SELECT $pk " +
             "FROM src " +
@@ -152,11 +156,19 @@ fun updatePrimaryKeyForEntitySets(destTable: String): String {
             "USING src " +
             "WHERE src.${VERSION.name} <= 0 " +
             " AND t.${ENTITY_SET_ID.name} = src.${ENTITY_SET_ID.name} " +
-            " AND t.${ID_VALUE.name} in (src.${ID_VALUE.name},src.${LINKING_ID.name})"
+            " AND t.${ID_VALUE.name} in (src.${ID_VALUE.name},src.${LINKING_ID.name}) " +
+            "RETURNING src.${ID_VALUE.name}, src.${LAST_WRITE.name}"
     return "WITH src as ($selectFromIds), " +
             "inserts as ($createMissingRows)," +
             "insertLinks as ($createMissingLinkedRows) " +
             deleteRows
+}
+
+/**
+ *
+ */
+fun updateOneBatchForEdges(): String {
+    return ""
 }
 
 /**
