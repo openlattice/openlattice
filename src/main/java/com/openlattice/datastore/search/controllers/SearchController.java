@@ -104,15 +104,16 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     public SearchResult executeEntitySetKeywordQuery(
             @RequestBody Search search ) {
         if ( search.getOptionalKeyword().isEmpty() && search.getOptionalEntityType().isEmpty()
-                && search.getOptionalPropertyTypes().isEmpty() ) {
+                && search.getOptionalPropertyTypes().isEmpty() && search.getOptionalOrganizationId().isEmpty() ) {
             throw new IllegalArgumentException(
-                    "Your search cannot be empty--you must include at least one of of the three params: keyword " +
-                            "('kw'), entity type id ('eid'), or property type ids ('pid')" );
+                    "Your search cannot be empty--you must include at least one of of the four params: keyword " +
+                            "('kw'), entity type id ('eid'), property type ids ('pid'), or organiazation id ('organizationId')" );
         }
         return searchService
                 .executeEntitySetKeywordSearchQuery( search.getOptionalKeyword(),
                         search.getOptionalEntityType(),
                         search.getOptionalPropertyTypes(),
+                        search.getOptionalOrganizationId(),
                         search.getStart(),
                         search.getMaxHits() );
     }
@@ -128,6 +129,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             @PathVariable( NUM_RESULTS ) int maxHits ) {
         return searchService
                 .executeEntitySetKeywordSearchQuery( Optional.of( "*" ),
+                        Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
                         start,
