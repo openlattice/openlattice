@@ -7,10 +7,10 @@ import com.openlattice.postgres.PostgresArrays
 import com.openlattice.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
 import com.openlattice.transporter.hasModifiedData
 import com.openlattice.transporter.tableName
+import com.openlattice.transporter.transporterNamespace
 import com.openlattice.transporter.types.TransporterColumnSet
 import com.openlattice.transporter.types.TransporterDatastore
 import com.openlattice.transporter.types.TransporterDependent
-import com.openlattice.transporter.types.transporterNamespace
 import com.openlattice.transporter.updateIdsForEntitySets
 import com.openlattice.transporter.updateOneBatchForProperty
 import io.prometheus.client.Counter

@@ -10,10 +10,10 @@ import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.postgres.IndexType
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresTableManager
+import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
 import com.openlattice.transporter.processors.TransporterSynchronizeTableDefinitionEntryProcessor
 import com.openlattice.transporter.types.TransporterColumn
 import com.openlattice.transporter.types.TransporterColumnSet
-import com.openlattice.transporter.types.TransporterConfiguration
 import com.openlattice.transporter.types.TransporterDatastore
 import com.openlattice.transporter.types.TransporterDependent
 import com.zaxxer.hikari.HikariDataSource
@@ -47,8 +47,9 @@ class TransporterQueriesTest {
             val config = configurationLoader.load(AssemblerConfiguration::class.java)
             val rhizome = context.getBean(RhizomeConfiguration::class.java)
             context.getBean(PostgresTableManager::class.java)
+            val extDbConMan = context.getBean(ExternalDatabaseConnectionManager::class.java)
 
-            data = TransporterDatastore(config, rhizome)
+            data = TransporterDatastore(config, rhizome, extDbConMan)
             transporter = data.datastore()
             val fdwTables = transporter.connection.use { conn ->
                 conn.createStatement()

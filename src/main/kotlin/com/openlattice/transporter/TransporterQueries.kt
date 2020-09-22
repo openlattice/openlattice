@@ -20,6 +20,8 @@ import com.openlattice.transporter.types.TransporterColumn
 import com.zaxxer.hikari.HikariDataSource
 import java.util.*
 
+const val transporterNamespace = "transporter_data"
+
 private val transportTimestampColumn: PostgresColumnDefinition = LAST_TRANSPORT
 
 fun unquotedTableName(entityTypeId: UUID): String {
