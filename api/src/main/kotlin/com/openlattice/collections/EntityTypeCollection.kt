@@ -11,8 +11,6 @@ import com.openlattice.client.serialization.SerializationConstants
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.util.*
 
-class EntityTypeCollection
-
 /**
  * Creates an entity type collection with provided parameters and will automatically generate a UUID if not provided.
  *
@@ -24,6 +22,7 @@ class EntityTypeCollection
  * @param template A set of CollectionTemplateType objects, which describe the entity types involved in the
  * entity type collection and the purposes they serve
  */
+class EntityTypeCollection
 @JsonCreator
 constructor(
         @JsonProperty(SerializationConstants.ID_FIELD) id: Optional<UUID>,

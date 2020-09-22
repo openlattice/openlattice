@@ -61,6 +61,12 @@ interface EntitySetsApi {
     }
 
     /**
+     * Marks an entity set for materialization
+     */
+    @GET("/materialize${ID_PATH}")
+    fun materializeEntitySet(@Path(ID) entitySetId: UUID )
+
+    /**
      * Gets all entity sets available to the calling user.
      *
      * @return Iterable containing entity sets available to the calling user.

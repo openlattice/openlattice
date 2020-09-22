@@ -28,9 +28,9 @@ const val ORGANIZATION = "/organization"
 const val USAGE = "/usage"
 
 const val ID = "id"
-const val ID_PATH = "/{${ID}}"
+const val ID_PATH = "/{$ID}"
 const val NAME = "name"
-const val NAME_PATH = "/{${NAME}}"
+const val NAME_PATH = "/{$NAME}"
 
 const val JOBS = "/jobs"
 
