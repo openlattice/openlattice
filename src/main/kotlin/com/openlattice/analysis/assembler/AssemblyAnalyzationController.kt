@@ -32,6 +32,7 @@ import com.openlattice.authorization.Principals
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.directory.MaterializedViewAccount
+import com.zaxxer.hikari.HikariDataSource
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.PostMapping
@@ -122,7 +123,7 @@ class AssemblyAnalyzationController : AssemblyAnalyzationApi, AuthorizingCompone
                 }.toMap()
 
 
-        val connection = assemblerConnectionManager.connect(dbName, account).connection
+        val connection = HikariDataSource().connection
         val aggregationValues = assemblerQueryService.simpleAggregation(
                 connection,
                 srcEntitySetName, edgeEntitySetName, dstEntitySetName,

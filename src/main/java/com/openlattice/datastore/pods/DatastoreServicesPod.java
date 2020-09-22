@@ -37,7 +37,6 @@ import com.openlattice.assembler.Assembler;
 import com.openlattice.assembler.AssemblerConfiguration;
 import com.openlattice.assembler.AssemblerConnectionManager;
 import com.openlattice.assembler.AssemblerDependencies;
-import com.openlattice.assembler.AssemblerQueryService;
 import com.openlattice.assembler.pods.AssemblerConfigurationPod;
 import com.openlattice.assembler.tasks.UserCredentialSyncTask;
 import com.openlattice.auditing.AuditRecordEntitySetsManager;
@@ -98,6 +97,7 @@ import com.openlattice.organizations.pods.OrganizationExternalDatabaseConfigurat
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.PostgresTableManager;
+import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
 import com.openlattice.requests.HazelcastRequestsManager;
 import com.openlattice.requests.RequestQueryService;
 import com.openlattice.search.PersistentSearchService;
@@ -181,6 +181,9 @@ public class DatastoreServicesPod {
 
     @Inject
     private ResolvedPrincipalTreesMapLoader rptml;
+
+    @Inject
+    private ExternalDatabaseConnectionManager externalDbConnMan;
 
     @Bean
     public PostgresUserApi pgUserApi() {
@@ -354,7 +357,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public AssemblerDependencies assemblerDependencies() {
-        return new AssemblerDependencies( hikariDataSource, dcs(), assemblerConnectionManager() );
+        return new AssemblerDependencies( hikariDataSource, dcs(), externalDbConnMan, assemblerConnectionManager() );
     }
 
     @Bean
@@ -494,8 +497,16 @@ public class DatastoreServicesPod {
     }
 
     @Bean
+    public ExternalDatabaseConnectionManager externalDbConnManager() {
+        return new ExternalDatabaseConnectionManager(
+                assemblerConfiguration
+        );
+    }
+
+    @Bean
     public AssemblerConnectionManager assemblerConnectionManager() {
         return new AssemblerConnectionManager( assemblerConfiguration,
+                externalDbConnManager(),
                 hikariDataSource,
                 principalService(),
                 organizationsManager(),
@@ -504,10 +515,10 @@ public class DatastoreServicesPod {
                 metricRegistry );
     }
 
-    @Bean
-    public AssemblerQueryService assemblerQueryService() {
-        return new AssemblerQueryService( dataModelService() );
-    }
+//    @Bean
+//    public AssemblerQueryService assemblerQueryService() {
+//        return new AssemblerQueryService( dataModelService() );
+//    }
 
     @Bean
     public PersistentSearchService persistentSearchService() {
@@ -596,7 +607,7 @@ public class DatastoreServicesPod {
     public ExternalDatabaseManagementService edms() {
         return new ExternalDatabaseManagementService(
                 hazelcastInstance,
-                assemblerConnectionManager(),
+                externalDbConnManager(),
                 principalService(),
                 aclKeyReservationService(),
                 authorizationManager(),
