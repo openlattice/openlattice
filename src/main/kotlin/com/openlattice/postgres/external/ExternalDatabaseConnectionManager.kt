@@ -7,7 +7,6 @@ import com.openlattice.assembler.AssemblerConfiguration
 import com.openlattice.assembler.PostgresDatabases
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
-import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.TimeUnit
 
@@ -23,10 +22,6 @@ class ExternalDatabaseConnectionManager(
             .expireAfterAccess(1, TimeUnit.HOURS)
             .build(cacheLoader())
 
-    companion object {
-        private val logger = LoggerFactory.getLogger(ExternalDatabaseConnectionManager::class.java)
-    }
-
     fun createOrgDataSource( organizationId: UUID ): HikariDataSource {
         return createDataSource(
                 PostgresDatabases.buildOrganizationDatabaseName(organizationId),
@@ -36,16 +31,15 @@ class ExternalDatabaseConnectionManager(
     }
     fun createDataSource(dbName: String, config: Properties, useSsl: Boolean): HikariDataSource {
         val jdbcUrl = config.getProperty("jdbcUrl")
-                ?: throw Exception("No JDBC URL specified in Assembler configuration")
+                ?: throw Exception("No JDBC URL specified in configuration ${config}")
 
-        val newJdbcUrl = "${jdbcUrl.removeSuffix("/")}/$dbName" + if (useSsl) {
+        val newProps = config.clone() as Properties
+        newProps["jdbcUrl"] = "${jdbcUrl.removeSuffix("/")}/$dbName" + if (useSsl) {
             "?sslmode=require"
         } else {
             ""
         }
-        val newHds = HikariDataSource(HikariConfig(config.clone() as Properties))
-        newHds.jdbcUrl = newJdbcUrl
-        return newHds
+        return HikariDataSource(HikariConfig(newProps))
     }
 
     private fun cacheLoader(): CacheLoader<String, HikariDataSource> {
