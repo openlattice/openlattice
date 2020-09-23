@@ -152,10 +152,10 @@ fun updateRowsForPropertyType(
     val modifyDestination = "UPDATE $destTable t " +
             "SET $destinationColumn = src.$destinationColumn " +
             "FROM src " +
-            "WHERE " + pkCols.joinToString(" AND ") { "t." + it.name + " = src." + it.name}
-
+            "WHERE " + pkCols.joinToString(" AND ") { "t.${it.name} = src.${it.name}"}
     return "WITH src as ($updateLastTransport), " +
-            "inserted as ($createMissingRows) $modifyDestination"
+            "inserted as ($createMissingRows) " +
+            modifyDestination
 }
 
 /**
@@ -242,13 +242,15 @@ fun updateRowsForEdges(): String {
             "FROM src " +
             "WHERE ${VERSION.name} > 0 " +
             "ON CONFLICT ($pkString) DO NOTHING"
-    val deleteRows = "DELETE FROM ${MAT_EDGES_TABLE.name} " +
+    val deleteRow = "DELETE FROM ${MAT_EDGES_TABLE.name} t " +
             "USING src " +
-            "WHERE src.${VERSION.name} <= 0 " +
-            " AND ${pk.joinToString(" AND ") { "${MAT_EDGES_TABLE.name}.${it} = src.${it}" }} "
+            "WHERE src.${VERSION.name} = 0 " +
+            " AND ${pk.joinToString(" AND ") {
+                "t.${it} = src.${it}" 
+            }} "
     return "WITH src as ($selectFromE), " +
             "inserts as ($createMissingRows) " +
-            deleteRows
+            deleteRow
 }
 
 /**

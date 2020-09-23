@@ -2,6 +2,7 @@ package com.openlattice.transporter.processors
 
 import com.hazelcast.core.Offloadable
 import com.openlattice.edm.EntitySet
+import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.BasePostgresIterable
@@ -20,7 +21,7 @@ import java.util.*
  */
 class TransporterPropagateDataEntryProcessor(
         val entitySets: Set<EntitySet>,
-        val partitions: Collection<Int>
+        val entitySetPartitions: Collection<Int>
 ): AbstractReadOnlyRhizomeEntryProcessor<UUID, TransporterColumnSet, Void?>(),
         Offloadable
 {
@@ -58,27 +59,28 @@ class TransporterPropagateDataEntryProcessor(
     }
 
     private fun transport(entry: Map.Entry<UUID, TransporterColumnSet>) {
-        if (entitySets.isEmpty() || partitions.isEmpty()) {
-            return
-        }
         val tableName = tableName(entry.key)
         entitySets.filter { it.isLinking }.forEach {
             // should be a noop because it's always filtered out but just in case...
             logger.error("Skipping linking entity set {} ({})", it.name, it.id)
         }
         val entitySetIds = entitySets
-                .filter{ !it.isLinking }// && it.flags.contains(EntitySetFlag.MATERIALIZED) }
+                .filter{ !it.isLinking && it.flags.contains(EntitySetFlag.MATERIALIZED) }
                 .map { it.id }
                 .toSet()
+        if (entitySets.isEmpty() || entitySetPartitions.isEmpty()) {
+            return
+        }
         val transporter = data.datastore()
-        if (!hasModifiedData(transporter, partitions, entitySetIds)) {
+        if (!hasModifiedData(transporter, entitySetPartitions, entitySetIds)) {
             return
         }
 
         transporter.connection.use { conn ->
             var lastSql = ""
             try {
-                val partitions = PostgresArrays.createIntArray(conn, partitions)
+                logger.info("Partitions: {}", entitySetPartitions)
+                val partitions = PostgresArrays.createIntArray(conn, entitySetPartitions)
                 val entitySetArray = PostgresArrays.createUuidArray(conn, entitySetIds)
 
                 lastSql = updatePrimaryKeyForEntitySets(tableName)
@@ -94,36 +96,36 @@ class TransporterPropagateDataEntryProcessor(
                 entry.value.forEach { (ptId, col) ->
                     logger.info("transporting data rows")
                     lastSql = updateRowsForPropertyType(tableName, ptId, col)
-                    val pts = conn.prepareStatement( lastSql )
+                    val pts = conn.prepareStatement(lastSql)
                     pts.setArray(1, partitions)
                     pts.setArray(2, entitySetArray)
                     pts.setArray(3, ekidsArray)
-                    valueCounter.inc( pts.executeUpdate().toDouble())
-
-                    logger.info("transporting edge rows")
-                    lastSql = updateRowsForEdges()
-                    val edges = conn.prepareStatement( lastSql )
-                    edges.setArray(1, partitions)
-                    edges.setArray(2, entitySetArray)
-                    edges.setArray(3, ekidsArray)
-                    edges.setArray(4, entitySetArray)
-                    edges.setArray(5, ekidsArray)
-                    edges.setArray(6, entitySetArray)
-                    edges.setArray(7, ekidsArray)
-                    edgesCounter.inc( edges.executeUpdate().toDouble())
-
-                    logger.info("updating last transport timestamps")
-                    lastSql = updateLastWriteForId()
-                    val idsCommit = conn.prepareStatement( lastSql )
-                    idsToVersions.forEach { ( ekid, version ) ->
-                        idsCommit.setLong(1, version)
-                        idsCommit.setArray(2, partitions)
-                        idsCommit.setArray(3, entitySetArray)
-                        idsCommit.setObject(4, ekid)
-                        idsCommit.addBatch()
-                    }
-                    idCounter.inc( idsCommit.executeBatch().sum().toDouble())
+                    valueCounter.inc(pts.executeUpdate().toDouble())
                 }
+
+                logger.info("transporting edge rows")
+                lastSql = updateRowsForEdges()
+                val edges = conn.prepareStatement( lastSql )
+                edges.setArray(1, partitions)
+                edges.setArray(2, entitySetArray)
+                edges.setArray(3, ekidsArray)
+                edges.setArray(4, entitySetArray)
+                edges.setArray(5, ekidsArray)
+                edges.setArray(6, entitySetArray)
+                edges.setArray(7, ekidsArray)
+                edgesCounter.inc( edges.executeUpdate().toDouble())
+
+                logger.info("updating last transport timestamps")
+                lastSql = updateLastWriteForId()
+                val idsCommit = conn.prepareStatement( lastSql )
+                idsToVersions.forEach { ( ekid, version ) ->
+                    idsCommit.setLong(1, version)
+                    idsCommit.setArray(2, partitions)
+                    idsCommit.setArray(3, entitySetArray)
+                    idsCommit.setObject(4, ekid)
+                    idsCommit.addBatch()
+                }
+                idCounter.inc( idsCommit.executeBatch().sum().toDouble())
 
                 logger.info("Updated {} data rows in entity type table {}", valueCounter.get(), tableName)
                 logger.info("Updated {} edge rows for entity type table {}", edgesCounter.get(), tableName)

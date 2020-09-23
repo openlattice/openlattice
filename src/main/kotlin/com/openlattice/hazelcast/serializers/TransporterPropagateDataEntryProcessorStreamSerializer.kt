@@ -29,7 +29,7 @@ class TransporterPropagateDataEntryProcessorStreamSerializer :
         SetStreamSerializers.serialize(out, `object`.entitySets) { es ->
             EntitySetStreamSerializer.serialize(out, es)
         }
-        val partitions = `object`.partitions.toIntArray()
+        val partitions = `object`.entitySetPartitions.toIntArray()
         out.writeIntArray(partitions)
     }
 
