@@ -281,10 +281,11 @@ class AssemblerConnectionManager(
     private fun createOrganizationDatabase(organizationId: UUID, dbName: String) {
         val db = quote(dbName)
         val dbRole = buildOrganizationRoleName(dbName)
+
         val unquotedDbAdminUser = buildOrganizationUserId(organizationId)
-        val dbOrgUser = quote(unquotedDbAdminUser)
-        val dbAdminUserPassword = dbCredentialService.getOrCreateUserCredentials(unquotedDbAdminUser)
-                ?: dbCredentialService.getDbCredential(unquotedDbAdminUser)
+        
+        val (dbOrgUser, dbAdminUserPassword) = dbCredentialService.getOrCreateUserCredentials(unquotedDbAdminUser)
+
         val createOrgDbRole = createRoleIfNotExistsSql(dbRole)
         val createOrgDbUser = createUserIfNotExistsSql(unquotedDbAdminUser, dbAdminUserPassword)
 
@@ -640,9 +641,14 @@ class AssemblerConnectionManager(
     }
 
     fun createUnprivilegedUser(user: SecurablePrincipal) {
-        val dbUser = buildPostgresUsername(user)
-        //user.name
-        val dbUserPassword = dbCredentialService.getOrCreateUserCredentials(dbUser)
+        val dbUserKey = buildPostgresUsername(user)
+
+        /**
+         * To simplify work-around for ESRI username limitations, we are only introducing one additional
+         * field into the dbcreds table. We keep the results of calling [buildPostgresUsername] as the lookup
+         * key, but instead use the username and password returned from the db credential service.
+         */
+        val (dbUser, dbUserPassword) = dbCredentialService.getOrCreateUserCredentials(dbUserKey)
 
         target.connection.use { connection ->
             connection.createStatement().use { statement ->
