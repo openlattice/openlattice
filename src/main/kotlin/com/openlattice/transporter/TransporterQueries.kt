@@ -190,12 +190,13 @@ fun updatePrimaryKeyForEntitySets(destTable: String): String {
             "USING src " +
             "WHERE src.${VERSION.name} <= 0 " +
             " AND t.${ENTITY_SET_ID.name} = src.${ENTITY_SET_ID.name} " +
-            " AND t.${ID_VALUE.name} in (src.${ID_VALUE.name},src.${LINKING_ID.name}) " +
-            "RETURNING src.${ID_VALUE.name}, abs(src.${VERSION.name}) as ${VERSION.name}"
+            " AND t.${ID_VALUE.name} in (src.${ID_VALUE.name},src.${LINKING_ID.name}) "
+    val results = "SELECT ${ID_VALUE.name}, abs(${VERSION.name}) as ${VERSION.name} FROM src"
     return "WITH src as ($selectFromIds), " +
             "inserts as ($createMissingRows)," +
-            "insertLinks as ($createMissingLinkedRows) " +
-            deleteRows
+            "insertLinks as ($createMissingLinkedRows), " +
+            "deletes as ($deleteRows) " +
+            results
 }
 
 /**

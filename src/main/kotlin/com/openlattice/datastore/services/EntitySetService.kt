@@ -111,7 +111,7 @@ class EntitySetService(
 
     private val transporterState = HazelcastMap.TRANSPORTER_DB_COLUMNS.getMap( hazelcastInstance )
 
-    override fun materializeEntitySet( entitySetId: UUID ) {
+    override fun materializeEntitySet( organizationId: UUID, entitySetId: UUID ) {
         // Access checks
         // materialize entity set
         entitySets.submitToKey(
@@ -124,7 +124,7 @@ class EntitySetService(
                 // exceptional
                 throw Exception()
             }
-            entitySets.submitToKey( entitySetId, ProjectEntitySetEntryProcessor( columns ))
+            entitySets.submitToKey( entitySetId, ProjectEntitySetEntryProcessor( columns, organizationId ))
         }
     }
 

@@ -17,7 +17,8 @@ import java.util.*
  * @author Drew Bailey &lt;drew@openlattice.com&gt;
  */
 class ProjectEntitySetEntryProcessor(
-        val columns: TransporterColumnSet
+        val columns: TransporterColumnSet,
+        val organizationId: UUID
 ): AbstractReadOnlyRhizomeEntryProcessor<UUID, EntitySet, Unit>(),
         Offloadable,
         TransporterDependent
@@ -28,7 +29,7 @@ class ProjectEntitySetEntryProcessor(
         val es = entry.value
         es.flags.add(EntitySetFlag.MATERIALIZED)
 
-        data.createOrgDataSource( es.organizationId ).connection.use { conn ->
+        data.createOrgDataSource( organizationId ).connection.use { conn ->
             conn.createStatement().executeUpdate(
                     createEntityTypeView(
                             es.name,

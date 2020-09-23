@@ -1126,7 +1126,7 @@ internal fun getLinkingId(linkingIds: Map<UUID, UUID>, entityKeyId: UUID): UUID 
 
 private val KEY_COLUMNS = E.primaryKey.map { col -> col.name }.toSet()
 
-private val INSERT_COLUMNS = E.columns.filterNot{ LAST_TRANSPORT.equals(it) }.map { it.name }.toSet()
+private val INSERT_COLUMNS = E.columns.filterNot{ LAST_TRANSPORT == it }.map { it.name }.toSet()
 
 /**
  * Builds the SQL query for top utilizers.
