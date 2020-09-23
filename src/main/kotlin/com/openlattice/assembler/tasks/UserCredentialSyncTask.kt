@@ -45,8 +45,10 @@ class UserCredentialSyncTask : HazelcastInitializationTask<AssemblerDependencies
                 .forEach { user ->
                     dependencies.target.connection.use { conn ->
                         conn.createStatement().use { stmt ->
-                            val username = buildPostgresUsername(user)
-                            val credential = dependencies.dbCredentialService.getOrCreateUserCredentials(username)
+                            val (username, credential) = dependencies.dbCredentialService.getOrCreateUserCredentials(
+                                    buildPostgresUsername(user)
+                            )
+
                             try {
                                 stmt.execute(
                                         "ALTER USER ${DataTables.quote(username)} WITH ENCRYPTED PASSWORD '$credential'"
