@@ -497,16 +497,9 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    public ExternalDatabaseConnectionManager externalDbConnManager() {
-        return new ExternalDatabaseConnectionManager(
-                assemblerConfiguration
-        );
-    }
-
-    @Bean
     public AssemblerConnectionManager assemblerConnectionManager() {
         return new AssemblerConnectionManager( assemblerConfiguration,
-                externalDbConnManager(),
+                externalDbConnMan,
                 hikariDataSource,
                 principalService(),
                 organizationsManager(),
@@ -607,7 +600,7 @@ public class DatastoreServicesPod {
     public ExternalDatabaseManagementService edms() {
         return new ExternalDatabaseManagementService(
                 hazelcastInstance,
-                externalDbConnManager(),
+                externalDbConnMan,
                 principalService(),
                 aclKeyReservationService(),
                 authorizationManager(),
