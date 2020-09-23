@@ -79,7 +79,6 @@ class TransporterPropagateDataEntryProcessor(
         transporter.connection.use { conn ->
             var lastSql = ""
             try {
-                logger.info("Partitions: {}", entitySetPartitions)
                 val partitions = PostgresArrays.createIntArray(conn, entitySetPartitions)
                 val entitySetArray = PostgresArrays.createUuidArray(conn, entitySetIds)
 

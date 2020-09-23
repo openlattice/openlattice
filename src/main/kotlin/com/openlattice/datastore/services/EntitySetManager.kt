@@ -35,8 +35,6 @@ import java.util.*
 
 interface EntitySetManager {
 
-    fun materializeEntitySet(organizationId: UUID, entitySetId: UUID)
-
     fun createEntitySet(principal: Principal, entitySet: EntitySet): UUID
 
     fun deleteEntitySet(entitySet: EntitySet)

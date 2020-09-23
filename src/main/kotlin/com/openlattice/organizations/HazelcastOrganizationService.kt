@@ -7,17 +7,21 @@ import com.google.common.eventbus.EventBus
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
-import com.openlattice.admin.ORGANIZATION
 import com.openlattice.assembler.Assembler
 import com.openlattice.authorization.*
 import com.openlattice.authorization.mapstores.PrincipalMapstore
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.hazelcast.processors.GetMembersOfOrganizationEntryProcessor
 import com.openlattice.notifications.sms.PhoneNumberService
 import com.openlattice.notifications.sms.SmsEntitySetInformation
 import com.openlattice.organization.OrganizationPrincipal
 import com.openlattice.organization.roles.Role
-import com.openlattice.organizations.events.*
+import com.openlattice.organizations.events.MembersAddedToOrganizationEvent
+import com.openlattice.organizations.events.MembersRemovedFromOrganizationEvent
+import com.openlattice.organizations.events.OrganizationCreatedEvent
+import com.openlattice.organizations.events.OrganizationDeletedEvent
+import com.openlattice.organizations.events.OrganizationUpdatedEvent
 import com.openlattice.organizations.mapstores.CONNECTIONS_INDEX
 import com.openlattice.organizations.mapstores.MEMBERS_INDEX
 import com.openlattice.organizations.processors.OrganizationEntryProcessor
@@ -30,7 +34,6 @@ import com.openlattice.users.getAppMetadata
 import com.openlattice.users.processors.aggregators.UsersWithConnectionsAggregator
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import java.io.Serializable
 import java.util.*
 import java.util.stream.Stream
 import javax.inject.Inject
@@ -262,7 +265,7 @@ class HazelcastOrganizationService(
 
     @Timed
     fun getMembers(organizationId: UUID): Set<Principal> {
-        return organizations[organizationId]?.members ?: setOf()
+        return organizations.executeOnKey( organizationId, GetMembersOfOrganizationEntryProcessor() ) ?: setOf()
     }
 
     @Timed

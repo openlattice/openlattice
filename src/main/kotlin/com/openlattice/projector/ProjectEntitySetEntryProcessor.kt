@@ -2,6 +2,7 @@ package com.openlattice.projector
 
 import com.hazelcast.core.Offloadable
 import com.openlattice.ApiUtil
+import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.postgres.PostgresColumn
@@ -18,7 +19,8 @@ import java.util.*
  */
 class ProjectEntitySetEntryProcessor(
         val columns: TransporterColumnSet,
-        val organizationId: UUID
+        val organizationId: UUID,
+        val usersToColumnPermissions: Map<String, List<String>>
 ): AbstractReadOnlyRhizomeEntryProcessor<UUID, EntitySet, Unit>(),
         Offloadable,
         TransporterDependent
@@ -38,6 +40,14 @@ class ProjectEntitySetEntryProcessor(
                             columns
                     )
             )
+            conn.createStatement().use { statement ->
+                usersToColumnPermissions.forEach { ( username, allowedCols ) ->
+                    statement.addBatch(
+                            AssemblerConnectionManager.grantSelectSql( es.name, username, allowedCols )
+                    )
+                }
+                statement.executeBatch()
+            }
         }
 
         entry.setValue(es)

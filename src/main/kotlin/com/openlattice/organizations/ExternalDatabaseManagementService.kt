@@ -14,8 +14,10 @@ import com.openlattice.assembler.PostgresRoles.Companion.isPostgresUserName
 import com.openlattice.authorization.*
 import com.openlattice.authorization.processors.PermissionMerger
 import com.openlattice.authorization.securable.SecurableObjectType
+import com.openlattice.edm.processors.GetEntityTypeFromEntitySetEntryProcessor
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.hazelcast.processors.GetMembersOfOrganizationEntryProcessor
 import com.openlattice.hazelcast.processors.organizations.UpdateOrganizationExternalDatabaseColumnEntryProcessor
 import com.openlattice.hazelcast.processors.organizations.UpdateOrganizationExternalDatabaseTableEntryProcessor
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
@@ -42,6 +44,7 @@ import com.openlattice.postgres.ResultSetAdapters.user
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.StatementHolderSupplier
+import com.openlattice.projector.ProjectEntitySetEntryProcessor
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
@@ -55,6 +58,7 @@ import java.nio.file.StandardOpenOption
 import java.time.OffsetDateTime
 import java.util.*
 import kotlin.collections.HashMap
+import kotlin.streams.toList
 
 @Service
 class ExternalDatabaseManagementService(
@@ -74,6 +78,14 @@ class ExternalDatabaseManagementService(
     private val logger = LoggerFactory.getLogger(ExternalDatabaseManagementService::class.java)
     private val primaryKeyConstraint = "PRIMARY KEY"
     private val FETCH_SIZE = 100_000
+
+    /**
+     * Only needed for materialize entity set, which should move elsewhere eventually
+     */
+    private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
+    private val entityTypes = HazelcastMap.ENTITY_TYPES.getMap(hazelcastInstance)
+    private val organizations = HazelcastMap.ORGANIZATIONS.getMap(hazelcastInstance)
+    private val transporterState = HazelcastMap.TRANSPORTER_DB_COLUMNS.getMap(hazelcastInstance)
 
     /*CREATE*/
     fun createOrganizationExternalDatabaseTable(orgId: UUID, table: OrganizationExternalDatabaseTable): UUID {
@@ -127,6 +139,53 @@ class ExternalDatabaseManagementService(
                     isPrimaryKey,
                     position)
         }
+    }
+
+    fun materializeEntitySet( organizationId: UUID, entitySetId: UUID ) {
+        val permissionsCompletion = organizations.submitToKey(
+                organizationId,
+                GetMembersOfOrganizationEntryProcessor()
+        ).thenApplyAsync { members ->
+            securePrincipalsManager.getSecurablePrincipals( members ).associate { member ->
+                quote(buildPostgresUsername(member)) to securePrincipalsManager.getAllPrincipals( member )
+            }
+        }
+
+        val entityTypeId = entitySets.submitToKey(
+                entitySetId,
+                GetEntityTypeFromEntitySetEntryProcessor()
+        )
+
+        val transporterColumnsCompletion = entityTypeId.thenCompose { etid ->
+            transporterState.getAsync(etid!!)
+        }
+
+        val accessCheckCompletion = entityTypeId.thenCompose { etid ->
+            entityTypes.getAsync(etid!!)
+        }.thenApplyAsync { entityType ->
+            entityType.properties.mapTo( mutableSetOf() ) { ptid ->
+                AccessCheck(AclKey( entitySetId, ptid ), EnumSet.of(Permission.READ))
+            }
+        }
+
+        val userToPermissions = permissionsCompletion.thenCombine( accessCheckCompletion ) { userToPrincipals, accessChecks ->
+            userToPrincipals.mapValues { (_, principals) ->
+                val asSet = principals.mapTo(mutableSetOf()) {
+                    it.principal
+                }
+                authorizationManager.accessChecksForPrincipals(accessChecks, asSet).filter {
+                    it.permissions[Permission.READ]!!
+                }.map {
+                    it.aclKey[1].toString()
+                }.toList()
+            }
+        }
+
+        userToPermissions.thenCombine( transporterColumnsCompletion ) { userToPerms, transporterColumns ->
+            entitySets.executeOnKey( entitySetId,
+                    ProjectEntitySetEntryProcessor(transporterColumns, organizationId, userToPerms)
+            )
+        }.toCompletableFuture().get()
     }
 
     /*GET*/

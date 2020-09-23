@@ -116,6 +116,27 @@ class AssemblerConnectionManager(
         fun entitySetNameTableName(entitySetName: String): String {
             return "$MATERIALIZED_VIEWS_SCHEMA.${quote(entitySetName)}"
         }
+
+        /**
+         * Build grant select sql statement for a given table and user with column level security.
+         * If properties (columns) are left empty, it will grant select on whole table.
+         */
+        @JvmStatic
+        fun grantSelectSql(
+                tableName: String,
+                postgresUserName: String,
+                columns: List<String>
+        ): String {
+            val onProperties = if (columns.isEmpty()) {
+                ""
+            } else {
+                "( ${columns.joinToString(",")} )"
+            }
+
+            return "GRANT SELECT $onProperties " +
+                    "ON $tableName " +
+                    "TO $postgresUserName"
+        }
     }
 
     @Subscribe
@@ -491,26 +512,6 @@ class AssemblerConnectionManager(
     }
 
     /**
-     * Build grant select sql statement for a given table and user with column level security.
-     * If properties (columns) are left empty, it will grant select on whole table.
-     */
-    private fun grantSelectSql(
-            tableName: String,
-            postgresUserName: String,
-            columns: List<String>
-    ): String {
-        val onProperties = if (columns.isEmpty()) {
-            ""
-        } else {
-            "( ${columns.joinToString(",")} )"
-        }
-
-        return "GRANT SELECT $onProperties " +
-                "ON $tableName " +
-                "TO $postgresUserName"
-    }
-
-    /**
      * Synchronize data changes in entity set materialized view in organization database.
      */
     fun refreshEntitySet(organizationId: UUID, entitySet: EntitySet) {
@@ -722,7 +723,6 @@ class AssemblerConnectionManager(
 }
 
 val MEMBER_ORG_DATABASE_PERMISSIONS = setOf("CREATE", "CONNECT", "TEMPORARY", "TEMP")
-
 
 private val PRINCIPALS_SQL = "SELECT ${ACL_KEY.name} FROM ${PRINCIPALS.name} WHERE ${PRINCIPAL_TYPE.name} = ?"
 
