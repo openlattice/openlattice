@@ -5,7 +5,6 @@ import com.kryptnostic.rhizome.configuration.RhizomeConfiguration
 import com.openlattice.assembler.AssemblerConfiguration
 import com.openlattice.assembler.PostgresDatabases
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
-import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -26,7 +25,7 @@ class TransporterDatastore(
     }
     private val fdwName = "enterprise"
     private val fdwSchema = "ol"
-    private var hds: HikariDataSource = exConnMan.connect("transporter")
+    private var hds: HikariDataSource = exConnMan.createDataSource( "transporter", configuration.server, configuration.ssl)
 
     init {
         logger.info("Initializing TransporterDatastore")
@@ -90,7 +89,7 @@ class TransporterDatastore(
             conn.commit()
         }
         hds.close()
-        hds = HikariDataSource(HikariConfig(configuration.server))
+        hds = exConnMan.createDataSource( "transporter", configuration.server, configuration.ssl)
     }
 
     fun datastore(): HikariDataSource {

@@ -2,7 +2,6 @@ package com.openlattice.transporter.processors
 
 import com.hazelcast.core.Offloadable
 import com.openlattice.edm.EntitySet
-import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.BasePostgresIterable
@@ -68,7 +67,7 @@ class TransporterPropagateDataEntryProcessor(
             logger.error("Skipping linking entity set {} ({})", it.name, it.id)
         }
         val entitySetIds = entitySets
-                .filter{ !it.isLinking && it.flags.contains(EntitySetFlag.MATERIALIZED) }
+                .filter{ !it.isLinking }// && it.flags.contains(EntitySetFlag.MATERIALIZED) }
                 .map { it.id }
                 .toSet()
         val transporter = data.datastore()
@@ -83,17 +82,17 @@ class TransporterPropagateDataEntryProcessor(
                 val entitySetArray = PostgresArrays.createUuidArray(conn, entitySetIds)
 
                 lastSql = updatePrimaryKeyForEntitySets(tableName)
-                val idsToLastWrites = BasePostgresIterable(PreparedStatementHolderSupplier(transporter, lastSql ) {
+                val idsToVersions = BasePostgresIterable(PreparedStatementHolderSupplier(transporter, lastSql ) {
                     it.setArray(1, partitions)
                     it.setArray(2, entitySetArray)
                 }) {
-                    ResultSetAdapters.id(it) to ResultSetAdapters.lastWriteTyped(it)
+                    ResultSetAdapters.id(it) to ResultSetAdapters.version(it)
                 }.toMap()
 
-                val ekidsArray = PostgresArrays.createUuidArray(conn, idsToLastWrites.keys)
+                val ekidsArray = PostgresArrays.createUuidArray(conn, idsToVersions.keys)
 
-                val colUpdates = entry.value.map { (ptId, col) ->
-                    logger.debug("transporting data rows")
+                entry.value.forEach { (ptId, col) ->
+                    logger.info("transporting data rows")
                     lastSql = updateRowsForPropertyType(tableName, ptId, col)
                     val pts = conn.prepareStatement( lastSql )
                     pts.setArray(1, partitions)
@@ -101,7 +100,7 @@ class TransporterPropagateDataEntryProcessor(
                     pts.setArray(3, ekidsArray)
                     valueCounter.inc( pts.executeUpdate().toDouble())
 
-                    logger.debug("transporting edge rows")
+                    logger.info("transporting edge rows")
                     lastSql = updateRowsForEdges()
                     val edgeBatch = conn.prepareStatement( lastSql )
                     edgeBatch.setArray(1, partitions)
@@ -113,11 +112,11 @@ class TransporterPropagateDataEntryProcessor(
                     edgeBatch.setArray(7, ekidsArray)
                     edgesCounter.inc( edgeBatch.executeUpdate().toDouble())
 
-                    logger.debug("updating last transport timestamps")
+                    logger.info("updating last transport timestamps")
                     lastSql = updateLastWriteForId()
                     val idsCommit = conn.prepareStatement( lastSql )
-                    idsToLastWrites.forEach { ( ekid, lastWrite ) ->
-                        idsCommit.setObject(1, lastWrite)
+                    idsToVersions.forEach { ( ekid, version ) ->
+                        idsCommit.setLong(1, version)
                         idsCommit.setArray(2, partitions)
                         idsCommit.setArray(3, entitySetArray)
                         idsCommit.setObject(4, ekid)
@@ -126,14 +125,12 @@ class TransporterPropagateDataEntryProcessor(
                     idCounter.inc( idsCommit.executeBatch().sum().toDouble())
                 }
 
-                logger.debug("Updated {} data rows in entity type table {}", valueCounter.get(), tableName)
-                logger.debug("Updated {} edge rows for entity type table {}", edgesCounter.get(), tableName)
-                logger.debug("Updated {} ids for entity type table {}", idCounter.get(), tableName)
-                conn.commit()
+                logger.info("Updated {} data rows in entity type table {}", valueCounter.get(), tableName)
+                logger.info("Updated {} edge rows for entity type table {}", edgesCounter.get(), tableName)
+                logger.info("Updated {} ids for entity type table {}", idCounter.get(), tableName)
             } catch (ex: Exception) {
                 errorCounter.inc()
                 logger.error("Unable to update transporter: SQL: {}", lastSql, ex)
-                conn.rollback()
                 throw ex
             }
         }

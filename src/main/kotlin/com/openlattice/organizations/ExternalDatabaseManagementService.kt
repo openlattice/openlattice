@@ -6,6 +6,7 @@ import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.hazelcast.query.QueryConstants
 import com.openlattice.assembler.AssemblerConnectionManager.Companion.MATERIALIZED_VIEWS_SCHEMA
+import com.openlattice.assembler.AssemblerConnectionManager.Companion.STAGING_SCHEMA
 import com.openlattice.assembler.PostgresDatabases
 import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresUsername
 import com.openlattice.assembler.PostgresRoles.Companion.getSecurablePrincipalIdFromUserName
@@ -601,7 +602,7 @@ class ExternalDatabaseManagementService(
     fun promoteStagingTable(organizationId: UUID, tableName: String) {
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(organizationId)
 
-        acm.connect(dbName).use { hds ->
+        externalDbManager.connect(dbName).use { hds ->
             hds.connection.use { conn ->
                 conn.createStatement().use { stmt ->
                     stmt.execute(publishStagingTableSql(tableName))

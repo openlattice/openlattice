@@ -119,14 +119,15 @@ final class DataTransporterService(
                     TransporterPropagateDataEntryProcessor(relevantEntitySets, partitions).init(data)
             ).toCompletableFuture()
 
-            entitySetIds.count() to ft
+            entitySetIds.count() to ft.get()
         }
         val setsPolled = futures.map { it.first }.sum()
         // wait for all futures to complete.
         val exception = MultiException()
         futures.forEach { (_, f) ->
             try {
-                f.get()
+                f
+//                f.get()
             } catch(e: Exception) {
                 errorCount.inc()
                 exception.add(e)

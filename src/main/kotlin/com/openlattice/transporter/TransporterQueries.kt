@@ -2,7 +2,6 @@ package com.openlattice.transporter
 
 import com.openlattice.ApiUtil
 import com.openlattice.IdConstants
-import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.DST_ENTITY_KEY_ID
 import com.openlattice.postgres.PostgresColumn.DST_ENTITY_SET_ID
@@ -33,7 +32,7 @@ const val transporterNamespace = "transporter_data"
 
 private val transportTimestampColumn: PostgresColumnDefinition = LAST_TRANSPORT
 
-private val BATCH_LIMIT = 10_000
+private const val BATCH_LIMIT = 10_000
 
 val MAT_EDGES_TABLE = edgesTableDefinition()
 
@@ -98,7 +97,7 @@ private val checkQuery = "SELECT 1 " +
         " SELECT 1 FROM ${PostgresTable.IDS.name} " +
         " WHERE ${PARTITION.name} = ANY(?) " +
         "  AND ${ENTITY_SET_ID.name} = ANY(?) " +
-        "  AND ${LAST_WRITE.name} > ${transportTimestampColumn.name}" +
+        "  AND abs(${VERSION.name}) > ${transportTimestampColumn.name}" +
         ")"
 
 fun hasModifiedData(enterprise: HikariDataSource, partitions: Collection<Int>, entitySetIds: Set<UUID>): Boolean {
@@ -135,12 +134,12 @@ fun updateRowsForPropertyType(
     val dataView = "CASE WHEN VERSION > 0 THEN $dataColumn else null END as $destinationColumn"
 
     val updateLastTransport = "UPDATE ${PostgresTable.DATA.name} " +
-            "SET ${transportTimestampColumn.name} = ${LAST_WRITE.name} " +
+            "SET ${transportTimestampColumn.name} = abs(${VERSION.name}) " +
             "WHERE ${PARTITION.name} = ANY(?) " +
             " AND ${ENTITY_SET_ID.name} = ANY(?) " +
             " AND ${ID_VALUE.name} = ANY(?) " +
             " AND ${PROPERTY_TYPE_ID.name} = '${propId}' " +
-            " AND ${LAST_WRITE.name} > ${transportTimestampColumn.name} " +
+            " AND abs(${VERSION.name}) > ${transportTimestampColumn.name} " +
             "RETURNING $ids,${VERSION.name},$dataView"
 
     // this seems unnecessary but it's good to be sure
@@ -168,12 +167,11 @@ fun updateRowsForPropertyType(
  */
 fun updatePrimaryKeyForEntitySets(destTable: String): String {
     val selectFromIds = "SELECT " +
-            "${ENTITY_SET_ID.name},${ID_VALUE.name},${LINKING_ID.name}," +
-            "${VERSION.name},${LAST_WRITE.name} " +
+            "${ENTITY_SET_ID.name},${ID_VALUE.name},${LINKING_ID.name},${VERSION.name} " +
             "FROM ${PostgresTable.IDS.name} " +
             "WHERE ${PARTITION.name} = ANY(?) " +
             " AND ${ENTITY_SET_ID.name} = ANY(?) " +
-            " AND ${LAST_WRITE.name} > ${transportTimestampColumn.name} " +
+            " AND abs(${VERSION.name}) > ${transportTimestampColumn.name} " +
             "LIMIT $BATCH_LIMIT"
     val createMissingRows = "INSERT INTO $destTable ($pk) " +
             "SELECT $pk " +
@@ -193,7 +191,7 @@ fun updatePrimaryKeyForEntitySets(destTable: String): String {
             "WHERE src.${VERSION.name} <= 0 " +
             " AND t.${ENTITY_SET_ID.name} = src.${ENTITY_SET_ID.name} " +
             " AND t.${ID_VALUE.name} in (src.${ID_VALUE.name},src.${LINKING_ID.name}) " +
-            "RETURNING src.${ID_VALUE.name}, src.${LAST_WRITE.name}"
+            "RETURNING src.${ID_VALUE.name}, abs(src.${VERSION.name}) as ${VERSION.name}"
     return "WITH src as ($selectFromIds), " +
             "inserts as ($createMissingRows)," +
             "insertLinks as ($createMissingLinkedRows) " +
@@ -222,9 +220,10 @@ fun updateRowsForEdges(): String {
             EDGE_ENTITY_KEY_ID
     ).map { it.name }
     val pkString = pk.joinToString(",")
-    val selectFromE = "SELECT $pkString,${VERSION.name} " +
-            "FROM ${E.name} " +
-            "WHERE ${LAST_WRITE.name} > ${transportTimestampColumn.name} AND (" +
+
+    val selectFromE = "UPDATE ${E.name} " +
+            "SET ${transportTimestampColumn.name} = abs(${VERSION.name}) " +
+            "WHERE abs(${VERSION.name}) > ${transportTimestampColumn.name} AND (" +
             "  (" +
             "    ${PARTITION.name} = ANY(?) " +
             "    AND ${SRC_ENTITY_SET_ID.name} = ANY(?) " +
@@ -234,20 +233,20 @@ fun updateRowsForEdges(): String {
             "    AND ${DST_ENTITY_KEY_ID.name} = ANY(?) " +
             "  ) OR (" +
             "    ${EDGE_ENTITY_SET_ID.name} = ANY(?) " +
-            "    AND ${EDGE_ENTITY_KEY_ID.name} = ANY(?) "
-    "  )" +
-            ") LIMIT $BATCH_LIMIT"
-    val createMissingRows = "INSERT INTO ${MAT_EDGES_TABLE.name} ($pk) " +
+            "    AND ${EDGE_ENTITY_KEY_ID.name} = ANY(?) " +
+            "  ) " +
+            ") RETURNING $pkString,${VERSION.name}"
+    val createMissingRows = "INSERT INTO ${MAT_EDGES_TABLE.name} ($pkString) " +
             "SELECT $pkString " +
             "FROM src " +
             "WHERE ${VERSION.name} > 0 " +
-            "ON CONFLICT ($pk) DO NOTHING"
-    val deleteRows = "DELETE FROM ${MAT_EDGES_TABLE.name} t " +
+            "ON CONFLICT ($pkString) DO NOTHING"
+    val deleteRows = "DELETE FROM ${MAT_EDGES_TABLE.name} " +
             "USING src " +
             "WHERE src.${VERSION.name} <= 0 " +
-            " AND ${pk.joinToString(" AND ") { "t.${it} = src.${it}" }} "
+            " AND ${pk.joinToString(" AND ") { "${MAT_EDGES_TABLE.name}.${it} = src.${it}" }} "
     return "WITH src as ($selectFromE), " +
-            "inserts as ($createMissingRows)," +
+            "inserts as ($createMissingRows) " +
             deleteRows
 }
 
@@ -266,7 +265,7 @@ fun updateLastWriteForId(): String {
             "WHERE ${PARTITION.name} = ANY(?) " +
             " AND ${ENTITY_SET_ID.name} = ANY(?) " +
             " AND ${ID_VALUE.name} = ? " +
-            " AND ${LAST_WRITE.name} > ${transportTimestampColumn.name} "
+            " AND abs(${VERSION.name}) > ${transportTimestampColumn.name} "
 }
 
 fun addAllMissingColumnsQuery(table: PostgresTableDefinition): String =

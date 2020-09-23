@@ -295,7 +295,7 @@ public final class ResultSetAdapters {
     }
 
     public static EntityDataKey srcEntityDataKey( ResultSet rs ) throws SQLException {
-        final UUID srcEntitySetId = (UUID) rs.getObject( SRC_ENTITY_SET_ID_FIELD );
+    final UUID srcEntitySetId = (UUID) rs.getObject( SRC_ENTITY_SET_ID_FIELD );
         final UUID srcEntityKeyId = (UUID) rs.getObject( SRC_ENTITY_KEY_ID_FIELD );
         return new EntityDataKey( srcEntitySetId, srcEntityKeyId );
     }
@@ -337,6 +337,10 @@ public final class ResultSetAdapters {
         List<NeighborhoodSelection> dstSelections = Arrays
                 .asList( neighborhoodSelections( rs, DST_SELECTS.getName() ) );
         return new NeighborhoodQuery( dataKeys, srcSelections, dstSelections );
+    }
+
+    public static long version( ResultSet rs ) throws SQLException {
+        return rs.getLong( VERSION.getName() );
     }
 
     public static Edge edge( ResultSet rs ) throws SQLException {
