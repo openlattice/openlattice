@@ -176,7 +176,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
             produces = MediaType.APPLICATION_JSON_VALUE )
     public MaterializedViewAccount getMaterializedViewAccount() {
         final var principal = PostgresRoles.buildPostgresUsername( Principals.getCurrentSecurablePrincipal() );
-        return new MaterializedViewAccount( principal, dbCredService.getDbCredential( principal ) );
+        return dbCredService.getDbCredential( principal );
     }
 
     @Timed
@@ -242,12 +242,12 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
         ensureAdminAccess();
 
         //First remove from all organizations
-        organizationService.removeMemberFromAllOrganizations( new Principal(PrincipalType.USER, userId));
+        organizationService.removeMemberFromAllOrganizations( new Principal( PrincipalType.USER, userId ) );
         SecurablePrincipal securablePrincipal = spm.getPrincipal( userId );
         spm.deletePrincipal( securablePrincipal.getAclKey() );
 
         //Remove from materialized view account
-        dbCredService.deleteUserCredential( userId );
+        dbCredService.deleteUserCredential( PostgresRoles.buildPostgresUsername( securablePrincipal ) );
 
         //Delete from auth0
         userDirectoryService.deleteUser( userId );
