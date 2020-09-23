@@ -100,15 +100,6 @@ constructor(
         return auditingManager
     }
 
-    @RequestMapping(
-            path = [ "/materialize${ID_PATH}" ],
-            method = [RequestMethod.GET]
-    )
-    override fun materializeEntitySet( @PathVariable(ID) entitySetId: UUID ) {
-//        ensureOwnerAccess(AclKey( entitySetId ))
-        entitySetManager.materializeEntitySet( entitySetId )
-    }
-
     @Timed
     @RequestMapping(path = [LINKING + ID_PATH], method = [RequestMethod.PUT])
     override fun addEntitySetsToLinkingEntitySet(

@@ -38,6 +38,7 @@ import com.openlattice.hazelcast.pods.NearCachesPod;
 import com.openlattice.hazelcast.pods.SharedStreamSerializersPod;
 import com.openlattice.jdbc.JdbcPod;
 import com.openlattice.postgres.PostgresPod;
+import com.openlattice.postgres.pods.ExternalDatabaseConnectionManagerPod;
 import com.openlattice.tasks.pods.TaskSchedulerPod;
 import com.openlattice.transporter.pods.TransporterPod;
 
@@ -48,6 +49,7 @@ public class Datastore extends BaseRhizomeServer {
             AwsS3Pod.class,
             ByteBlobServicePod.class,
             DatastoreServicesPod.class,
+            ExternalDatabaseConnectionManagerPod.class,
             HazelcastQueuePod.class,
             JdbcPod.class,
             MapstoresPod.class,
