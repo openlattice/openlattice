@@ -66,6 +66,8 @@ class DbCredentialService(hazelcastInstance: HazelcastInstance, val longIdServic
 
     fun getDbCredential(userId: String): MaterializedViewAccount? = dbCreds[userId]
 
+    fun getDbUsername(userId: String): String = dbCreds.getValue(userId).username
+
     fun getOrCreateUserCredentials(userId: String): MaterializedViewAccount {
         if (dbCreds.containsKey(userId)) {
             return getDbCredential(userId)!!
