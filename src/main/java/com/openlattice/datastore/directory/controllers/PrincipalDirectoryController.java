@@ -246,7 +246,10 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
         SecurablePrincipal securablePrincipal = spm.getPrincipal( userId );
         spm.deletePrincipal( securablePrincipal.getAclKey() );
 
+        //Remove from materialized view account
+        dbCredService.deleteUserCredential( userId );
 
+        //Delete from auth0
         userDirectoryService.deleteUser( userId );
 
         return null;
