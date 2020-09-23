@@ -45,7 +45,7 @@ fun tableName(entityTypeId: UUID): String {
 }
 
 fun edgesTableDefinition(): PostgresTableDefinition {
-    val definition = PostgresTableDefinition("edges")
+    val definition = PostgresTableDefinition("edge_assemblies")
     definition.addColumns(
             SRC_ENTITY_SET_ID,
             SRC_ENTITY_KEY_ID,

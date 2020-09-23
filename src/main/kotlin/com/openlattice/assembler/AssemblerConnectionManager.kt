@@ -104,7 +104,6 @@ class AssemblerConnectionManager(
 
         @JvmStatic
         val MATERIALIZED_VIEWS_SCHEMA = "openlattice"
-
         @JvmStatic
         val TRANSPORTED_VIEWS_SCHEMA = "ol"
         @JvmStatic
@@ -167,6 +166,7 @@ class AssemblerConnectionManager(
                                 assemblerConfiguration.server["username"].toString(),
                                 false,
                                 INTEGRATIONS_SCHEMA,
+                                TRANSPORTED_VIEWS_SCHEMA,
                                 MATERIALIZED_VIEWS_SCHEMA,
                                 PUBLIC_SCHEMA,
                                 STAGING_SCHEMA

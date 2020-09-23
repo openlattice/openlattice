@@ -28,13 +28,21 @@ import com.google.common.annotations.VisibleForTesting
 import com.google.common.collect.ImmutableList
 import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
-import com.openlattice.analysis.*
-import com.openlattice.analysis.requests.*
-import com.openlattice.data.*
+import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
+import com.openlattice.analysis.requests.AggregationResult
+import com.openlattice.analysis.requests.AggregationType
+import com.openlattice.analysis.requests.EntityAggregationResult
+import com.openlattice.analysis.requests.FilteredNeighborsRankingAggregationResult
+import com.openlattice.analysis.requests.NeighborhoodRankingAggregationResult
+import com.openlattice.analysis.requests.WeightedRankingAggregation
+import com.openlattice.data.DataEdgeKey
+import com.openlattice.data.EntityDataKey
+import com.openlattice.data.EntityKeyIdService
+import com.openlattice.data.WriteEvent
 import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.data.storage.entityKeyIdColumns
-import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.data.storage.partitions.PartitionManager
+import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.data.storage.selectEntitySetWithCurrentVersionOfPropertyTypes
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.type.PropertyType
@@ -44,8 +52,21 @@ import com.openlattice.graph.edge.Edge
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn
-import com.openlattice.postgres.PostgresColumn.*
-import com.openlattice.postgres.PostgresTable.*
+import com.openlattice.postgres.PostgresColumn.DST_ENTITY_KEY_ID
+import com.openlattice.postgres.PostgresColumn.DST_ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.EDGE_COMP_1
+import com.openlattice.postgres.PostgresColumn.EDGE_COMP_2
+import com.openlattice.postgres.PostgresColumn.EDGE_ENTITY_KEY_ID
+import com.openlattice.postgres.PostgresColumn.EDGE_ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.ID_VALUE
+import com.openlattice.postgres.PostgresColumn.LAST_TRANSPORT
+import com.openlattice.postgres.PostgresColumn.LINKING_ID
+import com.openlattice.postgres.PostgresColumn.SRC_ENTITY_KEY_ID
+import com.openlattice.postgres.PostgresColumn.SRC_ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.VERSION
+import com.openlattice.postgres.PostgresColumn.VERSIONS
+import com.openlattice.postgres.PostgresTable.E
+import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PostgresIterable
@@ -1105,7 +1126,7 @@ internal fun getLinkingId(linkingIds: Map<UUID, UUID>, entityKeyId: UUID): UUID 
 
 private val KEY_COLUMNS = E.primaryKey.map { col -> col.name }.toSet()
 
-private val INSERT_COLUMNS = E.columns.map { it.name }.toSet()
+private val INSERT_COLUMNS = E.columns.filterNot{ LAST_TRANSPORT.equals(it) }.map { it.name }.toSet()
 
 /**
  * Builds the SQL query for top utilizers.
