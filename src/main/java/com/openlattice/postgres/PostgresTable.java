@@ -203,8 +203,9 @@ public final class PostgresTable {
                             EDGE_ENTITY_SET_ID,
                             EDGE_ENTITY_KEY_ID,
                             VERSION,
-                            VERSIONS )
-                    .primaryKey( PARTITION,
+                            VERSIONS,
+                            LAST_TRANSPORT )
+            .primaryKey( PARTITION,
                             SRC_ENTITY_KEY_ID,
                             DST_ENTITY_KEY_ID,
                             EDGE_ENTITY_KEY_ID )

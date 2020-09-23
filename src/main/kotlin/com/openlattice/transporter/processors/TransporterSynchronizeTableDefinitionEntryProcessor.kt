@@ -3,8 +3,8 @@ package com.openlattice.transporter.processors
 import com.hazelcast.core.Offloadable
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.edm.type.PropertyType
-import com.openlattice.transporter.addAllMissingColumnsQuery
 import com.openlattice.transporter.tableDefinition
+import com.openlattice.transporter.transportTable
 import com.openlattice.transporter.types.TransporterColumnSet
 import com.openlattice.transporter.types.TransporterDatastore
 import com.openlattice.transporter.types.TransporterDependent
@@ -44,23 +44,8 @@ data class TransporterSynchronizeTableDefinitionEntryProcessor(val newProperties
         val newColumns = entry.value.withProperties(newProps)
         val table = tableDefinition(entry.key, newColumns.columns.values.map { it.transporterColumn() })
         transporter.connection.use { conn ->
-            var lastSql = ""
-            try {
-                conn.createStatement().use { st ->
-                    lastSql = table.createTableQuery()
-                    st.execute(lastSql)
-                    lastSql = addAllMissingColumnsQuery(table)
-                    st.execute(lastSql)
-                    table.createIndexQueries.forEach {
-                        lastSql = it
-                        st.execute(it)
-                    }
-                }
-                entry.setValue(newColumns)
-            } catch (e: Exception) {
-                logger.error("Unable to execute query: {}", lastSql, e)
-                throw e
-            }
+            transportTable(table, conn, logger)
+            entry.setValue(newColumns)
         }
         return
     }

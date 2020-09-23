@@ -14,9 +14,11 @@ import com.openlattice.edm.events.EntityTypeDeletedEvent
 import com.openlattice.edm.events.PropertyTypesAddedToEntityTypeEvent
 import com.openlattice.edm.type.EntityType
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.transporter.MAT_EDGES_TABLE
 import com.openlattice.transporter.processors.TransporterPropagateDataEntryProcessor
 import com.openlattice.transporter.processors.TransporterSynchronizeTableDefinitionEntryProcessor
 import com.openlattice.transporter.tableName
+import com.openlattice.transporter.transportTable
 import com.openlattice.transporter.transporterNamespace
 import com.openlattice.transporter.types.TransporterColumnSet
 import com.openlattice.transporter.types.TransporterDatastore
@@ -70,6 +72,10 @@ final class DataTransporterService(
                     .filter { it.isPresent }
                     .map { it.get().get() }
                     .count()
+            logger.info("Creating edges table")
+            data.datastore().connection.use { connection ->
+                transportTable(MAT_EDGES_TABLE, connection, logger)
+            }
             logger.info("synchronization finished with {} entity type tables updated", tablesCreated)
         }
         eventBus.register(this)

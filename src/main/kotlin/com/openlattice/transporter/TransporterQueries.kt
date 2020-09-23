@@ -2,9 +2,12 @@ package com.openlattice.transporter
 
 import com.openlattice.ApiUtil
 import com.openlattice.IdConstants
-import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresArrays
+import com.openlattice.postgres.PostgresColumn.DST_ENTITY_KEY_ID
+import com.openlattice.postgres.PostgresColumn.DST_ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.EDGE_ENTITY_KEY_ID
+import com.openlattice.postgres.PostgresColumn.EDGE_ENTITY_SET_ID
 import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
 import com.openlattice.postgres.PostgresColumn.ID_VALUE
 import com.openlattice.postgres.PostgresColumn.LAST_TRANSPORT
@@ -12,18 +15,27 @@ import com.openlattice.postgres.PostgresColumn.LINKING_ID
 import com.openlattice.postgres.PostgresColumn.ORIGIN_ID
 import com.openlattice.postgres.PostgresColumn.PARTITION
 import com.openlattice.postgres.PostgresColumn.PROPERTY_TYPE_ID
+import com.openlattice.postgres.PostgresColumn.SRC_ENTITY_KEY_ID
+import com.openlattice.postgres.PostgresColumn.SRC_ENTITY_SET_ID
 import com.openlattice.postgres.PostgresColumn.VERSION
 import com.openlattice.postgres.PostgresColumnDefinition
 import com.openlattice.postgres.PostgresExpressionIndexDefinition
 import com.openlattice.postgres.PostgresTable
+import com.openlattice.postgres.PostgresTable.E
 import com.openlattice.postgres.PostgresTableDefinition
 import com.openlattice.transporter.types.TransporterColumn
 import com.zaxxer.hikari.HikariDataSource
+import org.slf4j.Logger
+import java.sql.Connection
 import java.util.*
 
 const val transporterNamespace = "transporter_data"
 
 private val transportTimestampColumn: PostgresColumnDefinition = LAST_TRANSPORT
+
+private val BATCH_LIMIT = 10_000
+
+val MAT_EDGES_TABLE = edgesTableDefinition()
 
 fun unquotedTableName(entityTypeId: UUID): String {
     return "et_$entityTypeId"
@@ -31,6 +43,27 @@ fun unquotedTableName(entityTypeId: UUID): String {
 
 fun tableName(entityTypeId: UUID): String {
     return ApiUtil.dbQuote(unquotedTableName(entityTypeId))
+}
+
+fun edgesTableDefinition(): PostgresTableDefinition {
+    val definition = PostgresTableDefinition("edges")
+    definition.addColumns(
+            SRC_ENTITY_SET_ID,
+            SRC_ENTITY_KEY_ID,
+            DST_ENTITY_SET_ID,
+            DST_ENTITY_KEY_ID,
+            EDGE_ENTITY_SET_ID,
+            EDGE_ENTITY_KEY_ID
+    )
+    definition.primaryKey(
+            SRC_ENTITY_SET_ID,
+            SRC_ENTITY_KEY_ID,
+            DST_ENTITY_SET_ID,
+            DST_ENTITY_KEY_ID,
+            EDGE_ENTITY_SET_ID,
+            EDGE_ENTITY_KEY_ID
+    )
+    return definition
 }
 
 fun tableDefinition(entityTypeId: UUID, propertyColumns: Collection<PostgresColumnDefinition>): PostgresTableDefinition {
@@ -65,7 +98,7 @@ private val checkQuery = "SELECT 1 " +
         " SELECT 1 FROM ${PostgresTable.IDS.name} " +
         " WHERE ${PARTITION.name} = ANY(?) " +
         "  AND ${ENTITY_SET_ID.name} = ANY(?) " +
-        "  AND ${DataTables.LAST_WRITE.name} > ${transportTimestampColumn.name}" +
+        "  AND ${LAST_WRITE.name} > ${transportTimestampColumn.name}" +
         ")"
 
 fun hasModifiedData(enterprise: HikariDataSource, partitions: Collection<Int>, entitySetIds: Set<UUID>): Boolean {
@@ -89,9 +122,9 @@ val ids = "$pk,${ORIGIN_ID.name}"
  * column bindings are
  * 1 - partitions array
  * 2 - entity set ids array
- *
+ * 3 - entity key ids array
  */
-fun updateOneBatchForProperty(
+fun updateRowsForPropertyType(
         destTable: String,
         propId: UUID,
         column: TransporterColumn
@@ -105,6 +138,7 @@ fun updateOneBatchForProperty(
             "SET ${transportTimestampColumn.name} = ${LAST_WRITE.name} " +
             "WHERE ${PARTITION.name} = ANY(?) " +
             " AND ${ENTITY_SET_ID.name} = ANY(?) " +
+            " AND ${ID_VALUE.name} = ANY(?) " +
             " AND ${PROPERTY_TYPE_ID.name} = '${propId}' " +
             " AND ${LAST_WRITE.name} > ${transportTimestampColumn.name} " +
             "RETURNING $ids,${VERSION.name},$dataView"
@@ -121,7 +155,8 @@ fun updateOneBatchForProperty(
             "FROM src " +
             "WHERE " + pkCols.joinToString(" AND ") { "t." + it.name + " = src." + it.name}
 
-    return "WITH src as ($updateLastTransport), inserted as ($createMissingRows) $modifyDestination"
+    return "WITH src as ($updateLastTransport), " +
+            "inserted as ($createMissingRows) $modifyDestination"
 }
 
 /**
@@ -138,7 +173,8 @@ fun updatePrimaryKeyForEntitySets(destTable: String): String {
             "FROM ${PostgresTable.IDS.name} " +
             "WHERE ${PARTITION.name} = ANY(?) " +
             " AND ${ENTITY_SET_ID.name} = ANY(?) " +
-            " AND ${LAST_WRITE.name} > ${transportTimestampColumn.name} LIMIT 10000"
+            " AND ${LAST_WRITE.name} > ${transportTimestampColumn.name} " +
+            "LIMIT $BATCH_LIMIT"
     val createMissingRows = "INSERT INTO $destTable ($pk) " +
             "SELECT $pk " +
             "FROM src " +
@@ -165,26 +201,96 @@ fun updatePrimaryKeyForEntitySets(destTable: String): String {
 }
 
 /**
+ * Transport edges
  *
+ * column bindings are
+ * 1 - partitions array
+ * 2 - entity set ids array
+ * 3 - entity key ids array
+ * 4 - entity set ids array
+ * 5 - entity key ids array
+ * 6 - entity set ids array
+ * 7 - entity key ids array
  */
-fun updateOneBatchForEdges(): String {
-    return ""
+fun updateRowsForEdges(): String {
+    val pk = listOf(
+            SRC_ENTITY_SET_ID,
+            SRC_ENTITY_KEY_ID,
+            DST_ENTITY_SET_ID,
+            DST_ENTITY_KEY_ID,
+            EDGE_ENTITY_SET_ID,
+            EDGE_ENTITY_KEY_ID
+    ).map { it.name }
+    val pkString = pk.joinToString(",")
+    val selectFromE = "SELECT $pkString,${VERSION.name} " +
+            "FROM ${E.name} " +
+            "WHERE ${LAST_WRITE.name} > ${transportTimestampColumn.name} AND (" +
+            "  (" +
+            "    ${PARTITION.name} = ANY(?) " +
+            "    AND ${SRC_ENTITY_SET_ID.name} = ANY(?) " +
+            "    AND ${SRC_ENTITY_KEY_ID.name} = ANY(?) " +
+            "  ) OR (" +
+            "    ${DST_ENTITY_SET_ID.name} = ANY(?) " +
+            "    AND ${DST_ENTITY_KEY_ID.name} = ANY(?) " +
+            "  ) OR (" +
+            "    ${EDGE_ENTITY_SET_ID.name} = ANY(?) " +
+            "    AND ${EDGE_ENTITY_KEY_ID.name} = ANY(?) "
+    "  )" +
+            ") LIMIT $BATCH_LIMIT"
+    val createMissingRows = "INSERT INTO ${MAT_EDGES_TABLE.name} ($pk) " +
+            "SELECT $pkString " +
+            "FROM src " +
+            "WHERE ${VERSION.name} > 0 " +
+            "ON CONFLICT ($pk) DO NOTHING"
+    val deleteRows = "DELETE FROM ${MAT_EDGES_TABLE.name} t " +
+            "USING src " +
+            "WHERE src.${VERSION.name} <= 0 " +
+            " AND ${pk.joinToString(" AND ") { "t.${it} = src.${it}" }} "
+    return "WITH src as ($selectFromE), " +
+            "inserts as ($createMissingRows)," +
+            deleteRows
 }
 
 /**
  * Update [IDS] with new transport time
  *
  * column bindings are
- * 1 - partitions array
- * 2 - entity set ids array
+ * 1 - last write value being processed
+ * 2 - partitions array
+ * 3 - entity set ids array
+ * 4 - entity key id
  */
-fun updateIdsForEntitySets(): String {
+fun updateLastWriteForId(): String {
     return "UPDATE ${PostgresTable.IDS.name} " +
-            "SET ${transportTimestampColumn.name} = ${DataTables.LAST_WRITE.name} " +
+            "SET ${transportTimestampColumn.name} = ? " +
             "WHERE ${PARTITION.name} = ANY(?) " +
             " AND ${ENTITY_SET_ID.name} = ANY(?) " +
-            " AND ${DataTables.LAST_WRITE.name} > ${transportTimestampColumn.name} "
+            " AND ${ID_VALUE.name} = ? " +
+            " AND ${LAST_WRITE.name} > ${transportTimestampColumn.name} "
 }
 
 fun addAllMissingColumnsQuery(table: PostgresTableDefinition): String =
         "ALTER TABLE ${table.name} " + table.columns.joinToString(",") { c -> "ADD COLUMN IF NOT EXISTS ${c.sql()}" }
+
+fun transportTable(
+        table: PostgresTableDefinition,
+        conn: Connection,
+        logger: Logger
+){
+    var lastSql = ""
+    try {
+        conn.createStatement().use { st ->
+            lastSql = table.createTableQuery()
+            st.execute(lastSql)
+            lastSql = addAllMissingColumnsQuery(table)
+            st.execute(lastSql)
+            table.createIndexQueries.forEach {
+                lastSql = it
+                st.execute(it)
+            }
+        }
+    } catch (e: Exception) {
+        logger.error("Unable to execute query: {}", lastSql, e)
+        throw e
+    }
+}

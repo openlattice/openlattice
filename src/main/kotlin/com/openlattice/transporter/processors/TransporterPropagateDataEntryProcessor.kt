@@ -8,15 +8,10 @@ import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.openlattice.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
-import com.openlattice.transporter.hasModifiedData
-import com.openlattice.transporter.tableName
-import com.openlattice.transporter.transporterNamespace
+import com.openlattice.transporter.*
 import com.openlattice.transporter.types.TransporterColumnSet
 import com.openlattice.transporter.types.TransporterDatastore
 import com.openlattice.transporter.types.TransporterDependent
-import com.openlattice.transporter.updateIdsForEntitySets
-import com.openlattice.transporter.updateOneBatchForProperty
-import com.openlattice.transporter.updatePrimaryKeyForEntitySets
 import io.prometheus.client.Counter
 import org.slf4j.LoggerFactory
 import java.util.*
@@ -81,51 +76,59 @@ class TransporterPropagateDataEntryProcessor(
             return
         }
 
-
         transporter.connection.use { conn ->
             var lastSql = ""
             try {
                 val partitions = PostgresArrays.createIntArray(conn, partitions)
                 val entitySetArray = PostgresArrays.createUuidArray(conn, entitySetIds)
-                lastSql = updatePrimaryKeyForEntitySets(tableName)
 
+                lastSql = updatePrimaryKeyForEntitySets(tableName)
                 val idsToLastWrites = BasePostgresIterable(PreparedStatementHolderSupplier(transporter, lastSql ) {
                     it.setArray(1, partitions)
                     it.setArray(2, entitySetArray)
                 }) {
                     ResultSetAdapters.id(it) to ResultSetAdapters.lastWriteTyped(it)
-                }
+                }.toMap()
+
+                val ekidsArray = PostgresArrays.createUuidArray(conn, idsToLastWrites.keys)
 
                 val colUpdates = entry.value.map { (ptId, col) ->
-                    val ptBatch = conn.prepareStatement(updateOneBatchForProperty(tableName, ptId, col))
-//                    val edgeBatch = conn.prepareStatement(updateOneBatchForEdges(tableName, ptId, col))
-                    val idsCommit = conn.prepareStatement(updateIdsForEntitySets())
+                    logger.debug("transporting data rows")
+                    lastSql = updateRowsForPropertyType(tableName, ptId, col)
+                    val pts = conn.prepareStatement( lastSql )
+                    pts.setArray(1, partitions)
+                    pts.setArray(2, entitySetArray)
+                    pts.setArray(3, ekidsArray)
+                    valueCounter.inc( pts.executeUpdate().toDouble())
 
-                    idsToLastWrites.asSequence().map {
-                        ptBatch.setArray(1, partitions)
-                        ptBatch.setArray(2, entitySetArray)
-                        ptBatch.setObject(3, it.first)
-                        ptBatch.setObject(4, it.second)
-                        ptBatch.addBatch()
+                    logger.debug("transporting edge rows")
+                    lastSql = updateRowsForEdges()
+                    val edgeBatch = conn.prepareStatement( lastSql )
+                    edgeBatch.setArray(1, partitions)
+                    edgeBatch.setArray(2, entitySetArray)
+                    edgeBatch.setArray(3, ekidsArray)
+                    edgeBatch.setArray(4, entitySetArray)
+                    edgeBatch.setArray(5, ekidsArray)
+                    edgeBatch.setArray(6, entitySetArray)
+                    edgeBatch.setArray(7, ekidsArray)
+                    edgesCounter.inc( edgeBatch.executeUpdate().toDouble())
 
-//                        edgeBatch.setArray(1, partitions)
-//                        edgeBatch.setArray(2, entitySetArray)
-//                        edgeBatch.setObject(3, it.first)
-//                        edgeBatch.setObject(4, it.second)
-//                        edgeBatch.addBatch()
-
-                        idsCommit.setArray(1, partitions)
-                        idsCommit.setArray(2, entitySetArray)
-                        idsCommit.setObject(3, it.first)
-                        idsCommit.setObject(4, it.second)
+                    logger.debug("updating last transport timestamps")
+                    lastSql = updateLastWriteForId()
+                    val idsCommit = conn.prepareStatement( lastSql )
+                    idsToLastWrites.forEach { ( ekid, lastWrite ) ->
+                        idsCommit.setObject(1, lastWrite)
+                        idsCommit.setArray(2, partitions)
+                        idsCommit.setArray(3, entitySetArray)
+                        idsCommit.setObject(4, ekid)
                         idsCommit.addBatch()
                     }
-                    valueCounter.inc( ptBatch.executeBatch().sum().toDouble())
-//                    edgesCounter.inc( edgeBatch.executeBatch().sum().toDouble())
                     idCounter.inc( idsCommit.executeBatch().sum().toDouble())
                 }
 
-                logger.debug("Updated {} values in entity type table {}", colUpdates, tableName)
+                logger.debug("Updated {} data rows in entity type table {}", valueCounter.get(), tableName)
+                logger.debug("Updated {} edge rows for entity type table {}", edgesCounter.get(), tableName)
+                logger.debug("Updated {} ids for entity type table {}", idCounter.get(), tableName)
                 conn.commit()
             } catch (ex: Exception) {
                 errorCounter.inc()

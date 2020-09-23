@@ -32,18 +32,13 @@ private const val configFileName = "assembler.yaml"
 
 /**
  *
- * [server] is a remote server that data will be transported to and assembled on
+ * [server] is a remote server that data will be transported to and assembled upon
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 @ReloadableConfiguration(uri= configFileName)
 data class AssemblerConfiguration(
         @JsonProperty val server: Properties,
-        @JsonProperty val foreignHost: String,
-        @JsonProperty val foreignDbName: String,
-        @JsonProperty val foreignPort: Short,
-        @JsonProperty val foreignUsername: String,
-        @JsonProperty val foreignPassword: String,
         @JsonProperty val ssl: Boolean = true
 ): Configuration {
 
@@ -58,7 +53,6 @@ data class AssemblerConfiguration(
     }
 
     override fun toString(): String {
-        return "AssemblerConfiguration(server=$server, foreignHost='$foreignHost', foreignDbName='$foreignDbName', " +
-                "foreignPort=$foreignPort, foreignUsername='$foreignUsername', ssl=$ssl)"
+        return "AssemblerConfiguration(server=$server, ssl=$ssl)"
     }
 }

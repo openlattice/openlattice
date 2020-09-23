@@ -6,6 +6,7 @@ import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.postgres.PostgresColumn
 import com.openlattice.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
+import com.openlattice.transporter.tableName
 import com.openlattice.transporter.types.TransporterColumnSet
 import com.openlattice.transporter.types.TransporterDatastore
 import com.openlattice.transporter.types.TransporterDependent
@@ -27,15 +28,12 @@ class ProjectEntitySetEntryProcessor(
         val es = entry.value
         es.flags.add(EntitySetFlag.MATERIALIZED)
 
-        // Should change this to use tableName() from `TransporterQueries`
-        val etTableName = ApiUtil.dbQuote("et_${es.entityTypeId}")
-
         data.createOrgDataSource( es.organizationId ).connection.use { conn ->
             conn.createStatement().executeUpdate(
                     createEntityTypeView(
                             es.name,
                             entry.key,
-                            etTableName,
+                            tableName(es.entityTypeId),
                             columns
                     )
             )

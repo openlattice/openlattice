@@ -4,9 +4,4 @@ server:
   password: "test"
   maximumPoolSize: 5
   connectionTimeout: 60000
-foreignHost: "localhost"
-foreignDbName: "openlattice"
-foreignPort: 5432
-foreignUsername: "oltest"
-foreignPassword: "test"
 ssl: false

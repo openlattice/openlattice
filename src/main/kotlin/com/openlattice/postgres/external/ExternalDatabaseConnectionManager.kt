@@ -29,7 +29,7 @@ class ExternalDatabaseConnectionManager(
         }
 
         @JvmStatic
-        fun createDataSource(dbName: String, config: Properties, useSsl: Boolean): HikariDataSource {
+        private fun createDataSource(dbName: String, config: Properties, useSsl: Boolean): HikariDataSource {
             config.computeIfPresent("jdbcUrl") { _, jdbcUrl ->
                 "${(jdbcUrl as String).removeSuffix("/")}/$dbName" + if (useSsl) {
                     "?sslmode=require"

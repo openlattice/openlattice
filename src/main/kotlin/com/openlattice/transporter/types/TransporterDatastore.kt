@@ -26,7 +26,7 @@ class TransporterDatastore(
     }
     private val fdwName = "enterprise"
     private val fdwSchema = "ol"
-    private var hds: HikariDataSource = HikariDataSource(HikariConfig(configuration.server))
+    private var hds: HikariDataSource = exConnMan.connect("transporter")
 
     init {
         logger.info("Initializing TransporterDatastore")
