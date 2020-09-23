@@ -36,9 +36,9 @@ import com.openlattice.indexing.pods.IndexerServicesPod;
 import com.openlattice.indexing.pods.IndexerServletsPod;
 import com.openlattice.indexing.pods.PlasmaCoupling;
 import com.openlattice.jdbc.JdbcPod;
-import com.openlattice.mail.services.MailService;
 import com.openlattice.postgres.PostgresPod;
 import com.openlattice.postgres.PostgresTablesPod;
+import com.openlattice.postgres.pods.ExternalDatabaseConnectionManagerPod;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -49,6 +49,7 @@ public class Indexer extends BaseRhizomeServer {
             AuditingConfigurationPod.class,
             Auth0Pod.class,
             AwsS3Pod.class,
+            ExternalDatabaseConnectionManagerPod.class,
             GraphProcessorPod.class,
             IndexerServicesPod.class,
             IndexerPostConfigurationServicesPod.class,
