@@ -69,7 +69,6 @@ class ExternalDatabaseManagementService(
     private val organizationExternalDatabaseColumns = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_COLUMN.getMap(hazelcastInstance)
     private val organizationExternalDatabaseTables = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE.getMap(hazelcastInstance)
     private val securableObjectTypes = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap(hazelcastInstance)
-    private val organizations = HazelcastMap.ORGANIZATIONS.getMap(hazelcastInstance)
     private val aces = HazelcastMap.PERMISSIONS.getMap(hazelcastInstance)
     private val logger = LoggerFactory.getLogger(ExternalDatabaseManagementService::class.java)
     private val primaryKeyConstraint = "PRIMARY KEY"
@@ -112,14 +111,14 @@ class ExternalDatabaseManagementService(
         return BasePostgresIterable(
                 StatementHolderSupplier(externalDbManager.connect(dbName), sql)
         ) { rs ->
-            val columnName = columnName(rs)
+            val storedColumnName = columnName(rs)
             val dataType = sqlDataType(rs)
             val position = ordinalPosition(rs)
             val isPrimaryKey = constraintType(rs) == primaryKeyConstraint
             OrganizationExternalDatabaseColumn(
                     Optional.empty(),
-                    columnName,
-                    columnName,
+                    storedColumnName,
+                    storedColumnName,
                     Optional.empty(),
                     tableId,
                     orgId,
@@ -130,9 +129,6 @@ class ExternalDatabaseManagementService(
     }
 
     /*GET*/
-    fun getOrganizationIds(): Set<UUID> {
-        return organizations.keys
-    }
 
     fun getExternalDatabaseTables(orgId: UUID): Set<Map.Entry<UUID, OrganizationExternalDatabaseTable>> {
         return organizationExternalDatabaseTables.entrySet(belongsToOrganization(orgId))
@@ -599,10 +595,25 @@ class ExternalDatabaseManagementService(
         }
     }
 
+    /**
+     * Moves a table from the [MATERIALIZED_VIEWS_SCHEMA] schema to the [STAGING_SCHEMA] schema
+     */
+    fun promoteStagingTable(organizationId: UUID, tableName: String) {
+        val dbName = PostgresDatabases.buildOrganizationDatabaseName(organizationId)
+
+        acm.connect(dbName).use { hds ->
+            hds.connection.use { conn ->
+                conn.createStatement().use { stmt ->
+                    stmt.execute(publishStagingTableSql(tableName))
+                }
+            }
+        }
+    }
+
     /*INTERNAL SQL QUERIES*/
     private fun getCurrentTableAndColumnNamesSql(): String {
         return selectExpression + fromExpression + leftJoinColumnsExpression +
-                "WHERE information_schema.tables.table_schema='$MATERIALIZED_VIEWS_SCHEMA' " +
+                "WHERE information_schema.tables.table_schema=ANY('{$MATERIALIZED_VIEWS_SCHEMA','$STAGING_SCHEMA}') " +
                 "AND table_type='BASE TABLE'"
     }
 
@@ -667,6 +678,10 @@ class ExternalDatabaseManagementService(
 
     private fun belongsToTable(tableId: UUID): Predicate<UUID, OrganizationExternalDatabaseColumn> {
         return Predicates.equal(TABLE_ID_INDEX, tableId)
+    }
+
+    private fun publishStagingTableSql(tableName: String): String {
+        return "ALTER TABLE $tableName SET SCHEMA TO $MATERIALIZED_VIEWS_SCHEMA"
     }
 
 }
