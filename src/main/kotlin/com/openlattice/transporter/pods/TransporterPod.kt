@@ -37,12 +37,12 @@ class TransporterPod {
     @Inject
     private lateinit var externalDbConnMan: ExternalDatabaseConnectionManager
     @Inject
-    private lateinit var assemblerConfig: AssemblerConfiguration
+    private lateinit var assemblerConfiguration: AssemblerConfiguration
 
     @Bean
     fun transporterDatastore(): TransporterDatastore {
         LoggerFactory.getLogger(TransporterPod::class.java).info("Constructing TransporterDatastore")
-        return TransporterDatastore(assemblerConfig, rhizome, externalDbConnMan)
+        return TransporterDatastore(assemblerConfiguration, rhizome, externalDbConnMan)
     }
 
     @Bean

@@ -34,16 +34,18 @@ class ExternalDatabaseConnectionManager(
                 assemblerConfiguration.ssl
         )
     }
-
     fun createDataSource(dbName: String, config: Properties, useSsl: Boolean): HikariDataSource {
-        config.computeIfPresent("jdbcUrl") { _, jdbcUrl ->
-            "${(jdbcUrl as String).removeSuffix("/")}/$dbName" + if (useSsl) {
-                "?sslmode=require"
-            } else {
-                ""
-            }
+        val jdbcUrl = config.getProperty("jdbcUrl")
+                ?: throw Exception("No JDBC URL specified in Assembler configuration")
+
+        val newJdbcUrl = "${jdbcUrl.removeSuffix("/")}/$dbName" + if (useSsl) {
+            "?sslmode=require"
+        } else {
+            ""
         }
-        return HikariDataSource(HikariConfig(config))
+        val newHds = HikariDataSource(HikariConfig(config.clone() as Properties))
+        newHds.jdbcUrl = newJdbcUrl
+        return newHds
     }
 
     private fun cacheLoader(): CacheLoader<String, HikariDataSource> {
@@ -59,5 +61,4 @@ class ExternalDatabaseConnectionManager(
     fun connect(dbName: String): HikariDataSource {
         return perDbCache.get(dbName)
     }
-
 }

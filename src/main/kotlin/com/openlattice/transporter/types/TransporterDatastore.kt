@@ -15,7 +15,7 @@ import java.util.*
  */
 @Component
 class TransporterDatastore(
-        private val configuration: AssemblerConfiguration,
+        private val assemblerConfiguration: AssemblerConfiguration,
         rhizome: RhizomeConfiguration,
         private val exConnMan: ExternalDatabaseConnectionManager
 ) {
@@ -25,7 +25,11 @@ class TransporterDatastore(
     }
     private val fdwName = "enterprise"
     private val fdwSchema = "ol"
-    private var hds: HikariDataSource = exConnMan.createDataSource( "transporter", configuration.server, configuration.ssl)
+    private var hds: HikariDataSource = exConnMan.createDataSource(
+            "transporter",
+            assemblerConfiguration.server.clone() as Properties,
+            assemblerConfiguration.ssl
+    )
 
     init {
         logger.info("Initializing TransporterDatastore")
@@ -62,13 +66,13 @@ class TransporterDatastore(
                 }
             }
             val url = enterprise.hikariConfiguration.getProperty("jdbcUrl")
-            logger.info("Configuring fdw from {} to {}", configuration.server.getProperty("jdbcUrl"), url)
+            logger.info("Configuring fdw from {} to {}", assemblerConfiguration.server.getProperty("jdbcUrl"), url)
             val match = PAT.matchEntire(url) ?: throw IllegalArgumentException("Invalid jdbc url: $url")
             // 0 = whole string, 1 = prefix, 2 = hostname, 3 = port, 4 = database
             val hostname = match.groupValues[2]
             val port = match.groupValues[3].toInt()
             val dbname = match.groupValues[4]
-            val user = configuration.server.getProperty("username")
+            val user = assemblerConfiguration.server.getProperty("username")
             val remoteUser = enterprise.hikariConfiguration.getProperty("username")
             val remotePassword = enterprise.hikariConfiguration.getProperty("password")
             """
@@ -89,7 +93,7 @@ class TransporterDatastore(
             conn.commit()
         }
         hds.close()
-        hds = exConnMan.createDataSource( "transporter", configuration.server, configuration.ssl)
+        hds = exConnMan.connect("transporter")
     }
 
     fun datastore(): HikariDataSource {

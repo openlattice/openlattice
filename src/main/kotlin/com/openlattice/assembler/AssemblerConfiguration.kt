@@ -31,7 +31,6 @@ import java.util.*
 private const val configFileName = "assembler.yaml"
 
 /**
- *
  * [server] is a remote server that data will be transported to and assembled upon
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
