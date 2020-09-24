@@ -80,9 +80,9 @@ fun buildPreparableFiltersSql(
     val metadataOptionColumnsSql = metadataOptionColumns.values.joinToString("")
 
     val (innerGroupBy, outerGroupBy) = if (metadataOptions.contains(MetadataOption.ENTITY_KEY_IDS)) {
-        groupBy(ESID_EKID_PART_PTID_ORIGIN_ID) to groupBy(ESID_EKID_PART_PTID)
+        groupBy(ESID_EKID_PART_PTID) to groupBy(ESID_EKID_PART_PTID)
     } else {
-        groupBy(ESID_EKID_PART_PTID_ORIGIN_ID) to groupBy(ESID_EKID_PART)
+        groupBy(ESID_EKID_PART_PTID) to groupBy(ESID_EKID_PART)
     }
     val linkingClause = if (linking) " AND ${ORIGIN_ID.name} != '${IdConstants.EMPTY_ORIGIN_ID.id}' " else ""
 
@@ -236,7 +236,6 @@ internal fun doBind(ps: PreparedStatement, info: SqlBindInfo) {
 
 internal val ESID_EKID_PART = "${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name}"
 internal val ESID_EKID_PART_PTID = "$ESID_EKID_PART,${PROPERTY_TYPE_ID.name}"
-internal val ESID_EKID_PART_PTID_ORIGIN_ID = "$ESID_EKID_PART_PTID,${ORIGIN_ID.name}"
 
 internal fun groupBy(columns: String): String {
     return "GROUP BY ($columns)"
