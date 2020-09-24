@@ -151,7 +151,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     }
 
     @Override
-    @GetMapping( value = ID_PATH + "/materialize", produces = MediaType.APPLICATION_JSON_VALUE )
+    @GetMapping( value = ID_PATH + SET_ID_PATH + "/materialize", produces = MediaType.APPLICATION_JSON_VALUE )
     @ResponseStatus( HttpStatus.OK )
     public Void materializeEntitySet( @PathVariable(ID) UUID organizationId, @PathVariable(SET_ID) UUID entitySetId) {
 //        ensureOwnerAccess(AclKey( entitySetId ))
