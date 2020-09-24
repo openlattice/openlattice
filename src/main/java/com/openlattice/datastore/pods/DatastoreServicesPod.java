@@ -106,6 +106,7 @@ import com.openlattice.subscriptions.PostgresSubscriptionService;
 import com.openlattice.subscriptions.SubscriptionService;
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies;
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask;
+import com.openlattice.transporter.types.TransporterDatastore;
 import com.openlattice.twilio.TwilioConfiguration;
 import com.openlattice.twilio.pods.TwilioConfigurationPod;
 import com.openlattice.users.Auth0SyncService;
@@ -184,6 +185,9 @@ public class DatastoreServicesPod {
 
     @Inject
     private ExternalDatabaseConnectionManager externalDbConnMan;
+
+    @Inject
+    private TransporterDatastore transporterDatastore;
 
     @Bean
     public PostgresUserApi pgUserApi() {
@@ -605,6 +609,7 @@ public class DatastoreServicesPod {
                 aclKeyReservationService(),
                 authorizationManager(),
                 organizationExternalDatabaseConfiguration,
+                transporterDatastore,
                 hikariDataSource );
     }
 
