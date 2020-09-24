@@ -30,6 +30,8 @@ import com.openlattice.ids.HazelcastLongIdService
 import org.slf4j.LoggerFactory
 import java.security.SecureRandom
 
+const val USER_PREFIX = "user"
+
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -69,16 +71,22 @@ class DbCredentialService(hazelcastInstance: HazelcastInstance, val longIdServic
     fun getDbUsername(userId: String): String = dbCreds.getValue(userId).username
 
     fun getOrCreateUserCredentials(userId: String): MaterializedViewAccount {
-        if (dbCreds.containsKey(userId)) {
-            return getDbCredential(userId)!!
+        return if (dbCreds.containsKey(userId)) {
+            getDbCredential(userId)!!
+        } else {
+            logger.info("Generating credentials for user id {}", userId)
+            val cred: String = generateCredential()
+            val id = longIdService.getId(userId)
+            val unpaddedLength = (USER_PREFIX.length + id.toString().length)
+            val username = if (unpaddedLength < 8) {
+                "user" + ("0".repeat(8 - unpaddedLength)) + id
+            } else {
+                "user$id"
+            }
+            val account = MaterializedViewAccount(username, cred)
+            logger.info("Generated credentials for user id {} with username {}", userId, username)
+            return MoreObjects.firstNonNull(dbCreds.putIfAbsent(userId, account), account)
         }
-
-        logger.info("Generating credentials for user id {}", userId)
-        val cred: String = generateCredential()
-        val id = longIdService.getId(userId)
-        val account = MaterializedViewAccount("user$id", cred)
-        logger.info("Generated credentials for user id {}", userId)
-        return MoreObjects.firstNonNull(dbCreds.putIfAbsent(userId, account), account)
     }
 
     fun deleteUserCredential(userId: String) {
