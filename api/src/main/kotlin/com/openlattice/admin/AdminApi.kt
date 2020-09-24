@@ -6,7 +6,12 @@ import com.openlattice.authorization.Principal
 import com.openlattice.jobs.JobUpdate
 import com.openlattice.notifications.sms.SmsEntitySetInformation
 import com.openlattice.organizations.Organization
-import retrofit2.http.*
+import retrofit2.http.Body
+import retrofit2.http.GET
+import retrofit2.http.PATCH
+import retrofit2.http.POST
+import retrofit2.http.Path
+import retrofit2.http.Query
 import java.util.*
 
 

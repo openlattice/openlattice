@@ -85,6 +85,12 @@ public interface OrganizationsApi {
     OrganizationIntegrationAccount getOrganizationIntegrationAccount( @Path( ID ) UUID organizationId );
 
     /**
+     * Marks an entity set for materialization
+     */
+    @GET( BASE + ID_PATH + SET_ID_PATH + "/materialize")
+    Void materializeEntitySet( @Path(ID) UUID organizationId, @Path(SET_ID) UUID entitySetId);
+
+    /**
      * Rolls the organization integration account credentials.
      *
      * @param organizationId The organization account for which to roll credentials.
