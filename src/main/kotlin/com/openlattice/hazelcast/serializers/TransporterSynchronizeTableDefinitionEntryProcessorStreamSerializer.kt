@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component
 @Component
 class TransporterSynchronizeTableDefinitionEntryProcessorStreamSerializer:
         SelfRegisteringStreamSerializer<TransporterSynchronizeTableDefinitionEntryProcessor>,
-        TransporterDependent
+        TransporterDependent<Unit>
 {
     private lateinit var data: TransporterDatastore
 

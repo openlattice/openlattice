@@ -1,12 +1,12 @@
 package com.openlattice.projector
 
 import com.hazelcast.core.Offloadable
+import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.ApiUtil
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.postgres.PostgresColumn
-import com.openlattice.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
 import com.openlattice.transporter.tableName
 import com.openlattice.transporter.types.TransporterColumnSet
 import com.openlattice.transporter.types.TransporterDatastore
@@ -17,17 +17,18 @@ import java.util.*
  *
  * @author Drew Bailey &lt;drew@openlattice.com&gt;
  */
-class ProjectEntitySetEntryProcessor(
+data class ProjectEntitySetEntryProcessor(
         val columns: TransporterColumnSet,
         val organizationId: UUID,
         val usersToColumnPermissions: Map<String, List<String>>
-): AbstractReadOnlyRhizomeEntryProcessor<UUID, EntitySet, Unit>(),
+): AbstractRhizomeEntryProcessor<UUID, EntitySet, Unit>(),
         Offloadable,
-        TransporterDependent
+        TransporterDependent<ProjectEntitySetEntryProcessor>
 {
     private lateinit var data: TransporterDatastore
 
     override fun process(entry: MutableMap.MutableEntry<UUID, EntitySet>) {
+        check(::data.isInitialized) { TransporterDependent.NOT_INITIALIZED }
         val es = entry.value
         es.flags.add(EntitySetFlag.MATERIALIZED)
 
@@ -75,7 +76,8 @@ class ProjectEntitySetEntryProcessor(
         return Offloadable.OFFLOADABLE_EXECUTOR
     }
 
-    override fun init(data: TransporterDatastore) {
+    override fun init(data: TransporterDatastore): ProjectEntitySetEntryProcessor {
         this.data = data
+        return this
     }
 }

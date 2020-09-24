@@ -45,6 +45,7 @@ import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.StatementHolderSupplier
 import com.openlattice.projector.ProjectEntitySetEntryProcessor
+import com.openlattice.transporter.types.TransporterDatastore
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
@@ -68,6 +69,7 @@ class ExternalDatabaseManagementService(
         private val aclKeyReservations: HazelcastAclKeyReservationService,
         private val authorizationManager: AuthorizationManager,
         private val organizationExternalDatabaseConfiguration: OrganizationExternalDatabaseConfiguration,
+        private val transporterDatastore: TransporterDatastore,
         private val hds: HikariDataSource
 ) {
 
@@ -184,6 +186,7 @@ class ExternalDatabaseManagementService(
         userToPermissions.thenCombine( transporterColumnsCompletion ) { userToPerms, transporterColumns ->
             entitySets.executeOnKey( entitySetId,
                     ProjectEntitySetEntryProcessor(transporterColumns, organizationId, userToPerms)
+                            .init(transporterDatastore)
             )
         }.toCompletableFuture().get()
     }

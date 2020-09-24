@@ -16,7 +16,6 @@ class PermissionStreamSerializer : AbstractEnumSerializer<Permission>() {
         fun deserialize(`in`: ObjectDataInput): Permission = deserialize(Permission::class.java, `in`)
     }
 
-
     override fun getTypeId(): Int {
         return StreamSerializerTypeIds.PERMISSION.ordinal
     }

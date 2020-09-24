@@ -47,7 +47,7 @@ class PostConstructInitializerTaskDependencies : HazelcastTaskDependencies {
     private lateinit var transporterDatastore: TransporterDatastore
 
     @Inject
-    private lateinit var transporterDependent: Set<TransporterDependent>
+    private lateinit var transporterDependent: Set<TransporterDependent<Any>>
 
     @Component
     class PostConstructInitializerTask : HazelcastInitializationTask<PostConstructInitializerTaskDependencies> {

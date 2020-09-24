@@ -23,7 +23,8 @@ class TransporterPropagateDataEntryProcessor(
         val entitySets: Set<EntitySet>,
         val entitySetPartitions: Collection<Int>
 ): AbstractReadOnlyRhizomeEntryProcessor<UUID, TransporterColumnSet, Void?>(),
-        Offloadable
+        Offloadable,
+        TransporterDependent<TransporterPropagateDataEntryProcessor>
 {
     companion object {
         private val logger = LoggerFactory.getLogger(TransporterPropagateDataEntryProcessor::class.java)
@@ -141,7 +142,7 @@ class TransporterPropagateDataEntryProcessor(
         return Offloadable.OFFLOADABLE_EXECUTOR
     }
 
-    fun init(data: TransporterDatastore): TransporterPropagateDataEntryProcessor {
+    override fun init(data: TransporterDatastore): TransporterPropagateDataEntryProcessor {
         this.data = data
         return this
     }

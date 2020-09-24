@@ -16,7 +16,8 @@ import java.util.*
  */
 data class TransporterSynchronizeTableDefinitionEntryProcessor(val newProperties: Collection<PropertyType>):
         AbstractRhizomeEntryProcessor<UUID, TransporterColumnSet, Void?>(),
-        Offloadable
+        Offloadable,
+        TransporterDependent<TransporterSynchronizeTableDefinitionEntryProcessor>
 {
     companion object {
         private val logger = LoggerFactory.getLogger(TransporterSynchronizeTableDefinitionEntryProcessor::class.java)
@@ -52,7 +53,7 @@ data class TransporterSynchronizeTableDefinitionEntryProcessor(val newProperties
 
     override fun getExecutorName(): String = Offloadable.OFFLOADABLE_EXECUTOR
 
-    fun init(data: TransporterDatastore): TransporterSynchronizeTableDefinitionEntryProcessor {
+    override fun init(data: TransporterDatastore): TransporterSynchronizeTableDefinitionEntryProcessor {
         this.data = data
         return this
     }

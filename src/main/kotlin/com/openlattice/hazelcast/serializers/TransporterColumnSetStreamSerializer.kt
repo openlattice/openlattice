@@ -6,8 +6,6 @@ import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.postgres.IndexType
-import com.openlattice.postgres.PostgresDatatype
-import com.openlattice.transporter.types.TransporterColumn
 import com.openlattice.transporter.types.TransporterColumnSet
 import org.springframework.stereotype.Component
 
@@ -15,18 +13,26 @@ import org.springframework.stereotype.Component
 class TransporterColumnSetStreamSerializer : TestableSelfRegisteringStreamSerializer<TransporterColumnSet> {
 
     companion object {
-        fun serializeColumn(out: ObjectDataOutput, col: TransporterColumn) {
-            out.writeUTF(col.dataTableColumnName)
-            out.writeUTF(col.transporterTableColumnName)
-            AbstractEnumSerializer.serialize(out, col.dataType)
+        @JvmStatic
+        fun serializeColumnSet(out: ObjectDataOutput, columnSet: TransporterColumnSet) {
+            out.writeInt(columnSet.size)
+            columnSet.entries.forEach { (id, col) ->
+                UUIDStreamSerializerUtils.serialize(out, id)
+                TransporterColumnStreamSerializer.serializeColumn(out, col)
+            }
         }
-        fun deserializeColumn(`in`: ObjectDataInput): TransporterColumn {
-            val srcCol = `in`.readUTF()
-            val destColName = `in`.readUTF()
-            val dataType = AbstractEnumSerializer.deserialize(PostgresDatatype::class.java, `in`)
-            return TransporterColumn(srcCol, destColName, dataType)
+
+        @JvmStatic
+        fun deserializeColumnSet(`in`: ObjectDataInput): TransporterColumnSet {
+            val size = `in`.readInt()
+            val columns = (1..size).map { _ ->
+                val uuid = UUIDStreamSerializerUtils.deserialize(`in`)
+                uuid to TransporterColumnStreamSerializer.deserializeColumn(`in`)
+            }.toMap()
+            return TransporterColumnSet(columns)
         }
     }
+
     override fun getTypeId(): Int {
         return StreamSerializerTypeIds.TRANSPORTER_COLUMN_SET.ordinal
     }
@@ -36,20 +42,11 @@ class TransporterColumnSetStreamSerializer : TestableSelfRegisteringStreamSerial
     }
 
     override fun write(out: ObjectDataOutput, `object`: TransporterColumnSet) {
-        out.writeInt(`object`.size)
-        `object`.entries.forEach { (id, col) ->
-            UUIDStreamSerializerUtils.serialize(out, id)
-            serializeColumn(out, col)
-        }
+        serializeColumnSet(out, `object`)
     }
 
     override fun read(`in`: ObjectDataInput): TransporterColumnSet {
-        val size = `in`.readInt()
-        val columns = (1..size).map { _ ->
-            val uuid = UUIDStreamSerializerUtils.deserialize(`in`)
-            uuid to deserializeColumn(`in`)
-        }.toMap()
-        return TransporterColumnSet(columns)
+        return deserializeColumnSet(`in`)
     }
 
     override fun generateTestValue(): TransporterColumnSet {

@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component
 @Component
 class TransporterPropagateDataEntryProcessorStreamSerializer :
         SelfRegisteringStreamSerializer<TransporterPropagateDataEntryProcessor>,
-        TransporterDependent
+        TransporterDependent<Unit>
 {
     private lateinit var data: TransporterDatastore
 
