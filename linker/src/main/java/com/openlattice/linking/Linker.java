@@ -39,6 +39,7 @@ import com.openlattice.linking.pods.LinkerServletsPod;
 import com.openlattice.linking.pods.PlasmaCoupling;
 import com.openlattice.postgres.PostgresPod;
 import com.openlattice.postgres.PostgresTablesPod;
+import com.openlattice.postgres.pods.ExternalDatabaseConnectionManagerPod;
 import com.openlattice.tasks.pods.TaskSchedulerPod;
 
 /**
@@ -50,6 +51,7 @@ public class Linker extends BaseRhizomeServer {
             AuditingConfigurationPod.class,
             Auth0Pod.class,
             AwsS3Pod.class,
+            ExternalDatabaseConnectionManagerPod.class,
             JdbcPod.class,
             LinkerPostConfigurationServicesPod.class,
             LinkerServicesPod.class,
