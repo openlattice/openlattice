@@ -76,7 +76,7 @@ class DbCredentialService(hazelcastInstance: HazelcastInstance, val longIdServic
         } else {
             logger.info("Generating credentials for user id {}", userId)
             val cred: String = generateCredential()
-            val id = longIdService.getId(userId)
+            val id = longIdService.getId(scope)
             val unpaddedLength = (USER_PREFIX.length + id.toString().length)
             val username = if (unpaddedLength < 8) {
                 "user" + ("0".repeat(8 - unpaddedLength)) + id
