@@ -24,6 +24,7 @@ package com.openlattice.authorization
 import com.google.common.base.MoreObjects
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.map.IMap
+import com.openlattice.assembler.ORGANIZATION_PREFIX
 import com.openlattice.directory.MaterializedViewAccount
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.ids.HazelcastLongIdService
@@ -78,10 +79,14 @@ class DbCredentialService(hazelcastInstance: HazelcastInstance, val longIdServic
             val cred: String = generateCredential()
             val id = longIdService.getId(scope)
             val unpaddedLength = (USER_PREFIX.length + id.toString().length)
-            val username = if (unpaddedLength < 8) {
-                "user" + ("0".repeat(8 - unpaddedLength)) + id
+            val username = if (userId.startsWith(ORGANIZATION_PREFIX)) {
+                userId
             } else {
-                "user$id"
+                if (unpaddedLength < 8) {
+                    "user" + ("0".repeat(8 - unpaddedLength)) + id
+                } else {
+                    "user$id"
+                }
             }
             val account = MaterializedViewAccount(username, cred)
             logger.info("Generated credentials for user id {} with username {}", userId, username)
