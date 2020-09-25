@@ -10,7 +10,7 @@ import com.openlattice.ids.processors.LongIdsGeneratingProcessor
  * Used for generating scoped long ids.
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class HazelcastLongIdService(hazelcastClientProvider: HazelcastClientProvider, hazelcastInstance: HazelcastInstance) {
+class HazelcastLongIdService(hazelcastClientProvider: HazelcastClientProvider) {
     private val counters = HazelcastMap.LONG_IDS.getMap(hazelcastClientProvider
             .getClient(HazelcastClient.IDS.name))
 
