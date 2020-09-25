@@ -601,6 +601,7 @@ public class DatastoreServicesPod {
                 aclKeyReservationService(),
                 authorizationManager(),
                 organizationExternalDatabaseConfiguration,
+                dcs(),
                 hikariDataSource );
     }
 
