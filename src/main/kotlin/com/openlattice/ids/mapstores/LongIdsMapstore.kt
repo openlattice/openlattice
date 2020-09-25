@@ -30,7 +30,7 @@ class LongIdsMapstore(hds: HikariDataSource) : AbstractBasePostgresMapstore<Stri
         val index = bind(ps, key)
         ps.setLong(index, value)
         //UPDATE
-        ps.setLong(index, value)
+        ps.setLong(index+1, value)
     }
 
     override fun mapToKey(rs: ResultSet): String {
