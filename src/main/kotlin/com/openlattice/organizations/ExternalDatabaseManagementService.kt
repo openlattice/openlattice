@@ -160,15 +160,6 @@ class ExternalDatabaseManagementService(
                 GetEntityTypeFromEntitySetEntryProcessor()
         )
 
-        val transporterColumnsCompletion = entityTypeId.thenCompose { etid ->
-            if ( etid == null ){
-                throw Exception("Entity set {} has no entity type {}")
-            }
-            transporterState.getAsync(etid)
-        }.thenCompose {
-            propertyTypes.submitToKeys( it.keys, GetFqnFromPropertyTypeEntryProcessor() )
-        }
-
         val accessCheckCompletion = entityTypeId.thenCompose { etid ->
             entityTypes.getAsync(etid!!)
         }.thenApplyAsync { entityType ->
@@ -188,6 +179,15 @@ class ExternalDatabaseManagementService(
                     it.aclKey[1].toString()
                 }.toList()
             }
+        }
+
+        val transporterColumnsCompletion = entityTypeId.thenCompose { etid ->
+            if ( etid == null ){
+                throw Exception("Entity set {} has no entity type {}")
+            }
+            transporterState.getAsync(etid)
+        }.thenCompose {
+            propertyTypes.submitToKeys( it.keys, GetFqnFromPropertyTypeEntryProcessor() )
         }
 
         userToPermissions.thenCombine( transporterColumnsCompletion ) { userToPerms, transporterColumns ->
