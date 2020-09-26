@@ -56,6 +56,7 @@ import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
 import com.openlattice.principals.RoleCreatedEvent
 import com.openlattice.principals.UserCreatedEvent
+import com.openlattice.transporter.types.TransporterDatastore
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -165,6 +166,7 @@ class AssemblerConnectionManager(
             createSchema(dataSource, MATERIALIZED_VIEWS_SCHEMA)
             createSchema(dataSource, INTEGRATIONS_SCHEMA)
             createSchema(dataSource, STAGING_SCHEMA)
+            createSchema(dataSource, TransporterDatastore.getOrgSchema( organizationId ))
             configureOrganizationUser(organizationId, dataSource)
             addMembersToOrganization(dbName, dataSource, organization.members)
             configureServerUser(dataSource)

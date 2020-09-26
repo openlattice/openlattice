@@ -13,8 +13,9 @@ import org.springframework.stereotype.Component
 @Component
 class TransporterPropagateDataEntryProcessorStreamSerializer :
         SelfRegisteringStreamSerializer<TransporterPropagateDataEntryProcessor>,
-        TransporterDependent<Unit>
+        TransporterDependent<Void?>
 {
+    @Transient
     private lateinit var data: TransporterDatastore
 
     override fun getTypeId(): Int {
@@ -42,7 +43,8 @@ class TransporterPropagateDataEntryProcessorStreamSerializer :
         return TransporterPropagateDataEntryProcessor(entitySets, partitions).init(data)
     }
 
-    override fun init(data: TransporterDatastore) {
+    override fun init(data: TransporterDatastore): Void? {
         this.data = data
+        return null
     }
 }

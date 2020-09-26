@@ -6,7 +6,9 @@ import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.projector.ProjectEntitySetEntryProcessor
-import com.openlattice.transporter.types.TransporterColumnSet
+import com.openlattice.transporter.types.TransporterDatastore
+import com.openlattice.transporter.types.TransporterDependent
+import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.springframework.stereotype.Component
 import java.util.*
 
@@ -14,9 +16,19 @@ import java.util.*
  * @author Drew Bailey &lt;drew@openlattice.com&gt;
  */
 @Component
-class ProjectEntitySetEntryProcessorStreamSerializer: TestableSelfRegisteringStreamSerializer<ProjectEntitySetEntryProcessor> {
+class ProjectEntitySetEntryProcessorStreamSerializer:
+        TestableSelfRegisteringStreamSerializer<ProjectEntitySetEntryProcessor> ,
+        TransporterDependent<Void?>
+{
+    @Transient
+    private lateinit var data: TransporterDatastore
+
     override fun write(out: ObjectDataOutput, `object`: ProjectEntitySetEntryProcessor) {
-        TransporterColumnSetStreamSerializer.serializeColumnSet(out, `object`.columns)
+        out.writeInt(`object`.columns.size)
+        `object`.columns.forEach { id, fqn ->
+            UUIDStreamSerializerUtils.serialize(out, id)
+            FullQualifiedNameStreamSerializer.serialize(out, fqn)
+        }
         UUIDStreamSerializerUtils.serialize(out, `object`.organizationId)
         out.writeInt(`object`.usersToColumnPermissions.size)
         `object`.usersToColumnPermissions.forEach { (key, vals) ->
@@ -29,7 +41,14 @@ class ProjectEntitySetEntryProcessorStreamSerializer: TestableSelfRegisteringStr
     }
 
     override fun read(`in`: ObjectDataInput): ProjectEntitySetEntryProcessor {
-        val columns = TransporterColumnSetStreamSerializer.deserializeColumnSet(`in`)
+        val colSize = `in`.readInt()
+        val columns = Maps.newLinkedHashMapWithExpectedSize<UUID, FullQualifiedName>( colSize )
+        for ( i in 0 until colSize ) {
+            columns.put(
+                    UUIDStreamSerializerUtils.deserialize(`in`),
+                    FullQualifiedNameStreamSerializer.deserialize(`in`)
+            )
+        }
         val orgId = UUIDStreamSerializerUtils.deserialize(`in`)
         val size = `in`.readInt()
         val usersToColPerms = Maps.newLinkedHashMapWithExpectedSize<String, List<String>>(size)
@@ -43,12 +62,12 @@ class ProjectEntitySetEntryProcessorStreamSerializer: TestableSelfRegisteringStr
             }
             usersToColPerms[key] = list
         }
-        return ProjectEntitySetEntryProcessor(columns, orgId, usersToColPerms)
+        return ProjectEntitySetEntryProcessor(columns, orgId, usersToColPerms).init(data)
     }
 
     override fun generateTestValue(): ProjectEntitySetEntryProcessor {
         return ProjectEntitySetEntryProcessor(
-                TransporterColumnSet(mapOf()),
+                mapOf(),
                 UUID.randomUUID(),
                 mapOf()
         )
@@ -60,5 +79,10 @@ class ProjectEntitySetEntryProcessorStreamSerializer: TestableSelfRegisteringStr
 
     override fun getClazz(): Class<out ProjectEntitySetEntryProcessor> {
         return ProjectEntitySetEntryProcessor::class.java
+    }
+
+    override fun init(data: TransporterDatastore): Void? {
+        this.data = data
+        return null
     }
 }

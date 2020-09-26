@@ -12,8 +12,9 @@ import org.springframework.stereotype.Component
 @Component
 class TransporterSynchronizeTableDefinitionEntryProcessorStreamSerializer:
         SelfRegisteringStreamSerializer<TransporterSynchronizeTableDefinitionEntryProcessor>,
-        TransporterDependent<Unit>
+        TransporterDependent<Void?>
 {
+    @Transient
     private lateinit var data: TransporterDatastore
 
     override fun getTypeId(): Int {
@@ -40,7 +41,8 @@ class TransporterSynchronizeTableDefinitionEntryProcessorStreamSerializer:
         return TransporterSynchronizeTableDefinitionEntryProcessor(newProperties).init(data)
     }
 
-    override fun init(data: TransporterDatastore) {
+    override fun init(data: TransporterDatastore): Void? {
         this.data = data
+        return null
     }
 }

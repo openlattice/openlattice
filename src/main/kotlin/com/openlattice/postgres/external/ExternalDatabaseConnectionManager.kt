@@ -31,10 +31,10 @@ class ExternalDatabaseConnectionManager(
     }
     fun createDataSource(dbName: String, config: Properties, useSsl: Boolean): HikariDataSource {
         val jdbcUrl = config.getProperty("jdbcUrl")
-                ?: throw Exception("No JDBC URL specified in configuration ${config}")
+                ?: throw Exception("No JDBC URL specified in configuration $config")
 
         val newProps = config.clone() as Properties
-        newProps["jdbcUrl"] = "${jdbcUrl.removeSuffix("/")}/$dbName" + if (useSsl) {
+        newProps["jdbcUrl"] = appendDatabaseToJdbcPartial(jdbcUrl, dbName) + if (useSsl) {
             "?sslmode=require"
         } else {
             ""
@@ -54,5 +54,9 @@ class ExternalDatabaseConnectionManager(
 
     fun connect(dbName: String): HikariDataSource {
         return perDbCache.get(dbName)
+    }
+
+    fun appendDatabaseToJdbcPartial( jdbcStringNoDatabase: String, dbName: String ): String {
+        return "${jdbcStringNoDatabase.removeSuffix("/")}/$dbName"
     }
 }

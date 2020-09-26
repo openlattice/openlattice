@@ -40,8 +40,8 @@ final class DataTransporterService(
         private val executor: ListeningExecutorService,
         hazelcastInstance: HazelcastInstance,
         private val data: TransporterDatastore
-)
-{
+) {
+
     companion object {
         val logger: Logger = LoggerFactory.getLogger(DataTransporterService::class.java)
         val pollTimer: Histogram = Histogram.build()

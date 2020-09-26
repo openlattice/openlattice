@@ -15,6 +15,7 @@ import com.openlattice.authorization.*
 import com.openlattice.authorization.processors.PermissionMerger
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.edm.processors.GetEntityTypeFromEntitySetEntryProcessor
+import com.openlattice.edm.processors.GetFqnFromPropertyTypeEntryProcessor
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.processors.GetMembersOfOrganizationEntryProcessor
@@ -86,6 +87,7 @@ class ExternalDatabaseManagementService(
      */
     private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
     private val entityTypes = HazelcastMap.ENTITY_TYPES.getMap(hazelcastInstance)
+    private val propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap(hazelcastInstance)
     private val organizations = HazelcastMap.ORGANIZATIONS.getMap(hazelcastInstance)
     private val transporterState = HazelcastMap.TRANSPORTER_DB_COLUMNS.getMap(hazelcastInstance)
 
@@ -159,7 +161,12 @@ class ExternalDatabaseManagementService(
         )
 
         val transporterColumnsCompletion = entityTypeId.thenCompose { etid ->
-            transporterState.getAsync(etid!!)
+            if ( etid == null ){
+                throw Exception("Entity set {} has no entity type {}")
+            }
+            transporterState.getAsync(etid)
+        }.thenCompose {
+            propertyTypes.submitToKeys( it.keys, GetFqnFromPropertyTypeEntryProcessor() )
         }
 
         val accessCheckCompletion = entityTypeId.thenCompose { etid ->
@@ -184,11 +191,11 @@ class ExternalDatabaseManagementService(
         }
 
         userToPermissions.thenCombine( transporterColumnsCompletion ) { userToPerms, transporterColumns ->
-            entitySets.executeOnKey( entitySetId,
+            entitySets.submitToKey( entitySetId,
                     ProjectEntitySetEntryProcessor(transporterColumns, organizationId, userToPerms)
                             .init(transporterDatastore)
             )
-        }.toCompletableFuture().get()
+        }.toCompletableFuture().get().toCompletableFuture().get()
     }
 
     /*GET*/

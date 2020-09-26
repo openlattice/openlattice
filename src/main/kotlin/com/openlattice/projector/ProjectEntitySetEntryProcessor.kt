@@ -3,14 +3,14 @@ package com.openlattice.projector
 import com.hazelcast.core.Offloadable
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.ApiUtil
-import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.postgres.PostgresColumn
 import com.openlattice.transporter.tableName
-import com.openlattice.transporter.types.TransporterColumnSet
 import com.openlattice.transporter.types.TransporterDatastore
 import com.openlattice.transporter.types.TransporterDependent
+import org.apache.olingo.commons.api.edm.FullQualifiedName
+import org.slf4j.LoggerFactory
 import java.util.*
 
 /**
@@ -18,57 +18,88 @@ import java.util.*
  * @author Drew Bailey &lt;drew@openlattice.com&gt;
  */
 data class ProjectEntitySetEntryProcessor(
-        val columns: TransporterColumnSet,
+        val columns: Map<UUID, FullQualifiedName>,
         val organizationId: UUID,
         val usersToColumnPermissions: Map<String, List<String>>
-): AbstractRhizomeEntryProcessor<UUID, EntitySet, Unit>(),
+): AbstractRhizomeEntryProcessor<UUID, EntitySet, Void?>(),
         Offloadable,
         TransporterDependent<ProjectEntitySetEntryProcessor>
 {
+    @Transient
     private lateinit var data: TransporterDatastore
 
-    override fun process(entry: MutableMap.MutableEntry<UUID, EntitySet>) {
+    companion object {
+        private val logger = LoggerFactory.getLogger(ProjectEntitySetEntryProcessor::class.java)
+    }
+
+    override fun process(entry: MutableMap.MutableEntry<UUID, EntitySet>): Void? {
         check(::data.isInitialized) { TransporterDependent.NOT_INITIALIZED }
         val es = entry.value
+        if ( es.flags.contains( EntitySetFlag.MATERIALIZED )){
+            return null
+        }
         es.flags.add(EntitySetFlag.MATERIALIZED)
+        entry.setValue(es)
 
-        data.createOrgDataSource( organizationId ).connection.use { conn ->
-            conn.createStatement().executeUpdate(
-                    createEntityTypeView(
-                            es.name,
-                            entry.key,
-                            tableName(es.entityTypeId),
-                            columns
-                    )
-            )
-            conn.createStatement().use { statement ->
-                usersToColumnPermissions.forEach { ( username, allowedCols ) ->
-                    statement.addBatch(
-                            AssemblerConnectionManager.grantSelectSql( es.name, username, allowedCols )
+        try {
+            data.linkOrgDbToTransporterDb( organizationId )
+
+            data.datastore().connection.use { conn ->
+                conn.createStatement().use { stmt ->
+                    stmt.executeUpdate(
+                            createEntityTypeView(
+                                    es.name,
+                                    entry.key,
+                                    tableName(es.entityTypeId),
+                                    columns
+                            )
                     )
                 }
-                statement.executeBatch()
             }
-        }
 
-        entry.setValue(es)
+            data.createOrgDataSource(organizationId).connection.use { conn ->
+                conn.createStatement().use { stmt ->
+                    stmt.executeUpdate(
+                            data.importTablesFromForeignSchema(
+                                    "ol",
+                                    setOf(es.name),
+                                    "transporter",
+                                    data.getOrgFdw( organizationId )
+                            )
+                    )
+                    // TODO - need to apply these as roles due to the maximum row width thing
+//                usersToColumnPermissions.forEach { ( username, allowedCols ) ->
+//                    stmt.addBatch(
+//                            AssemblerConnectionManager.grantSelectSql( es.name, username, allowedCols )
+//                    )
+//                }
+//                stmt.executeBatch()
+                }
+            }
+        } catch ( ex: Exception ) {
+            logger.error("Marking entity set id as not materialized {}", entry.key, ex)
+            es.flags.remove( EntitySetFlag.MATERIALIZED )
+            entry.setValue( es )
+        }
+        return null
     }
 
     fun createEntityTypeView(
             entitySetName: String,
             entitySetId: UUID,
             etTableName: String,
-            cols: TransporterColumnSet
+            propertyTypes: Map<UUID, FullQualifiedName>
     ): String {
-        val colsSql = cols.map {( id, col ) ->
+        val colsSql = propertyTypes.map { ( id, ptName ) ->
             val column = ApiUtil.dbQuote(id.toString())
-            "$column as ${col.dataTableColumnName}"
+            val quotedPt = ApiUtil.dbQuote(ptName.toString())
+            "$column as $quotedPt"
         }.joinToString()
 
         return """
             CREATE VIEW $entitySetName AS 
                 SELECT $colsSql FROM $etTableName
-                WHERE ${PostgresColumn.ENTITY_SET_ID.name} = $entitySetId
+                WHERE ${PostgresColumn.ENTITY_SET_ID.name} = '$entitySetId'
         """.trimIndent()
     }
 
