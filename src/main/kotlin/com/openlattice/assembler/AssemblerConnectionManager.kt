@@ -211,7 +211,7 @@ class AssemblerConnectionManager(
     }
 
     private fun configureOrganizationUser(organizationId: UUID, dataSource: HikariDataSource) {
-        val dbOrgUser = dbCredentialService.getDbUsername(buildOrganizationUserId(organizationId))
+        val dbOrgUser = quote(dbCredentialService.getDbUsername(buildOrganizationUserId(organizationId)))
         dataSource.connection.createStatement().use { statement ->
             //Allow usage and create on schema openlattice to organization user
             statement.execute(grantOrgUserPrivilegesOnSchemaSql(MATERIALIZED_VIEWS_SCHEMA, dbOrgUser))
