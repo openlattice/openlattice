@@ -423,7 +423,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public DbCredentialService dcs() {
-        return new DbCredentialService( hazelcastInstance );
+        return new DbCredentialService( hazelcastInstance, longIdService() );
     }
 
     @Bean
@@ -558,7 +558,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public HazelcastLongIdService longIdService() {
-        return new HazelcastLongIdService( hazelcastClientProvider, hazelcastInstance );
+        return new HazelcastLongIdService( hazelcastClientProvider );
     }
 
     @Bean
@@ -610,6 +610,7 @@ public class DatastoreServicesPod {
                 authorizationManager(),
                 organizationExternalDatabaseConfiguration,
                 transporterDatastore,
+                dcs(),
                 hikariDataSource );
     }
 
