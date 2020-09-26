@@ -18,13 +18,14 @@
 
 package com.openlattice.authorization;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
-import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.io.Serializable;
+import com.google.common.base.Preconditions;
+import com.openlattice.client.serialization.SerializationConstants;
+import com.openlattice.util.Hashcodes;
 import org.apache.commons.lang3.StringUtils;
+
+import java.io.Serializable;
 
 /**
  * This class represents a principal in the OpenLattice system. It is only serializable because it is used
@@ -35,6 +36,8 @@ public class Principal implements Comparable<Principal>, Serializable {
     private final PrincipalType type;
 
     private final String        id;
+
+    private transient int h = 0;
 
     @JsonCreator
     public Principal(
@@ -55,17 +58,16 @@ public class Principal implements Comparable<Principal>, Serializable {
     }
 
     private String validate( String id ) {
-        checkArgument( StringUtils.isAllLowerCase( id ),"Principal id must be all lower case" );
+        Preconditions.checkArgument( StringUtils.isAllLowerCase( id ),"Principal id must be all lower case" );
         return id;
     }
 
     @Override
     public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + ( ( id == null ) ? 0 : id.hashCode() );
-        result = prime * result + ( ( type == null ) ? 0 : type.hashCode() );
-        return result;
+        if ( h == 0 ) {
+            h = Hashcodes.generate( id, type );
+        }
+        return h;
     }
 
     @Override
