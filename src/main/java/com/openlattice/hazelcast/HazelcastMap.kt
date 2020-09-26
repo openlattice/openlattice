@@ -37,6 +37,7 @@ import com.openlattice.collections.CollectionTemplateKey
 import com.openlattice.collections.EntitySetCollection
 import com.openlattice.collections.EntityTypeCollection
 import com.openlattice.data.EntityDataKey
+import com.openlattice.directory.MaterializedViewAccount
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetPropertyKey
 import com.openlattice.edm.set.EntitySetPropertyMetadata
@@ -96,7 +97,7 @@ class HazelcastMap<K, V> internal constructor(val name: String) : TypedMapIdenti
         @JvmField val AUDIT_RECORD_ENTITY_SETS = HazelcastMap<AclKey, AuditRecordEntitySetConfiguration>("AUDIT_RECORD_ENTITY_SETS")
         @JvmField val CODEX_LOCKS = HazelcastMap<SmsInformationKey, Long>("CODEX_LOCKS")
         @JvmField val CODEX_MEDIA = HazelcastMap<UUID, Base64Media>("CODEX_MEDIA")
-        @JvmField val DB_CREDS = HazelcastMap<String, String>("DB_CREDS")
+        @JvmField val DB_CREDS = HazelcastMap<String, MaterializedViewAccount>("DB_CREDS")
         @JvmField val DELETION_LOCKS = HazelcastMap<UUID, Long>("DELETION_LOCKS")
         @JvmField val ENTITY_SET_COLLECTION_CONFIG = HazelcastMap<CollectionTemplateKey, UUID>("ENTITY_SET_COLLECTION_CONFIG")
         @JvmField val ENTITY_SET_COLLECTIONS = HazelcastMap<UUID, EntitySetCollection>("ENTITY_SET_COLLECTIONS")
