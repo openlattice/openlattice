@@ -200,7 +200,7 @@ class AssemblerConnectionManager(
     }
 
     private fun configureOrganizationUser(organizationId: UUID, dataSource: HikariDataSource) {
-        val dbOrgUser = quote(buildOrganizationUserId(organizationId))
+        val dbOrgUser = dbCredentialService.getDbUsername(buildOrganizationUserId(organizationId))
         dataSource.connection.createStatement().use { statement ->
             //Allow usage and create on schema openlattice to organization user
             statement.execute(grantOrgUserPrivilegesOnSchemaSql(MATERIALIZED_VIEWS_SCHEMA, dbOrgUser))
@@ -225,7 +225,7 @@ class AssemblerConnectionManager(
 
         val securablePrincipalsToAdd = securePrincipalsManager.getSecurablePrincipals(validUserPrincipals)
         if (securablePrincipalsToAdd.isNotEmpty()) {
-            val userNames = securablePrincipalsToAdd.map { quote(buildPostgresUsername(it)) }
+            val userNames = securablePrincipalsToAdd.map { dbCredentialService.getDbUsername(buildPostgresUsername(it)) }
             configureUsersInDatabase(dataSource, dbName, userNames)
         }
     }
@@ -247,7 +247,7 @@ class AssemblerConnectionManager(
     ) {
         if (authorizedPropertyTypesOfEntitySetsByPrincipal.isNotEmpty()) {
             val authorizedPropertyTypesOfEntitySetsByPostgresUser = authorizedPropertyTypesOfEntitySetsByPrincipal
-                    .mapKeys { quote(buildPostgresUsername(it.key)) }
+                    .mapKeys { dbCredentialService.getDbUsername(buildPostgresUsername(it.key)) }
             val userNames = authorizedPropertyTypesOfEntitySetsByPostgresUser.keys
             configureUsersInDatabase(dataSource, dbName, userNames)
             dataSource.connection.use { connection ->
@@ -272,7 +272,7 @@ class AssemblerConnectionManager(
             principals: Collection<SecurablePrincipal>
     ) {
         if (principals.isNotEmpty()) {
-            val userNames = principals.map { quote(buildPostgresUsername(it)) }
+            val userNames = principals.map { dbCredentialService.getDbUsername(buildPostgresUsername(it)) }
             revokeConnectAndSchemaUsage(dataSource, dbName, userNames)
         }
     }
@@ -290,10 +290,11 @@ class AssemblerConnectionManager(
     private fun createOrganizationDatabase(organizationId: UUID, dbName: String) {
         val db = quote(dbName)
         val dbRole = buildOrganizationRoleName(dbName)
+
         val unquotedDbAdminUser = buildOrganizationUserId(organizationId)
-        val dbOrgUser = quote(unquotedDbAdminUser)
-        val dbAdminUserPassword = dbCredentialService.getOrCreateUserCredentials(unquotedDbAdminUser)
-                ?: dbCredentialService.getDbCredential(unquotedDbAdminUser)
+
+        val (dbOrgUser, dbAdminUserPassword) = dbCredentialService.getOrCreateUserCredentials(unquotedDbAdminUser)
+
         val createOrgDbRole = createRoleIfNotExistsSql(dbRole)
         val createOrgDbUser = createUserIfNotExistsSql(unquotedDbAdminUser, dbAdminUserPassword)
 
@@ -329,7 +330,7 @@ class AssemblerConnectionManager(
         val db = quote(dbName)
         val dbRole = quote(buildOrganizationRoleName(dbName))
         val unquotedDbAdminUser = buildOrganizationUserId(organizationId)
-        val dbAdminUser = quote(unquotedDbAdminUser)
+        val dbAdminUser = dbCredentialService.getDbUsername(unquotedDbAdminUser)
 
         val dropDb = " DROP DATABASE $db"
         val dropDbUser = "DROP ROLE $dbAdminUser"
@@ -502,7 +503,7 @@ class AssemblerConnectionManager(
             columns: List<String>
     ): String {
         val postgresUserName = when (principal.type) {
-            PrincipalType.USER -> buildPostgresUsername(securePrincipalsManager.getPrincipal(principal.id))
+            PrincipalType.USER -> dbCredentialService.getDbUsername(buildPostgresUsername(securePrincipalsManager.getPrincipal(principal.id)))
             PrincipalType.ROLE -> buildPostgresRoleName(securePrincipalsManager.lookupRole(principal))
             else -> throw IllegalArgumentException(
                     "Only ${PrincipalType.USER} and ${PrincipalType.ROLE} principal " +
@@ -643,9 +644,14 @@ class AssemblerConnectionManager(
     }
 
     fun createUnprivilegedUser(user: SecurablePrincipal) {
-        val dbUser = buildPostgresUsername(user)
-        //user.name
-        val dbUserPassword = dbCredentialService.getOrCreateUserCredentials(dbUser)
+        val dbUserKey = buildPostgresUsername(user)
+
+        /**
+         * To simplify work-around for ESRI username limitations, we are only introducing one additional
+         * field into the dbcreds table. We keep the results of calling [buildPostgresUsername] as the lookup
+         * key, but instead use the username and password returned from the db credential service.
+         */
+        val (dbUser, dbUserPassword) = dbCredentialService.getOrCreateUserCredentials(dbUserKey)
 
         atlas.connection.use { connection ->
             connection.createStatement().use { statement ->

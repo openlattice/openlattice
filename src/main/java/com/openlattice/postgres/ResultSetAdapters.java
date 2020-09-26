@@ -53,6 +53,7 @@ import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.EntityKey;
 import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.data.storage.MetadataOption;
+import com.openlattice.directory.MaterializedViewAccount;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.edm.set.EntitySetPropertyKey;
@@ -1173,4 +1174,8 @@ public final class ResultSetAdapters {
 
     }
 
+    public static MaterializedViewAccount materializedViewAccount( ResultSet rs ) throws SQLException {
+        return new MaterializedViewAccount( rs.getString( PostgresColumn.USERNAME_FIELD ),
+                rs.getString( PostgresColumn.CREDENTIAL_FIELD ) );
+    }
 }

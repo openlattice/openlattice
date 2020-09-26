@@ -190,7 +190,7 @@ public final class PostgresTable {
             .buildDataTableDefinition();
     public static final PostgresTableDefinition DB_CREDS                      =
             new PostgresTableDefinition( "db_creds" )
-                    .addColumns( PRINCIPAL_ID, CREDENTIAL )
+                    .addColumns( PRINCIPAL_ID, USERNAME, CREDENTIAL )
                     .primaryKey( PRINCIPAL_ID );
     public static final PostgresTableDefinition E                             =
             new CitusDistributedTableDefinition( "e" )

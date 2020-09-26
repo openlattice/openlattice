@@ -71,6 +71,7 @@ class ExternalDatabaseManagementService(
         private val authorizationManager: AuthorizationManager,
         private val organizationExternalDatabaseConfiguration: OrganizationExternalDatabaseConfiguration,
         private val transporterDatastore: TransporterDatastore,
+        private val dbCredentialService: DbCredentialService,
         private val hds: HikariDataSource
 ) {
 
@@ -576,7 +577,7 @@ class ExternalDatabaseManagementService(
     private fun getDBUser(principalId: String): String {
         val securePrincipal = securePrincipalsManager.getPrincipal(principalId)
         checkState(securePrincipal.principalType == PrincipalType.USER, "Principal must be of type USER")
-        return quote(buildPostgresUsername(securePrincipal))
+        return dbCredentialService.getDbUsername(buildPostgresUsername(securePrincipal))
     }
 
     private fun areValidPermissions(permissions: EnumSet<Permission>): Boolean {

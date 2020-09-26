@@ -49,6 +49,7 @@ import com.openlattice.collections.EntityTypeCollection;
 import com.openlattice.collections.mapstores.EntitySetCollectionConfigMapstore;
 import com.openlattice.collections.mapstores.EntitySetCollectionMapstore;
 import com.openlattice.collections.mapstores.EntityTypeCollectionMapstore;
+import com.openlattice.directory.MaterializedViewAccount;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.EntitySetPropertyKey;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
@@ -59,6 +60,7 @@ import com.openlattice.hazelcast.mapstores.shuttle.IntegrationJobsMapstore;
 import com.openlattice.hazelcast.mapstores.shuttle.IntegrationsMapstore;
 import com.openlattice.ids.IdGenerationMapstore;
 import com.openlattice.ids.Range;
+import com.openlattice.ids.mapstores.LongIdsMapstore;
 import com.openlattice.linking.mapstores.LinkingFeedbackMapstore;
 import com.openlattice.notifications.sms.SmsInformationMapstore;
 import com.openlattice.organization.OrganizationExternalDatabaseColumn;
@@ -186,8 +188,13 @@ public class MapstoresPod {
     }
 
     @Bean
-    public SelfRegisteringMapStore<String, String> dbCredentialsMapstore() {
+    public SelfRegisteringMapStore<String, MaterializedViewAccount> dbCredentialsMapstore() {
         return new PostgresCredentialMapstore( hikariDataSource );
+    }
+
+    @Bean
+    public SelfRegisteringMapStore<String, Long> longIdsMapstore() {
+        return new LongIdsMapstore( hikariDataSource );
     }
 
     @Bean
