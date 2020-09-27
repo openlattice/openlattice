@@ -18,20 +18,21 @@
 
 package com.openlattice.search.requests;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.openlattice.client.serialization.SerializationConstants;
+import com.openlattice.search.SearchApi;
+
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-
-import com.openlattice.client.serialization.SerializationConstants;
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.openlattice.search.SearchApi;
 
 public class Search {
 
     private final Optional<String>    optionalKeyword;
     private final Optional<UUID>      optionalEntityType;
     private final Optional<Set<UUID>> optionalPropertyTypes;
+    private final Optional<UUID>      optionalOrganizationId;
     private final int                 start;
     private final int                 maxHits;
 
@@ -40,11 +41,13 @@ public class Search {
             @JsonProperty( SerializationConstants.KEYWORD ) Optional<String> keyword,
             @JsonProperty( SerializationConstants.ENTITY_TYPE_ID ) Optional<UUID> entityType,
             @JsonProperty( SerializationConstants.PROPERTY_TYPE_IDS ) Optional<Set<UUID>> propertyTypes,
+            @JsonProperty( SerializationConstants.ORGANIZATION_ID ) Optional<UUID> organizationId,
             @JsonProperty( SerializationConstants.START ) int start,
             @JsonProperty( SerializationConstants.MAX_HITS ) int maxHits ) {
         this.optionalKeyword = keyword.isPresent() ? Optional.of( keyword.get().trim() ) : Optional.empty();
         this.optionalEntityType = entityType;
         this.optionalPropertyTypes = propertyTypes;
+        this.optionalOrganizationId = organizationId;
         this.start = start;
         this.maxHits = Math.min( maxHits, SearchApi.MAX_SEARCH_RESULTS );
     }
@@ -62,6 +65,11 @@ public class Search {
     @JsonProperty( SerializationConstants.PROPERTY_TYPE_IDS )
     public Optional<Set<UUID>> getOptionalPropertyTypes() {
         return optionalPropertyTypes;
+    }
+
+    @JsonProperty( SerializationConstants.ORGANIZATION_ID )
+    public Optional<UUID> getOptionalOrganizationId() {
+        return optionalOrganizationId;
     }
 
     @JsonProperty( SerializationConstants.START )
