@@ -38,7 +38,7 @@ import com.openlattice.assembler.AssemblerConfiguration;
 import com.openlattice.assembler.AssemblerConnectionManager;
 import com.openlattice.assembler.AssemblerDependencies;
 import com.openlattice.assembler.pods.AssemblerConfigurationPod;
-import com.openlattice.assembler.tasks.UserCredentialSyncTask;
+import com.openlattice.assembler.tasks.UserCredentialsAssemblerInitializationTask;
 import com.openlattice.auditing.AuditRecordEntitySetsManager;
 import com.openlattice.auditing.AuditingConfiguration;
 import com.openlattice.auditing.AuditingManager;
@@ -365,8 +365,8 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    public UserCredentialSyncTask userCredentialSyncTask() {
-        return new UserCredentialSyncTask();
+    public UserCredentialsAssemblerInitializationTask userCredentialSyncTask() {
+        return new UserCredentialsAssemblerInitializationTask();
     }
 
     @Bean
@@ -508,14 +508,11 @@ public class DatastoreServicesPod {
                 principalService(),
                 organizationsManager(),
                 dcs(),
+                dataQueryService(),
+                entitySetManager(),
                 eventBus,
                 metricRegistry );
     }
-
-//    @Bean
-//    public AssemblerQueryService assemblerQueryService() {
-//        return new AssemblerQueryService( dataModelService() );
-//    }
 
     @Bean
     public PersistentSearchService persistentSearchService() {
