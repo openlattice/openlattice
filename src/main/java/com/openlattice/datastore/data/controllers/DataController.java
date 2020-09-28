@@ -71,6 +71,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.Maps.transformValues;
 import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
@@ -255,10 +256,12 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         Preconditions.checkNotNull( updateType, "An invalid update type value was specified." );
         ensureReadAccess( new AclKey( entitySetId ) );
         ensureEntitySetCanBeWritten( entitySetId );
+
+        var requiredPropertyTypes = requiredEntitySetPropertyTypes( entities );
+        assertRequiredEntitySetPropertyTypesMatchEDM( entitySetId, requiredPropertyTypes );
+
         var allAuthorizedPropertyTypes = authzHelper
                 .getAuthorizedPropertyTypes( entitySetId, EnumSet.of( Permission.WRITE ) );
-        var requiredPropertyTypes = requiredEntitySetPropertyTypes( entities );
-
         accessCheck( allAuthorizedPropertyTypes, requiredPropertyTypes );
 
         var authorizedPropertyTypes = Maps.asMap( requiredPropertyTypes, allAuthorizedPropertyTypes::get );
@@ -394,7 +397,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         ensureReadAccess( new AclKey( entitySetId ) );
         ensureEntitySetCanBeWritten( entitySetId );
         final var requiredPropertyTypes = entities.stream()
-                .flatMap(  entity ->  entity.keySet().stream() )
+                .flatMap( entity -> entity.keySet().stream() )
                 .collect( Collectors.toSet() );
         //Load authorized property types
         final Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper
@@ -972,6 +975,13 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         return propertyTypesByEntitySet;
     }
 
+    private void assertRequiredEntitySetPropertyTypesMatchEDM( UUID entitySetId, Set<UUID> requiredPropertyTypes ) {
+        final Set<UUID> missingPropertyTypes = Sets.difference( requiredPropertyTypes,
+                entitySetService.getPropertyTypesForEntitySet( entitySetId ).keySet() );
+        checkArgument( missingPropertyTypes.isEmpty(),
+                "Entity set " + entitySetId.toString() + " does not contain the property types: "
+                        + missingPropertyTypes.toString() );
+    }
 
     private static Set<UUID> requiredEntitySetPropertyTypes( Map<UUID, Map<UUID, Set<Object>>> entities ) {
         return entities.values().stream().map( Map::keySet ).flatMap( Set::stream )
