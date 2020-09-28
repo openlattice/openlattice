@@ -82,6 +82,7 @@ final class DataTransporterService(
     }
 
     private val transporterState = HazelcastMap.TRANSPORTER_DB_COLUMNS.getMap( hazelcastInstance )
+    private val entitySets = HazelcastMap.ENTITY_SETS.getMap( hazelcastInstance )
 
     /**
      *  Sync [et] from enterprise to table in atlas
@@ -139,16 +140,19 @@ final class DataTransporterService(
     }
 
     private fun refreshDataForEntitySet(entitySetId: UUID) {
-        val es = this.entitySetService.getEntitySet(entitySetId) ?: return
-        val partitions = partitions(setOf(entitySetId))
+        val esCompletion = entitySets.getAsync( entitySetId )
+        val partitions = partitionManager.getEntitySetPartitions( entitySetId )
         val refreshTimer = refreshTimer.startTimer()
-        transporterState.submitToKey(es.entityTypeId, TransporterPropagateDataEntryProcessor(setOf(es), partitions).init(data))
-                .whenCompleteAsync { _, throwable ->
-                    refreshTimer.observeDuration()
-                    if ( throwable != null ){
-                        errorCount.inc()
-                    }
-                }
+        esCompletion.thenCompose{ es ->
+            transporterState.submitToKey(es.entityTypeId,
+                    TransporterPropagateDataEntryProcessor(setOf(es), partitions).init(data)
+            )
+        }.whenCompleteAsync { _, throwable ->
+            refreshTimer.observeDuration()
+            if ( throwable != null ){
+                errorCount.inc()
+            }
+        }
     }
 
     private fun validEntitySets(entityTypeId: UUID): Set<EntitySet> {
@@ -168,16 +172,6 @@ final class DataTransporterService(
             this.syncTable(entityType)
         }
     }
-
-//    @Subscribe
-//    fun handleEntitiesUpserted(e: EntitiesUpsertedEvent) {
-//        this.refreshDataForEntitySet(e.entitySetId)
-//    }
-
-//    @Subscribe
-//    fun handleEntities(e: EntitiesDeletedEvent) {
-//        this.refreshDataForEntitySet(e.entitySetId)
-//    }
 
     @Subscribe
     fun handleEntityTypeDeleted(e: EntityTypeDeletedEvent) {

@@ -33,7 +33,7 @@ class SerializersTest(val serializer: TestableSelfRegisteringStreamSerializer<An
                         if (ss is AssemblerConnectionManagerDependent<*>) {
                             ss.init(acm)
                         }
-                        if (ss is TransporterDependent) {
+                        if (ss is TransporterDependent<*>) {
                             ss.init(tds)
                         }
                         ss

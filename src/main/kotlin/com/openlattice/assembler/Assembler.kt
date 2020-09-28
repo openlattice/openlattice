@@ -35,7 +35,12 @@ import com.openlattice.assembler.events.MaterializePermissionChangeEvent
 import com.openlattice.assembler.events.MaterializedEntitySetDataChangeEvent
 import com.openlattice.assembler.events.MaterializedEntitySetEdmChangeEvent
 import com.openlattice.assembler.processors.*
-import com.openlattice.authorization.*
+import com.openlattice.authorization.AclKey
+import com.openlattice.authorization.AuthorizationManager
+import com.openlattice.authorization.DbCredentialService
+import com.openlattice.authorization.EdmAuthorizationHelper
+import com.openlattice.authorization.Principal
+import com.openlattice.authorization.PrincipalType
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.controllers.exceptions.ResourceNotFoundException
 import com.openlattice.datastore.util.Util
@@ -84,7 +89,6 @@ class Assembler(
 ) : HazelcastTaskDependencies, AssemblerConnectionManagerDependent<Void?> {
 
     private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcast)
-    private val entityTypes = HazelcastMap.ENTITY_TYPES.getMap(hazelcast)
     private val propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap(hazelcast)
     private val assemblies = HazelcastMap.ASSEMBLIES.getMap(hazelcast)
     private val materializedEntitySets = HazelcastMap.MATERIALIZED_ENTITY_SETS.getMap(hazelcast)

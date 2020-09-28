@@ -1,18 +1,15 @@
 package com.openlattice.hazelcast.serializers
 
-import com.google.common.collect.Maps
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.collections.CollectionTemplates
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import org.springframework.stereotype.Component
 import java.util.*
-import java.util.concurrent.ConcurrentMap
 
 @Component
-class CollectionTemplatesStreamSerializer : SelfRegisteringStreamSerializer<CollectionTemplates> {
+class CollectionTemplatesStreamSerializer : TestableSelfRegisteringStreamSerializer<CollectionTemplates> {
 
     companion object {
 
@@ -55,6 +52,18 @@ class CollectionTemplatesStreamSerializer : SelfRegisteringStreamSerializer<Coll
 
     override fun read(`in`: ObjectDataInput): CollectionTemplates {
         return deserialize(`in`)
+    }
+
+    override fun generateTestValue(): CollectionTemplates {
+        val outer = mutableMapOf<UUID, MutableMap<UUID, UUID>>()
+        for (j in 0 until 10 ) {
+            val inner = mutableMapOf<UUID, UUID>()
+            for ( i in 0 until 10 ){
+                inner.put(UUID.randomUUID(), UUID.randomUUID())
+            }
+            outer.put(UUID.randomUUID(), inner)
+        }
+        return CollectionTemplates( outer )
     }
 
 }

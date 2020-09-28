@@ -21,11 +21,21 @@
 package com.openlattice.hazelcast.serializers
 
 import com.geekbeast.rhizome.hazelcast.AbstractDelegatedIntListStreamSerializer
+import com.geekbeast.rhizome.hazelcast.DelegatedIntList
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import org.springframework.stereotype.Component
+import kotlin.random.Random
 
 @Component
 class DelegatedIntListStreamSerializer : AbstractDelegatedIntListStreamSerializer() {
+    override fun generateTestValue(): DelegatedIntList {
+        return DelegatedIntList(
+                intArrayOf(
+                        Random.nextInt(), Random.nextInt(), Random.nextInt(), Random.nextInt(), Random.nextInt(),
+                        Random.nextInt(), Random.nextInt(), Random.nextInt(), Random.nextInt(), Random.nextInt()
+                ).toList())
+    }
+
     override fun getTypeId(): Int {
         return StreamSerializerTypeIds.INT_LIST.ordinal
     }
