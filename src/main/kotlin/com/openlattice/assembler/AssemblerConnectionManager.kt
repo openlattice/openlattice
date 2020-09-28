@@ -200,7 +200,7 @@ class AssemblerConnectionManager(
     }
 
     private fun configureOrganizationUser(organizationId: UUID, dataSource: HikariDataSource) {
-        val dbOrgUser = dbCredentialService.getDbUsername(buildOrganizationUserId(organizationId))
+        val dbOrgUser = quote(dbCredentialService.getDbUsername(buildOrganizationUserId(organizationId)))
         dataSource.connection.createStatement().use { statement ->
             //Allow usage and create on schema openlattice to organization user
             statement.execute(grantOrgUserPrivilegesOnSchemaSql(MATERIALIZED_VIEWS_SCHEMA, dbOrgUser))
@@ -298,7 +298,7 @@ class AssemblerConnectionManager(
         val createOrgDbRole = createRoleIfNotExistsSql(dbRole)
         val createOrgDbUser = createUserIfNotExistsSql(unquotedDbAdminUser, dbAdminUserPassword)
 
-        val grantRole = "GRANT ${quote(dbRole)} TO $dbOrgUser"
+        val grantRole = "GRANT ${quote(dbRole)} TO ${quote(dbOrgUser)}"
         val createDb = "CREATE DATABASE $db"
         val revokeAll = "REVOKE ALL ON DATABASE $db FROM $PUBLIC_ROLE"
 
@@ -313,7 +313,7 @@ class AssemblerConnectionManager(
                     statement.execute(createDb)
                     statement.execute(
                             "GRANT ${MEMBER_ORG_DATABASE_PERMISSIONS.joinToString(", ")} " +
-                                    "ON DATABASE $db TO $dbOrgUser"
+                                    "ON DATABASE $db TO ${quote(dbOrgUser)}"
                     )
                 }
                 statement.execute(revokeAll)

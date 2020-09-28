@@ -27,6 +27,7 @@ import com.google.common.collect.Sets
 import com.google.common.eventbus.EventBus
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.map.IMap
+import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.hazelcast.query.QueryConstants
 import com.openlattice.assembler.events.MaterializedEntitySetEdmChangeEvent
@@ -318,6 +319,13 @@ class EntitySetService(
 
     override fun getEntitySetsForOrganization(organizationId: UUID): Set<UUID> {
         return entitySets.keySet(Predicates.equal(EntitySetMapstore.ORGANIZATION_INDEX, organizationId))
+    }
+
+    override fun filterEntitySetsForOrganization(organizationId: UUID, entitySetIds: Collection<UUID>): Set<UUID> {
+        return entitySets.keySet(Predicates.and(
+                Predicates.equal<UUID, EntitySet>(EntitySetMapstore.ORGANIZATION_INDEX, organizationId),
+                Predicates.`in`<UUID, EntitySet>(EntitySetMapstore.ID_INDEX, *entitySetIds.toTypedArray())
+        ))
     }
 
     override fun getEntityTypeByEntitySetId(entitySetId: UUID): EntityType {
