@@ -38,7 +38,7 @@ import com.openlattice.assembler.AssemblerConfiguration;
 import com.openlattice.assembler.AssemblerConnectionManager;
 import com.openlattice.assembler.AssemblerDependencies;
 import com.openlattice.assembler.pods.AssemblerConfigurationPod;
-import com.openlattice.assembler.tasks.UserCredentialsAssemblerInitializationTask;
+import com.openlattice.assembler.tasks.UserCredentialSyncTask;
 import com.openlattice.auditing.AuditRecordEntitySetsManager;
 import com.openlattice.auditing.AuditingConfiguration;
 import com.openlattice.auditing.AuditingManager;
@@ -365,8 +365,8 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    public UserCredentialsAssemblerInitializationTask userCredentialSyncTask() {
-        return new UserCredentialsAssemblerInitializationTask();
+    public UserCredentialSyncTask userCredentialSyncTask() {
+        return new UserCredentialSyncTask();
     }
 
     @Bean
@@ -502,14 +502,13 @@ public class DatastoreServicesPod {
 
     @Bean
     public AssemblerConnectionManager assemblerConnectionManager() {
-        return new AssemblerConnectionManager( assemblerConfiguration,
+        return new AssemblerConnectionManager(
+                assemblerConfiguration,
                 externalDbConnMan,
                 hikariDataSource,
                 principalService(),
                 organizationsManager(),
                 dcs(),
-                dataQueryService(),
-                entitySetManager(),
                 eventBus,
                 metricRegistry );
     }
