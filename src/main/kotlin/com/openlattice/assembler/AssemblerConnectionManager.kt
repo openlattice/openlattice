@@ -56,7 +56,7 @@ import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
 import com.openlattice.principals.RoleCreatedEvent
 import com.openlattice.principals.UserCreatedEvent
-import com.openlattice.transporter.types.TransporterDatastore
+import com.openlattice.transporter.types.TransporterDatastore.Companion.ORG_VIEWS_SCHEMA
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -90,8 +90,6 @@ class AssemblerConnectionManager(
             metricRegistry.timer(name(AssemblerConnectionManager::class.java, "materializeAll"))
     private val materializeEntitySetsTimer: Timer =
             metricRegistry.timer(name(AssemblerConnectionManager::class.java, "materializeEntitySets"))
-    private val materializeEdgesTimer: Timer =
-            metricRegistry.timer(name(AssemblerConnectionManager::class.java, "materializeEdges"))
 
     init {
         eventBus.register(this)
@@ -166,7 +164,7 @@ class AssemblerConnectionManager(
             createSchema(dataSource, MATERIALIZED_VIEWS_SCHEMA)
             createSchema(dataSource, INTEGRATIONS_SCHEMA)
             createSchema(dataSource, STAGING_SCHEMA)
-            createSchema(dataSource, TransporterDatastore.getOrgSchema( organizationId ))
+            createSchema(dataSource, ORG_VIEWS_SCHEMA)
             configureOrganizationUser(organizationId, dataSource)
             addMembersToOrganization(dbName, dataSource, organization.members)
             configureServerUser(dataSource)

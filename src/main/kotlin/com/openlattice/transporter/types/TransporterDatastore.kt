@@ -24,10 +24,9 @@ class TransporterDatastore(
         private val logger = LoggerFactory.getLogger(TransporterDatastore::class.java)
         private val PAT = Regex("""([\w:]+)://([\w_.]*):(\d+)/(\w+)""")
 
-        fun getOrgSchema( organizationId: UUID ): String {
-            return ApiUtil.dbQuote("org_views_$organizationId")
-        }
+        const val ORG_VIEWS_SCHEMA = "transporter"
     }
+
     private val enterpriseFdwName = "enterprise"
     private val enterpriseFdwSchema = "ol"
     private var hds: HikariDataSource = exConnMan.createDataSource(
@@ -48,12 +47,6 @@ class TransporterDatastore(
     }
 
     fun linkOrgDbToTransporterDb( organizationId: UUID ) {
-        // create org schema if not exists
-
-        exConnMan.connect("transporter").connection.use {
-            it.createStatement().execute("CREATE SCHEMA IF NOT EXISTS ${getOrgSchema( organizationId )}")
-        }
-
         val hds = createOrgDataSource( organizationId )
         createFdwBetweenDatabases(
                 hds,
@@ -64,7 +57,7 @@ class TransporterDatastore(
                         "transporter"
                 ),
                 assemblerConfiguration.server.getProperty("username"),
-                "transporter",
+                ORG_VIEWS_SCHEMA,
                 getOrgFdw( organizationId )
         )
     }
