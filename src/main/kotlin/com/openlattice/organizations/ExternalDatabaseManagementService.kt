@@ -45,6 +45,7 @@ import com.openlattice.postgres.ResultSetAdapters.user
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.StatementHolderSupplier
+import com.openlattice.transporter.processors.DestroyTransportedEntitySetEntryProcessor
 import com.openlattice.transporter.processors.TransportEntitySetEntryProcessor
 import com.openlattice.transporter.types.TransporterDatastore
 import com.zaxxer.hikari.HikariDataSource
@@ -144,6 +145,10 @@ class ExternalDatabaseManagementService(
                     isPrimaryKey,
                     position)
         }
+    }
+
+    fun destroyTransportedEntitySet( entitySetId: UUID ) {
+        entitySets.executeOnKey( entitySetId, DestroyTransportedEntitySetEntryProcessor())
     }
 
     fun transportEntitySet( organizationId: UUID, entitySetId: UUID ) {

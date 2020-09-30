@@ -3,6 +3,7 @@ package com.openlattice.transporter.processors
 import com.hazelcast.core.Offloadable
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.edm.EntitySet
+import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.transporter.destroyEntitySetView
 import com.openlattice.transporter.types.TransporterDatastore
 import com.openlattice.transporter.types.TransporterDependent
@@ -19,11 +20,14 @@ class DestroyTransportedEntitySetEntryProcessor: AbstractRhizomeEntryProcessor<U
     private lateinit var data: TransporterDatastore
 
     override fun process(entry: MutableMap.MutableEntry<UUID, EntitySet>): Void? {
-        data.createOrgDataSource( entry.key ).connection.use { conn ->
+        val es = entry.value
+        data.createOrgDataSource( es.organizationId ).connection.use { conn ->
             conn.createStatement().use { stmt ->
-                stmt.executeUpdate( destroyEntitySetView( entry.value.name ) )
+                stmt.executeUpdate( destroyEntitySetView( es.name ) )
             }
         }
+        es.flags.remove(EntitySetFlag.TRANSPORTED)
+        entry.setValue( es )
         return null
     }
 
