@@ -140,9 +140,11 @@ class HazelcastOrganizationService(
         //We add the user/role that created the organization to the admin role for the organization
 
         // set up organization database
-        val dbName = buildDefaultOrganizationDatabaseName(organization.id)
-        val oid = assembler.createOrganizationAndReturnOid(organization, dbName)
-        organizationDatabases.set(organization.id, OrganizationDatabase(oid, dbName))
+        val orgDatabase = assembler.createOrganizationAndReturnOid(
+                organization,
+                buildDefaultOrganizationDatabaseName(organization.id)
+        )
+        organizationDatabases.set(organization.id, orgDatabase)
 
         eventBus.post(OrganizationCreatedEvent(organization))
         setSmsEntitySetInformation(organization.smsEntitySetInfo)

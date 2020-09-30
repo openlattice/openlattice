@@ -46,6 +46,7 @@ import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organization.OrganizationEntitySetFlag
 import com.openlattice.organization.OrganizationIntegrationAccount
 import com.openlattice.organizations.Organization
+import com.openlattice.organizations.OrganizationDatabase
 import com.openlattice.organizations.events.MembersAddedToOrganizationEvent
 import com.openlattice.organizations.events.MembersRemovedFromOrganizationEvent
 import com.openlattice.organizations.roles.SecurePrincipalsManager
@@ -239,9 +240,10 @@ class Assembler(
         )
     }
 
-    fun createOrganizationAndReturnOid(organization: Organization, dbName: String): Int {
+    fun createOrganizationAndReturnOid(organization: Organization, dbName: String): OrganizationDatabase {
         createOrganization(organization.id, dbName)
-        return acm.getDatabaseOid(dbName)
+        val oid = acm.getDatabaseOid(dbName)
+        return OrganizationDatabase(oid, dbName)
     }
 
     fun createOrganization(organizationId: UUID, dbName: String) {
