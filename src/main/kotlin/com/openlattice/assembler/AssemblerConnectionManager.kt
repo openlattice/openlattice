@@ -167,10 +167,9 @@ class AssemblerConnectionManager(
      * Also sets up foreign data wrapper using assembler in assembler so that materialized views of data can be
      * provided.
      */
-    fun createOrganizationDatabase(organizationId: UUID) {
+    fun createAndInitializeOrganizationDatabase(organizationId: UUID, dbName: String) {
         logger.info("Creating organization database for organization with id $organizationId")
         val organization = organizations.getOrganization(organizationId)!!
-        val dbName = organizations.getOrganizationDatabaseName(organizationId)
         createOrganizationDatabase(organizationId, dbName)
 
         connect(dbName).let { dataSource ->

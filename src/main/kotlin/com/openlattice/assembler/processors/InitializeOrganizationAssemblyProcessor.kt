@@ -56,7 +56,7 @@ class InitializeOrganizationAssemblyProcessor(val dbName: String) :
                     organizationId
             )
             else -> {
-                acm?.createOrganizationDatabase(organizationId)
+                acm?.createAndInitializeOrganizationDatabase(organizationId, dbName)
                         ?: throw IllegalStateException(AssemblerConnectionManagerDependent.NOT_INITIALIZED)
                 assembly.initialized = true
                 entry.setValue(assembly)
