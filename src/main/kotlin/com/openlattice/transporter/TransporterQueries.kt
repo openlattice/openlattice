@@ -131,7 +131,7 @@ fun updateRowsForPropertyType(
     val dataColumn = column.dataTableColumnName
     val destinationColumn = column.transporterTableColumnName
     // if data is deleted (version <= 0, use null, otherwise use the value from source
-    val dataView = "CASE WHEN VERSION > 0 THEN $dataColumn else null END as $destinationColumn"
+    val dataView = "CASE WHEN ${VERSION.name} > 0 THEN $dataColumn else null END as $destinationColumn"
 
     val updateLastTransport = "UPDATE ${PostgresTable.DATA.name} " +
             "SET ${transportTimestampColumn.name} = abs(${VERSION.name}) " +

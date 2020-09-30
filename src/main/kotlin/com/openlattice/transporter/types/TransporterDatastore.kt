@@ -22,6 +22,7 @@ class TransporterDatastore(
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(TransporterDatastore::class.java)
+        // 0 = whole string, 1 = prefix, 2 = hostname, 3 = port, 4 = database
         private val PAT = Regex("""([\w:]+)://([\w_.]*):(\d+)/(\w+)""")
 
         // schema in org_* database where the view is projected
@@ -97,7 +98,6 @@ class TransporterDatastore(
             }
 
             val match = PAT.matchEntire(remoteDbJdbc) ?: throw IllegalArgumentException("Invalid jdbc url: $remoteDbJdbc")
-            // 0 = whole string, 1 = prefix, 2 = hostname, 3 = port, 4 = database
             val remoteHostname = match.groupValues[2]
             val remotePort = match.groupValues[3].toInt()
             val remoteDbname = match.groupValues[4]
