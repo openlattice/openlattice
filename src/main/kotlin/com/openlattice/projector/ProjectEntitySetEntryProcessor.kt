@@ -49,7 +49,7 @@ data class ProjectEntitySetEntryProcessor(
             data.datastore().connection.use { conn ->
                 conn.createStatement().use { stmt ->
                     stmt.executeUpdate(
-                            createEntityTypeView(
+                            createEntitySetView(
                                     es.name,
                                     entry.key,
                                     tableName(es.entityTypeId),
@@ -86,7 +86,7 @@ data class ProjectEntitySetEntryProcessor(
         return null
     }
 
-    fun createEntityTypeView(
+    fun createEntitySetView(
             entitySetName: String,
             entitySetId: UUID,
             etTableName: String,

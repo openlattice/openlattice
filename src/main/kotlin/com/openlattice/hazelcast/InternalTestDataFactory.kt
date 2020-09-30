@@ -1,5 +1,6 @@
 package com.openlattice.hazelcast
 
+import com.geekbeast.rhizome.hazelcast.DelegatedIntList
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.AclKeySet
 import com.openlattice.client.RetrofitFactory
@@ -17,6 +18,7 @@ import org.apache.commons.text.CharacterPredicates
 import org.apache.commons.text.RandomStringGenerator
 import java.time.OffsetDateTime
 import java.util.*
+import kotlin.random.Random
 
 class InternalTestDataFactory {
     companion object {
@@ -71,6 +73,16 @@ class InternalTestDataFactory {
                     sourcePrimaryKeyColumns,
                     null,
                     flight
+            )
+        }
+
+        @JvmStatic
+        fun delegatedIntList(): DelegatedIntList {
+            return DelegatedIntList(
+                    listOf(
+                            Random.nextInt(), Random.nextInt(), Random.nextInt(), Random.nextInt(), Random.nextInt(),
+                            Random.nextInt(), Random.nextInt(), Random.nextInt(), Random.nextInt(), Random.nextInt()
+                    )
             )
         }
 
