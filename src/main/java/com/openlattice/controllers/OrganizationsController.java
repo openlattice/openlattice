@@ -151,12 +151,12 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     }
 
     @Override
-    @GetMapping( value = ID_PATH + SET_ID_PATH + "/materialize", produces = MediaType.APPLICATION_JSON_VALUE )
+    @GetMapping( value = ID_PATH + SET_ID_PATH + TRANSPORT, produces = MediaType.APPLICATION_JSON_VALUE )
     @ResponseStatus( HttpStatus.OK )
-    public Void materializeEntitySet( @PathVariable(ID) UUID organizationId, @PathVariable(SET_ID) UUID entitySetId) {
+    public Void transportEntitySet( @PathVariable(ID) UUID organizationId, @PathVariable(SET_ID) UUID entitySetId) {
         ensureRead( organizationId );
-        ensureMaterializeAccess( new AclKey( organizationId ));
-        edms.materializeEntitySet( organizationId, entitySetId );
+        ensureTransportAccess( new AclKey( organizationId ));
+        edms.transportEntitySet( organizationId, entitySetId );
         return null;
     }
 
