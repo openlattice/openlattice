@@ -5,7 +5,7 @@ import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
 import com.openlattice.hazelcast.StreamSerializerTypeIds
-import com.openlattice.projector.ProjectEntitySetEntryProcessor
+import com.openlattice.transporter.processors.TransportEntitySetEntryProcessor
 import com.openlattice.transporter.types.TransporterDatastore
 import com.openlattice.transporter.types.TransporterDependent
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -17,13 +17,13 @@ import java.util.*
  */
 @Component
 class ProjectEntitySetEntryProcessorStreamSerializer:
-        TestableSelfRegisteringStreamSerializer<ProjectEntitySetEntryProcessor> ,
+        TestableSelfRegisteringStreamSerializer<TransportEntitySetEntryProcessor> ,
         TransporterDependent<Void?>
 {
     @Transient
     private lateinit var data: TransporterDatastore
 
-    override fun write(out: ObjectDataOutput, `object`: ProjectEntitySetEntryProcessor) {
+    override fun write(out: ObjectDataOutput, `object`: TransportEntitySetEntryProcessor) {
         out.writeInt(`object`.columns.size)
         `object`.columns.forEach { id, fqn ->
             UUIDStreamSerializerUtils.serialize(out, id)
@@ -40,7 +40,7 @@ class ProjectEntitySetEntryProcessorStreamSerializer:
         }
     }
 
-    override fun read(`in`: ObjectDataInput): ProjectEntitySetEntryProcessor {
+    override fun read(`in`: ObjectDataInput): TransportEntitySetEntryProcessor {
         val colSize = `in`.readInt()
         val columns = Maps.newLinkedHashMapWithExpectedSize<UUID, FullQualifiedName>( colSize )
         for ( i in 0 until colSize ) {
@@ -62,11 +62,11 @@ class ProjectEntitySetEntryProcessorStreamSerializer:
             }
             usersToColPerms[key] = list
         }
-        return ProjectEntitySetEntryProcessor(columns, orgId, usersToColPerms).init(data)
+        return TransportEntitySetEntryProcessor(columns, orgId, usersToColPerms).init(data)
     }
 
-    override fun generateTestValue(): ProjectEntitySetEntryProcessor {
-        return ProjectEntitySetEntryProcessor(
+    override fun generateTestValue(): TransportEntitySetEntryProcessor {
+        return TransportEntitySetEntryProcessor(
                 mapOf(),
                 UUID.randomUUID(),
                 mapOf()
@@ -77,8 +77,8 @@ class ProjectEntitySetEntryProcessorStreamSerializer:
         return StreamSerializerTypeIds.PROJECT_ENTITY_SET_EP.ordinal
     }
 
-    override fun getClazz(): Class<out ProjectEntitySetEntryProcessor> {
-        return ProjectEntitySetEntryProcessor::class.java
+    override fun getClazz(): Class<out TransportEntitySetEntryProcessor> {
+        return TransportEntitySetEntryProcessor::class.java
     }
 
     override fun init(data: TransporterDatastore): Void? {

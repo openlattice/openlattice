@@ -1,15 +1,14 @@
-package com.openlattice.projector
+package com.openlattice.transporter.processors
 
 import com.hazelcast.core.Offloadable
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.ApiUtil
+import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.postgres.PostgresColumn
 import com.openlattice.transporter.tableName
 import com.openlattice.transporter.types.TransporterDatastore
-import com.openlattice.transporter.types.TransporterDatastore.Companion.ENTERPRISE_FDW_SCHEMA
-import com.openlattice.transporter.types.TransporterDatastore.Companion.ORG_VIEWS_SCHEMA
 import com.openlattice.transporter.types.TransporterDependent
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
@@ -19,28 +18,28 @@ import java.util.*
  *
  * @author Drew Bailey &lt;drew@openlattice.com&gt;
  */
-data class ProjectEntitySetEntryProcessor(
+data class TransportEntitySetEntryProcessor(
         val columns: Map<UUID, FullQualifiedName>,
         val organizationId: UUID,
         val usersToColumnPermissions: Map<String, List<String>>
 ): AbstractRhizomeEntryProcessor<UUID, EntitySet, Void?>(),
         Offloadable,
-        TransporterDependent<ProjectEntitySetEntryProcessor>
+        TransporterDependent<TransportEntitySetEntryProcessor>
 {
     @Transient
     private lateinit var data: TransporterDatastore
 
     companion object {
-        private val logger = LoggerFactory.getLogger(ProjectEntitySetEntryProcessor::class.java)
+        private val logger = LoggerFactory.getLogger(TransportEntitySetEntryProcessor::class.java)
     }
 
     override fun process(entry: MutableMap.MutableEntry<UUID, EntitySet>): Void? {
         check(::data.isInitialized) { TransporterDependent.NOT_INITIALIZED }
         val es = entry.value
-        if ( es.flags.contains( EntitySetFlag.MATERIALIZED )){
+        if ( es.flags.contains(EntitySetFlag.TRANSPORTED)){
             return null
         }
-        es.flags.add(EntitySetFlag.MATERIALIZED)
+        es.flags.add(EntitySetFlag.TRANSPORTED)
         entry.setValue(es)
 
         try {
@@ -63,24 +62,24 @@ data class ProjectEntitySetEntryProcessor(
                 conn.createStatement().use { stmt ->
                     stmt.executeUpdate(
                             data.importTablesFromForeignSchema(
-                                    ENTERPRISE_FDW_SCHEMA,
+                                    TransporterDatastore.ENTERPRISE_FDW_SCHEMA,
                                     setOf(es.name),
-                                    ORG_VIEWS_SCHEMA,
+                                    TransporterDatastore.ORG_VIEWS_SCHEMA,
                                     data.getOrgFdw( organizationId )
                             )
                     )
                     // TODO - need to apply these as roles due to the maximum row width thing
-//                usersToColumnPermissions.forEach { ( username, allowedCols ) ->
-//                    stmt.addBatch(
-//                            AssemblerConnectionManager.grantSelectSql( es.name, username, allowedCols )
-//                    )
-//                }
+                    usersToColumnPermissions.forEach { ( username, allowedCols ) ->
+                        stmt.addBatch(
+                                AssemblerConnectionManager.grantSelectSql(es.name, username, allowedCols)
+                        )
+                    }
 //                stmt.executeBatch()
                 }
             }
         } catch ( ex: Exception ) {
             logger.error("Marking entity set id as not materialized {}", entry.key, ex)
-            es.flags.remove( EntitySetFlag.MATERIALIZED )
+            es.flags.remove(EntitySetFlag.TRANSPORTED)
             entry.setValue( es )
         }
         return null
@@ -109,7 +108,7 @@ data class ProjectEntitySetEntryProcessor(
         return Offloadable.OFFLOADABLE_EXECUTOR
     }
 
-    override fun init(data: TransporterDatastore): ProjectEntitySetEntryProcessor {
+    override fun init(data: TransporterDatastore): TransportEntitySetEntryProcessor {
         this.data = data
         return this
     }

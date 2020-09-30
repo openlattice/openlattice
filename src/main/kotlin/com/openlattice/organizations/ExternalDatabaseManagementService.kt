@@ -45,7 +45,7 @@ import com.openlattice.postgres.ResultSetAdapters.user
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.StatementHolderSupplier
-import com.openlattice.projector.ProjectEntitySetEntryProcessor
+import com.openlattice.transporter.processors.TransportEntitySetEntryProcessor
 import com.openlattice.transporter.types.TransporterDatastore
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -146,7 +146,7 @@ class ExternalDatabaseManagementService(
         }
     }
 
-    fun materializeEntitySet( organizationId: UUID, entitySetId: UUID ) {
+    fun transportEntitySet( organizationId: UUID, entitySetId: UUID ) {
         val permissionsCompletion = organizations.submitToKey(
                 organizationId,
                 GetMembersOfOrganizationEntryProcessor()
@@ -193,7 +193,7 @@ class ExternalDatabaseManagementService(
 
         userToPermissions.thenCombine( transporterColumnsCompletion ) { userToPerms, transporterColumns ->
             entitySets.submitToKey( entitySetId,
-                    ProjectEntitySetEntryProcessor(transporterColumns, organizationId, userToPerms)
+                    TransportEntitySetEntryProcessor(transporterColumns, organizationId, userToPerms)
                             .init(transporterDatastore)
             )
         }.toCompletableFuture().get().toCompletableFuture().get()

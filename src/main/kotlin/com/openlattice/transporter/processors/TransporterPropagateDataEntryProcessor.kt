@@ -66,7 +66,7 @@ class TransporterPropagateDataEntryProcessor(
             logger.error("Skipping linking entity set {} ({})", it.name, it.id)
         }
         val entitySetIds = entitySets
-                .filter{ !it.isLinking && it.flags.contains(EntitySetFlag.MATERIALIZED) }
+                .filter{ !it.isLinking && it.flags.contains(EntitySetFlag.TRANSPORTED) }
                 .map { it.id }
                 .toSet()
         if (entitySets.isEmpty() || entitySetPartitions.isEmpty()) {

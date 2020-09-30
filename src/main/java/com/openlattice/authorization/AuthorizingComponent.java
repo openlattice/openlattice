@@ -41,7 +41,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.openlattice.authorization.EdmAuthorizationHelper.MATERIALIZE_PERMISSION;
+import static com.openlattice.authorization.EdmAuthorizationHelper.TRANSPORT_PERMISSION;
 import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
 import static com.openlattice.authorization.EdmAuthorizationHelper.WRITE_PERMISSION;
 
@@ -75,8 +75,8 @@ public interface AuthorizingComponent {
         return isAuthorized( Permission.OWNER ).test( new AclKey( aclKey ) );
     }
 
-    default void ensureMaterializeAccess( AclKey aclKey ) {
-        accessCheck( aclKey, MATERIALIZE_PERMISSION );
+    default void ensureTransportAccess( AclKey aclKey ) {
+        accessCheck( aclKey, TRANSPORT_PERMISSION );
     }
 
     default void ensureReadAccess( AclKey aclKey ) {

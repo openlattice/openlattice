@@ -24,7 +24,6 @@ import com.codahale.metrics.annotation.Timed;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Maps;
 import com.google.common.collect.SetMultimap;
-import com.google.common.collect.Sets;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EntitySetManager;
 import com.openlattice.edm.EntitySet;
@@ -33,14 +32,18 @@ import com.openlattice.edm.type.PropertyType;
 import org.springframework.stereotype.Component;
 
 import javax.validation.constraints.NotNull;
-import java.util.*;
+import java.util.EnumMap;
+import java.util.EnumSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Component
 public class EdmAuthorizationHelper implements AuthorizingComponent {
-    public static final EnumSet<Permission>  MATERIALIZE_PERMISSION  = EnumSet.of( Permission.MATERIALIZE );
-    public static final EnumSet<Permission>  READ_PERMISSION  = EnumSet.of( Permission.READ );
+    public static final EnumSet<Permission>  TRANSPORT_PERMISSION = EnumSet.of( Permission.MATERIALIZE );
+    public static final EnumSet<Permission>  READ_PERMISSION      = EnumSet.of( Permission.READ );
     public static final EnumSet<Permission>  WRITE_PERMISSION = EnumSet.of( Permission.WRITE );
     public static final EnumSet<Permission>  OWNER_PERMISSION = EnumSet.of( Permission.OWNER );
     private final       EdmManager           edm;
