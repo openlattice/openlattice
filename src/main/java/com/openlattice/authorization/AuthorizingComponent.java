@@ -36,6 +36,7 @@ import java.util.EnumSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -82,6 +83,11 @@ public interface AuthorizingComponent {
 
     default void ensureOwnerAccess( AclKey aclKey ) {
         accessCheck( aclKey, EnumSet.of( Permission.OWNER ) );
+    }
+
+    default void ensureOwnerAccess( Set<AclKey> keys ) {
+        EnumSet<Permission> owner = EnumSet.of( Permission.OWNER );
+        accessCheck( keys.stream().collect( Collectors.toMap( Function.identity(), aclKey -> owner ) ) );
     }
 
     default void ensureLinkAccess( AclKey aclKey ) {

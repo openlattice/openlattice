@@ -97,16 +97,24 @@ class SearchService(
             optionalQuery: Optional<String>,
             optionalEntityType: Optional<UUID>,
             optionalPropertyTypes: Optional<Set<UUID>>,
+            optionalOrganizationId: Optional<UUID>,
             start: Int,
             maxHits: Int
     ): SearchResult {
 
-        val authorizedEntitySetIds = authorizations
+        var authorizedEntitySetIds = authorizations
                 .getAuthorizedObjectsOfType(
                         Principals.getCurrentPrincipals(),
                         SecurableObjectType.EntitySet,
                         READ_PERMISSION
                 ).collect(Collectors.toSet())
+
+        if (optionalOrganizationId.isPresent) {
+            authorizedEntitySetIds = entitySetService.filterEntitySetsForOrganization(
+                    optionalOrganizationId.get(),
+                    authorizedEntitySetIds.map { it.first() }
+            ).map { AclKey(it) }.toSet()
+        }
 
         return if (authorizedEntitySetIds.size == 0) {
             SearchResult(0, arrayListOf())

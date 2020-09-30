@@ -186,6 +186,8 @@ public interface AuthorizationManager {
 
     Acl getAllSecurableObjectPermissions( AclKey key );
 
+    Set<Acl> getAllSecurableObjectPermissions( Set<AclKey> keys );
+
     /**
      * Returns all Principals, which have all the specified permissions on the securable object
      *
