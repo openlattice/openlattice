@@ -631,6 +631,14 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         return null;
     }
 
+    @Override
+    @PatchMapping( value = ID_PATH + DATABASE, consumes = MediaType.APPLICATION_JSON_VALUE )
+    public Void renameOrganizationDatabase( UUID organizationId, String newDatabaseName ) {
+        ensureOwner( organizationId );
+        // TODO call through to db rename method
+        return null;
+    }
+
     private void ensureRoleAdminAccess( UUID organizationId, UUID roleId ) {
         ensureOwner( organizationId );
 
