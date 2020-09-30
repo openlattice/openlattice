@@ -732,6 +732,14 @@ class AssemblerConnectionManager(
         val dbName = organizations.getOrganizationDatabaseName(orgId)
         return connect(dbName)
     }
+
+    fun renameOrganizationDatabase(currentDatabaseName: String, newDatabaseName: String) {
+        connect("postgres").connection.use { conn ->
+            conn.createStatement().use { stmt ->
+                stmt.execute(renameDatabaseSql(currentDatabaseName, newDatabaseName))
+            }
+        }
+    }
 }
 
 val MEMBER_ORG_DATABASE_PERMISSIONS = setOf("CREATE", "CONNECT", "TEMPORARY", "TEMP")
@@ -831,6 +839,10 @@ internal fun dropUserIfExistsSql(dbUser: String): String {
             "   END IF;\n" +
             "END\n" +
             "\$do\$;"
+}
+
+internal fun renameDatabaseSql(currentDatabaseName: String, newDatabaseName: String): String {
+    return "ALTER DATABASE ${quote(currentDatabaseName)} RENAME TO ${quote(newDatabaseName)}"
 }
 
 

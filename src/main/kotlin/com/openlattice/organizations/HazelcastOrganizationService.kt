@@ -8,6 +8,7 @@ import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.openlattice.assembler.Assembler
+import com.openlattice.assembler.PostgresDatabases
 import com.openlattice.assembler.PostgresDatabases.Companion.buildDefaultOrganizationDatabaseName
 import com.openlattice.authorization.*
 import com.openlattice.authorization.mapstores.PrincipalMapstore
@@ -537,7 +538,21 @@ class HazelcastOrganizationService(
 
     @Timed
     fun renameOrganizationDatabase(organizationId: UUID, newDatabaseName: String) {
+        PostgresDatabases.assertDatabaseNameIsValid(newDatabaseName)
+        val currentDatabaseName = getOrganizationDatabaseName(organizationId)
 
+        organizationDatabases.set(organizationId, newDatabaseName)
+
+        try {
+            assembler.renameOrganizationDatabase(currentDatabaseName, newDatabaseName)
+        } catch (e: Exception) {
+            logger.error("An error occurred while trying to rename org {} database name to {}",
+                    organizationId,
+                    newDatabaseName,
+                    e)
+            organizationDatabases.set(organizationId, currentDatabaseName)
+            throw(e)
+        }
     }
 
     fun getOrganizationsWithoutUserAndWithConnection(connections: Collection<String>, principal: Principal): Set<UUID> {

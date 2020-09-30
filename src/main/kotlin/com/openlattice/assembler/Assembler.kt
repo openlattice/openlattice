@@ -251,6 +251,10 @@ class Assembler(
         }
     }
 
+    fun renameOrganizationDatabase(currentDatabaseName: String, newDatabaseName: String) {
+        acm.renameOrganizationDatabase(currentDatabaseName, newDatabaseName)
+    }
+
     fun destroyOrganization(organizationId: UUID) {
         deleteOrganizationTimer.time().use {
             assemblies.executeOnKey(organizationId, DeleteOrganizationAssemblyProcessor().init(acm))
