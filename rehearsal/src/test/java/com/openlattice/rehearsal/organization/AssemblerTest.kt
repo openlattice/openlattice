@@ -24,7 +24,6 @@ import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.rehearsal.assertException
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
-import org.apache.spark.sql.SparkSession
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
@@ -1170,7 +1169,7 @@ class AssemblerTest : AssemblerTestBase() {
 
         // integrate data from local db to org openlattice schema
         val organizationUserCredentials = organizationsApi.getOrganizationIntegrationAccount(organization2.id)
-        val organizationDataBaseName = PostgresDatabases.buildOrganizationDatabaseName(organization2.id)
+        val organizationDataBaseName = PostgresDatabases.buildDefaultOrganizationDatabaseName(organization2.id)
 
         val sourceDb = "local_db"
         val destinationDb = "${organization2.id}_db"
