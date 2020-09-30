@@ -114,7 +114,7 @@ class BackgroundExternalDatabaseSyncingService(
 
     private fun syncOrganizationDatabases(orgId: UUID): Int {
         var totalSynced = 0
-        val dbName = organizationDatabases.getValue(orgId)
+        val dbName = organizationDatabases.getValue(orgId).name
         val orgOwnerIds = edms.getOrganizationOwners(orgId).map { it.id }
         val currentTableIds = mutableSetOf<UUID>()
         val currentColumnIds = mutableSetOf<UUID>()
