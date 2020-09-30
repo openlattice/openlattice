@@ -403,7 +403,10 @@ public final class PostgresTable {
             new PostgresTableDefinition( "organization_assemblies" )
                     .addColumns( ORGANIZATION_ID, INITIALIZED )
                     .primaryKey( ORGANIZATION_ID );
-
+    public static final PostgresTableDefinition ORGANIZATION_DATABASES   =
+            new PostgresTableDefinition( "organization_databases" )
+                    .addColumns( ID, NAME )
+                    .setUnique( NAME );
     public static final PostgresTableDefinition ORGANIZATION_EXTERNAL_DATABASE_COLUMN =
             new PostgresTableDefinition( "organization_external_database_columns" )
                     .addColumns(

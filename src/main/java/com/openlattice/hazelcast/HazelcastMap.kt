@@ -137,6 +137,7 @@ class HazelcastMap<K, V> internal constructor(val name: String) : TypedMapIdenti
         @JvmField val REQUESTS = HazelcastMap<AceKey, Status>("REQUESTS")
         @JvmField val SECURABLE_OBJECT_TYPES = HazelcastMap<AclKey, SecurableObjectType>("SECURABLE_OBJECT_TYPES")
         @JvmField val USERS = HazelcastMap<String, User>("USERS")
+        @JvmField val ORGANIZATION_DATABASES = HazelcastMap<UUID, String>("ORGANIZATION_DATABASES")
         @JvmField val ORGANIZATION_EXTERNAL_DATABASE_COLUMN = HazelcastMap<UUID, OrganizationExternalDatabaseColumn>("ORGANIZATION_EXTERNAL_DATABASE_COLUMN")
         @JvmField val ORGANIZATION_EXTERNAL_DATABASE_TABLE = HazelcastMap<UUID, OrganizationExternalDatabaseTable>("ORGANIZATION_EXTERNAL_DATABASE_TABLE")
         @JvmField val SECURABLE_PRINCIPALS = HazelcastMap<String, SecurablePrincipal>("SECURABLE_PRINCIPALS")
