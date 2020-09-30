@@ -1,11 +1,18 @@
 package com.openlattice.hazelcast
 
+import com.openlattice.authorization.AclKey
+import com.openlattice.authorization.AclKeySet
 import com.openlattice.client.RetrofitFactory
 import com.openlattice.codex.SendCodexMessageTask
+import com.openlattice.hazelcast.serializers.AclKeyStreamSerializer
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.notifications.sms.SubscriptionNotification
 import com.openlattice.scheduling.ScheduledTask
-import com.openlattice.shuttle.*
+import com.openlattice.shuttle.Flight
+import com.openlattice.shuttle.FlightPlanParameters
+import com.openlattice.shuttle.Integration
+import com.openlattice.shuttle.IntegrationJob
+import com.openlattice.shuttle.IntegrationStatus
 import org.apache.commons.text.CharacterPredicates
 import org.apache.commons.text.RandomStringGenerator
 import java.time.OffsetDateTime
@@ -65,6 +72,19 @@ class InternalTestDataFactory {
                     null,
                     flight
             )
+        }
+
+        @JvmStatic
+        fun aclKeySet(): AclKeySet {
+            val set = AclKeySet(7)
+            set.add(AclKeyStreamSerializer().generateTestValue() as AclKey)
+            set.add(AclKeyStreamSerializer().generateTestValue() as AclKey)
+            set.add(AclKeyStreamSerializer().generateTestValue() as AclKey)
+            set.add(AclKeyStreamSerializer().generateTestValue() as AclKey)
+            set.add(AclKeyStreamSerializer().generateTestValue() as AclKey)
+            set.add(AclKeyStreamSerializer().generateTestValue() as AclKey)
+            set.add(AclKeyStreamSerializer().generateTestValue() as AclKey)
+            return set
         }
 
         @JvmStatic

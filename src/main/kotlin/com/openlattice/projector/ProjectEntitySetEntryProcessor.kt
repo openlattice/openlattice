@@ -8,6 +8,8 @@ import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.postgres.PostgresColumn
 import com.openlattice.transporter.tableName
 import com.openlattice.transporter.types.TransporterDatastore
+import com.openlattice.transporter.types.TransporterDatastore.Companion.ENTERPRISE_FDW_SCHEMA
+import com.openlattice.transporter.types.TransporterDatastore.Companion.ORG_VIEWS_SCHEMA
 import com.openlattice.transporter.types.TransporterDependent
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
@@ -61,9 +63,9 @@ data class ProjectEntitySetEntryProcessor(
                 conn.createStatement().use { stmt ->
                     stmt.executeUpdate(
                             data.importTablesFromForeignSchema(
-                                    "ol",
+                                    ENTERPRISE_FDW_SCHEMA,
                                     setOf(es.name),
-                                    "transporter",
+                                    ORG_VIEWS_SCHEMA,
                                     data.getOrgFdw( organizationId )
                             )
                     )

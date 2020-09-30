@@ -24,13 +24,19 @@ class TransporterDatastore(
         private val logger = LoggerFactory.getLogger(TransporterDatastore::class.java)
         private val PAT = Regex("""([\w:]+)://([\w_.]*):(\d+)/(\w+)""")
 
+        // schema in org_* database where the view is projected
         const val ORG_VIEWS_SCHEMA = "transporter"
+
+        // database in atlas where the data is transported
+        const val TRANSPORTER_DB_NAME = "transporter"
+
+        // schema in atlas where production tables are FDW accessible
+        const val ENTERPRISE_FDW_SCHEMA = "ol"
     }
 
     private val enterpriseFdwName = "enterprise"
-    private val enterpriseFdwSchema = "ol"
     private var hds: HikariDataSource = exConnMan.createDataSource(
-            "transporter",
+            TRANSPORTER_DB_NAME,
             assemblerConfiguration.server.clone() as Properties,
             assemblerConfiguration.ssl
     )
@@ -41,7 +47,7 @@ class TransporterDatastore(
             initializeFDW(rhizome.postgresConfiguration.get())
         }
         val sp = ensureSearchPath(hds)
-        if ( !sp.contains( enterpriseFdwSchema )) {
+        if ( !sp.contains( ENTERPRISE_FDW_SCHEMA )) {
             logger.error("bad search path: {}", sp)
         }
     }
@@ -54,7 +60,7 @@ class TransporterDatastore(
                 assemblerConfiguration.server.getProperty("password"),
                 exConnMan.appendDatabaseToJdbcPartial(
                         assemblerConfiguration.server.getProperty("jdbcUrl"),
-                        "transporter"
+                        TRANSPORTER_DB_NAME
                 ),
                 assemblerConfiguration.server.getProperty("username"),
                 ORG_VIEWS_SCHEMA,
@@ -156,7 +162,7 @@ class TransporterDatastore(
                 rhizomeConfig.hikariConfiguration.getProperty("password"),
                 rhizomeConfig.hikariConfiguration.getProperty("jdbcUrl"),
                 assemblerConfiguration.server.getProperty("username"),
-                enterpriseFdwSchema,
+                ENTERPRISE_FDW_SCHEMA,
                 enterpriseFdwName
         )
 
@@ -171,7 +177,7 @@ class TransporterDatastore(
                                 importTablesFromForeignSchema(
                                         "public",
                                         setOf(),
-                                        enterpriseFdwSchema,
+                                        ENTERPRISE_FDW_SCHEMA,
                                         enterpriseFdwName
                                 )
                         )
@@ -181,7 +187,7 @@ class TransporterDatastore(
         }
 
         hds.close()
-        hds = exConnMan.connect("transporter")
+        hds = exConnMan.connect(TRANSPORTER_DB_NAME)
     }
 
     fun datastore(): HikariDataSource {
