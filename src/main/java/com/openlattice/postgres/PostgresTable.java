@@ -625,7 +625,7 @@ public final class PostgresTable {
                         .ifNotExists(),
                 new PostgresExpressionIndexDefinition( IDS,
                         ENTITY_SET_ID.getName()
-                                + ",(" + LAST_WRITE.getName() + " > " + LAST_TRANSPORT.getName() + ")" )
+                                + ",( abs(" + VERSION.getName() + ") > " + LAST_TRANSPORT.getName() + ")" )
                         .name( "ids_needing_transport_idx" )
                         .ifNotExists()
         );
