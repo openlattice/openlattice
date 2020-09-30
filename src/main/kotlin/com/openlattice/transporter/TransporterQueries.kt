@@ -20,7 +20,6 @@ import com.openlattice.postgres.PostgresColumn.VERSION
 import com.openlattice.postgres.PostgresColumnDefinition
 import com.openlattice.postgres.PostgresExpressionIndexDefinition
 import com.openlattice.postgres.PostgresTable
-import com.openlattice.postgres.PostgresTable.E
 import com.openlattice.postgres.PostgresTableDefinition
 import com.openlattice.transporter.types.TransporterColumn
 import com.zaxxer.hikari.HikariDataSource
@@ -223,7 +222,7 @@ fun updateRowsForEdges(): String {
     ).map { it.name }
     val pkString = pk.joinToString(",")
 
-    val selectFromE = "UPDATE ${E.name} " +
+    val selectFromE = "UPDATE ${PostgresTable.E.name} " +
             "SET ${transportTimestampColumn.name} = abs(${VERSION.name}) " +
             "WHERE abs(${VERSION.name}) > ${transportTimestampColumn.name} AND (" +
             "  (" +

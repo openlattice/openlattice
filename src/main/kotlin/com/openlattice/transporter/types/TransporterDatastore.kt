@@ -5,6 +5,7 @@ import com.kryptnostic.rhizome.configuration.RhizomeConfiguration
 import com.openlattice.ApiUtil
 import com.openlattice.assembler.AssemblerConfiguration
 import com.openlattice.assembler.PostgresDatabases
+import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
@@ -169,7 +170,7 @@ class TransporterDatastore(
 
         hds.connection.use { conn ->
             conn.createStatement().use { stmt ->
-                stmt.executeQuery("select count(*) from information_schema.foreign_tables where foreign_table_schema = 'ol'").use { rs ->
+                stmt.executeQuery("select count(*) from information_schema.foreign_tables where foreign_table_schema = '$ENTERPRISE_FDW_SCHEMA'").use { rs ->
                     if (rs.next() && rs.getInt(1) > 0) {
                         // don't bother if it's already there
                         logger.info("schema already imported, not re-importing")
@@ -177,7 +178,11 @@ class TransporterDatastore(
                         stmt.executeUpdate(
                                 importTablesFromForeignSchema(
                                         "public",
-                                        setOf(),
+                                        setOf(
+                                                PostgresTable.IDS.name,
+                                                PostgresTable.DATA.name,
+                                                PostgresTable.E.name
+                                        ),
                                         ENTERPRISE_FDW_SCHEMA,
                                         enterpriseFdwName
                                 )

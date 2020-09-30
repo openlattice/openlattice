@@ -74,7 +74,7 @@ class TransportEntitySetEntryProcessorStreamSerializer:
     }
 
     override fun getTypeId(): Int {
-        return StreamSerializerTypeIds.PROJECT_ENTITY_SET_EP.ordinal
+        return StreamSerializerTypeIds.TRANSPORT_ENTITY_SET_EP.ordinal
     }
 
     override fun getClazz(): Class<out TransportEntitySetEntryProcessor> {
