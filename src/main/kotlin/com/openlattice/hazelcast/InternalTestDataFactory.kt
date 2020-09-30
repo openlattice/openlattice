@@ -5,6 +5,7 @@ import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.AclKeySet
 import com.openlattice.client.RetrofitFactory
 import com.openlattice.codex.SendCodexMessageTask
+import com.openlattice.collections.CollectionTemplates
 import com.openlattice.hazelcast.serializers.AclKeyStreamSerializer
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.notifications.sms.SubscriptionNotification
@@ -74,6 +75,19 @@ class InternalTestDataFactory {
                     null,
                     flight
             )
+        }
+
+        @JvmStatic
+        fun collectionTemplates(): CollectionTemplates {
+            val outer = mutableMapOf<UUID, MutableMap<UUID, UUID>>()
+            for (j in 0 until 10 ) {
+                val inner = mutableMapOf<UUID, UUID>()
+                for ( i in 0 until 10 ){
+                    inner.put(UUID.randomUUID(), UUID.randomUUID())
+                }
+                outer.put(UUID.randomUUID(), inner)
+            }
+            return CollectionTemplates( outer )
         }
 
         @JvmStatic

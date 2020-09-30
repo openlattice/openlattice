@@ -4,6 +4,7 @@ import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
 import com.openlattice.collections.CollectionTemplates
+import com.openlattice.hazelcast.InternalTestDataFactory
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import org.springframework.stereotype.Component
 import java.util.*
@@ -55,15 +56,7 @@ class CollectionTemplatesStreamSerializer : TestableSelfRegisteringStreamSeriali
     }
 
     override fun generateTestValue(): CollectionTemplates {
-        val outer = mutableMapOf<UUID, MutableMap<UUID, UUID>>()
-        for (j in 0 until 10 ) {
-            val inner = mutableMapOf<UUID, UUID>()
-            for ( i in 0 until 10 ){
-                inner.put(UUID.randomUUID(), UUID.randomUUID())
-            }
-            outer.put(UUID.randomUUID(), inner)
-        }
-        return CollectionTemplates( outer )
+        return InternalTestDataFactory.collectionTemplates()
     }
 
 }
