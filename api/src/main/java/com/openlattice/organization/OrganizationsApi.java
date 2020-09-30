@@ -67,6 +67,8 @@ public interface OrganizationsApi {
     String USER_ID           = "userId";
     String USER_ID_PATH      = "/{" + USER_ID + ":.*}";
 
+    String TRANSPORT         = "/transport";
+
     // @formatter:on
 
     @GET( BASE )
@@ -87,8 +89,8 @@ public interface OrganizationsApi {
     /**
      * Marks an entity set for materialization
      */
-    @GET( BASE + ID_PATH + SET_ID_PATH + "/materialize")
-    Void materializeEntitySet( @Path(ID) UUID organizationId, @Path(SET_ID) UUID entitySetId);
+    @GET( BASE + ID_PATH + SET_ID_PATH + TRANSPORT )
+    Void transportEntitySet( @Path(ID) UUID organizationId, @Path(SET_ID) UUID entitySetId);
 
     /**
      * Rolls the organization integration account credentials.

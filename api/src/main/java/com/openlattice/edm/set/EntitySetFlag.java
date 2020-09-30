@@ -5,6 +5,6 @@ public enum EntitySetFlag {
     AUDIT,
     EXTERNAL,
     LINKING,
-    MATERIALIZED,
+    TRANSPORTED,
     UNVERSIONED
 }
