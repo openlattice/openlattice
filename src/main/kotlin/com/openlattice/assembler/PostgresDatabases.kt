@@ -30,7 +30,7 @@ import java.util.*
 class PostgresDatabases private constructor() {
     companion object {
         @JvmStatic
-        fun buildOrganizationDatabaseName(organizationId: UUID): String {
+        fun buildDefaultOrganizationDatabaseName(organizationId: UUID): String {
             return "org_${organizationId.toString().replace("-","").toLowerCase()}"
         }
     }

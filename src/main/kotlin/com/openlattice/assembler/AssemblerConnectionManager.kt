@@ -29,7 +29,6 @@ import com.google.common.cache.CacheLoader
 import com.google.common.cache.LoadingCache
 import com.google.common.eventbus.EventBus
 import com.google.common.eventbus.Subscribe
-import com.openlattice.assembler.PostgresDatabases.Companion.buildOrganizationDatabaseName
 import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationRoleName
 import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationUserId
 import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresRoleName
@@ -171,7 +170,7 @@ class AssemblerConnectionManager(
     fun createOrganizationDatabase(organizationId: UUID) {
         logger.info("Creating organization database for organization with id $organizationId")
         val organization = organizations.getOrganization(organizationId)!!
-        val dbName = buildOrganizationDatabaseName(organizationId)
+        val dbName = organizations.getOrganizationDatabaseName(organizationId)
         createOrganizationDatabase(organizationId, dbName)
 
         connect(dbName).let { dataSource ->
@@ -271,11 +270,15 @@ class AssemblerConnectionManager(
     fun updateCredentialInDatabase(organizationId: UUID, unquotedUserId: String, credential: String) {
         val updateSql = updateUserCredentialSql(quote(unquotedUserId), credential)
 
-        connect(buildOrganizationDatabaseName(organizationId)).connection.use { connection ->
+        connectToOrg(organizationId).connection.use { connection ->
             connection.createStatement().use { stmt ->
                 stmt.execute(updateSql)
             }
         }
+    }
+
+    fun getOrganizationDatabaseName(organizationId: UUID): String {
+        return organizations.getOrganizationDatabaseName(organizationId)
     }
 
     private fun createOrganizationDatabase(organizationId: UUID, dbName: String) {
@@ -294,7 +297,7 @@ class AssemblerConnectionManager(
         val revokeAll = "REVOKE ALL ON DATABASE $db FROM $PUBLIC_ROLE"
 
         //We connect to default db in order to do initial db setup
-
+        
         target.connection.use { connection ->
             connection.createStatement().use { statement ->
                 statement.execute(createOrgDbRole)
@@ -314,7 +317,7 @@ class AssemblerConnectionManager(
     }
 
     fun dropOrganizationDatabase(organizationId: UUID) {
-        dropOrganizationDatabase(organizationId, buildOrganizationDatabaseName(organizationId))
+        dropOrganizationDatabase(organizationId, organizations.getOrganizationDatabaseName(organizationId))
     }
 
     fun dropOrganizationDatabase(organizationId: UUID, dbName: String) {
@@ -352,7 +355,7 @@ class AssemblerConnectionManager(
         )
 
         materializeAllTimer.time().use {
-            connect(buildOrganizationDatabaseName(organizationId)).let { datasource ->
+            connectToOrg(organizationId).let { datasource ->
                 materializeEntitySets(
                         datasource,
                         authorizedPropertyTypesByEntitySet,
@@ -532,7 +535,7 @@ class AssemblerConnectionManager(
         logger.info("Refreshing entity set ${entitySet.id} in organization $organizationId database")
         val tableName = entitySetNameTableName(entitySet.name)
 
-        connect(buildOrganizationDatabaseName(organizationId)).let { dataSource ->
+        connectToOrg(organizationId).let { dataSource ->
             dataSource.connection.use { connection ->
                 connection.createStatement().use {
                     it.execute("REFRESH MATERIALIZED VIEW $tableName")
@@ -548,7 +551,7 @@ class AssemblerConnectionManager(
      * @param oldName The old name of the entity set.
      */
     fun renameMaterializedEntitySet(organizationId: UUID, newName: String, oldName: String) {
-        connect(buildOrganizationDatabaseName(organizationId)).let { dataSource ->
+        connectToOrg(organizationId).let { dataSource ->
             dataSource.connection.createStatement().use { stmt ->
                 val newTableName = quote(newName)
                 val oldTableName = entitySetNameTableName(oldName)
@@ -566,8 +569,7 @@ class AssemblerConnectionManager(
      * Removes a materialized entity set from atlas.
      */
     fun dematerializeEntitySets(organizationId: UUID, entitySetIds: Set<UUID>) {
-        val dbName = buildOrganizationDatabaseName(organizationId)
-        connect(dbName).let { dataSource ->
+        connectToOrg(organizationId).let { dataSource ->
             //TODO: Implement de-materialization code here.
         }
         logger.info("Removed materialized entity sets $entitySetIds from organization $organizationId")
@@ -724,6 +726,11 @@ class AssemblerConnectionManager(
                 stmt.execute(revokePrivilegesOnTablesInSchemaSql(STAGING_SCHEMA, userIdsSql))
             }
         }
+    }
+
+    fun connectToOrg(orgId: UUID): HikariDataSource {
+        val dbName = organizations.getOrganizationDatabaseName(orgId)
+        return connect(dbName)
     }
 }
 

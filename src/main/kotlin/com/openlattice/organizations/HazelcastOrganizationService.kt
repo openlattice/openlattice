@@ -67,6 +67,7 @@ class HazelcastOrganizationService(
 ) {
     protected val organizations = HazelcastMap.ORGANIZATIONS.getMap(hazelcastInstance)
     protected val users = HazelcastMap.USERS.getMap(hazelcastInstance)
+    protected val organizationDatabases = HazelcastMap.ORGANIZATION_DATABASES.getMap(hazelcastInstance)
 
     @Inject
     private lateinit var eventBus: EventBus
@@ -139,6 +140,7 @@ class HazelcastOrganizationService(
 
         //We add the user/role that created the organization to the admin role for the organization
 
+
         assembler.createOrganization(organization)
         eventBus.post(OrganizationCreatedEvent(organization))
         setSmsEntitySetInformation(organization.smsEntitySetInfo)
@@ -168,6 +170,10 @@ class HazelcastOrganizationService(
         return organizations.executeOnKey(organizationId, OrganizationReadEntryProcessor {
             DelegatedUUIDSet.wrap(it.apps)
         }) as Set<UUID>
+    }
+
+    fun getOrganizationDatabaseName(organizationId: UUID): String {
+        return organizationDatabases.getValue(organizationId)
     }
 
     fun getOrganizations(organizationIds: Stream<UUID>): Iterable<Organization> {
