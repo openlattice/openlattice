@@ -201,6 +201,7 @@ class HazelcastOrganizationService(
         securePrincipalsManager.deleteAllRolesInOrganization(organizationId)
         securePrincipalsManager.deletePrincipal(aclKey)
         organizations.delete(organizationId)
+        organizationDatabases.delete(organizationId)
         reservations.release(organizationId)
         assembler.destroyOrganization(organizationId)
         eventBus.post(OrganizationDeletedEvent(organizationId))
