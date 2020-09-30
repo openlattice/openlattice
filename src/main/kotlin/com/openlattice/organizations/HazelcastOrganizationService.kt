@@ -528,6 +528,11 @@ class HazelcastOrganizationService(
         addUsersMatchingConnections(organizationId, connections)
     }
 
+    @Timed
+    fun renameOrganizationDatabase(organizationId: UUID, newDatabaseName: String) {
+
+    }
+
     fun getOrganizationsWithoutUserAndWithConnection(connections: Collection<String>, principal: Principal): Set<UUID> {
         return organizations.keySet(
                 Predicates.and(
