@@ -152,7 +152,7 @@ class ExternalDatabaseManagementService(
     }
 
     fun transportEntitySet( organizationId: UUID, entitySetId: UUID ) {
-        val permissionsCompletion = organizations.submitToKey(
+        val userToPrincipalsCompletion = organizations.submitToKey(
                 organizationId,
                 GetMembersOfOrganizationEntryProcessor()
         ).thenApplyAsync { members ->
@@ -174,7 +174,7 @@ class ExternalDatabaseManagementService(
             }
         }
 
-        val userToPermissions = permissionsCompletion.thenCombine( accessCheckCompletion ) { userToPrincipals, accessChecks ->
+        val userToPermissionsCompletion = userToPrincipalsCompletion.thenCombine( accessCheckCompletion ) { userToPrincipals, accessChecks ->
             userToPrincipals.mapValues { (_, principals) ->
                 val asSet = principals.mapTo(mutableSetOf()) {
                     it.principal
@@ -196,7 +196,7 @@ class ExternalDatabaseManagementService(
             propertyTypes.submitToKeys( it.keys, GetFqnFromPropertyTypeEntryProcessor() )
         }
 
-        userToPermissions.thenCombine( transporterColumnsCompletion ) { userToPerms, transporterColumns ->
+        userToPermissionsCompletion.thenCombine( transporterColumnsCompletion ) { userToPerms, transporterColumns ->
             entitySets.submitToKey( entitySetId,
                     TransportEntitySetEntryProcessor(transporterColumns, organizationId, userToPerms)
                             .init(transporterDatastore)
