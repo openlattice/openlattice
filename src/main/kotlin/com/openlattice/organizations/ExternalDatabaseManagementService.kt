@@ -51,6 +51,7 @@ class ExternalDatabaseManagementService(
         private val aclKeyReservations: HazelcastAclKeyReservationService,
         private val authorizationManager: AuthorizationManager,
         private val organizationExternalDatabaseConfiguration: OrganizationExternalDatabaseConfiguration,
+        private val dbCredentialService: DbCredentialService,
         private val hds: HikariDataSource
 ) {
 
