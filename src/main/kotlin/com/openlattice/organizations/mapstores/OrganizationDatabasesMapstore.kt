@@ -2,6 +2,7 @@ package com.openlattice.organizations.mapstores
 
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.mapstores.TestDataFactory
+import com.openlattice.organizations.OrganizationDatabase
 import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore
@@ -12,17 +13,19 @@ import java.util.*
 
 open class OrganizationDatabasesMapstore(
         hds: HikariDataSource
-) : AbstractBasePostgresMapstore<UUID, String>
+) : AbstractBasePostgresMapstore<UUID, OrganizationDatabase>
 (HazelcastMap.ORGANIZATION_DATABASES, PostgresTable.ORGANIZATION_DATABASES, hds) {
 
-    override fun bind(ps: PreparedStatement, key: UUID, value: String) {
+    override fun bind(ps: PreparedStatement, key: UUID, value: OrganizationDatabase) {
         var index = bind(ps, key, 1)
 
         //create
-        ps.setString(index++, value)
+        ps.setInt(index++, value.oid)
+        ps.setString(index++, value.name)
 
         //update
-        ps.setString(index++, value)
+        ps.setInt(index++, value.oid)
+        ps.setString(index++, value.name)
     }
 
     override fun bind(ps: PreparedStatement, key: UUID, offset: Int): Int {
@@ -35,15 +38,15 @@ open class OrganizationDatabasesMapstore(
         return ResultSetAdapters.id(rs)
     }
 
-    override fun mapToValue(rs: ResultSet?): String {
-        return ResultSetAdapters.name(rs)
+    override fun mapToValue(rs: ResultSet?): OrganizationDatabase {
+        return ResultSetAdapters.organizationDatabase(rs)
     }
 
     override fun generateTestKey(): UUID {
         return UUID.randomUUID()
     }
 
-    override fun generateTestValue(): String {
-        return TestDataFactory.randomAlphanumeric(10)
+    override fun generateTestValue(): OrganizationDatabase {
+        return TestDataFactory.organizationDatabase()
     }
 }

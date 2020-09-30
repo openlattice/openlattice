@@ -239,14 +239,15 @@ class Assembler(
         )
     }
 
-    fun createOrganization(organization: Organization) {
-        createOrganization(organization.id)
+    fun createOrganizationAndReturnOid(organization: Organization, dbName: String): Int {
+        createOrganization(organization.id, dbName)
+        return acm.getDatabaseOid(dbName)
     }
 
-    fun createOrganization(organizationId: UUID) {
+    fun createOrganization(organizationId: UUID, dbName: String) {
         createOrganizationTimer.time().use {
             assemblies.set(organizationId, OrganizationAssembly(organizationId))
-            assemblies.executeOnKey(organizationId, InitializeOrganizationAssemblyProcessor().init(acm))
+            assemblies.executeOnKey(organizationId, InitializeOrganizationAssemblyProcessor(dbName).init(acm))
             return@use
         }
     }
@@ -505,7 +506,8 @@ class Assembler(
                     )
                 } else {
                     logger.info("Initializing database for organization {}", organizationId)
-                    dependencies.createOrganization(organizationId)
+                    val dbName = dependencies.acm.getOrganizationDatabaseName(organizationId)
+                    dependencies.createOrganization(organizationId, dbName)
                 }
             }
         }

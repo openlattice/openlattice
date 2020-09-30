@@ -135,14 +135,15 @@ class HazelcastOrganizationService(
                 //For a role we ensure that it has
                 logger.debug("Creating an organization with no members, but accessible by {}", principal)
             else -> throw IllegalStateException("Only users and roles can create organizations.")
-        }//Fall throught by design
-
+        }//Fall through by design
 
         //We add the user/role that created the organization to the admin role for the organization
 
+        // set up organization database
+        val dbName = buildDefaultOrganizationDatabaseName(organization.id)
+        val oid = assembler.createOrganizationAndReturnOid(organization, dbName)
+        organizationDatabases.set(organization.id, OrganizationDatabase(oid, dbName))
 
-        organizationDatabases.set(organization.id, buildDefaultOrganizationDatabaseName(organization.id))
-        assembler.createOrganization(organization)
         eventBus.post(OrganizationCreatedEvent(organization))
         setSmsEntitySetInformation(organization.smsEntitySetInfo)
     }
@@ -174,7 +175,7 @@ class HazelcastOrganizationService(
     }
 
     fun getOrganizationDatabaseName(organizationId: UUID): String {
-        return organizationDatabases.getValue(organizationId)
+        return organizationDatabases.getValue(organizationId).name
     }
 
     fun getOrganizations(organizationIds: Stream<UUID>): Iterable<Organization> {
@@ -536,12 +537,20 @@ class HazelcastOrganizationService(
         addUsersMatchingConnections(organizationId, connections)
     }
 
+    private fun executeDatabaseNameUpdate(organizationId: UUID, name: String) {
+        organizationDatabases.executeOnKey(organizationId) {
+            val value = it.value
+            value.name = name
+            it.setValue(value)
+        }
+    }
+
     @Timed
     fun renameOrganizationDatabase(organizationId: UUID, newDatabaseName: String) {
         PostgresDatabases.assertDatabaseNameIsValid(newDatabaseName)
         val currentDatabaseName = getOrganizationDatabaseName(organizationId)
 
-        organizationDatabases.set(organizationId, newDatabaseName)
+        executeDatabaseNameUpdate(organizationId, newDatabaseName)
 
         try {
             assembler.renameOrganizationDatabase(currentDatabaseName, newDatabaseName)
@@ -550,7 +559,7 @@ class HazelcastOrganizationService(
                     organizationId,
                     newDatabaseName,
                     e)
-            organizationDatabases.set(organizationId, currentDatabaseName)
+            executeDatabaseNameUpdate(organizationId, currentDatabaseName)
             throw(e)
         }
     }

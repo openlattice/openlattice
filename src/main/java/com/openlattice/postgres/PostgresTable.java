@@ -102,6 +102,7 @@ import static com.openlattice.postgres.PostgresColumn.NAME;
 import static com.openlattice.postgres.PostgresColumn.NAMESPACE;
 import static com.openlattice.postgres.PostgresColumn.NAME_SET;
 import static com.openlattice.postgres.PostgresColumn.NULLABLE_TITLE;
+import static com.openlattice.postgres.PostgresColumn.OID;
 import static com.openlattice.postgres.PostgresColumn.ORDINAL_POSITION;
 import static com.openlattice.postgres.PostgresColumn.ORGANIZATION;
 import static com.openlattice.postgres.PostgresColumn.ORGANIZATION_ID;
@@ -405,7 +406,7 @@ public final class PostgresTable {
                     .primaryKey( ORGANIZATION_ID );
     public static final PostgresTableDefinition ORGANIZATION_DATABASES   =
             new PostgresTableDefinition( "organization_databases" )
-                    .addColumns( ID, NAME )
+                    .addColumns( ID, OID, NAME )
                     .setUnique( NAME );
     public static final PostgresTableDefinition ORGANIZATION_EXTERNAL_DATABASE_COLUMN =
             new PostgresTableDefinition( "organization_external_database_columns" )

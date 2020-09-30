@@ -740,6 +740,25 @@ class AssemblerConnectionManager(
             }
         }
     }
+
+    fun getDatabaseOid(dbName: String): Int {
+        var oid = -1
+        try {
+            return connect("postgres").connection.use { conn ->
+                conn.prepareStatement(databaseOidSql).use { ps ->
+                    ps.setString(1, dbName)
+                    val rs = ps.executeQuery()
+                    if (rs.next()) {
+                        oid = rs.getInt(1)
+                    }
+                    return oid
+                }
+            }
+        } catch (e: Exception) {
+            logger.error("Unable to look up OID for database {}: ", dbName, e)
+            return oid
+        }
+    }
 }
 
 val MEMBER_ORG_DATABASE_PERMISSIONS = setOf("CREATE", "CONNECT", "TEMPORARY", "TEMP")
@@ -844,5 +863,7 @@ internal fun dropUserIfExistsSql(dbUser: String): String {
 internal fun renameDatabaseSql(currentDatabaseName: String, newDatabaseName: String): String {
     return "ALTER DATABASE ${quote(currentDatabaseName)} RENAME TO ${quote(newDatabaseName)}"
 }
+
+internal val databaseOidSql = "SELECT oid FROM pg_database WHERE datname = ?"
 
 
