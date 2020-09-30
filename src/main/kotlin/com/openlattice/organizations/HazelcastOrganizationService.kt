@@ -7,8 +7,8 @@ import com.google.common.eventbus.EventBus
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
-import com.openlattice.admin.ORGANIZATION
 import com.openlattice.assembler.Assembler
+import com.openlattice.assembler.PostgresDatabases.Companion.buildDefaultOrganizationDatabaseName
 import com.openlattice.authorization.*
 import com.openlattice.authorization.mapstores.PrincipalMapstore
 import com.openlattice.data.storage.partitions.PartitionManager
@@ -30,7 +30,6 @@ import com.openlattice.users.getAppMetadata
 import com.openlattice.users.processors.aggregators.UsersWithConnectionsAggregator
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import java.io.Serializable
 import java.util.*
 import java.util.stream.Stream
 import javax.inject.Inject
@@ -141,6 +140,7 @@ class HazelcastOrganizationService(
         //We add the user/role that created the organization to the admin role for the organization
 
 
+        organizationDatabases.set(organization.id, buildDefaultOrganizationDatabaseName(organizationId =))
         assembler.createOrganization(organization)
         eventBus.post(OrganizationCreatedEvent(organization))
         setSmsEntitySetInformation(organization.smsEntitySetInfo)
