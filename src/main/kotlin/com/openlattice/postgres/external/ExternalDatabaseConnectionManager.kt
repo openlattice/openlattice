@@ -4,7 +4,6 @@ import com.google.common.cache.CacheBuilder
 import com.google.common.cache.CacheLoader
 import com.google.common.cache.LoadingCache
 import com.openlattice.assembler.AssemblerConfiguration
-import com.openlattice.assembler.PostgresDatabases
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import java.util.*
@@ -16,6 +15,12 @@ import java.util.concurrent.TimeUnit
 class ExternalDatabaseConnectionManager(
         private val assemblerConfiguration: AssemblerConfiguration
 ) {
+    companion object {
+        @JvmStatic
+        private fun buildOrganizationDatabaseName(organizationId: UUID): String {
+            return "org_${organizationId.toString().replace("-","").toLowerCase()}"
+        }
+    }
 
     private val perDbCache: LoadingCache<String, HikariDataSource> = CacheBuilder
             .newBuilder()
@@ -24,7 +29,7 @@ class ExternalDatabaseConnectionManager(
 
     fun createOrgDataSource( organizationId: UUID ): HikariDataSource {
         return createDataSource(
-                PostgresDatabases.buildOrganizationDatabaseName(organizationId),
+                buildOrganizationDatabaseName(organizationId),
                 assemblerConfiguration.server.clone() as Properties,
                 assemblerConfiguration.ssl
         )
@@ -54,6 +59,10 @@ class ExternalDatabaseConnectionManager(
 
     fun connect(dbName: String): HikariDataSource {
         return perDbCache.get(dbName)
+    }
+
+    fun connectOrgDb(organizationId: UUID): HikariDataSource {
+        return perDbCache.get(buildOrganizationDatabaseName(organizationId))
     }
 
     fun appendDatabaseToJdbcPartial( jdbcStringNoDatabase: String, dbName: String ): String {

@@ -1,14 +1,13 @@
 package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
-import com.hazelcast.nio.ObjectDataOutput
 import com.openlattice.edm.processors.GetFqnFromPropertyTypeEntryProcessor
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 
 /**
  * @author Drew Bailey &lt;drew@openlattice.com&gt;
  */
-class GetFqnFromPropertyTypeEntryProcessorStreamSerializer: TestableSelfRegisteringStreamSerializer<GetFqnFromPropertyTypeEntryProcessor> {
+class GetFqnFromPropertyTypeEntryProcessorStreamSerializer: NoOpSelfRegisteringStreamSerializer<GetFqnFromPropertyTypeEntryProcessor>() {
     override fun read(`in`: ObjectDataInput?): GetFqnFromPropertyTypeEntryProcessor {
         return GetFqnFromPropertyTypeEntryProcessor()
     }
@@ -19,13 +18,5 @@ class GetFqnFromPropertyTypeEntryProcessorStreamSerializer: TestableSelfRegister
 
     override fun getClazz(): Class<out GetFqnFromPropertyTypeEntryProcessor> {
         return GetFqnFromPropertyTypeEntryProcessor::class.java
-    }
-
-    override fun generateTestValue(): GetFqnFromPropertyTypeEntryProcessor {
-        return GetFqnFromPropertyTypeEntryProcessor()
-    }
-
-    override fun write(out: ObjectDataOutput?, `object`: GetFqnFromPropertyTypeEntryProcessor?) {
-        // no-op
     }
 }

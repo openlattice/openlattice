@@ -25,10 +25,10 @@ class TransporterColumnSetStreamSerializer : TestableSelfRegisteringStreamSerial
         @JvmStatic
         fun deserializeColumnSet(`in`: ObjectDataInput): TransporterColumnSet {
             val size = `in`.readInt()
-            val columns = (1..size).map { _ ->
-                val uuid = UUIDStreamSerializerUtils.deserialize(`in`)
-                uuid to TransporterColumnStreamSerializer.deserializeColumn(`in`)
-            }.toMap()
+            val columns = (1..size).associate { _ ->
+                UUIDStreamSerializerUtils.deserialize(`in`) to
+                        TransporterColumnStreamSerializer.deserializeColumn(`in`)
+            }
             return TransporterColumnSet(columns)
         }
     }
