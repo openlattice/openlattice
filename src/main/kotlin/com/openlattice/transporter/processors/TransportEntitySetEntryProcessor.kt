@@ -2,11 +2,10 @@ package com.openlattice.transporter.processors
 
 import com.hazelcast.core.Offloadable
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
-import com.openlattice.ApiUtil
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
-import com.openlattice.postgres.PostgresColumn
+import com.openlattice.transporter.createEntitySetView
 import com.openlattice.transporter.tableName
 import com.openlattice.transporter.types.TransporterDatastore
 import com.openlattice.transporter.types.TransporterDependent
@@ -83,25 +82,6 @@ data class TransportEntitySetEntryProcessor(
             entry.setValue( es )
         }
         return null
-    }
-
-    fun createEntitySetView(
-            entitySetName: String,
-            entitySetId: UUID,
-            etTableName: String,
-            propertyTypes: Map<UUID, FullQualifiedName>
-    ): String {
-        val colsSql = propertyTypes.map { ( id, ptName ) ->
-            val column = ApiUtil.dbQuote(id.toString())
-            val quotedPt = ApiUtil.dbQuote(ptName.toString())
-            "$column as $quotedPt"
-        }.joinToString()
-
-        return """
-            CREATE VIEW $entitySetName AS 
-                SELECT $colsSql FROM $etTableName
-                WHERE ${PostgresColumn.ENTITY_SET_ID.name} = '$entitySetId'
-        """.trimIndent()
     }
 
     override fun getExecutorName(): String {

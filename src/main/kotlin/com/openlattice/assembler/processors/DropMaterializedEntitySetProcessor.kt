@@ -28,7 +28,7 @@ import com.openlattice.assembler.AssemblerConnectionManagerDependent
 import com.openlattice.assembler.EntitySetAssemblyKey
 import com.openlattice.assembler.MaterializedEntitySet
 
-
+@Deprecated("Use Transporter instead")
 class DropMaterializedEntitySetProcessor
     : AbstractRhizomeEntryProcessor<EntitySetAssemblyKey, MaterializedEntitySet, Void?>(),
         AssemblerConnectionManagerDependent<DropMaterializedEntitySetProcessor>,

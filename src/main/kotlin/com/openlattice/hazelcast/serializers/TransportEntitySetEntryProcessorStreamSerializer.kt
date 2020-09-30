@@ -16,7 +16,7 @@ import java.util.*
  * @author Drew Bailey &lt;drew@openlattice.com&gt;
  */
 @Component
-class ProjectEntitySetEntryProcessorStreamSerializer:
+class TransportEntitySetEntryProcessorStreamSerializer:
         TestableSelfRegisteringStreamSerializer<TransportEntitySetEntryProcessor> ,
         TransporterDependent<Void?>
 {

@@ -24,6 +24,7 @@ import com.openlattice.postgres.PostgresTable.E
 import com.openlattice.postgres.PostgresTableDefinition
 import com.openlattice.transporter.types.TransporterColumn
 import com.zaxxer.hikari.HikariDataSource
+import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.Logger
 import java.sql.Connection
 import java.util.*
@@ -295,4 +296,27 @@ fun transportTable(
         logger.error("Unable to execute query: {}", lastSql, e)
         throw e
     }
+}
+
+fun destroyEntitySetView( entitySetName: String ): String {
+    return "DROP VIEW $entitySetName"
+}
+
+fun createEntitySetView(
+        entitySetName: String,
+        entitySetId: UUID,
+        etTableName: String,
+        propertyTypes: Map<UUID, FullQualifiedName>
+): String {
+    val colsSql = propertyTypes.map { ( id, ptName ) ->
+        val column = ApiUtil.dbQuote(id.toString())
+        val quotedPt = ApiUtil.dbQuote(ptName.toString())
+        "$column as $quotedPt"
+    }.joinToString()
+
+    return """
+            CREATE VIEW $entitySetName AS 
+                SELECT $colsSql FROM $etTableName
+                WHERE ${ENTITY_SET_ID.name} = '$entitySetId'
+        """.trimIndent()
 }
