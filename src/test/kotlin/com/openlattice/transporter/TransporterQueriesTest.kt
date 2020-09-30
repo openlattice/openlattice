@@ -53,7 +53,7 @@ class TransporterQueriesTest {
             transporter = data.datastore()
             val fdwTables = transporter.connection.use { conn ->
                 conn.createStatement()
-                        .executeQuery("select count(*) from information_schema.foreign_tables where foreign_table_schema = 'ol'").use {rs ->
+                        .executeQuery("select count(*) from information_schema.foreign_tables where foreign_table_schema = '${TransporterDatastore.ENTERPRISE_FDW_SCHEMA}'").use { rs ->
                             rs.next()
                             rs.getInt(1)
                         }

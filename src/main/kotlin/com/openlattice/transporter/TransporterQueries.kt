@@ -298,6 +298,10 @@ fun transportTable(
     }
 }
 
+fun dropOrgViewTable( entitySetName: String ): String {
+    return "DROP VIEW $entitySetName"
+}
+
 fun destroyEntitySetView( entitySetName: String ): String {
     return "DROP VIEW $entitySetName"
 }

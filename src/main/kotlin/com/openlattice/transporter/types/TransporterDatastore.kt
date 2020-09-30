@@ -54,19 +54,20 @@ class TransporterDatastore(
     }
 
     fun linkOrgDbToTransporterDb( organizationId: UUID ) {
-        val hds = createOrgDataSource( organizationId )
-        createFdwBetweenDatabases(
-                hds,
-                assemblerConfiguration.server.getProperty("username"),
-                assemblerConfiguration.server.getProperty("password"),
-                exConnMan.appendDatabaseToJdbcPartial(
-                        assemblerConfiguration.server.getProperty("jdbcUrl"),
-                        TRANSPORTER_DB_NAME
-                ),
-                assemblerConfiguration.server.getProperty("username"),
-                ORG_VIEWS_SCHEMA,
-                getOrgFdw( organizationId )
-        )
+        createOrgDataSource( organizationId ).use { hds ->
+            createFdwBetweenDatabases(
+                    hds,
+                    assemblerConfiguration.server.getProperty("username"),
+                    assemblerConfiguration.server.getProperty("password"),
+                    exConnMan.appendDatabaseToJdbcPartial(
+                            assemblerConfiguration.server.getProperty("jdbcUrl"),
+                            TRANSPORTER_DB_NAME
+                    ),
+                    assemblerConfiguration.server.getProperty("username"),
+                    ORG_VIEWS_SCHEMA,
+                    getOrgFdw( organizationId )
+            )
+        }
     }
 
     /**

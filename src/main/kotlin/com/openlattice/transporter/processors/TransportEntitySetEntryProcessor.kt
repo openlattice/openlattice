@@ -2,7 +2,6 @@ package com.openlattice.transporter.processors
 
 import com.hazelcast.core.Offloadable
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
-import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.transporter.createEntitySetView
@@ -68,11 +67,6 @@ data class TransportEntitySetEntryProcessor(
                             )
                     )
                     // TODO - need to apply these as roles due to the maximum row width thing
-                    usersToColumnPermissions.forEach { ( username, allowedCols ) ->
-                        stmt.addBatch(
-                                AssemblerConnectionManager.grantSelectSql(es.name, username, allowedCols)
-                        )
-                    }
 //                stmt.executeBatch()
                 }
             }

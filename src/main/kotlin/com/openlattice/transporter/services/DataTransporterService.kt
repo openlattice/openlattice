@@ -12,6 +12,7 @@ import com.openlattice.edm.events.AssociationTypeCreatedEvent
 import com.openlattice.edm.events.EntityTypeCreatedEvent
 import com.openlattice.edm.events.EntityTypeDeletedEvent
 import com.openlattice.edm.events.PropertyTypesAddedToEntityTypeEvent
+import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.edm.type.EntityType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.transporter.MAT_EDGES_TABLE
@@ -157,7 +158,8 @@ final class DataTransporterService(
 
     private fun validEntitySets(entityTypeId: UUID): Set<EntitySet> {
         return entitySetService.getEntitySetsOfType(entityTypeId)
-                .filter { !it.isLinking }.toSet()
+                .filter { !it.isLinking && it.flags.contains(EntitySetFlag.TRANSPORTED) }
+                .toSet()
     }
 
     @Subscribe
