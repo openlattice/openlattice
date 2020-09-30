@@ -72,7 +72,6 @@ import java.util.List;
                 DataStoreExceptionHandler.class, EntitySetsController.class,
                 RequestsController.class, AppController.class, GraphController.class,
                 PersistentSearchController.class, AdminController.class,
-//                AssemblyAnalyzationController.class,
                 SubscriptionController.class, FeedsController.class, CodexController.class, CollectionsController.class,
                 DatasetController.class, AnalysisController.class
         },
