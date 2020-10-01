@@ -632,6 +632,13 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     }
 
     @Override
+    @GetMapping( value = ID_PATH + DATABASE, produces = MediaType.APPLICATION_JSON_VALUE )
+    public String getOrganizationDatabaseName( @PathVariable( ID ) UUID organizationId ) {
+        ensureRead( organizationId );
+        return organizations.getOrganizationDatabaseName( organizationId );
+    }
+
+    @Override
     @PatchMapping( value = ID_PATH + DATABASE, consumes = MediaType.APPLICATION_JSON_VALUE )
     public Void renameOrganizationDatabase(
             @PathVariable( ID ) UUID organizationId,
