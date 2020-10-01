@@ -23,7 +23,6 @@ package com.openlattice.analysis.assembler
 import com.openlattice.analysis.requests.Orientation
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.AssemblerQueryService
-import com.openlattice.assembler.PostgresDatabases
 import com.openlattice.assembler.PostgresRoles
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
@@ -31,7 +30,6 @@ import com.openlattice.authorization.DbCredentialService
 import com.openlattice.authorization.Principals
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
-import com.openlattice.directory.MaterializedViewAccount
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.PostMapping
@@ -75,7 +73,6 @@ class AssemblyAnalyzationController : AssemblyAnalyzationApi, AuthorizingCompone
                 PostgresRoles.buildPostgresUsername(Principals.getCurrentSecurablePrincipal())
         )
 
-        val dbName = PostgresDatabases.buildOrganizationDatabaseName(assemblyAggregationFilter.organizationId)
         val srcEntitySetName = entitySetManager.getEntitySet(assemblyAggregationFilter.srcEntitySetId)!!.name
         val edgeEntitySetName = entitySetManager.getEntitySet(assemblyAggregationFilter.edgeEntitySetId)!!.name
         val dstEntitySetName = entitySetManager.getEntitySet(assemblyAggregationFilter.dstEntitySetId)!!.name
@@ -136,7 +133,7 @@ class AssemblyAnalyzationController : AssemblyAnalyzationApi, AuthorizingCompone
                 }.toMap()
 
 
-        val connection = assemblerConnectionManager.connect(dbName, account).connection
+        val connection = assemblerConnectionManager.connectToOrg(assemblyAggregationFilter.organizationId).connection
         val aggregationValues = assemblerQueryService.simpleAggregation(
                 connection,
                 srcEntitySetName, edgeEntitySetName, dstEntitySetName,
