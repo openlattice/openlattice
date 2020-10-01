@@ -735,6 +735,7 @@ class AssemblerConnectionManager(
     fun renameOrganizationDatabase(currentDatabaseName: String, newDatabaseName: String) {
         target.connection.use { conn ->
             conn.createStatement().use { stmt ->
+                stmt.execute(dropAllConnectionsToDatabaseSql(currentDatabaseName))
                 stmt.execute(renameDatabaseSql(currentDatabaseName, newDatabaseName))
             }
         }
@@ -857,6 +858,16 @@ internal fun dropUserIfExistsSql(dbUser: String): String {
             "   END IF;\n" +
             "END\n" +
             "\$do\$;"
+}
+
+internal fun dropAllConnectionsToDatabaseSql(dbName: String): String {
+    return """
+        SELECT pg_terminate_backend(pg_stat_activity.pid)
+        FROM pg_stat_activity
+        WHERE
+          pg_stat_activity.datname = '$dbName'
+          AND pid <> pg_backend_pid();
+    """.trimIndent()
 }
 
 internal fun renameDatabaseSql(currentDatabaseName: String, newDatabaseName: String): String {
