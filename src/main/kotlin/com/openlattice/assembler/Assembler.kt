@@ -46,6 +46,7 @@ import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organization.OrganizationEntitySetFlag
 import com.openlattice.organization.OrganizationIntegrationAccount
 import com.openlattice.organizations.Organization
+import com.openlattice.organizations.OrganizationDatabase
 import com.openlattice.organizations.events.MembersAddedToOrganizationEvent
 import com.openlattice.organizations.events.MembersRemovedFromOrganizationEvent
 import com.openlattice.organizations.roles.SecurePrincipalsManager
@@ -239,16 +240,22 @@ class Assembler(
         )
     }
 
-    fun createOrganization(organization: Organization) {
-        createOrganization(organization.id)
+    fun createOrganizationAndReturnOid(organization: Organization, dbName: String): OrganizationDatabase {
+        createOrganization(organization.id, dbName)
+        val oid = acm.getDatabaseOid(dbName)
+        return OrganizationDatabase(oid, dbName)
     }
 
-    fun createOrganization(organizationId: UUID) {
+    fun createOrganization(organizationId: UUID, dbName: String) {
         createOrganizationTimer.time().use {
             assemblies.set(organizationId, OrganizationAssembly(organizationId))
-            assemblies.executeOnKey(organizationId, InitializeOrganizationAssemblyProcessor().init(acm))
+            assemblies.executeOnKey(organizationId, InitializeOrganizationAssemblyProcessor(dbName).init(acm))
             return@use
         }
+    }
+
+    fun renameOrganizationDatabase(currentDatabaseName: String, newDatabaseName: String) {
+        acm.renameOrganizationDatabase(currentDatabaseName, newDatabaseName)
     }
 
     fun destroyOrganization(organizationId: UUID) {
@@ -478,6 +485,7 @@ class Assembler(
         }
 
         override fun initialize(dependencies: Assembler) {
+            dependencies.acm.createRenameDatabaseFunctionIfNotExists()
             val currentOrganizations =
                     dependencies
                             .securableObjectTypes.keySet(
@@ -501,7 +509,8 @@ class Assembler(
                     )
                 } else {
                     logger.info("Initializing database for organization {}", organizationId)
-                    dependencies.createOrganization(organizationId)
+                    val dbName = dependencies.acm.getOrganizationDatabaseName(organizationId)
+                    dependencies.createOrganization(organizationId, dbName)
                 }
             }
         }

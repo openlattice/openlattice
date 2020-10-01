@@ -66,6 +66,7 @@ import com.openlattice.notifications.sms.SmsInformationMapstore;
 import com.openlattice.organization.OrganizationExternalDatabaseColumn;
 import com.openlattice.organization.OrganizationExternalDatabaseTable;
 import com.openlattice.organizations.Organization;
+import com.openlattice.organizations.mapstores.OrganizationDatabasesMapstore;
 import com.openlattice.organizations.mapstores.OrganizationExternalDatabaseColumnMapstore;
 import com.openlattice.organizations.mapstores.OrganizationExternalDatabaseTableMapstore;
 import com.openlattice.organizations.mapstores.OrganizationsMapstore;
@@ -295,5 +296,10 @@ public class MapstoresPod {
     @Bean
     public ScheduledTasksMapstore scheduledTasksMapstore() {
         return new ScheduledTasksMapstore( hikariDataSource );
+    }
+
+    @Bean
+    public OrganizationDatabasesMapstore OrganizationDatabasesMapstore() {
+        return new OrganizationDatabasesMapstore( hikariDataSource );
     }
 }
