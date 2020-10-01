@@ -255,7 +255,7 @@ class ExternalDatabaseManagementService(
         return organizationExternalDatabaseColumns.getValue(columnId)
     }
 
-    fun getColumnNamesByTable(dbName: String): Map<String, Set<String>> {
+    fun getColumnNamesByTableName(dbName: String): Map<String, Set<String>> {
         val columnNamesByTableName = mutableMapOf<String, MutableSet<String>>()
         val sql = getCurrentTableAndColumnNamesSql()
         BasePostgresIterable(
@@ -484,7 +484,6 @@ class ExternalDatabaseManagementService(
     }
 
     fun syncPermissions(
-            dbName: String,
             orgOwnerIds: List<UUID>,
             orgId: UUID,
             tableId: UUID,
@@ -509,7 +508,7 @@ class ExternalDatabaseManagementService(
 
 
             BasePostgresIterable(
-                    StatementHolderSupplier(externalDbManager.connect(dbName), sql)
+                    StatementHolderSupplier(externalDbManager.connectToOrg(orgId), sql)
             ) { rs ->
                 user(rs) to PostgresPrivileges.valueOf(privilegeType(rs).toUpperCase())
             }
