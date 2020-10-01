@@ -21,11 +21,16 @@
 package com.openlattice.hazelcast.serializers
 
 import com.geekbeast.rhizome.hazelcast.AbstractDelegatedIntListStreamSerializer
+import com.geekbeast.rhizome.hazelcast.DelegatedIntList
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import org.springframework.stereotype.Component
 
 @Component
 class DelegatedIntListStreamSerializer : AbstractDelegatedIntListStreamSerializer() {
+    override fun generateTestValue(): DelegatedIntList {
+        return DelegatedIntList(listOf(1,2,3,4,5))
+    }
+
     override fun getTypeId(): Int {
         return StreamSerializerTypeIds.INT_LIST.ordinal
     }
