@@ -141,7 +141,7 @@ public class IndexerServicesPod {
 
     @Bean
     public DbCredentialService dbcs() {
-        return new DbCredentialService( hazelcastInstance );
+        return new DbCredentialService( hazelcastInstance,longIdService() );
     }
 
     @Bean
@@ -311,7 +311,7 @@ public class IndexerServicesPod {
 
     @Bean
     public HazelcastLongIdService longIdService() {
-        return new HazelcastLongIdService( hazelcastClientProvider, hazelcastInstance );
+        return new HazelcastLongIdService( hazelcastClientProvider );
     }
 
     @Bean
@@ -337,6 +337,7 @@ public class IndexerServicesPod {
                 aclKeyReservationService(),
                 authorizationManager(),
                 organizationExternalDatabaseConfiguration,
+                dbcs(),
                 hikariDataSource );
     }
 

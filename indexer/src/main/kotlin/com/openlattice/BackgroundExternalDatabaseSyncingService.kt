@@ -4,10 +4,8 @@ import com.google.common.base.Stopwatch
 import com.google.common.collect.ImmutableMap
 import com.hazelcast.config.IndexType
 import com.hazelcast.core.HazelcastInstance
-import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.hazelcast.query.QueryConstants
-import com.openlattice.assembler.PostgresDatabases
 import com.openlattice.auditing.AuditEventType
 import com.openlattice.auditing.AuditRecordEntitySetsManager
 import com.openlattice.auditing.AuditableEvent
@@ -15,6 +13,7 @@ import com.openlattice.auditing.AuditingManager
 import com.openlattice.authorization.Acl
 import com.openlattice.authorization.AclKey
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.hazelcast.HazelcastMap.Companion.ORGANIZATION_DATABASES
 import com.openlattice.hazelcast.HazelcastMap.Companion.ORGANIZATION_EXTERNAL_DATABASE_COLUMN
 import com.openlattice.hazelcast.HazelcastMap.Companion.ORGANIZATION_EXTERNAL_DATABASE_TABLE
 import com.openlattice.indexing.MAX_DURATION_MILLIS
@@ -48,6 +47,7 @@ class BackgroundExternalDatabaseSyncingService(
 
     private val organizationExternalDatabaseColumns = ORGANIZATION_EXTERNAL_DATABASE_COLUMN.getMap(hazelcastInstance)
     private val organizationExternalDatabaseTables = ORGANIZATION_EXTERNAL_DATABASE_TABLE.getMap(hazelcastInstance)
+    private val organizationDatabases = ORGANIZATION_DATABASES.getMap(hazelcastInstance)
 
     private val aclKeys = HazelcastMap.ACL_KEYS.getMap(hazelcastInstance)
     private val organizations = HazelcastMap.ORGANIZATIONS.getMap(hazelcastInstance)
@@ -114,7 +114,7 @@ class BackgroundExternalDatabaseSyncingService(
 
     private fun syncOrganizationDatabases(orgId: UUID): Int {
         var totalSynced = 0
-        val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
+        val dbName = organizationDatabases.getValue(orgId).name
         val orgOwnerIds = edms.getOrganizationOwners(orgId).map { it.id }
         val currentTableIds = mutableSetOf<UUID>()
         val currentColumnIds = mutableSetOf<UUID>()
