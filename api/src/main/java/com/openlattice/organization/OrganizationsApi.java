@@ -296,6 +296,9 @@ public interface OrganizationsApi {
     @POST( BASE + PROMOTE )
     Void promoteStagingTable( @Path( ID ) UUID organizationId, @Body String tableName );
 
+    @GET( BASE + ID_PATH + DATABASE )
+    String getOrganizationDatabaseName( @Path(ID) UUID organizationId );
+
     @PATCH( BASE + ID_PATH + DATABASE )
     Void renameOrganizationDatabase( @Path( ID ) UUID organizationId, @Body String newDatabaseName );
 }
