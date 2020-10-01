@@ -639,7 +639,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     }
 
     @Override
-    @PatchMapping( value = ID_PATH + DATABASE, consumes = MediaType.TEXT_PLAIN_VALUE )
+    @PatchMapping( value = ID_PATH + DATABASE, consumes = { MediaType.TEXT_PLAIN_VALUE, MediaType.APPLICATION_FORM_URLENCODED_VALUE } )
     public Void renameOrganizationDatabase(
             @PathVariable( ID ) UUID organizationId,
             @RequestBody String newDatabaseName ) {
