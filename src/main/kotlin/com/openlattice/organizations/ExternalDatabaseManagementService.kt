@@ -7,7 +7,6 @@ import com.hazelcast.query.Predicates
 import com.hazelcast.query.QueryConstants
 import com.openlattice.assembler.AssemblerConnectionManager.Companion.MATERIALIZED_VIEWS_SCHEMA
 import com.openlattice.assembler.AssemblerConnectionManager.Companion.STAGING_SCHEMA
-import com.openlattice.assembler.PostgresDatabases
 import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresUsername
 import com.openlattice.assembler.PostgresRoles.Companion.getSecurablePrincipalIdFromUserName
 import com.openlattice.assembler.PostgresRoles.Companion.isPostgresUserName
@@ -121,14 +120,14 @@ class ExternalDatabaseManagementService(
         return column.id
     }
 
-    fun getColumnMetadata(dbName: String, tableName: String, tableId: UUID, orgId: UUID, columnName: Optional<String>): BasePostgresIterable<
+    fun getColumnMetadata(tableName: String, tableId: UUID, orgId: UUID, columnName: Optional<String>): BasePostgresIterable<
             OrganizationExternalDatabaseColumn> {
         var columnCondition = ""
         columnName.ifPresent { columnCondition = "AND information_schema.columns.column_name = '$it'" }
 
         val sql = getColumnMetadataSql(tableName, columnCondition)
         return BasePostgresIterable(
-                StatementHolderSupplier(externalDbManager.connect(dbName), sql)
+                StatementHolderSupplier(externalDbManager.connectToOrg(orgId), sql)
         ) { rs ->
             val storedColumnName = columnName(rs)
             val dataType = sqlDataType(rs)
@@ -231,10 +230,9 @@ class ExternalDatabaseManagementService(
         val columnNamesSql = authorizedColumns.joinToString(", ") { it.name }
         val dataByColumnId = mutableMapOf<UUID, MutableList<Any?>>()
 
-        val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
         val sql = "SELECT $columnNamesSql FROM $tableName LIMIT $rowCount"
         BasePostgresIterable(
-                StatementHolderSupplier(externalDbManager.connect(dbName), sql)
+                StatementHolderSupplier(externalDbManager.connectToOrg(orgId), sql)
         ) { rs ->
             val pairsList = mutableListOf<Pair<UUID, Any?>>()
             authorizedColumns.forEach {
@@ -274,8 +272,7 @@ class ExternalDatabaseManagementService(
         update.name.ifPresent {
             val newTableFqn = FullQualifiedName(orgId.toString(), it)
             val oldTableName = getNameFromFqnString(tableFqnToId.first)
-            val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
-            externalDbManager.connect(dbName).connection.use { conn ->
+            externalDbManager.connectToOrg(orgId).connection.use { conn ->
                 val stmt = conn.createStatement()
                 stmt.execute("ALTER TABLE $oldTableName RENAME TO $it")
             }
@@ -290,8 +287,7 @@ class ExternalDatabaseManagementService(
             val tableName = getNameFromFqnString(tableFqnToId.first)
             val newColumnFqn = FullQualifiedName(tableFqnToId.second.toString(), it)
             val oldColumnName = getNameFromFqnString(columnFqnToId.first)
-            val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
-            externalDbManager.connect(dbName).connection.use { conn ->
+            externalDbManager.connectToOrg(orgId).connection.use { conn ->
                 val stmt = conn.createStatement()
                 stmt.execute("ALTER TABLE $tableName RENAME COLUMN $oldColumnName to $it")
             }
@@ -315,8 +311,7 @@ class ExternalDatabaseManagementService(
             deleteOrganizationExternalDatabaseColumns(orgId, columnsByTable)
 
             //delete tables from postgres
-            val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
-            externalDbManager.connect(dbName).connection.use { conn ->
+            externalDbManager.connectToOrg(orgId).connection.use { conn ->
                 val stmt = conn.createStatement()
                 stmt.execute("DROP TABLE $tableName")
             }
@@ -348,8 +343,7 @@ class ExternalDatabaseManagementService(
 
             //delete columns from postgres
             val dropColumnsSql = createDropColumnSql(columnNames)
-            val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
-            externalDbManager.connect(dbName).connection.use { conn ->
+            externalDbManager.connectToOrg(orgId).connection.use { conn ->
                 val stmt = conn.createStatement()
                 stmt.execute("ALTER TABLE $tableName $dropColumnsSql")
             }
@@ -384,7 +378,7 @@ class ExternalDatabaseManagementService(
         deleteOrganizationExternalDatabaseTables(orgId, tableIdByFqn)
 
         //drop db from schema
-        val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
+        val dbName = externalDbManager.getOrganizationDatabaseName(orgId)
         externalDbManager.connect(dbName).connection.use { conn ->
             val stmt = conn.createStatement()
             stmt.execute("DROP DATABASE $dbName")
@@ -393,7 +387,7 @@ class ExternalDatabaseManagementService(
 
     /*PERMISSIONS*/
     fun addHBARecord(orgId: UUID, userPrincipal: Principal, connectionType: PostgresConnectionType, ipAddress: String) {
-        val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
+        val dbName = externalDbManager.getOrganizationDatabaseName(orgId)
         val username = getDBUser(userPrincipal.id)
         val record = PostgresAuthenticationRecord(
                 connectionType,
@@ -414,7 +408,7 @@ class ExternalDatabaseManagementService(
     }
 
     fun removeHBARecord(orgId: UUID, userPrincipal: Principal, connectionType: PostgresConnectionType, ipAddress: String) {
-        val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
+        val dbName = externalDbManager.getOrganizationDatabaseName(orgId)
         val username = getDBUser(userPrincipal.id)
         val record = PostgresAuthenticationRecord(
                 connectionType,
@@ -447,8 +441,7 @@ class ExternalDatabaseManagementService(
         }
 
         columnAclsByOrg.forEach { (orgId, columnAcls) ->
-            val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
-            externalDbManager.connect(dbName).connection.use { conn ->
+            externalDbManager.connectToOrg(orgId).connection.use { conn ->
                 conn.autoCommit = false
                 val stmt = conn.createStatement()
                 columnAcls.forEach {
@@ -482,7 +475,7 @@ class ExternalDatabaseManagementService(
      * when that user is removed from an organization.
      */
     fun revokeAllPrivilegesFromMember(orgId: UUID, userId: String) {
-        val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
+        val dbName = externalDbManager.getOrganizationDatabaseName(orgId)
         val userName = getDBUser(userId)
         externalDbManager.connect(dbName).connection.use { conn ->
             val stmt = conn.createStatement()
@@ -675,9 +668,7 @@ class ExternalDatabaseManagementService(
      * Moves a table from the [MATERIALIZED_VIEWS_SCHEMA] schema to the [STAGING_SCHEMA] schema
      */
     fun promoteStagingTable(organizationId: UUID, tableName: String) {
-        val dbName = PostgresDatabases.buildOrganizationDatabaseName(organizationId)
-
-        externalDbManager.connect(dbName).use { hds ->
+        externalDbManager.connectToOrg(organizationId).use { hds ->
             hds.connection.use { conn ->
                 conn.createStatement().use { stmt ->
                     stmt.execute(publishStagingTableSql(tableName))
@@ -689,7 +680,7 @@ class ExternalDatabaseManagementService(
     /*INTERNAL SQL QUERIES*/
     private fun getCurrentTableAndColumnNamesSql(): String {
         return selectExpression + fromExpression + leftJoinColumnsExpression +
-                "WHERE information_schema.tables.table_schema=ANY('{$MATERIALIZED_VIEWS_SCHEMA','$STAGING_SCHEMA}') " +
+                "WHERE information_schema.tables.table_schema=ANY('{$MATERIALIZED_VIEWS_SCHEMA,$STAGING_SCHEMA}') " +
                 "AND table_type='BASE TABLE'"
     }
 

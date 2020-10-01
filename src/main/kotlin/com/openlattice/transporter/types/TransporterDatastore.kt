@@ -201,7 +201,7 @@ class TransporterDatastore(
     }
 
     fun connectOrgDb(organizationId: UUID): HikariDataSource {
-        return exConnMan.connectOrgDb( organizationId )
+        return exConnMan.connectToOrg( organizationId )
     }
 
     fun getOrgFdw( organizationId: UUID ): String {

@@ -25,11 +25,12 @@ class InitializeOrganizationAssemblyProcessorStreamSerializer
     }
 
     override fun write(out: ObjectDataOutput, obj: InitializeOrganizationAssemblyProcessor) {
-
+        out.writeUTF(obj.dbName)
     }
 
     override fun read(input: ObjectDataInput): InitializeOrganizationAssemblyProcessor {
-        return InitializeOrganizationAssemblyProcessor().init(acm)
+        val dbName = input.readUTF()
+        return InitializeOrganizationAssemblyProcessor(dbName).init(acm)
     }
 
     override fun getTypeId(): Int {

@@ -1,13 +1,14 @@
 package com.openlattice.organizations
 
 import com.codahale.metrics.annotation.Timed
-import com.google.common.collect.ImmutableSet
 import com.google.common.collect.Iterables
 import com.google.common.eventbus.EventBus
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.openlattice.assembler.Assembler
+import com.openlattice.assembler.PostgresDatabases
+import com.openlattice.assembler.PostgresDatabases.Companion.buildDefaultOrganizationDatabaseName
 import com.openlattice.authorization.*
 import com.openlattice.authorization.mapstores.PrincipalMapstore
 import com.openlattice.data.storage.partitions.PartitionManager
@@ -70,6 +71,7 @@ class HazelcastOrganizationService(
 ) {
     protected val organizations = HazelcastMap.ORGANIZATIONS.getMap(hazelcastInstance)
     protected val users = HazelcastMap.USERS.getMap(hazelcastInstance)
+    protected val organizationDatabases = HazelcastMap.ORGANIZATION_DATABASES.getMap(hazelcastInstance)
 
     @Inject
     private lateinit var eventBus: EventBus
@@ -117,9 +119,6 @@ class HazelcastOrganizationService(
 
     @Timed
     fun createOrganization(principal: Principal, organization: Organization) {
-        initializeOrganizationPrincipals(principal, organization)
-        initializeOrganization(organization)
-
         /*
          * Roles shouldn't be members of an organizations.
          *
@@ -128,21 +127,31 @@ class HazelcastOrganizationService(
          *
          * In order to function roles must have READ access on the organization and
          */
-
-        when (principal.type) {
+        val membersToAdd = when (principal.type) {
             PrincipalType.USER ->
                 //Add the organization principal to the creator marking them as a member of the organization
-                addMembers(organization.getAclKey().first(), ImmutableSet.of(principal), mapOf())
+                setOf(principal)
             PrincipalType.ROLE ->
                 //For a role we ensure that it has
-                logger.debug("Creating an organization with no members, but accessible by {}", principal)
+                setOf()
             else -> throw IllegalStateException("Only users and roles can create organizations.")
-        }//Fall throught by design
+        }//Fall through by design
+
+        initializeOrganizationPrincipals(principal, organization)
+        initializeOrganization(organization)
 
 
-        //We add the user/role that created the organization to the admin role for the organization
+        // set up organization database
+        val orgDatabase = assembler.createOrganizationAndReturnOid(
+                organization,
+                buildDefaultOrganizationDatabaseName(organization.id)
+        )
+        organizationDatabases.set(organization.id, orgDatabase)
 
-        assembler.createOrganization(organization)
+        if (membersToAdd.isNotEmpty()) {
+            addMembers(organization.getAclKey().first(), membersToAdd, mapOf())
+        }
+
         eventBus.post(OrganizationCreatedEvent(organization))
         setSmsEntitySetInformation(organization.smsEntitySetInfo)
     }
@@ -173,6 +182,10 @@ class HazelcastOrganizationService(
         }) as Set<UUID>
     }
 
+    fun getOrganizationDatabaseName(organizationId: UUID): String {
+        return organizationDatabases.getValue(organizationId).name
+    }
+
     fun getOrganizations(organizationIds: Stream<UUID>): Iterable<Organization> {
         //TODO: Figure out why copy is here?
         return organizationIds.asSequence().map(this::getOrganization)
@@ -198,6 +211,7 @@ class HazelcastOrganizationService(
         securePrincipalsManager.deleteAllRolesInOrganization(organizationId)
         securePrincipalsManager.deletePrincipal(aclKey)
         organizations.delete(organizationId)
+        organizationDatabases.delete(organizationId)
         reservations.release(organizationId)
         assembler.destroyOrganization(organizationId)
         eventBus.post(OrganizationDeletedEvent(organizationId))
@@ -529,6 +543,28 @@ class HazelcastOrganizationService(
         })
 
         addUsersMatchingConnections(organizationId, connections)
+    }
+
+    private fun executeDatabaseNameUpdate(organizationId: UUID, name: String) {
+        organizationDatabases.executeOnKey(organizationId) {
+            val value = it.value
+            value.name = name
+            it.setValue(value)
+        }
+    }
+
+    @Timed
+    fun renameOrganizationDatabase(organizationId: UUID, newDatabaseName: String) {
+        PostgresDatabases.assertDatabaseNameIsValid(newDatabaseName)
+        val currentDatabaseName = getOrganizationDatabaseName(organizationId)
+
+        try {
+            assembler.renameOrganizationDatabase(currentDatabaseName, newDatabaseName)
+            executeDatabaseNameUpdate(organizationId, newDatabaseName)
+        } catch (e: Exception) {
+            throw IllegalStateException("An error occurred while trying to rename org $organizationId database " +
+                    "name to $newDatabaseName", e)
+        }
     }
 
     fun getOrganizationsWithoutUserAndWithConnection(connections: Collection<String>, principal: Principal): Set<UUID> {

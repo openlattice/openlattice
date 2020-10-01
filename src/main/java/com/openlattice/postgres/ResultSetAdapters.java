@@ -78,6 +78,7 @@ import com.openlattice.organization.OrganizationEntitySetFlag;
 import com.openlattice.organization.OrganizationExternalDatabaseColumn;
 import com.openlattice.organization.OrganizationExternalDatabaseTable;
 import com.openlattice.organization.roles.Role;
+import com.openlattice.organizations.OrganizationDatabase;
 import com.openlattice.requests.Request;
 import com.openlattice.requests.RequestStatus;
 import com.openlattice.requests.Status;
@@ -180,6 +181,7 @@ import static com.openlattice.postgres.PostgresColumn.MULTI_VALUED;
 import static com.openlattice.postgres.PostgresColumn.NAME;
 import static com.openlattice.postgres.PostgresColumn.NAMESPACE;
 import static com.openlattice.postgres.PostgresColumn.NULLABLE_TITLE;
+import static com.openlattice.postgres.PostgresColumn.OID;
 import static com.openlattice.postgres.PostgresColumn.ORDINAL_POSITION;
 import static com.openlattice.postgres.PostgresColumn.ORGANIZATION_ID;
 import static com.openlattice.postgres.PostgresColumn.ORGANIZATION_ID_FIELD;
@@ -1177,5 +1179,12 @@ public final class ResultSetAdapters {
     public static MaterializedViewAccount materializedViewAccount( ResultSet rs ) throws SQLException {
         return new MaterializedViewAccount( rs.getString( PostgresColumn.USERNAME_FIELD ),
                 rs.getString( PostgresColumn.CREDENTIAL_FIELD ) );
+    }
+
+    public static OrganizationDatabase organizationDatabase( ResultSet rs ) throws SQLException {
+        int oid = rs.getInt( OID.getName() );
+        String name = name( rs );
+
+        return new OrganizationDatabase(oid, name);
     }
 }

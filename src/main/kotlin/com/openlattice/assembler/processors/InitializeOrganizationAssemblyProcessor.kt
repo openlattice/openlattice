@@ -37,7 +37,7 @@ private val logger = LoggerFactory.getLogger(InitializeOrganizationAssemblyProce
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 
-class InitializeOrganizationAssemblyProcessor :
+class InitializeOrganizationAssemblyProcessor(val dbName: String) :
         AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(),
         AssemblerConnectionManagerDependent<InitializeOrganizationAssemblyProcessor>,
         Offloadable {
@@ -56,7 +56,7 @@ class InitializeOrganizationAssemblyProcessor :
                     organizationId
             )
             else -> {
-                acm?.createOrganizationDatabase(organizationId)
+                acm?.createAndInitializeOrganizationDatabase(organizationId, dbName)
                         ?: throw IllegalStateException(AssemblerConnectionManagerDependent.NOT_INITIALIZED)
                 assembly.initialized = true
                 entry.setValue(assembly)

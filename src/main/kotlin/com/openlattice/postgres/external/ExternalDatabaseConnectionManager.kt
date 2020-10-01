@@ -3,7 +3,9 @@ package com.openlattice.postgres.external
 import com.google.common.cache.CacheBuilder
 import com.google.common.cache.CacheLoader
 import com.google.common.cache.LoadingCache
+import com.hazelcast.core.HazelcastInstance
 import com.openlattice.assembler.AssemblerConfiguration
+import com.openlattice.hazelcast.HazelcastMap
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import java.util.*
@@ -13,11 +15,13 @@ import java.util.concurrent.TimeUnit
  * @author Drew Bailey &lt;drew@openlattice.com&gt;
  */
 class ExternalDatabaseConnectionManager(
-        private val assemblerConfiguration: AssemblerConfiguration
+        private val assemblerConfiguration: AssemblerConfiguration,
+        hazelcastInstance: HazelcastInstance
 ) {
+    private val organizationDatabases = HazelcastMap.ORGANIZATION_DATABASES.getMap(hazelcastInstance)
+
     companion object {
-        @JvmStatic
-        private fun buildOrganizationDatabaseName(organizationId: UUID): String {
+        private fun buildDefaultOrganizationDatabaseName(organizationId: UUID): String {
             return "org_${organizationId.toString().replace("-","").toLowerCase()}"
         }
     }
@@ -27,13 +31,15 @@ class ExternalDatabaseConnectionManager(
             .expireAfterAccess(1, TimeUnit.HOURS)
             .build(cacheLoader())
 
+    @Deprecated("unused, needs update to use getOrgDbName")
     fun createOrgDataSource( organizationId: UUID ): HikariDataSource {
         return createDataSource(
-                buildOrganizationDatabaseName(organizationId),
+                buildDefaultOrganizationDatabaseName(organizationId),
                 assemblerConfiguration.server.clone() as Properties,
                 assemblerConfiguration.ssl
         )
     }
+
     fun createDataSource(dbName: String, config: Properties, useSsl: Boolean): HikariDataSource {
         val jdbcUrl = config.getProperty("jdbcUrl")
                 ?: throw Exception("No JDBC URL specified in configuration $config")
@@ -57,12 +63,16 @@ class ExternalDatabaseConnectionManager(
         }
     }
 
+    internal fun getOrganizationDatabaseName(organizationId: UUID): String {
+        return organizationDatabases.getValue(organizationId).name
+    }
+
     fun connect(dbName: String): HikariDataSource {
         return perDbCache.get(dbName)
     }
 
-    fun connectOrgDb(organizationId: UUID): HikariDataSource {
-        return perDbCache.get(buildOrganizationDatabaseName(organizationId))
+    fun connectToOrg(organizationId: UUID): HikariDataSource {
+        return perDbCache.get(getOrganizationDatabaseName(organizationId))
     }
 
     fun appendDatabaseToJdbcPartial( jdbcStringNoDatabase: String, dbName: String ): String {
