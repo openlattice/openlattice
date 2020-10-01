@@ -633,7 +633,9 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
 
     @Override
     @PatchMapping( value = ID_PATH + DATABASE, consumes = MediaType.APPLICATION_JSON_VALUE )
-    public Void renameOrganizationDatabase( @PathVariable( ID ) UUID organizationId, String newDatabaseName ) {
+    public Void renameOrganizationDatabase(
+            @PathVariable( ID ) UUID organizationId,
+            @RequestBody String newDatabaseName ) {
         ensureOwner( organizationId );
         organizations.renameOrganizationDatabase( organizationId, newDatabaseName );
         return null;
