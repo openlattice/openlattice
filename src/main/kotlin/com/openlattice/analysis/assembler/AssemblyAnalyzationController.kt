@@ -23,7 +23,6 @@ package com.openlattice.analysis.assembler
 import com.openlattice.analysis.requests.Orientation
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.AssemblerQueryService
-import com.openlattice.assembler.PostgresDatabases
 import com.openlattice.assembler.PostgresRoles
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
@@ -75,7 +74,6 @@ class AssemblyAnalyzationController : AssemblyAnalyzationApi, AuthorizingCompone
                 PostgresRoles.buildPostgresUsername(Principals.getCurrentSecurablePrincipal())
         )
 
-        val dbName = PostgresDatabases.buildOrganizationDatabaseName(assemblyAggregationFilter.organizationId)
         val srcEntitySetName = entitySetManager.getEntitySet(assemblyAggregationFilter.srcEntitySetId)!!.name
         val edgeEntitySetName = entitySetManager.getEntitySet(assemblyAggregationFilter.edgeEntitySetId)!!.name
         val dstEntitySetName = entitySetManager.getEntitySet(assemblyAggregationFilter.dstEntitySetId)!!.name
@@ -134,7 +132,6 @@ class AssemblyAnalyzationController : AssemblyAnalyzationApi, AuthorizingCompone
                 .map {
                     edmService.getPropertyTypeFqn(it.key).fullQualifiedNameAsString to it.value.map { it.filter }
                 }.toMap()
-
 
         val connection = HikariDataSource().connection
         val aggregationValues = assemblerQueryService.simpleAggregation(
