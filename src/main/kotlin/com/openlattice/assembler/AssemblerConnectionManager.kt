@@ -54,6 +54,7 @@ import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
+import java.lang.IllegalStateException
 import java.sql.Connection
 import java.sql.Statement
 import java.util.*
@@ -733,6 +734,10 @@ class AssemblerConnectionManager(
     }
 
     fun renameOrganizationDatabase(currentDatabaseName: String, newDatabaseName: String) {
+        if (checkIfDatabaseExists(newDatabaseName)) {
+            throw IllegalStateException("Cannot rename database $currentDatabaseName to $newDatabaseName because database $newDatabaseName already exists")
+        }
+
         target.connection.use { conn ->
             conn.createStatement().use { stmt ->
                 stmt.execute(dropAllConnectionsToDatabaseSql(currentDatabaseName))
@@ -769,6 +774,17 @@ class AssemblerConnectionManager(
         target.connection.use { conn ->
             conn.createStatement().use { stmt ->
                 stmt.execute(createRenameDatabaseFunctionSql)
+            }
+        }
+    }
+
+    private fun checkIfDatabaseExists(dbName: String): Boolean {
+        target.connection.use { conn ->
+            conn.prepareStatement(checkIfDatabaseNameIsInUseSql).use { ps ->
+                ps.setString(1, dbName)
+                val rs = ps.executeQuery()
+
+                return rs.next()
             }
         }
     }
@@ -882,6 +898,8 @@ internal fun dropAllConnectionsToDatabaseSql(dbName: String): String {
           AND pid <> pg_backend_pid();
     """.trimIndent()
 }
+
+internal val checkIfDatabaseNameIsInUseSql = "SELECT 1 FROM pg_database WHERE datname = ?"
 
 internal val renameDatabaseSql = "SELECT rename_database(?, ?)"
 
