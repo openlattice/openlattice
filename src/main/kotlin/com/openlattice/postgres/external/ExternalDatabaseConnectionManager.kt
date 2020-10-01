@@ -21,7 +21,7 @@ class ExternalDatabaseConnectionManager(
     private val organizationDatabases = HazelcastMap.ORGANIZATION_DATABASES.getMap(hazelcastInstance)
 
     companion object {
-        private fun buildDefaultOrganizationDatabaseName(organizationId: UUID): String {
+        fun buildDefaultOrganizationDatabaseName(organizationId: UUID): String {
             return "org_${organizationId.toString().replace("-","").toLowerCase()}"
         }
     }
@@ -63,7 +63,7 @@ class ExternalDatabaseConnectionManager(
         }
     }
 
-    internal fun getOrganizationDatabaseName(organizationId: UUID): String {
+    fun getOrganizationDatabaseName(organizationId: UUID): String {
         return organizationDatabases.getValue(organizationId).name
     }
 
