@@ -33,8 +33,7 @@ import java.util.stream.Stream;
 
 public class ApiUtil {
     private static final Encoder encoder = Base64.getEncoder();
-    private static final Logger  logger  = LoggerFactory
-            .getLogger( ApiUtil.class );
+    private static final Logger  logger  = LoggerFactory.getLogger( ApiUtil.class );
 
     private ApiUtil() {}
 
@@ -70,7 +69,7 @@ public class ApiUtil {
                 .collect( Collectors.joining( "," ) );
     }
 
-    private static byte[] toBytes( Object o ) {
+    protected static byte[] toBytes( Object o ) {
         if ( o instanceof String ) {
             return toUtf8Bytes( (String) o );
         }
@@ -82,7 +81,7 @@ public class ApiUtil {
         }
     }
 
-    private static byte[] toUtf8Bytes( String s ) {
+    protected static byte[] toUtf8Bytes( String s ) {
         return s.getBytes( Charsets.UTF_8 );
     }
 }
