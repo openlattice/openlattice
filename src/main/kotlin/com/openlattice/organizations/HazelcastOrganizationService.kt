@@ -1,6 +1,7 @@
 package com.openlattice.organizations
 
 import com.codahale.metrics.annotation.Timed
+import com.google.common.base.Preconditions.checkState
 import com.google.common.collect.ImmutableSet
 import com.google.common.collect.Iterables
 import com.google.common.eventbus.EventBus
@@ -115,9 +116,6 @@ class HazelcastOrganizationService(
 
     @Timed
     fun createOrganization(principal: Principal, organization: Organization) {
-        initializeOrganizationPrincipals(principal, organization)
-        initializeOrganization(organization)
-
         /*
          * Roles shouldn't be members of an organizations.
          *
@@ -126,18 +124,19 @@ class HazelcastOrganizationService(
          *
          * In order to function roles must have READ access on the organization and
          */
-
-        when (principal.type) {
+        val membersToAdd = when (principal.type) {
             PrincipalType.USER ->
                 //Add the organization principal to the creator marking them as a member of the organization
-                addMembers(organization.getAclKey().first(), ImmutableSet.of(principal), mapOf())
+                setOf(principal)
             PrincipalType.ROLE ->
                 //For a role we ensure that it has
-                logger.debug("Creating an organization with no members, but accessible by {}", principal)
+                setOf()
             else -> throw IllegalStateException("Only users and roles can create organizations.")
         }//Fall through by design
 
-        //We add the user/role that created the organization to the admin role for the organization
+        initializeOrganizationPrincipals(principal, organization)
+        initializeOrganization(organization)
+
 
         // set up organization database
         val orgDatabase = assembler.createOrganizationAndReturnOid(
@@ -145,6 +144,10 @@ class HazelcastOrganizationService(
                 buildDefaultOrganizationDatabaseName(organization.id)
         )
         organizationDatabases.set(organization.id, orgDatabase)
+
+        if (membersToAdd.isNotEmpty()) {
+            addMembers(organization.getAclKey().first(), membersToAdd, mapOf())
+        }
 
         eventBus.post(OrganizationCreatedEvent(organization))
         setSmsEntitySetInformation(organization.smsEntitySetInfo)
