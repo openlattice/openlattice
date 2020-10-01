@@ -56,6 +56,7 @@ import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.Grant;
 import com.openlattice.organizations.GrantType;
 import com.openlattice.organizations.Organization;
+import com.openlattice.organizations.OrganizationDatabase;
 import com.openlattice.postgres.IndexType;
 import com.openlattice.postgres.PostgresAuthenticationRecord;
 import com.openlattice.postgres.PostgresConnectionType;
@@ -837,6 +838,10 @@ public final class TestDataFactory {
                 base64Media(),
                 OffsetDateTime.now()
         );
+    }
+
+    public static OrganizationDatabase organizationDatabase() {
+        return new OrganizationDatabase( r.nextInt(), randomAlphanumeric( 10 ) );
     }
 
 }

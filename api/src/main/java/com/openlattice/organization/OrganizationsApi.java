@@ -36,6 +36,7 @@ public interface OrganizationsApi {
     String ASSEMBLE          = "/assemble";
     String CONNECTIONS       = "/connections";
     String CONTROLLER        = "/organizations";
+    String DATABASE          = "/database";
     String DESCRIPTION       = "/description";
     String EMAIL_DOMAIN      = "email-domain";
     String EMAIL_DOMAINS     = "/email-domains";
@@ -309,4 +310,10 @@ public interface OrganizationsApi {
      */
     @POST( BASE + PROMOTE )
     Void promoteStagingTable( @Path( ID ) UUID organizationId, @Body String tableName );
+
+    @GET( BASE + ID_PATH + DATABASE )
+    String getOrganizationDatabaseName( @Path(ID) UUID organizationId );
+
+    @PATCH( BASE + ID_PATH + DATABASE )
+    Void renameOrganizationDatabase( @Path( ID ) UUID organizationId, @Body String newDatabaseName );
 }
