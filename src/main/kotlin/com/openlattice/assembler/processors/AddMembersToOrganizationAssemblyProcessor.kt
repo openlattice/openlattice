@@ -53,7 +53,7 @@ data class AddMembersToOrganizationAssemblyProcessor(
         }
 
         check(::acm.isInitialized) { AssemblerConnectionManagerDependent.NOT_INITIALIZED }
-        val dbName = PostgresDatabases.buildOrganizationDatabaseName(organizationId)
+        val dbName = acm.getOrganizationDatabaseName(organizationId)
         acm.connect(dbName).let { dataSource ->
             acm.addMembersToOrganization(dbName, dataSource, authorizedPropertyTypesOfEntitySetsByPrincipal)
         }
