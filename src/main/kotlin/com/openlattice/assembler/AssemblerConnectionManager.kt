@@ -733,7 +733,7 @@ class AssemblerConnectionManager(
     }
 
     fun renameOrganizationDatabase(currentDatabaseName: String, newDatabaseName: String) {
-        connect("postgres").connection.use { conn ->
+        target.connection.use { conn ->
             conn.createStatement().use { stmt ->
                 stmt.execute(renameDatabaseSql(currentDatabaseName, newDatabaseName))
             }
@@ -743,7 +743,7 @@ class AssemblerConnectionManager(
     fun getDatabaseOid(dbName: String): Int {
         var oid = -1
         try {
-            return connect("postgres").connection.use { conn ->
+            return target.connection.use { conn ->
                 conn.prepareStatement(databaseOidSql).use { ps ->
                     ps.setString(1, dbName)
                     val rs = ps.executeQuery()
