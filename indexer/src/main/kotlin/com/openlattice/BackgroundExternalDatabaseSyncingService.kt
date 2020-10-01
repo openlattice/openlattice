@@ -238,7 +238,7 @@ class BackgroundExternalDatabaseSyncingService(
             currentColumnIds: MutableSet<UUID>
     ): Int {
         var totalSynced = 0
-        edms.getColumnMetadata(dbName, tableName, tableId, orgId, columnName)
+        edms.getColumnMetadata(tableName, tableId, orgId, columnName)
                 .forEach { column ->
                     createSecurableColumnObject(dbName, orgOwnerIds, orgId, tableName, currentColumnIds, column)
                     totalSynced++
