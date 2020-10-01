@@ -4,12 +4,12 @@ import com.geekbeast.configuration.postgres.PostgresConfiguration
 import com.kryptnostic.rhizome.configuration.RhizomeConfiguration
 import com.openlattice.ApiUtil
 import com.openlattice.assembler.AssemblerConfiguration
-import com.openlattice.assembler.PostgresDatabases
 import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
+import java.sql.Connection
 import java.util.*
 
 /**
@@ -32,11 +32,16 @@ class TransporterDatastore(
         // database in atlas where the data is transported
         const val TRANSPORTER_DB_NAME = "transporter"
 
-        // schema in atlas where production tables are FDW accessible
+        // schema in atlas where views live
+        const val PUBLIC_SCHEMA = "public"
+
+        // schema in atlas where production tables are accessible
         const val ENTERPRISE_FDW_SCHEMA = "ol"
+
+        // fdw name for atlas <-> production fdw
+        const val ENTERPRISE_FDW_NAME = "enterprise"
     }
 
-    private val enterpriseFdwName = "enterprise"
     private var hds: HikariDataSource = exConnMan.createDataSource(
             TRANSPORTER_DB_NAME,
             assemblerConfiguration.server.clone() as Properties,
@@ -48,27 +53,25 @@ class TransporterDatastore(
         if (rhizome.postgresConfiguration.isPresent) {
             initializeFDW(rhizome.postgresConfiguration.get())
         }
-        val sp = ensureSearchPath(hds)
+        val sp = ensureSearchPath(hds.connection)
         if ( !sp.contains( ENTERPRISE_FDW_SCHEMA )) {
             logger.error("bad search path: {}", sp)
         }
     }
 
     fun linkOrgDbToTransporterDb( organizationId: UUID ) {
-        createOrgDataSource( organizationId ).use { hds ->
-            createFdwBetweenDatabases(
-                    hds,
-                    assemblerConfiguration.server.getProperty("username"),
-                    assemblerConfiguration.server.getProperty("password"),
-                    exConnMan.appendDatabaseToJdbcPartial(
-                            assemblerConfiguration.server.getProperty("jdbcUrl"),
-                            TRANSPORTER_DB_NAME
-                    ),
-                    assemblerConfiguration.server.getProperty("username"),
-                    ORG_VIEWS_SCHEMA,
-                    getOrgFdw( organizationId )
-            )
-        }
+        createFdwBetweenDatabases(
+                connectOrgDb( organizationId ),
+                assemblerConfiguration.server.getProperty("username"),
+                assemblerConfiguration.server.getProperty("password"),
+                exConnMan.appendDatabaseToJdbcPartial(
+                        assemblerConfiguration.server.getProperty("jdbcUrl"),
+                        TRANSPORTER_DB_NAME
+                ),
+                assemblerConfiguration.server.getProperty("username"),
+                ORG_VIEWS_SCHEMA,
+                getOrgFdw( organizationId )
+        )
     }
 
     /**
@@ -83,7 +86,7 @@ class TransporterDatastore(
             localSchema: String,
             fdwName: String
     ) {
-        var searchPath = ensureSearchPath(localDbDatasource)
+        var searchPath = ensureSearchPath(localDbDatasource.connection)
         if ( !searchPath.contains(localSchema) ){
             searchPath = "$searchPath, $localSchema"
         }
@@ -140,20 +143,17 @@ class TransporterDatastore(
         return "import foreign schema $remoteSchema $tablesClause from server $usingFdwName INTO $localSchema;"
     }
 
-    private fun ensureSearchPath( hds: HikariDataSource ): String {
+    private fun ensureSearchPath( connection: Connection): String {
         logger.info("checking search path for current user")
-        hds.connection.use { conn ->
-            val st = conn.createStatement()
-            st.executeQuery( "show search_path" ).use {
-                it.next()
-                val searchPath = it.getString(1)
-                logger.info(searchPath)
-                if ( searchPath == null ) {
-                    logger.error("bad search path: {}", searchPath)
-                    return ""
-                }
-                return searchPath
+        connection.createStatement().executeQuery( "show search_path" ).use {
+            it.next()
+            val searchPath = it.getString(1)
+            logger.info(searchPath)
+            if ( searchPath == null ) {
+                logger.error("bad search path: {}", searchPath)
+                return ""
             }
+            return searchPath
         }
     }
 
@@ -165,7 +165,7 @@ class TransporterDatastore(
                 rhizomeConfig.hikariConfiguration.getProperty("jdbcUrl"),
                 assemblerConfiguration.server.getProperty("username"),
                 ENTERPRISE_FDW_SCHEMA,
-                enterpriseFdwName
+                ENTERPRISE_FDW_NAME
         )
 
         hds.connection.use { conn ->
@@ -177,14 +177,14 @@ class TransporterDatastore(
                     } else {
                         stmt.executeUpdate(
                                 importTablesFromForeignSchema(
-                                        "public",
+                                        PUBLIC_SCHEMA,
                                         setOf(
                                                 PostgresTable.IDS.name,
                                                 PostgresTable.DATA.name,
                                                 PostgresTable.E.name
                                         ),
                                         ENTERPRISE_FDW_SCHEMA,
-                                        enterpriseFdwName
+                                        ENTERPRISE_FDW_NAME
                                 )
                         )
                     }
@@ -200,8 +200,8 @@ class TransporterDatastore(
         return hds
     }
 
-    fun createOrgDataSource(organizationId: UUID): HikariDataSource {
-        return exConnMan.connect( PostgresDatabases.buildOrganizationDatabaseName( organizationId ) )
+    fun connectOrgDb(organizationId: UUID): HikariDataSource {
+        return exConnMan.connectOrgDb( organizationId )
     }
 
     fun getOrgFdw( organizationId: UUID ): String {

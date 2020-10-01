@@ -12,6 +12,7 @@ import com.openlattice.edm.events.AssociationTypeCreatedEvent
 import com.openlattice.edm.events.EntityTypeCreatedEvent
 import com.openlattice.edm.events.EntityTypeDeletedEvent
 import com.openlattice.edm.events.PropertyTypesAddedToEntityTypeEvent
+import com.openlattice.edm.events.PropertyTypesRemovedFromEntityTypeEvent
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.edm.type.EntityType
 import com.openlattice.hazelcast.HazelcastMap
@@ -196,8 +197,19 @@ final class DataTransporterService(
 //    }
 
     @Subscribe
+    fun handlePropertyTypesRemovedFromEntityTypeEventn(e: PropertyTypesRemovedFromEntityTypeEvent) {
+        this.transporterState.executeOnKey(e.entityType.id,
+                TransporterSynchronizeTableDefinitionEntryProcessor(removedProperties = e.removedPropertyTypes)
+                        .init(data)
+        )
+    }
+
+    @Subscribe
     fun handlePropertyTypesAddedToEntityTypeEvent(e: PropertyTypesAddedToEntityTypeEvent) {
-        this.transporterState.executeOnKey(e.entityType.id, TransporterSynchronizeTableDefinitionEntryProcessor(e.newPropertyTypes).init(data))
+        this.transporterState.executeOnKey(e.entityType.id,
+                TransporterSynchronizeTableDefinitionEntryProcessor(newProperties = e.newPropertyTypes)
+                        .init(data)
+        )
     }
 }
 

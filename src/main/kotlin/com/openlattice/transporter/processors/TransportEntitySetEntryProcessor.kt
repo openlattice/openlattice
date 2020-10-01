@@ -56,11 +56,11 @@ data class TransportEntitySetEntryProcessor(
                 }
             }
 
-            data.createOrgDataSource(organizationId).connection.use { conn ->
+            data.connectOrgDb(organizationId).connection.use { conn ->
                 conn.createStatement().use { stmt ->
                     stmt.executeUpdate(
                             data.importTablesFromForeignSchema(
-                                    TransporterDatastore.ENTERPRISE_FDW_SCHEMA,
+                                    TransporterDatastore.PUBLIC_SCHEMA,
                                     setOf(es.name),
                                     TransporterDatastore.ORG_VIEWS_SCHEMA,
                                     data.getOrgFdw( organizationId )

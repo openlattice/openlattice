@@ -14,7 +14,10 @@ import java.util.*
 /**
  * Synchronizes property table definitions for [newProperties]
  */
-data class TransporterSynchronizeTableDefinitionEntryProcessor(val newProperties: Collection<PropertyType>):
+data class TransporterSynchronizeTableDefinitionEntryProcessor(
+        val newProperties: Collection<PropertyType> = setOf(),
+        val removedProperties: Collection<PropertyType> = setOf()
+):
         AbstractRhizomeEntryProcessor<UUID, TransporterColumnSet, Void?>(),
         Offloadable,
         TransporterDependent<TransporterSynchronizeTableDefinitionEntryProcessor>
@@ -34,18 +37,20 @@ data class TransporterSynchronizeTableDefinitionEntryProcessor(val newProperties
     }
 
     private fun transport(entry: MutableMap.MutableEntry<UUID, TransporterColumnSet>) {
+        val toRemove = removedProperties.filter { entry.value.containsKey(it.id) }
         val newProps = newProperties.filter { !entry.value.containsKey(it.id) }
-        if (newProps.isEmpty()) {
+        if (newProps.isEmpty() && toRemove.isEmpty()) {
             return
         }
         /**
          * TODO: drop and create new view when columns added
          */
         val transporter = data.datastore()
-        val newColumns = entry.value.withProperties(newProps)
+        val removeCols = entry.value.withoutProperties(toRemove).values.map{ it.transporterColumn() }
+        val newColumns = entry.value.withAndWithoutProperties(newProps, toRemove)
         val table = tableDefinition(entry.key, newColumns.columns.values.map { it.transporterColumn() })
         transporter.connection.use { conn ->
-            transportTable(table, conn, logger)
+            transportTable(table, conn, logger, removeCols)
             entry.setValue(newColumns)
         }
         return

@@ -2,6 +2,7 @@ package com.openlattice.transporter
 
 import com.openlattice.ApiUtil
 import com.openlattice.IdConstants
+import com.openlattice.edm.EdmConstants
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.DST_ENTITY_KEY_ID
 import com.openlattice.postgres.PostgresColumn.DST_ENTITY_SET_ID
@@ -271,21 +272,30 @@ fun updateLastWriteForId(): String {
             " AND abs(${VERSION.name}) > ${transportTimestampColumn.name} "
 }
 
-fun addAllMissingColumnsQuery(table: PostgresTableDefinition): String =
-        "ALTER TABLE ${table.name} " + table.columns.joinToString(",") { c -> "ADD COLUMN IF NOT EXISTS ${c.sql()}" }
+fun addAllMissingColumnsQuery(table: PostgresTableDefinition, columns: Set<PostgresColumnDefinition>): String =
+        "ALTER TABLE ${table.name} " + columns.joinToString(",") { c -> "ADD COLUMN IF NOT EXISTS ${c.sql()}" }
+
+fun removeColumnsQuery(table: PostgresTableDefinition, columns: List<PostgresColumnDefinition>): String =
+        "ALTER TABLE ${table.name} " + columns.joinToString(",") { c -> "DROP COLUMN ${c.name}" }
 
 fun transportTable(
         table: PostgresTableDefinition,
         conn: Connection,
-        logger: Logger
+        logger: Logger,
+        removedColumns: List<PostgresColumnDefinition> = listOf()
 ){
     var lastSql = ""
     try {
         conn.createStatement().use { st ->
             lastSql = table.createTableQuery()
             st.execute(lastSql)
-            lastSql = addAllMissingColumnsQuery(table)
+            lastSql = addAllMissingColumnsQuery(table, table.columns)
             st.execute(lastSql)
+
+            if ( removedColumns.isNotEmpty() ){
+                lastSql = removeColumnsQuery(table, removedColumns)
+                st.execute(lastSql)
+            }
             table.createIndexQueries.forEach {
                 lastSql = it
                 st.execute(it)
@@ -319,7 +329,8 @@ fun createEntitySetView(
 
     return """
             CREATE VIEW $entitySetName AS 
-                SELECT $colsSql FROM $etTableName
+                SELECT  ${ApiUtil.dbQuote(EdmConstants.ID_FQN.toString())} as ${ID_VALUE.name}, 
+                    $colsSql FROM $etTableName
                 WHERE ${ENTITY_SET_ID.name} = '$entitySetId'
         """.trimIndent()
 }

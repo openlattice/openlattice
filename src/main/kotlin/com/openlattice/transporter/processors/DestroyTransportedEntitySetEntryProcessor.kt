@@ -28,7 +28,7 @@ class DestroyTransportedEntitySetEntryProcessor: AbstractRhizomeEntryProcessor<U
             }
         }
 
-        data.createOrgDataSource( es.organizationId ).use { hds ->
+        data.connectOrgDb( es.organizationId ).use { hds ->
             hds.connection.use { conn ->
                 conn.createStatement().use { stmt ->
                     stmt.executeUpdate( dropOrgViewTable( es.name ))

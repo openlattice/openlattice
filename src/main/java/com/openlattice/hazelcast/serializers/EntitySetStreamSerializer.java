@@ -22,7 +22,6 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.google.common.collect.Sets;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers;
@@ -62,7 +61,7 @@ public class EntitySetStreamSerializer implements TestableSelfRegisteringStreamS
             EntitySetFlagStreamSerializer.serialize( out, flag );
         }
 
-        StreamSerializers.serializeIntList( out, object.getPartitions() );
+        StreamSerializers.serializeIntListItems( out, object.getPartitions() );
 
         if ( object.getExpiration() != null ) {
             out.writeBoolean( true );
@@ -93,8 +92,7 @@ public class EntitySetStreamSerializer implements TestableSelfRegisteringStreamS
             flags.add( EntitySetFlagStreamSerializer.deserialize( in ) );
         }
 
-        LinkedHashSet<Integer> partitions = (LinkedHashSet<Integer>) StreamSerializers
-                .deserializeIntList( in, Sets.newLinkedHashSet() );
+        LinkedHashSet<Integer> partitions = StreamSerializers.deserializeIntListItems( in );
 
         DataExpiration expiration;
         boolean hasExpiration = in.readBoolean();

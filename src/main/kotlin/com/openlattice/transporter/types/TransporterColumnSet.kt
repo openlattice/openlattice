@@ -25,9 +25,27 @@ data class TransporterColumn(
 data class TransporterColumnSet(
         val columns: Map<UUID, TransporterColumn>
 ): Map<UUID, TransporterColumn> by columns {
+    fun withAndWithoutProperties(with: Collection<PropertyType>, without: Collection<PropertyType>): TransporterColumnSet {
+        val copy = columns.toMutableMap()
+        with.forEach { propertyType ->
+            copy[propertyType.id] = TransporterColumn(propertyType)
+        }
+        without.forEach{ propertyType ->
+            copy.remove(propertyType.id)
+        }
+        return TransporterColumnSet(copy)
+    }
+    fun withoutProperties(properties: Collection<PropertyType>): TransporterColumnSet {
+        val copy = columns.toMutableMap()
+        properties.forEach{ propertyType ->
+            copy.remove(propertyType.id)
+        }
+        return TransporterColumnSet(copy)
+    }
+
     fun withProperties(properties: Collection<PropertyType>): TransporterColumnSet {
         val copy = columns.toMutableMap()
-        properties.forEach {propertyType ->
+        properties.forEach { propertyType ->
             copy[propertyType.id] = TransporterColumn(propertyType)
         }
         return TransporterColumnSet(copy)
