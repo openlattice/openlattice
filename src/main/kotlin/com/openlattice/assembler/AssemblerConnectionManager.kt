@@ -883,7 +883,7 @@ internal fun dropAllConnectionsToDatabaseSql(dbName: String): String {
     """.trimIndent()
 }
 
-internal val renameDatabaseSql = "rename_database(?, ?)"
+internal val renameDatabaseSql = "SELECT rename_database(?, ?)"
 
 internal val createRenameDatabaseFunctionSql = """
     CREATE OR REPLACE FUNCTION rename_database(curr_name text, new_name text) RETURNS VOID AS $$
