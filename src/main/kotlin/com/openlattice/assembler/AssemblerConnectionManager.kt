@@ -736,7 +736,12 @@ class AssemblerConnectionManager(
         target.connection.use { conn ->
             conn.createStatement().use { stmt ->
                 stmt.execute(dropAllConnectionsToDatabaseSql(currentDatabaseName))
-                stmt.execute(renameDatabaseSql(currentDatabaseName, newDatabaseName))
+            }
+
+            conn.prepareStatement(renameDatabaseSql).use { ps ->
+                ps.setString(1, currentDatabaseName)
+                ps.setString(2, newDatabaseName)
+                ps.execute()
             }
         }
     }
@@ -757,6 +762,14 @@ class AssemblerConnectionManager(
         } catch (e: Exception) {
             logger.error("Unable to look up OID for database {}: ", dbName, e)
             return oid
+        }
+    }
+
+    fun createRenameDatabaseFunctionIfNotExists() {
+        target.connection.use { conn ->
+            conn.createStatement().use { stmt ->
+                stmt.execute(createRenameDatabaseFunctionSql)
+            }
         }
     }
 }
@@ -870,9 +883,15 @@ internal fun dropAllConnectionsToDatabaseSql(dbName: String): String {
     """.trimIndent()
 }
 
-internal fun renameDatabaseSql(currentDatabaseName: String, newDatabaseName: String): String {
-    return "ALTER DATABASE ${quote(currentDatabaseName)} RENAME TO ${quote(newDatabaseName)}"
-}
+internal val renameDatabaseSql = "rename_database(?, ?)"
+
+internal val createRenameDatabaseFunctionSql = """
+    CREATE OR REPLACE FUNCTION rename_database(curr_name text, new_name text) RETURNS VOID AS $$
+      BEGIN
+        EXECUTE 'ALTER DATABASE ' || quote_ident(curr_name) || ' RENAME TO ' || quote_ident(new_name);
+      END;
+    $$ LANGUAGE plpgsql
+""".trimIndent()
 
 internal val databaseOidSql = "SELECT oid FROM pg_database WHERE datname = ?"
 

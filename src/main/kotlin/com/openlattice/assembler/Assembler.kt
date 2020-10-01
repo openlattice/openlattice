@@ -485,6 +485,7 @@ class Assembler(
         }
 
         override fun initialize(dependencies: Assembler) {
+            dependencies.acm.createRenameDatabaseFunctionIfNotExists()
             val currentOrganizations =
                     dependencies
                             .securableObjectTypes.keySet(
