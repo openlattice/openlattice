@@ -552,17 +552,12 @@ class HazelcastOrganizationService(
         PostgresDatabases.assertDatabaseNameIsValid(newDatabaseName)
         val currentDatabaseName = getOrganizationDatabaseName(organizationId)
 
-        executeDatabaseNameUpdate(organizationId, newDatabaseName)
-
         try {
             assembler.renameOrganizationDatabase(currentDatabaseName, newDatabaseName)
+            executeDatabaseNameUpdate(organizationId, newDatabaseName)
         } catch (e: Exception) {
-            logger.error("An error occurred while trying to rename org {} database name to {}",
-                    organizationId,
-                    newDatabaseName,
-                    e)
-            executeDatabaseNameUpdate(organizationId, currentDatabaseName)
-            throw(e)
+            throw IllegalStateException("An error occurred while trying to rename org $organizationId database " +
+                    "name to $newDatabaseName", e)
         }
     }
 
