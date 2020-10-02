@@ -136,12 +136,16 @@ class CollectionsController : CollectionsApi, AuthorizingComponent {
     @RequestMapping(path = [ENTITY_TYPE_PATH + ENTITY_TYPE_COLLECTION_ID_PATH], method = [RequestMethod.DELETE])
     override fun deleteEntityTypeCollection(@PathVariable(ENTITY_TYPE_COLLECTION_ID) entityTypeCollectionId: UUID) {
         ensureAdminAccess()
+        collectionsManager.ensureEntityTypeCollectionExists(entityTypeCollectionId)
+
         collectionsManager.deleteEntityTypeCollection(entityTypeCollectionId)
     }
 
     @RequestMapping(path = [ENTITY_SET_PATH + ENTITY_SET_COLLECTION_ID_PATH], method = [RequestMethod.DELETE])
     override fun deleteEntitySetCollection(@PathVariable(ENTITY_SET_COLLECTION_ID) entitySetCollectionId: UUID) {
         ensureOwnerAccess(AclKey(entitySetCollectionId))
+        collectionsManager.ensureEntitySetCollectionExists(entitySetCollectionId)
+
         collectionsManager.deleteEntitySetCollection(entitySetCollectionId)
     }
 
