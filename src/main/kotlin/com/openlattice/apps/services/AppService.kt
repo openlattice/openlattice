@@ -88,6 +88,8 @@ class AppService(
     }
 
     fun deleteApp(appId: UUID) {
+        Preconditions.checkState(apps.containsKey(appId), "Cannot delete app [$appId] because it does not exist.")
+
         appConfigs.keySet(Predicates.equal(AppConfigMapstore.APP_ID, appId))
                 .forEach { (appId1, organizationId) -> uninstallApp(appId1, organizationId) }
         apps.delete(appId)
