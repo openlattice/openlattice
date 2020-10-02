@@ -125,6 +125,7 @@ public class AppController implements AppApi, AuthorizingComponent {
     @ResponseStatus( HttpStatus.OK )
     public void deleteApp( @PathVariable( ID ) UUID id ) {
         ensureAdminAccess();
+        appService.ensureAppExists( id );
         appService.deleteApp( id );
     }
 
