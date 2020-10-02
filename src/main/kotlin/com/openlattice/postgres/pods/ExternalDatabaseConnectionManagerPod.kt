@@ -1,7 +1,7 @@
 package com.openlattice.postgres.pods
 
+import com.hazelcast.core.HazelcastInstance
 import com.openlattice.assembler.AssemblerConfiguration
-import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
 import com.openlattice.transporter.pods.TransporterPod
 import org.slf4j.LoggerFactory
@@ -19,11 +19,11 @@ class ExternalDatabaseConnectionManagerPod {
     private lateinit var assemblerConfiguration: AssemblerConfiguration
 
     @Inject
-    private lateinit var organizationService: HazelcastOrganizationService
+    private lateinit var hazelcastInstance: HazelcastInstance
 
     @Bean
     fun externalDatabaseConnectionManager(): ExternalDatabaseConnectionManager {
         LoggerFactory.getLogger(TransporterPod::class.java).info("Constructing ExternalDatabaseConnectionManager")
-        return ExternalDatabaseConnectionManager(assemblerConfiguration, organizationService)
+        return ExternalDatabaseConnectionManager(assemblerConfiguration, hazelcastInstance)
     }
 }

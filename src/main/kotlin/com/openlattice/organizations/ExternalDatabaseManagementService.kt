@@ -1,6 +1,7 @@
 package com.openlattice.organizations
 
 import com.google.common.base.Preconditions.checkState
+import com.google.common.collect.Sets
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
@@ -156,7 +157,10 @@ class ExternalDatabaseManagementService(
                 GetMembersOfOrganizationEntryProcessor()
         ).thenApplyAsync { members ->
             securePrincipalsManager.getSecurablePrincipals( members ).associate { member ->
-                quote(buildPostgresUsername(member)) to securePrincipalsManager.getAllPrincipals( member )
+                val prins = securePrincipalsManager.getAllUnderlyingPrincipals( member )
+                val asSet = Sets.newLinkedHashSetWithExpectedSize<Principal>(prins.size)
+                asSet.addAll(prins)
+                quote(dbCredentialService.getDbUsername(member)) to asSet
             }
         }
 
@@ -175,10 +179,7 @@ class ExternalDatabaseManagementService(
 
         val userToPermissionsCompletion = userToPrincipalsCompletion.thenCombine( accessCheckCompletion ) { userToPrincipals, accessChecks ->
             userToPrincipals.mapValues { (_, principals) ->
-                val asSet = principals.mapTo(mutableSetOf()) {
-                    it.principal
-                }
-                authorizationManager.accessChecksForPrincipals(accessChecks, asSet).filter {
+                authorizationManager.accessChecksForPrincipals(accessChecks, principals).filter {
                     it.permissions[Permission.READ]!!
                 }.map {
                     it.aclKey[1].toString()
@@ -574,7 +575,7 @@ class ExternalDatabaseManagementService(
     private fun getDBUser(principalId: String): String {
         val securePrincipal = securePrincipalsManager.getPrincipal(principalId)
         checkState(securePrincipal.principalType == PrincipalType.USER, "Principal must be of type USER")
-        return dbCredentialService.getDbUsername(buildPostgresUsername(securePrincipal))
+        return dbCredentialService.getDbUsername(securePrincipal)
     }
 
     private fun areValidPermissions(permissions: EnumSet<Permission>): Boolean {

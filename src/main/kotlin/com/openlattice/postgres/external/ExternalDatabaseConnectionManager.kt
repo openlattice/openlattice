@@ -31,15 +31,6 @@ class ExternalDatabaseConnectionManager(
             .expireAfterAccess(1, TimeUnit.HOURS)
             .build(cacheLoader())
 
-    @Deprecated("unused, needs update to use getOrgDbName")
-    fun createOrgDataSource( organizationId: UUID ): HikariDataSource {
-        return createDataSource(
-                buildDefaultOrganizationDatabaseName(organizationId),
-                assemblerConfiguration.server.clone() as Properties,
-                assemblerConfiguration.ssl
-        )
-    }
-
     fun createDataSource(dbName: String, config: Properties, useSsl: Boolean): HikariDataSource {
         val jdbcUrl = config.getProperty("jdbcUrl")
                 ?: throw Exception("No JDBC URL specified in configuration $config")

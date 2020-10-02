@@ -25,6 +25,7 @@ import com.google.common.base.MoreObjects
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.map.IMap
 import com.openlattice.assembler.ORGANIZATION_PREFIX
+import com.openlattice.assembler.PostgresRoles
 import com.openlattice.directory.MaterializedViewAccount
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.ids.HazelcastLongIdService
@@ -67,9 +68,17 @@ class DbCredentialService(hazelcastInstance: HazelcastInstance, val longIdServic
 
     private val dbCreds: IMap<String, MaterializedViewAccount> = HazelcastMap.DB_CREDS.getMap(hazelcastInstance)
 
+    fun getDbCredential(user: SecurablePrincipal): MaterializedViewAccount? = dbCreds[PostgresRoles.buildPostgresUsername(user)]
+
     fun getDbCredential(userId: String): MaterializedViewAccount? = dbCreds[userId]
 
+    fun getDbUsername(user: SecurablePrincipal): String = dbCreds.getValue(PostgresRoles.buildPostgresUsername(user)).username
+
     fun getDbUsername(userId: String): String = dbCreds.getValue(userId).username
+
+    fun getOrCreateUserCredentials(user: SecurablePrincipal): MaterializedViewAccount {
+        return getOrCreateUserCredentials(PostgresRoles.buildPostgresUsername(user))
+    }
 
     fun getOrCreateUserCredentials(userId: String): MaterializedViewAccount {
         return if (dbCreds.containsKey(userId)) {
@@ -92,6 +101,10 @@ class DbCredentialService(hazelcastInstance: HazelcastInstance, val longIdServic
             logger.info("Generated credentials for user id {} with username {}", userId, username)
             return MoreObjects.firstNonNull(dbCreds.putIfAbsent(userId, account), account)
         }
+    }
+
+    fun deleteUserCredential(user: SecurablePrincipal) {
+        dbCreds.delete(PostgresRoles.buildPostgresUsername(user))
     }
 
     fun deleteUserCredential(userId: String) {

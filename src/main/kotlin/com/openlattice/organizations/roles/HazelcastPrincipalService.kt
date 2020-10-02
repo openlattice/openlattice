@@ -30,6 +30,7 @@ import com.openlattice.authorization.*
 import com.openlattice.authorization.mapstores.PrincipalMapstore
 import com.openlattice.datastore.util.Util
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.hazelcast.processors.GetPrincipalFromSecurablePrincipalsEntryProcessor
 import com.openlattice.organization.roles.Role
 import com.openlattice.organizations.processors.NestedPrincipalMerger
 import com.openlattice.organizations.processors.NestedPrincipalRemover
@@ -251,6 +252,20 @@ class HazelcastPrincipalService(
             roles.addAll(nextLayer)
         }
         return principals.getAll(roles).values
+    }
+
+    override fun getAllUnderlyingPrincipals(sp: SecurablePrincipal): Collection<Principal> {
+        val roles = principalTrees[sp.aclKey] ?: return listOf()
+        var nextLayer: Set<AclKey> = roles
+
+        while (nextLayer.isNotEmpty()) {
+            nextLayer = principalTrees.getAll(nextLayer)
+                    .values
+                    .flatten()
+                    .toSet()
+            roles.addAll(nextLayer)
+        }
+        return principals.executeOnKeys(roles, GetPrincipalFromSecurablePrincipalsEntryProcessor()).values
     }
 
     override fun getAuthorizedPrincipalsOnSecurableObject(key: AclKey, permissions: EnumSet<Permission>): Set<Principal> {

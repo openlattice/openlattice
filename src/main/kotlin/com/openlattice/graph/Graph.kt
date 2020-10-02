@@ -116,8 +116,7 @@ class Graph(
         val partitionsInfoByEntitySet = partitionManager.getPartitionsByEntitySetId(
                 keys.flatMap { listOf(it.src, it.dst, it.edge) }
                         .map { it.entitySetId }.toSet()
-        )
-                .mapValues { it.value.toList() }
+        ).mapValues { it.value.toList() }
 
         hds.connection.use { connection ->
             val ps = connection.prepareStatement(EDGES_UPSERT_SQL)

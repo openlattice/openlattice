@@ -8,7 +8,6 @@ import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.openlattice.assembler.Assembler
 import com.openlattice.assembler.PostgresDatabases
-import com.openlattice.assembler.PostgresDatabases.Companion.buildDefaultOrganizationDatabaseName
 import com.openlattice.authorization.*
 import com.openlattice.authorization.mapstores.PrincipalMapstore
 import com.openlattice.data.storage.partitions.PartitionManager
@@ -140,12 +139,8 @@ class HazelcastOrganizationService(
         initializeOrganizationPrincipals(principal, organization)
         initializeOrganization(organization)
 
-
         // set up organization database
-        val orgDatabase = assembler.createOrganizationAndReturnOid(
-                organization,
-                buildDefaultOrganizationDatabaseName(organization.id)
-        )
+        val orgDatabase = assembler.createOrganizationAndReturnOid( organization.id )
         organizationDatabases.set(organization.id, orgDatabase)
 
         if (membersToAdd.isNotEmpty()) {

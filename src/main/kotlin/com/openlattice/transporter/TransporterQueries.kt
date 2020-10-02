@@ -329,7 +329,7 @@ fun createEntitySetView(
 
     return """
             CREATE VIEW $entitySetName AS 
-                SELECT  ${ApiUtil.dbQuote(EdmConstants.ID_FQN.toString())} as ${ID_VALUE.name}, 
+                SELECT ${ID_VALUE.name} as ${ApiUtil.dbQuote(EdmConstants.ID_FQN.toString())}, 
                     $colsSql FROM $etTableName
                 WHERE ${ENTITY_SET_ID.name} = '$entitySetId'
         """.trimIndent()

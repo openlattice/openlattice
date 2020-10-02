@@ -52,12 +52,12 @@ import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organization.OrganizationEntitySetFlag
 import com.openlattice.organization.OrganizationIntegrationAccount
-import com.openlattice.organizations.Organization
 import com.openlattice.organizations.OrganizationDatabase
 import com.openlattice.organizations.events.MembersAddedToOrganizationEvent
 import com.openlattice.organizations.events.MembersRemovedFromOrganizationEvent
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.organizations.tasks.OrganizationsInitializationTask
+import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
 import com.openlattice.postgres.mapstores.MaterializedEntitySetMapStore
 import com.openlattice.postgres.mapstores.OrganizationAssemblyMapstore
 import com.openlattice.postgres.mapstores.OrganizationAssemblyMapstore.INITIALIZED_INDEX
@@ -246,8 +246,10 @@ class Assembler(
         )
     }
 
-    fun createOrganizationAndReturnOid(organization: Organization, dbName: String): OrganizationDatabase {
-        createOrganization(organization.id, dbName)
+    fun createOrganizationAndReturnOid(organizationId: UUID): OrganizationDatabase {
+        val dbName = ExternalDatabaseConnectionManager.buildDefaultOrganizationDatabaseName(organizationId)
+        createOrganization(organizationId, dbName )
+
         val oid = acm.getDatabaseOid(dbName)
         return OrganizationDatabase(oid, dbName)
     }
@@ -401,7 +403,7 @@ class Assembler(
      */
     private fun isEntitySetMaterialized(entitySetId: UUID): Boolean {
         return materializedEntitySets
-                .keySet(entitySetIdPredicate(entitySetId) as Predicate<EntitySetAssemblyKey, MaterializedEntitySet>)
+                .keySet(entitySetIdPredicate(entitySetId))
                 .isNotEmpty()
     }
 
@@ -409,7 +411,7 @@ class Assembler(
      * Returns true, if the entity set is materialized in the organization
      */
     private fun isEntitySetMaterialized(entitySetAssemblyKey: EntitySetAssemblyKey): Boolean {
-        return materializedEntitySets.keySet(entitySetAssemblyKeyPredicate(entitySetAssemblyKey) as Predicate<EntitySetAssemblyKey, MaterializedEntitySet>).isNotEmpty()
+        return materializedEntitySets.keySet(entitySetAssemblyKeyPredicate(entitySetAssemblyKey)).isNotEmpty()
     }
 
     private fun ensureEntitySetMaterialized(entitySetAssemblyKey: EntitySetAssemblyKey) {
@@ -429,7 +431,7 @@ class Assembler(
         }
     }
 
-    private fun entitySetIdPredicate(entitySetId: UUID): Predicate<*, *> {
+    private fun entitySetIdPredicate(entitySetId: UUID): Predicate<EntitySetAssemblyKey, MaterializedEntitySet> {
         return Predicates.equal<EntitySetAssemblyKey, MaterializedEntitySet>(
                 MaterializedEntitySetMapStore.ENTITY_SET_ID_INDEX,
                 entitySetId
@@ -452,7 +454,7 @@ class Assembler(
         )
     }
 
-    private fun entitySetAssemblyKeyPredicate(entitySetAssemblyKey: EntitySetAssemblyKey): Predicate<*, *> {
+    private fun entitySetAssemblyKeyPredicate(entitySetAssemblyKey: EntitySetAssemblyKey): Predicate<EntitySetAssemblyKey, MaterializedEntitySet> {
         return Predicates.equal<EntitySetAssemblyKey, MaterializedEntitySet>(
                 QueryConstants.KEY_ATTRIBUTE_NAME.value(),
                 entitySetAssemblyKey
@@ -485,7 +487,6 @@ class Assembler(
         }
     }
 
-
     class OrganizationAssembliesInitializerTask : HazelcastInitializationTask<Assembler> {
         override fun getInitialDelay(): Long {
             return 0
@@ -493,16 +494,9 @@ class Assembler(
 
         override fun initialize(dependencies: Assembler) {
             dependencies.acm.createRenameDatabaseFunctionIfNotExists()
-            val currentOrganizations =
-                    dependencies
-                            .securableObjectTypes.keySet(
-                                    Predicates.equal(
-                                            "this"
-                                            , SecurableObjectType.Organization
-                                    )
-                            )
-                            .map { it.first() }
-                            .toSet()
+            val currentOrganizations = dependencies.securableObjectTypes.keySet(
+                    Predicates.equal("this", SecurableObjectType.Organization)
+            ).map { it.first() }.toSet()
 
             val initializedOrganizations = dependencies.assemblies.keySet(Predicates.equal(INITIALIZED_INDEX, true))
 
@@ -516,7 +510,7 @@ class Assembler(
                     )
                 } else {
                     logger.info("Initializing database for organization {}", organizationId)
-                    val dbName = dependencies.acm.getOrganizationDatabaseName(organizationId)
+                    val dbName = ExternalDatabaseConnectionManager.buildDefaultOrganizationDatabaseName(organizationId)
                     dependencies.createOrganization(organizationId, dbName)
                 }
             }

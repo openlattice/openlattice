@@ -102,6 +102,8 @@ public interface SecurePrincipalsManager {
 
     Collection<SecurablePrincipal> getAllPrincipals( SecurablePrincipal sp );
 
+    Collection<Principal> getAllUnderlyingPrincipals( SecurablePrincipal sp );
+
     /**
      * Returns all Principals, which have all the specified permissions on the securable object
      * @param key The securable object
