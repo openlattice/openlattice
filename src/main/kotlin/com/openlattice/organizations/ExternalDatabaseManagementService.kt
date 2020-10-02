@@ -8,7 +8,6 @@ import com.hazelcast.query.Predicates
 import com.hazelcast.query.QueryConstants
 import com.openlattice.assembler.AssemblerConnectionManager.Companion.MATERIALIZED_VIEWS_SCHEMA
 import com.openlattice.assembler.AssemblerConnectionManager.Companion.STAGING_SCHEMA
-import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresUsername
 import com.openlattice.assembler.PostgresRoles.Companion.getSecurablePrincipalIdFromUserName
 import com.openlattice.assembler.PostgresRoles.Companion.isPostgresUserName
 import com.openlattice.authorization.*

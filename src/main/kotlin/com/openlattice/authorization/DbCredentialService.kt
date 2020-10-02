@@ -25,7 +25,6 @@ import com.google.common.base.MoreObjects
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.map.IMap
 import com.openlattice.assembler.ORGANIZATION_PREFIX
-import com.openlattice.assembler.PostgresRoles
 import com.openlattice.directory.MaterializedViewAccount
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.ids.HazelcastLongIdService
@@ -64,20 +63,24 @@ class DbCredentialService(hazelcastInstance: HazelcastInstance, val longIdServic
             }
             return String(cred)
         }
+
+        private fun buildPostgresUsername(securablePrincipal: SecurablePrincipal): String {
+            return "ol-internal|user|${securablePrincipal.id}"
+        }
     }
 
     private val dbCreds: IMap<String, MaterializedViewAccount> = HazelcastMap.DB_CREDS.getMap(hazelcastInstance)
 
-    fun getDbCredential(user: SecurablePrincipal): MaterializedViewAccount? = dbCreds[PostgresRoles.buildPostgresUsername(user)]
+    fun getDbCredential(user: SecurablePrincipal): MaterializedViewAccount? = dbCreds[buildPostgresUsername(user)]
 
     fun getDbCredential(userId: String): MaterializedViewAccount? = dbCreds[userId]
 
-    fun getDbUsername(user: SecurablePrincipal): String = dbCreds.getValue(PostgresRoles.buildPostgresUsername(user)).username
+    fun getDbUsername(user: SecurablePrincipal): String = dbCreds.getValue(buildPostgresUsername(user)).username
 
     fun getDbUsername(userId: String): String = dbCreds.getValue(userId).username
 
     fun getOrCreateUserCredentials(user: SecurablePrincipal): MaterializedViewAccount {
-        return getOrCreateUserCredentials(PostgresRoles.buildPostgresUsername(user))
+        return getOrCreateUserCredentials(buildPostgresUsername(user))
     }
 
     fun getOrCreateUserCredentials(userId: String): MaterializedViewAccount {
@@ -104,7 +107,7 @@ class DbCredentialService(hazelcastInstance: HazelcastInstance, val longIdServic
     }
 
     fun deleteUserCredential(user: SecurablePrincipal) {
-        dbCreds.delete(PostgresRoles.buildPostgresUsername(user))
+        dbCreds.delete(buildPostgresUsername(user))
     }
 
     fun deleteUserCredential(userId: String) {

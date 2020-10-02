@@ -22,7 +22,6 @@
 package com.openlattice.assembler
 
 import com.google.common.base.Preconditions.checkArgument
-import java.util.*
 
 /**
  *
@@ -33,12 +32,6 @@ class PostgresDatabases private constructor() {
         private const val MIN_LENGTH = 8
         private const val MAX_LENGTH = 50
         private val DB_NAME_CHARS = Regex("[a-zA-Z0-9_\\-]*")
-
-        @JvmStatic
-        @Deprecated("use ExternalDatabaseConnectionManager.buildDefaultOrganizationDatabaseName")
-        fun buildDefaultOrganizationDatabaseName(organizationId: UUID): String {
-            return "org_${organizationId.toString().replace("-","").toLowerCase()}"
-        }
 
         @JvmStatic
         fun assertDatabaseNameIsValid(name: String) {
