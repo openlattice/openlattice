@@ -13,6 +13,7 @@ Getting started
 
         git clone ssh://git@github.com/openlattice/openlattice.git --recurse-submodules
 
+* Install gradle (`brew install gradle`)
 * Install and start Postgresql (`brew install postgres` and `brew services start postgres`)
 * Install and start ElasticSearch 5.x (`brew install elasticsearch` and `elasticsearch -E cluster.name=openlattice` on OS X)
 
@@ -57,7 +58,4 @@ If a new subproject needs to be added:
 * edit **settings.gradle** to add it as a gradle subproject
 * create a new branch using `git checkout -b feature/add-<subproject>`
 * run `git submodule add ssh://git@github.com/openlattice/<subproject>`
-* commit, push, and submit a pull request. `git commit -a -m "Added subproject" && git push --set-upstream origin feature/test` 
-
-
-git ftw
+* commit, push, and submit a pull request. `git commit -a -m "Added subproject" && git push --set-upstream origin feature/test`

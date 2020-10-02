@@ -4,6 +4,12 @@
 [submodule "api"]
 	path = api
 	url = git@github.com:openlattice/api.git
+[submodule "chronicle-api"]
+	path = chronicle-api
+	url = git@github.com:openlattice/chronicle-api.git
+[submodule "chronicle-server"]
+	path = chronicle-server
+	url = git@github.com:openlattice/chronicle-server.git
 [submodule "conductor-client"]
 	path = conductor-client
 	url = git@github.com:openlattice/conductor-client.git
@@ -55,6 +61,3 @@
 [submodule "linker"]
 	path = linker
 	url = git@github.com:openlattice/linker.git
-[submodule "analyzer"]
-	path = analyzer
-	url = git@github.com:openlattice/analyzer.git
