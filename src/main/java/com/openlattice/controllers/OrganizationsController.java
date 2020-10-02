@@ -643,7 +643,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     }
 
     @Timed
-    @PostMapping( value = PROMOTE + ID_PATH, consumes = MediaType.APPLICATION_JSON_VALUE )
+    @PostMapping( value = PROMOTE + ID_PATH, consumes = MediaType.TEXT_PLAIN_VALUE )
     @Override
     public Void promoteStagingTable( @PathVariable( ID ) UUID organizationId, @RequestBody String tableName ) {
         ensureOwner( organizationId );
@@ -659,7 +659,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     }
 
     @Override
-    @PatchMapping( value = ID_PATH + DATABASE, consumes = MediaType.APPLICATION_JSON_VALUE )
+    @PatchMapping( value = ID_PATH + DATABASE, consumes = { MediaType.TEXT_PLAIN_VALUE, MediaType.APPLICATION_FORM_URLENCODED_VALUE } )
     public Void renameOrganizationDatabase(
             @PathVariable( ID ) UUID organizationId,
             @RequestBody String newDatabaseName ) {
