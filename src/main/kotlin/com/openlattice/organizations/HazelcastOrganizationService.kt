@@ -1,6 +1,7 @@
 package com.openlattice.organizations
 
 import com.codahale.metrics.annotation.Timed
+import com.google.common.base.Preconditions
 import com.google.common.base.Preconditions.checkState
 import com.google.common.collect.ImmutableSet
 import com.google.common.collect.Iterables
@@ -199,6 +200,13 @@ class HazelcastOrganizationService(
                             org.apps
                     )
                 }.asIterable()
+    }
+
+    fun ensureOrganizationExists(id: UUID) {
+        checkState(
+                organizations.containsKey(id),
+                "Cannot delete organization [$id] because it does not exist."
+        )
     }
 
     fun destroyOrganization(organizationId: UUID) {
