@@ -23,6 +23,7 @@ package com.openlattice.linking.pods;
 import com.codahale.metrics.MetricRegistry;
 import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.geekbeast.hazelcast.HazelcastClientProvider;
 import com.google.common.eventbus.EventBus;
 import com.hazelcast.core.HazelcastInstance;
 import com.openlattice.assembler.Assembler;
@@ -42,6 +43,7 @@ import com.openlattice.edm.properties.PostgresTypeManager;
 import com.openlattice.edm.schemas.SchemaQueryService;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
 import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService;
+import com.openlattice.ids.HazelcastLongIdService;
 import com.openlattice.linking.LinkingConfiguration;
 import com.openlattice.linking.LinkingLogService;
 import com.openlattice.linking.Matcher;
@@ -97,6 +99,9 @@ public class LinkerServicesPod {
     private AssemblerConfiguration assemblerConfiguration;
 
     @Inject
+    private HazelcastClientProvider hazelcastClientProvider;
+
+    @Inject
     private MetricRegistry metricRegistry;
 
     @Inject
@@ -118,8 +123,13 @@ public class LinkerServicesPod {
     }
 
     @Bean
+    public HazelcastLongIdService longIdService() {
+        return new HazelcastLongIdService( hazelcastClientProvider );
+    }
+
+    @Bean
     public DbCredentialService dbcs() {
-        return new DbCredentialService( hazelcastInstance );
+        return new DbCredentialService( hazelcastInstance, longIdService() );
     }
 
     @Bean
