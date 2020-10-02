@@ -70,10 +70,6 @@ class AssemblyAnalyzationController : AssemblyAnalyzationApi, AuthorizingCompone
     override fun getSimpleAssemblyAggregates(
             @RequestBody assemblyAggregationFilter: AssemblyAggregationFilter
     ): Iterable<Map<String, Any?>> {
-        val account = dbCredService.getOrCreateUserCredentials(
-                PostgresRoles.buildPostgresUsername(Principals.getCurrentSecurablePrincipal())
-        )
-
         val srcEntitySetName = entitySetManager.getEntitySet(assemblyAggregationFilter.srcEntitySetId)!!.name
         val edgeEntitySetName = entitySetManager.getEntitySet(assemblyAggregationFilter.edgeEntitySetId)!!.name
         val dstEntitySetName = entitySetManager.getEntitySet(assemblyAggregationFilter.dstEntitySetId)!!.name
