@@ -205,7 +205,7 @@ class HazelcastOrganizationService(
     fun ensureOrganizationExists(id: UUID) {
         checkState(
                 organizations.containsKey(id),
-                "Cannot delete organization [$id] because it does not exist."
+                "Organization [$id] does not exist."
         )
     }
 

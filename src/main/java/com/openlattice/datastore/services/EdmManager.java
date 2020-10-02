@@ -179,4 +179,8 @@ public interface EdmManager {
     Map<UUID, EntityTypePropertyMetadata> getAllEntityTypePropertyMetadata( UUID entityTypeId );
 
     Set<UUID> getAllLinkingEntitySetIdsForEntitySet( UUID entitySetId );
+
+    void ensureEntityTypeExists( UUID entityTypeId );
+
+    void ensurePropertyTypeExists( UUID propertyTypeId );
 }

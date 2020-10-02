@@ -97,7 +97,7 @@ class AppService(
     }
 
     fun ensureAppExists(id: UUID) {
-        Preconditions.checkState(apps.containsKey(id), "Cannot delete app [$id] because it does not exist.")
+        Preconditions.checkState(apps.containsKey(id), "App [$id] does not exist.")
     }
 
     fun getApp(appId: UUID): App {
