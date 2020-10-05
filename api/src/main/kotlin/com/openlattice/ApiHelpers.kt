@@ -1,5 +1,6 @@
 package com.openlattice
 
+import com.google.common.base.Charsets
 import com.google.common.base.Preconditions
 import java.nio.ByteBuffer
 import java.util.*
@@ -23,14 +24,19 @@ class ApiHelpers {
                     encoder.encodeToString(sorted.array())
                 }
             }.joinToString { joined ->
-                encoder.encodeToString(ApiUtil.toUtf8Bytes(joined))
+                encoder.encodeToString(ApiHelpers.toUtf8Bytes(joined))
             }
             Preconditions.checkArgument(entityId.isNotEmpty(), "Entity ids cannot be empty strings")
             return entityId
         }
 
         @JvmStatic
-        fun dbQuote(s: String): String? {
+        fun toUtf8Bytes(s: String): ByteArray {
+            return s.toByteArray(Charsets.UTF_8)
+        }
+
+        @JvmStatic
+        fun dbQuote(s: String): String {
             return "\"$s\""
         }
 

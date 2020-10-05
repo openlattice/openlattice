@@ -20,17 +20,22 @@ package com.openlattice;
 
 import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
-import java.util.*;
+import java.util.Base64;
 import java.util.Base64.Encoder;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+@Deprecated( since = "Use ApiHelpers.kt instead")
 public class ApiUtil {
     private static final Encoder encoder = Base64.getEncoder();
     private static final Logger  logger  = LoggerFactory.getLogger( ApiUtil.class );
@@ -48,15 +53,11 @@ public class ApiUtil {
         String entityId = keys.map( entityDetails::get )
                 .filter( Objects::nonNull )
                 .map( ApiUtil::joinObjectsAsString )
-                .map( ApiUtil::toUtf8Bytes )
+                .map( ApiHelpers::toUtf8Bytes )
                 .map( encoder::encodeToString )
                 .collect( Collectors.joining( "," ) );
         Preconditions.checkArgument( entityId.length() > 0, "Entity ids cannot be empty strings" );
         return entityId;
-    }
-
-    public static String dbQuote( String s ) {
-        return "\"" + s + "\"";
     }
 
     private static String joinObjectsAsString( Set<Object> s ) {
@@ -71,7 +72,7 @@ public class ApiUtil {
 
     protected static byte[] toBytes( Object o ) {
         if ( o instanceof String ) {
-            return toUtf8Bytes( (String) o );
+            return ApiHelpers.toUtf8Bytes( (String) o );
         }
         try {
             return ObjectMappers.getJsonMapper().writeValueAsBytes( o );
@@ -79,9 +80,5 @@ public class ApiUtil {
             logger.error( "Unable to serialize object for building entity id", e );
             return new byte[ 0 ];
         }
-    }
-
-    protected static byte[] toUtf8Bytes( String s ) {
-        return s.getBytes( Charsets.UTF_8 );
     }
 }
