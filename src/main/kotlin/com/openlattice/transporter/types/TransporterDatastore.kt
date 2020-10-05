@@ -2,11 +2,16 @@ package com.openlattice.transporter.types
 
 import com.geekbeast.configuration.postgres.PostgresConfiguration
 import com.kryptnostic.rhizome.configuration.RhizomeConfiguration
-import com.openlattice.ApiUtil
+import com.openlattice.ApiHelpers
 import com.openlattice.assembler.AssemblerConfiguration
 import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
+import com.openlattice.transporter.createEntitySetView
+import com.openlattice.transporter.destroyEntitySetViewIfExists
+import com.openlattice.transporter.dropOrgViewTable
+import com.openlattice.transporter.tableName
 import com.zaxxer.hikari.HikariDataSource
+import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.sql.Connection
@@ -205,7 +210,72 @@ class TransporterDatastore(
     }
 
     fun getOrgFdw( organizationId: UUID ): String {
-        return ApiUtil.dbQuote("fdw_$organizationId")
+        return ApiHelpers.dbQuote("fdw_$organizationId")
     }
 
+    fun destroyTransportedEntitySetFromOrg( organizationId: UUID, entitySetName: String ) {
+        connectOrgDb( organizationId ).use { hds ->
+            hds.connection.use { conn ->
+                conn.createStatement().use { stmt ->
+                    stmt.executeUpdate( dropOrgViewTable( entitySetName ))
+                }
+            }
+        }
+    }
+
+    fun destroyEntitySetViewFromTransporter( entitySetName: String ) {
+        datastore().connection.use { conn ->
+            conn.createStatement().use { stmt ->
+                stmt.executeUpdate( destroyEntitySetViewIfExists( entitySetName ) )
+            }
+        }
+    }
+
+    fun createTransporterEntitySetView(
+            entitySetName: String,
+            entitySetId: UUID,
+            entityTypeId: UUID,
+            ptIdToFqnColumns: Map<UUID, FullQualifiedName>
+    ) {
+        datastore().connection.use { conn ->
+            conn.createStatement().use { stmt ->
+                stmt.executeUpdate(
+                        createEntitySetView(
+                                entitySetName,
+                                entitySetId,
+                                tableName(entityTypeId),
+                                ptIdToFqnColumns
+                        )
+                )
+            }
+        }
+    }
+
+    fun createTransportedEntitySetInOrg(
+            organizationId: UUID,
+            entitySetName: String,
+            usersToColumnPermissions: Map<String, List<String>>
+    ) {
+        connectOrgDb(organizationId).connection.use { conn ->
+            conn.createStatement().use { stmt ->
+                stmt.executeUpdate(
+                        importTablesFromForeignSchema(
+                                PUBLIC_SCHEMA,
+                                setOf(entitySetName),
+                                ORG_VIEWS_SCHEMA,
+                                getOrgFdw( organizationId )
+                        )
+                )
+                // TODO - need to apply these as roles due to the maximum row width thing
+                usersToColumnPermissions.forEach { ( username, allowedCols ) ->
+                    logger.info("user $username has columns $allowedCols")
+                    // create role org_user_columnfqn
+//                        stmt.addBatch(
+//                                AssemblerConnectionManager.grantSelectSql(es.name, username, allowedCols)
+//                        )
+                }
+//                    stmt.executeBatch()
+            }
+        }
+    }
 }

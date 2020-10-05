@@ -4,8 +4,6 @@ import com.hazelcast.core.Offloadable
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
-import com.openlattice.transporter.createEntitySetView
-import com.openlattice.transporter.tableName
 import com.openlattice.transporter.types.TransporterDatastore
 import com.openlattice.transporter.types.TransporterDependent
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -17,7 +15,7 @@ import java.util.*
  * @author Drew Bailey &lt;drew@openlattice.com&gt;
  */
 data class TransportEntitySetEntryProcessor(
-        val columns: Map<UUID, FullQualifiedName>,
+        val ptIdToFqnColumns: Map<UUID, FullQualifiedName>,
         val organizationId: UUID,
         val usersToColumnPermissions: Map<String, List<String>>
 ): AbstractRhizomeEntryProcessor<UUID, EntitySet, Void?>(),
@@ -34,6 +32,7 @@ data class TransportEntitySetEntryProcessor(
     override fun process(entry: MutableMap.MutableEntry<UUID, EntitySet>): Void? {
         check(::data.isInitialized) { TransporterDependent.NOT_INITIALIZED }
         val es = entry.value
+        val esName = es.name
         if ( es.flags.contains(EntitySetFlag.TRANSPORTED)){
             return null
         }
@@ -43,33 +42,13 @@ data class TransportEntitySetEntryProcessor(
         try {
             data.linkOrgDbToTransporterDb( organizationId )
 
-            data.datastore().connection.use { conn ->
-                conn.createStatement().use { stmt ->
-                    stmt.executeUpdate(
-                            createEntitySetView(
-                                    es.name,
-                                    entry.key,
-                                    tableName(es.entityTypeId),
-                                    columns
-                            )
-                    )
-                }
-            }
+            data.destroyTransportedEntitySetFromOrg( organizationId, esName )
 
-            data.connectOrgDb(organizationId).connection.use { conn ->
-                conn.createStatement().use { stmt ->
-                    stmt.executeUpdate(
-                            data.importTablesFromForeignSchema(
-                                    TransporterDatastore.PUBLIC_SCHEMA,
-                                    setOf(es.name),
-                                    TransporterDatastore.ORG_VIEWS_SCHEMA,
-                                    data.getOrgFdw( organizationId )
-                            )
-                    )
-                    // TODO - need to apply these as roles due to the maximum row width thing
-//                stmt.executeBatch()
-                }
-            }
+            data.destroyEntitySetViewFromTransporter( esName )
+
+            data.createTransporterEntitySetView( esName, es.id, es.entityTypeId, ptIdToFqnColumns )
+
+            data.createTransportedEntitySetInOrg( organizationId, esName, usersToColumnPermissions )
         } catch ( ex: Exception ) {
             logger.error("Marking entity set id as not materialized {}", entry.key, ex)
             es.flags.remove(EntitySetFlag.TRANSPORTED)

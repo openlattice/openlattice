@@ -22,6 +22,7 @@ package com.openlattice.organizations.roles
 import com.auth0.json.mgmt.users.User
 import com.google.common.base.Preconditions
 import com.google.common.collect.ImmutableSet
+import com.google.common.collect.Sets
 import com.google.common.eventbus.EventBus
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicate
@@ -252,6 +253,47 @@ class HazelcastPrincipalService(
             roles.addAll(nextLayer)
         }
         return principals.getAll(roles).values
+    }
+
+    override fun bulkGetUnderlyingPrincipals(sps: Set<SecurablePrincipal>): Map<SecurablePrincipal, Set<Principal>> {
+        val aclKeyPrincipals = mutableMapOf<AclKey,AclKeySet>()
+
+        // Bulk load all relevant principal trees from hazelcast
+        var nextLayer = sps.mapTo(mutableSetOf()) { it.aclKey }
+        while (nextLayer.isNotEmpty()) {
+            //Don't load what's already been loaded.
+            val nextLayerMap = principalTrees.getAll(nextLayer - aclKeyPrincipals.keys)
+            nextLayer = nextLayerMap.values.flatMapTo(mutableSetOf()) { it.value }
+            aclKeyPrincipals.putAll(nextLayerMap)
+        }
+
+        // Map all loaded principals to SecurablePrincipals
+        val aclKeysToPrincipals = principals.getAll(aclKeyPrincipals.keys + aclKeyPrincipals.values.flatten())
+
+        // Map each SecurablePrincipal to all its aclKey children from the in-memory map, and from there a SortedPrincipalSet
+        return sps.associate { sp ->
+            val childAclKeys = mutableSetOf<AclKey>(sp.aclKey) //Need to include self.
+            aclKeyPrincipals.getOrDefault(sp.aclKey, AclKeySet()).forEach { childAclKeys.add(it) }
+
+            var nextAclKeyLayer : Set<AclKey> = childAclKeys
+
+            while (nextAclKeyLayer.isNotEmpty()) {
+                nextAclKeyLayer = (nextAclKeyLayer.flatMapTo(mutableSetOf<AclKey>()) {
+                    aclKeyPrincipals[it] ?: setOf()
+                }) - childAclKeys
+                childAclKeys += nextAclKeyLayer
+            }
+
+            val principals = childAclKeys.mapNotNullTo( Sets.newLinkedHashSetWithExpectedSize(childAclKeys.size) ) { aclKey ->
+                aclKeysToPrincipals[aclKey]?.principal
+            }
+
+            if (childAclKeys.size != principals.size) {
+                logger.warn("Unable to retrieve principals for acl keys: ${childAclKeys - aclKeysToPrincipals.keys}")
+            }
+
+            sp to principals
+        }
     }
 
     override fun getAllUnderlyingPrincipals(sp: SecurablePrincipal): Collection<Principal> {

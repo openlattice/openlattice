@@ -4,8 +4,6 @@ import com.hazelcast.core.Offloadable
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
-import com.openlattice.transporter.destroyEntitySetView
-import com.openlattice.transporter.dropOrgViewTable
 import com.openlattice.transporter.types.TransporterDatastore
 import com.openlattice.transporter.types.TransporterDependent
 import java.util.*
@@ -13,28 +11,21 @@ import java.util.*
 /**
  * @author Drew Bailey &lt;drew@openlattice.com&gt;
  */
-class DestroyTransportedEntitySetEntryProcessor: AbstractRhizomeEntryProcessor<UUID, EntitySet, Void?>(),
+class DestroyTransportedEntitySetEntryProcessor(): AbstractRhizomeEntryProcessor<UUID, EntitySet, Void?>(),
         Offloadable,
-        TransporterDependent<DestroyTransportedEntitySetEntryProcessor> {
+        TransporterDependent<DestroyTransportedEntitySetEntryProcessor>
+{
 
     @Transient
     private lateinit var data: TransporterDatastore
 
     override fun process(entry: MutableMap.MutableEntry<UUID, EntitySet>): Void? {
+        check(::data.isInitialized) { TransporterDependent.NOT_INITIALIZED }
         val es = entry.value
-        data.datastore().connection.use { conn ->
-            conn.createStatement().use { stmt ->
-                stmt.executeUpdate( destroyEntitySetView( es.name ) )
-            }
-        }
 
-        data.connectOrgDb( es.organizationId ).use { hds ->
-            hds.connection.use { conn ->
-                conn.createStatement().use { stmt ->
-                    stmt.executeUpdate( dropOrgViewTable( es.name ))
-                }
-            }
-        }
+        data.destroyTransportedEntitySetFromOrg( es.organizationId, es.name )
+
+        data.destroyEntitySetViewFromTransporter( es.name )
 
         es.flags.remove(EntitySetFlag.TRANSPORTED)
         entry.setValue( es )

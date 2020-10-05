@@ -34,7 +34,7 @@ import java.util.*
 import java.util.concurrent.Future
 
 @Service
-final class DataTransporterService(
+final class TransporterService(
         eventBus: EventBus,
         private val dataModelService: EdmManager,
         private val partitionManager: PartitionManager,
@@ -45,7 +45,7 @@ final class DataTransporterService(
 ) {
 
     companion object {
-        val logger: Logger = LoggerFactory.getLogger(DataTransporterService::class.java)
+        val logger: Logger = LoggerFactory.getLogger(TransporterService::class.java)
         val pollTimer: Histogram = Histogram.build()
                 .namespace(transporterNamespace)
                 .name("poll_duration_seconds")
@@ -197,7 +197,7 @@ final class DataTransporterService(
 //    }
 
     @Subscribe
-    fun handlePropertyTypesRemovedFromEntityTypeEventn(e: PropertyTypesRemovedFromEntityTypeEvent) {
+    fun handlePropertyTypesRemovedFromEntityTypeEvent(e: PropertyTypesRemovedFromEntityTypeEvent) {
         this.transporterState.executeOnKey(e.entityType.id,
                 TransporterSynchronizeTableDefinitionEntryProcessor(removedProperties = e.removedPropertyTypes)
                         .init(data)

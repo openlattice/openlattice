@@ -102,6 +102,8 @@ public interface SecurePrincipalsManager {
 
     Collection<SecurablePrincipal> getAllPrincipals( SecurablePrincipal sp );
 
+    Map<SecurablePrincipal, Set<Principal>> bulkGetUnderlyingPrincipals(Set<SecurablePrincipal> sps);
+
     Collection<Principal> getAllUnderlyingPrincipals( SecurablePrincipal sp );
 
     /**

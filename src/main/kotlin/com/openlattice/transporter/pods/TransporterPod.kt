@@ -9,7 +9,7 @@ import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
-import com.openlattice.transporter.services.DataTransporterService
+import com.openlattice.transporter.services.TransporterService
 import com.openlattice.transporter.tasks.TransporterRunSyncTask
 import com.openlattice.transporter.tasks.TransporterRunSyncTaskDependencies
 import com.openlattice.transporter.types.TransporterDatastore
@@ -46,9 +46,9 @@ class TransporterPod {
     }
 
     @Bean
-    fun transporterService(): DataTransporterService {
+    fun transporterService(): TransporterService {
         LoggerFactory.getLogger(TransporterPod::class.java).info("Constructing DataTransporterService")
-        return DataTransporterService(
+        return TransporterService(
                 eventBus,
                 dataModelService,
                 partitionManager,

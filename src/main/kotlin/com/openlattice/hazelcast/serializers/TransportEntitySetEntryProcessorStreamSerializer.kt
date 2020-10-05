@@ -24,8 +24,8 @@ class TransportEntitySetEntryProcessorStreamSerializer:
     private lateinit var data: TransporterDatastore
 
     override fun write(out: ObjectDataOutput, `object`: TransportEntitySetEntryProcessor) {
-        out.writeInt(`object`.columns.size)
-        `object`.columns.forEach { id, fqn ->
+        out.writeInt(`object`.ptIdToFqnColumns.size)
+        `object`.ptIdToFqnColumns.forEach { id, fqn ->
             UUIDStreamSerializerUtils.serialize(out, id)
             FullQualifiedNameStreamSerializer.serialize(out, fqn)
         }

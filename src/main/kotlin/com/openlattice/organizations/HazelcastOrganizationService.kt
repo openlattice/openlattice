@@ -1,6 +1,7 @@
 package com.openlattice.organizations
 
 import com.codahale.metrics.annotation.Timed
+import com.google.common.base.Preconditions
 import com.google.common.collect.Iterables
 import com.google.common.eventbus.EventBus
 import com.hazelcast.core.HazelcastInstance
@@ -245,6 +246,13 @@ class HazelcastOrganizationService(
     @Timed
     fun getEmailDomains(organizationId: UUID): Set<String> {
         return organizations[organizationId]?.emailDomains ?: setOf()
+    }
+
+    fun ensureOrganizationExists(id: UUID) {
+        Preconditions.checkState(
+                organizations.containsKey(id),
+                "Organization [$id] does not exist."
+        )
     }
 
     @Timed

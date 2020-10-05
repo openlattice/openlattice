@@ -3,11 +3,11 @@ package com.openlattice.transporter.tasks
 import com.openlattice.tasks.HazelcastFixedRateTask
 import com.openlattice.tasks.HazelcastTaskDependencies
 import com.openlattice.tasks.Task
-import com.openlattice.transporter.services.DataTransporterService
+import com.openlattice.transporter.services.TransporterService
 import java.util.concurrent.TimeUnit
 
 class TransporterRunSyncTaskDependencies(
-        val service: DataTransporterService
+        val service: TransporterService
 ): HazelcastTaskDependencies
 
 class TransporterRunSyncTask : HazelcastFixedRateTask<TransporterRunSyncTaskDependencies> {

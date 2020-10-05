@@ -1,6 +1,6 @@
 package com.openlattice.transporter.types
 
-import com.openlattice.ApiUtil
+import com.openlattice.ApiHelpers
 import com.openlattice.edm.PostgresEdmTypeConverter
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.PostgresColumnDefinition
@@ -16,14 +16,14 @@ data class TransporterColumn(
     constructor(propertyType: PropertyType) :
         this(
                 PostgresDataTables.getSourceDataColumnName(propertyType),
-                ApiUtil.dbQuote(propertyType.id.toString()),
+                ApiHelpers.dbQuote(propertyType.id.toString()),
                 PostgresEdmTypeConverter.map(propertyType.datatype)
         )
     fun transporterColumn() = PostgresColumnDefinition(this.transporterTableColumnName, this.dataType)
 }
 
 data class TransporterColumnSet(
-        val columns: Map<UUID, TransporterColumn>
+        val columns: Map<UUID, TransporterColumn> // mapping of ptid to column info
 ): Map<UUID, TransporterColumn> by columns {
     fun withAndWithoutProperties(with: Collection<PropertyType>, without: Collection<PropertyType>): TransporterColumnSet {
         val copy = columns.toMutableMap()

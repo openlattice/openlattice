@@ -1,7 +1,6 @@
 package com.openlattice.organizations
 
 import com.google.common.base.Preconditions.checkState
-import com.google.common.collect.Sets
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
@@ -45,6 +44,7 @@ import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.StatementHolderSupplier
 import com.openlattice.transporter.processors.DestroyTransportedEntitySetEntryProcessor
+import com.openlattice.transporter.processors.GetPropertyTypesFromTransporterColumnSetEntryProcessor
 import com.openlattice.transporter.processors.TransportEntitySetEntryProcessor
 import com.openlattice.transporter.types.TransporterDatastore
 import com.zaxxer.hikari.HikariDataSource
@@ -147,7 +147,7 @@ class ExternalDatabaseManagementService(
     }
 
     fun destroyTransportedEntitySet( entitySetId: UUID ) {
-        entitySets.executeOnKey( entitySetId, DestroyTransportedEntitySetEntryProcessor())
+        entitySets.executeOnKey( entitySetId, DestroyTransportedEntitySetEntryProcessor().init(transporterDatastore))
     }
 
     fun transportEntitySet( organizationId: UUID, entitySetId: UUID ) {
@@ -155,11 +155,12 @@ class ExternalDatabaseManagementService(
                 organizationId,
                 GetMembersOfOrganizationEntryProcessor()
         ).thenApplyAsync { members ->
-            securePrincipalsManager.getSecurablePrincipals( members ).associate { member ->
-                val prins = securePrincipalsManager.getAllUnderlyingPrincipals( member )
-                val asSet = Sets.newLinkedHashSetWithExpectedSize<Principal>(prins.size)
-                asSet.addAll(prins)
-                quote(dbCredentialService.getDbUsername(member)) to asSet
+            securePrincipalsManager.bulkGetUnderlyingPrincipals(
+                    securePrincipalsManager.getSecurablePrincipals( members ).toSet()
+            ).mapKeys {
+                val username = quote(dbCredentialService.getDbUsername(it.key))
+                logger.info("user {} has {}", username, it.value)
+                username
             }
         }
 
@@ -176,6 +177,15 @@ class ExternalDatabaseManagementService(
             }
         }
 
+        val transporterColumnsCompletion = entityTypeId.thenCompose { etid ->
+            if ( etid == null ){
+                throw Exception("Entity set {} has no entity type {}")
+            }
+            transporterState.submitToKey(etid, GetPropertyTypesFromTransporterColumnSetEntryProcessor() )
+        }.thenCompose { transporterPtIds ->
+            propertyTypes.submitToKeys( transporterPtIds, GetFqnFromPropertyTypeEntryProcessor() )
+        }
+
         val userToPermissionsCompletion = userToPrincipalsCompletion.thenCombine( accessCheckCompletion ) { userToPrincipals, accessChecks ->
             userToPrincipals.mapValues { (_, principals) ->
                 authorizationManager.accessChecksForPrincipals(accessChecks, principals).filter {
@@ -184,15 +194,6 @@ class ExternalDatabaseManagementService(
                     it.aclKey[1].toString()
                 }.toList()
             }
-        }
-
-        val transporterColumnsCompletion = entityTypeId.thenCompose { etid ->
-            if ( etid == null ){
-                throw Exception("Entity set {} has no entity type {}")
-            }
-            transporterState.getAsync(etid)
-        }.thenCompose {
-            propertyTypes.submitToKeys( it.keys, GetFqnFromPropertyTypeEntryProcessor() )
         }
 
         userToPermissionsCompletion.thenCombine( transporterColumnsCompletion ) { userToPerms, transporterColumns ->

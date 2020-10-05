@@ -1,6 +1,6 @@
 package com.openlattice.transporter
 
-import com.openlattice.ApiUtil
+import com.openlattice.ApiHelpers
 import com.openlattice.IdConstants
 import com.openlattice.edm.EdmConstants
 import com.openlattice.postgres.PostgresArrays
@@ -23,6 +23,8 @@ import com.openlattice.postgres.PostgresExpressionIndexDefinition
 import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.PostgresTableDefinition
 import com.openlattice.transporter.types.TransporterColumn
+import com.openlattice.transporter.types.TransporterDatastore.Companion.ORG_VIEWS_SCHEMA
+import com.openlattice.transporter.types.TransporterDatastore.Companion.PUBLIC_SCHEMA
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.Logger
@@ -41,12 +43,16 @@ fun unquotedTableName(entityTypeId: UUID): String {
     return "et_$entityTypeId"
 }
 
-fun tableName(entityTypeId: UUID): String {
-    return ApiUtil.dbQuote(unquotedTableName(entityTypeId))
+internal fun tableName(entityTypeId: UUID): String {
+    return ApiHelpers.dbQuote(unquotedTableName(entityTypeId))
+}
+
+internal fun tableNameWithSchema(schema: String, entityTypeId: UUID): String {
+    return "${schema}.${tableName(entityTypeId)}"
 }
 
 fun edgesTableDefinition(): PostgresTableDefinition {
-    val definition = PostgresTableDefinition("edge_assemblies")
+    val definition = PostgresTableDefinition("${PUBLIC_SCHEMA}.et_edges")
     definition.addColumns(
             SRC_ENTITY_SET_ID,
             SRC_ENTITY_KEY_ID,
@@ -67,7 +73,7 @@ fun edgesTableDefinition(): PostgresTableDefinition {
 }
 
 fun tableDefinition(entityTypeId: UUID, propertyColumns: Collection<PostgresColumnDefinition>): PostgresTableDefinition {
-    val definition = PostgresTableDefinition(tableName(entityTypeId))
+    val definition = PostgresTableDefinition(tableNameWithSchema(PUBLIC_SCHEMA, entityTypeId))
     val indexPrefix = unquotedTableName(entityTypeId) + "_"
     definition.addColumns(
             ENTITY_SET_ID,
@@ -80,7 +86,7 @@ fun tableDefinition(entityTypeId: UUID, propertyColumns: Collection<PostgresColu
     )
     definition.addIndexes(
             PostgresExpressionIndexDefinition(definition, "(${ORIGIN_ID.name} != '${IdConstants.EMPTY_ORIGIN_ID.id}')" )
-                    .name(ApiUtil.dbQuote(indexPrefix + "origin_id"))
+                    .name(ApiHelpers.dbQuote(indexPrefix + "origin_id"))
                     .ifNotExists()
                     .concurrent()
     )
@@ -278,6 +284,7 @@ fun addAllMissingColumnsQuery(table: PostgresTableDefinition, columns: Set<Postg
 fun removeColumnsQuery(table: PostgresTableDefinition, columns: List<PostgresColumnDefinition>): String =
         "ALTER TABLE ${table.name} " + columns.joinToString(",") { c -> "DROP COLUMN ${c.name}" }
 
+// TODO also need to refresh views when property types change (drop view, recreate view)
 fun transportTable(
         table: PostgresTableDefinition,
         conn: Connection,
@@ -308,11 +315,11 @@ fun transportTable(
 }
 
 fun dropOrgViewTable( entitySetName: String ): String {
-    return "DROP VIEW $entitySetName"
+    return "DROP VIEW IF EXISTS $ORG_VIEWS_SCHEMA.$entitySetName"
 }
 
-fun destroyEntitySetView( entitySetName: String ): String {
-    return "DROP VIEW $entitySetName"
+fun destroyEntitySetViewIfExists(entitySetName: String ): String {
+    return "DROP VIEW IF EXISTS $PUBLIC_SCHEMA.$entitySetName"
 }
 
 fun createEntitySetView(
@@ -322,14 +329,14 @@ fun createEntitySetView(
         propertyTypes: Map<UUID, FullQualifiedName>
 ): String {
     val colsSql = propertyTypes.map { ( id, ptName ) ->
-        val column = ApiUtil.dbQuote(id.toString())
-        val quotedPt = ApiUtil.dbQuote(ptName.toString())
+        val column = ApiHelpers.dbQuote(id.toString())
+        val quotedPt = ApiHelpers.dbQuote(ptName.toString())
         "$column as $quotedPt"
     }.joinToString()
 
     return """
             CREATE VIEW $entitySetName AS 
-                SELECT ${ID_VALUE.name} as ${ApiUtil.dbQuote(EdmConstants.ID_FQN.toString())}, 
+                SELECT ${ID_VALUE.name} as ${ApiHelpers.dbQuote(EdmConstants.ID_FQN.toString())}, 
                     $colsSql FROM $etTableName
                 WHERE ${ENTITY_SET_ID.name} = '$entitySetId'
         """.trimIndent()
