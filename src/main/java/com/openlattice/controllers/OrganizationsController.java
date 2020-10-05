@@ -154,6 +154,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     @GetMapping( value = ID_PATH + SET_ID_PATH + TRANSPORT, produces = MediaType.APPLICATION_JSON_VALUE )
     @ResponseStatus( HttpStatus.OK )
     public Void transportEntitySet( @PathVariable(ID) UUID organizationId, @PathVariable(SET_ID) UUID entitySetId) {
+        organizations.ensureOrganizationExists(organizationId);
         ensureRead( organizationId );
         ensureTransportAccess( new AclKey( organizationId ));
         edms.transportEntitySet( organizationId, entitySetId );
@@ -164,6 +165,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     @GetMapping( value = ID_PATH + SET_ID_PATH + DESTROY , produces = MediaType.APPLICATION_JSON_VALUE )
     @ResponseStatus( HttpStatus.OK )
     public Void destroyTransportedEntitySet(@PathVariable(ID) UUID organizationId, @PathVariable(SET_ID) UUID entitySetId) {
+        organizations.ensureOrganizationExists(organizationId);
         ensureRead( organizationId );
         ensureTransportAccess( new AclKey( organizationId ));
         edms.destroyTransportedEntitySet( entitySetId );
