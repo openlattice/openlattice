@@ -318,13 +318,18 @@ fun dropOrgViewTable( entitySetName: String ): String {
     return "DROP VIEW IF EXISTS $ORG_VIEWS_SCHEMA.$entitySetName"
 }
 
+fun grantOrgUserUsageOnschemaSql(schemaName: String, orgUserId: String): String {
+    return "GRANT USAGE ON SCHEMA $schemaName TO $orgUserId"
+}
+
 fun destroyEntitySetViewIfExists(entitySetName: String ): String {
     return "DROP VIEW IF EXISTS $PUBLIC_SCHEMA.$entitySetName"
 }
 
-fun createEntitySetView(
+fun createEntitySetViewInSchema(
         entitySetName: String,
         entitySetId: UUID,
+        schema: String,
         etTableName: String,
         propertyTypes: Map<UUID, FullQualifiedName>
 ): String {
@@ -335,7 +340,7 @@ fun createEntitySetView(
     }.joinToString()
 
     return """
-            CREATE VIEW $entitySetName AS 
+            CREATE VIEW $schema.$entitySetName AS 
                 SELECT ${ID_VALUE.name} as ${ApiHelpers.dbQuote(EdmConstants.ID_FQN.toString())}, 
                     $colsSql FROM $etTableName
                 WHERE ${ENTITY_SET_ID.name} = '$entitySetId'

@@ -8,9 +8,10 @@ import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.createRoleIfNotExistsSql
 import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
-import com.openlattice.transporter.createEntitySetView
+import com.openlattice.transporter.createEntitySetViewInSchema
 import com.openlattice.transporter.destroyEntitySetViewIfExists
 import com.openlattice.transporter.dropOrgViewTable
+import com.openlattice.transporter.grantOrgUserUsageOnschemaSql
 import com.openlattice.transporter.tableName
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -240,9 +241,10 @@ class TransporterDatastore(
         datastore().connection.use { conn ->
             conn.createStatement().use { stmt ->
                 stmt.executeUpdate(
-                        createEntitySetView(
+                        createEntitySetViewInSchema(
                                 entitySetName,
                                 entitySetId,
+                                PUBLIC_SCHEMA,
                                 tableName(entityTypeId),
                                 ptIdToFqnColumns
                         )
@@ -270,6 +272,7 @@ class TransporterDatastore(
                 allColumnsWithPermissions.forEach { columnName ->
                     val roleName = viewRoleName(entitySetName, columnName)
                     stmt.execute( createRoleIfNotExistsSql(roleName))
+                    grantOrgUserUsageOnschemaSql(ORG_VIEWS_SCHEMA, roleName)
                     AssemblerConnectionManager.grantSelectSql(entitySetName, roleName, listOf(columnName))
                 }
 
