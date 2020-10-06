@@ -270,14 +270,16 @@ class TransporterDatastore(
                 allColumnsWithPermissions.forEach { columnName ->
                     val roleName = viewRoleName(entitySetName, columnName)
                     stmt.execute( createRoleIfNotExistsSql(roleName))
-                    grantOrgUserUsageOnschemaSql(ORG_VIEWS_SCHEMA, roleName)
+                    stmt.execute( grantOrgUserUsageOnschemaSql(ORG_VIEWS_SCHEMA, ApiHelpers.dbQuote(roleName)))
                     AssemblerConnectionManager.grantSelectSql(entitySetName, roleName, listOf(columnName))
                 }
 
                 // TODO: invalidate/update this when pt types and permissions are changed
                 usersToColumnPermissions.forEach { ( username, allowedCols ) ->
                     logger.info("user $username has columns $allowedCols")
-//                    grantOrgUserUsageOnschemaSql(ORG_FOREIGN_TABLES_SCHEMA, username)
+
+                    stmt.executeUpdate( grantOrgUserUsageOnschemaSql(ORG_FOREIGN_TABLES_SCHEMA, username))
+
                     allowedCols.forEach { column ->
                         stmt.addBatch("GRANT ${ApiHelpers.dbQuote(viewRoleName(entitySetName, column))} to $username")
                     }
@@ -301,63 +303,6 @@ class TransporterDatastore(
                                 getOrgFdw(organizationId)
                         )
                 )
-            }
-        }
-    }
-
-    fun createTransporterEntitySetView(
-            entitySetName: String,
-            entitySetId: UUID,
-            entityTypeId: UUID,
-            ptIdToFqnColumns: Map<UUID, FullQualifiedName>
-    ) {
-        datastore().connection.use { conn ->
-            conn.createStatement().use { stmt ->
-                stmt.executeUpdate(
-                        createEntitySetViewInSchema(
-                                entitySetName,
-                                entitySetId,
-                                PUBLIC_SCHEMA,
-                                tableName(entityTypeId),
-                                ptIdToFqnColumns
-                        )
-                )
-            }
-        }
-    }
-
-    fun createTransportedEntitySetInOrg(
-            organizationId: UUID,
-            entitySetName: String,
-            usersToColumnPermissions: Map<String, List<String>>
-    ) {
-        val allColumnsWithPermissions = usersToColumnPermissions.values.flatten().toSet()
-        connectOrgDb(organizationId).connection.use { conn ->
-            conn.createStatement().use { stmt ->
-                stmt.executeUpdate(
-                        importTablesFromForeignSchema(
-                                PUBLIC_SCHEMA,
-                                setOf(entitySetName),
-                                ORG_FOREIGN_TABLES_SCHEMA,
-                                getOrgFdw( organizationId )
-                        )
-                )
-                allColumnsWithPermissions.forEach { columnName ->
-                    val roleName = viewRoleName(entitySetName, columnName)
-                    stmt.execute( createRoleIfNotExistsSql(roleName))
-                    grantOrgUserUsageOnschemaSql(ORG_FOREIGN_TABLES_SCHEMA, roleName)
-                    AssemblerConnectionManager.grantSelectSql(entitySetName, roleName, listOf(columnName))
-                }
-
-                // TODO: invalidate/update this when pt types and permissions are changed
-                usersToColumnPermissions.forEach { ( username, allowedCols ) ->
-                    logger.info("user $username has columns $allowedCols")
-                    grantOrgUserUsageOnschemaSql(ORG_FOREIGN_TABLES_SCHEMA, username)
-                    allowedCols.forEach { column ->
-                        stmt.addBatch("GRANT ${ApiHelpers.dbQuote(viewRoleName(entitySetName, column))} to $username")
-                    }
-                }
-                stmt.executeBatch()
             }
         }
     }
