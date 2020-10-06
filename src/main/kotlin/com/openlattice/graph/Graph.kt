@@ -1167,34 +1167,34 @@ internal fun getFilteredNeighborhoodSql(
         srcEntitySetPartitions: Set<Int>
 ): String {
 
-    var srcSql = DEFAULT_NEIGHBORHOOD_SRC_FILTER
-    var dstSql = DEFAULT_NEIGHBORHOOD_DST_FILTER
+    var vertexAsSrcSql = DEFAULT_NEIGHBORHOOD_SRC_FILTER
+    var vertexAsDstSql = DEFAULT_NEIGHBORHOOD_DST_FILTER
 
     if (filter.dstEntitySetIds.isPresent) {
         val dstEntitySetIdsSql = entitySetFilterClause(DST_ENTITY_SET_ID, filter.dstEntitySetIds)
 
-        srcSql += " AND ( $dstEntitySetIdsSql )"
+        vertexAsSrcSql += " AND ( $dstEntitySetIdsSql )"
     }
 
     if (filter.srcEntitySetIds.isPresent) {
         val srcEntitySetIdsSql = entitySetFilterClause(SRC_ENTITY_SET_ID, filter.srcEntitySetIds)
         val srcPartitionsSql = "${PARTITION.name} = ANY('{${srcEntitySetPartitions.joinToString(",")}}')"
 
-        dstSql += " AND ( $srcEntitySetIdsSql AND $srcPartitionsSql )"
+        vertexAsDstSql += " AND ( $srcEntitySetIdsSql AND $srcPartitionsSql )"
     }
 
     if (filter.associationEntitySetIds.isPresent && filter.associationEntitySetIds.get().isNotEmpty()) {
         val associationEntitySetIdsSql = entitySetFilterClause(EDGE_ENTITY_SET_ID, filter.associationEntitySetIds)
 
-        srcSql += " AND ( $associationEntitySetIdsSql )"
-        dstSql += " AND ( $associationEntitySetIdsSql )"
+        vertexAsSrcSql += " AND ( $associationEntitySetIdsSql )"
+        vertexAsDstSql += " AND ( $associationEntitySetIdsSql )"
     }
 
     return """
       SELECT *
       FROM ${E.name}
       WHERE 
-        ( ( $srcSql ) OR ( $dstSql ) ) 
+        ( ( $vertexAsSrcSql ) OR ( $vertexAsDstSql ) ) 
         AND ${VERSION.name} > 0
    """.trimIndent()
 }
