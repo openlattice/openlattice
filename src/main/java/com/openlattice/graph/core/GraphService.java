@@ -63,9 +63,7 @@ public interface GraphService {
             Set<UUID> entityKeyIds,
             boolean includeClearedEdges );
 
-    Stream<Edge> getEdgesAndNeighborsForVertices( UUID entitySetId, EntityNeighborsFilter filter );
-
-    Stream<Edge> getEdgesAndNeighborsForVerticesBulk( Set<UUID> entitySetIds, EntityNeighborsFilter filter );
+    Stream<Edge> getEdgesAndNeighborsForVertices( Set<UUID> entitySetIds, EntityNeighborsFilter filter );
 
     Set<UUID> getEdgeEntitySetsConnectedToEntities( UUID entitySetId, Set<UUID> entityKeyIds );
 
