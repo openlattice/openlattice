@@ -313,8 +313,27 @@ fun transportTable(
     }
 }
 
-fun grantOrgUserUsageOnschemaSql(schemaName: String, orgUserId: String): String {
-    return "GRANT USAGE ON SCHEMA $schemaName TO $orgUserId"
+fun setUserInhertRolePrivileges(role: String): String {
+    return "ALTER ROLE ${ApiHelpers.dbQuote(role)} INHERIT"
+}
+
+fun revokeTablePermissionsForRole(schema: String, entitySetName: String, role: String): String {
+    return "REVOKE ALL PRIVILEGES ON $schema.$entitySetName FROM ${ApiHelpers.dbQuote(role)}"
+}
+
+fun grantUsageOnschemaSql(schemaName: String, orgUserId: String): String {
+    return "GRANT USAGE ON SCHEMA $schemaName TO ${ApiHelpers.dbQuote(orgUserId)}"
+}
+
+fun grantSelectOnColumnsToRoles(schema: String, entitySetName: String, role: String, columns: List<String>): String {
+    if ( columns.isEmpty()){
+        return ""
+    }
+    val columnsSql = columns.joinToString {
+        ApiHelpers.dbQuote(it)
+    }
+
+    return "GRANT SELECT ( $columnsSql ) ON $schema.$entitySetName TO ${ApiHelpers.dbQuote(role)}"
 }
 
 fun dropForeignTypeTable( schema: String, entityTypeId: UUID ): String {

@@ -158,9 +158,7 @@ class ExternalDatabaseManagementService(
             securePrincipalsManager.bulkGetUnderlyingPrincipals(
                     securePrincipalsManager.getSecurablePrincipals( members ).toSet()
             ).mapKeys {
-                val username = quote(dbCredentialService.getDbUsername(it.key))
-                logger.info("user {} has {}", username, it.value)
-                username
+                dbCredentialService.getDbUsername(it.key)
             }
         }
 

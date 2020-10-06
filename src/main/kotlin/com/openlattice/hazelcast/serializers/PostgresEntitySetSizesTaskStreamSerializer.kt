@@ -20,26 +20,17 @@
  */
 package com.openlattice.hazelcast.serializers
 
-import com.hazelcast.nio.ObjectDataInput
-import com.hazelcast.nio.ObjectDataOutput
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.data.storage.PostgresEntitySetSizesTask
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import org.springframework.stereotype.Component
 
 @Component
-class PostgresEntitySetSizesTaskStreamSerializer : SelfRegisteringStreamSerializer<PostgresEntitySetSizesTask> {
+class PostgresEntitySetSizesTaskStreamSerializer : NoOpSelfRegisteringStreamSerializer<PostgresEntitySetSizesTask>() {
     override fun getTypeId(): Int {
         return StreamSerializerTypeIds.POSTGRES_ENTITY_SET_SIZES_TASK.ordinal
     }
 
     override fun getClazz(): Class<out PostgresEntitySetSizesTask> {
         return PostgresEntitySetSizesTask::class.java
-    }
-
-    override fun write(output: ObjectDataOutput, obj: PostgresEntitySetSizesTask) {}
-
-    override fun read(input: ObjectDataInput): PostgresEntitySetSizesTask {
-        return PostgresEntitySetSizesTask()
     }
 }

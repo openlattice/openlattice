@@ -4,15 +4,10 @@ import com.geekbeast.configuration.postgres.PostgresConfiguration
 import com.kryptnostic.rhizome.configuration.RhizomeConfiguration
 import com.openlattice.ApiHelpers
 import com.openlattice.assembler.AssemblerConfiguration
-import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.createRoleIfNotExistsSql
 import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
-import com.openlattice.transporter.createEntitySetViewInSchema
-import com.openlattice.transporter.destroyView
-import com.openlattice.transporter.dropForeignTypeTable
-import com.openlattice.transporter.grantOrgUserUsageOnschemaSql
-import com.openlattice.transporter.tableName
+import com.openlattice.transporter.*
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
@@ -255,7 +250,7 @@ class TransporterDatastore(
             ptIdToFqnColumns: Map<UUID, FullQualifiedName>,
             usersToColumnPermissions: Map<String, List<String>>
     ) {
-        val allColumnsWithPermissions = usersToColumnPermissions.values.flatten().toSet()
+        val allPermissions = mutableSetOf<String>()
         connectOrgDb(organizationId).connection.use { conn ->
             conn.createStatement().use { stmt ->
                 stmt.executeUpdate(
@@ -267,24 +262,34 @@ class TransporterDatastore(
                                 ptIdToFqnColumns
                         )
                 )
-                allColumnsWithPermissions.forEach { columnName ->
+
+                usersToColumnPermissions.forEach { (username, allowedCols) ->
+                    logger.info("user $username has columns $allowedCols")
+                    stmt.execute( setUserInhertRolePrivileges(username))
+                    stmt.execute( grantUsageOnschemaSql(ORG_VIEWS_SCHEMA, username))
+                    stmt.execute( revokeTablePermissionsForRole(ORG_VIEWS_SCHEMA, entitySetName, username) )
+
+                    allPermissions.addAll(allowedCols)
+                }
+
+                allPermissions.forEach { columnName ->
                     val roleName = viewRoleName(entitySetName, columnName)
                     stmt.execute( createRoleIfNotExistsSql(roleName))
-                    stmt.execute( grantOrgUserUsageOnschemaSql(ORG_VIEWS_SCHEMA, ApiHelpers.dbQuote(roleName)))
-                    AssemblerConnectionManager.grantSelectSql(entitySetName, roleName, listOf(columnName))
+                    stmt.execute( grantUsageOnschemaSql(ORG_VIEWS_SCHEMA, roleName))
+                    stmt.execute( revokeTablePermissionsForRole(ORG_VIEWS_SCHEMA, entitySetName, roleName) )
+                    stmt.execute( grantSelectOnColumnsToRoles(ORG_VIEWS_SCHEMA, entitySetName, roleName, listOf(columnName)) )
                 }
 
-                // TODO: invalidate/update this when pt types and permissions are changed
-                usersToColumnPermissions.forEach { ( username, allowedCols ) ->
-                    logger.info("user $username has columns $allowedCols")
+                conn.createStatement().use { batch ->
+                    // TODO: invalidate/update this when pt types and permissions are changed
+                    usersToColumnPermissions.forEach { ( username, allowedCols ) ->
 
-                    stmt.executeUpdate( grantOrgUserUsageOnschemaSql(ORG_FOREIGN_TABLES_SCHEMA, username))
-
-                    allowedCols.forEach { column ->
-                        stmt.addBatch("GRANT ${ApiHelpers.dbQuote(viewRoleName(entitySetName, column))} to $username")
+                        allowedCols.forEach { column ->
+                            batch.addBatch("GRANT ${ApiHelpers.dbQuote(viewRoleName(entitySetName, column))} to ${ApiHelpers.dbQuote(username)}")
+                        }
                     }
+                    batch.executeBatch()
                 }
-                stmt.executeBatch()
             }
         }
     }
