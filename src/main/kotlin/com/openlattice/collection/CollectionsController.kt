@@ -28,8 +28,8 @@ import javax.inject.Inject
 import kotlin.streams.toList
 
 @SuppressFBWarnings(
-        value = ["BC_BAD_CAST_TO_ABSTRACT_COLLECTION"],
-        justification = "Allowing kotlin collection mapping cast to List")
+        value = ["BC_BAD_CAST_TO_ABSTRACT_COLLECTION", "RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"],
+        justification = "Allowing kotlin collection mapping cast to List and underlying redundant nullchecks")
 @RestController
 @RequestMapping(CONTROLLER)
 class CollectionsController : CollectionsApi, AuthorizingComponent {
