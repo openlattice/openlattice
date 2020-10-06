@@ -21,6 +21,7 @@ import com.openlattice.linking.LinkingQueryService
 import com.openlattice.linking.PostgresLinkingFeedbackService
 import com.openlattice.postgres.streams.BasePostgresIterable
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -105,10 +106,12 @@ class PostgresEntityDatastore(
 
     private fun signalCreatedEntities(entitySetId: UUID, entityKeyIds: Set<UUID>) {
         if (shouldIndexDirectly(entitySetId, entityKeyIds)) {
+            val propertyTypesToIndex = entitySetManager.getPropertyTypesForEntitySet(entitySetId)
+                    .filter { it.value.datatype != EdmPrimitiveTypeKind.Binary }
             val entities = dataQueryService
                     .getEntitiesWithPropertyTypeIds(
                             ImmutableMap.of(entitySetId, Optional.of(entityKeyIds)),
-                            ImmutableMap.of(entitySetId, entitySetManager.getPropertyTypesForEntitySet(entitySetId)),
+                            ImmutableMap.of(entitySetId, propertyTypesToIndex),
                             mapOf(),
                             EnumSet.of(MetadataOption.LAST_WRITE)
                     )
