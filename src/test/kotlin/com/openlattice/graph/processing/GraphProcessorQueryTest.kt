@@ -43,7 +43,7 @@ class GraphProcessorQueryTest {
                 Optional.of(setOf(UUID.randomUUID())),
                 Optional.of(setOf(UUID.randomUUID())),
                 Optional.of(setOf(UUID.randomUUID())))
-        val query = getFilteredNeighborhoodSql(filter, true)
+        val query = getFilteredNeighborhoodSql(filter, true, mapOf(UUID.randomUUID() to setOf(1, 2, 3)))
 
         val uuidArray = "'{\"${UUID.randomUUID()}\"}'"
         val preparedQuery = query.replace("?", uuidArray)
