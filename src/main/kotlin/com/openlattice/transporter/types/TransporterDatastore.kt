@@ -283,7 +283,6 @@ class TransporterDatastore(
                 conn.createStatement().use { batch ->
                     // TODO: invalidate/update this when pt types and permissions are changed
                     usersToColumnPermissions.forEach { ( username, allowedCols ) ->
-
                         allowedCols.forEach { column ->
                             batch.addBatch("GRANT ${ApiHelpers.dbQuote(viewRoleName(entitySetName, column))} to ${ApiHelpers.dbQuote(username)}")
                         }

@@ -189,14 +189,19 @@ class ExternalDatabaseManagementService(
                 authorizationManager.accessChecksForPrincipals(accessChecks, principals).filter {
                     it.permissions[Permission.READ]!!
                 }.map {
-                    it.aclKey[1].toString()
+                    it.aclKey[1]
                 }.toList()
             }
         }
 
-        userToPermissionsCompletion.thenCombine( transporterColumnsCompletion ) { userToPerms, transporterColumns ->
+        userToPermissionsCompletion.thenCombine( transporterColumnsCompletion ) { userToPtCols, transporterColumns ->
+            val userToEntitySetColumnNames = userToPtCols.mapValues { (_, columns) ->
+                columns.map {
+                    transporterColumns.get(it).toString()
+                }
+            }
             entitySets.submitToKey( entitySetId,
-                    TransportEntitySetEntryProcessor(transporterColumns, organizationId, userToPerms)
+                    TransportEntitySetEntryProcessor(transporterColumns, organizationId, userToEntitySetColumnNames)
                             .init(transporterDatastore)
             )
         }.toCompletableFuture().get().toCompletableFuture().get()
