@@ -1152,6 +1152,15 @@ private val DST_IDS_AND_ENTITY_SETS_AND_PARTITION_SQL = "${DST_ENTITY_KEY_ID.nam
 private val BULK_NEIGHBORHOOD_SQL = "SELECT * FROM ${E.name} WHERE (($SRC_IDS_SQL) OR ($DST_IDS_SQL) OR ($EDGE_IDS_SQL))"
 private val BULK_NON_TOMBSTONED_NEIGHBORHOOD_SQL = "$BULK_NEIGHBORHOOD_SQL AND ${VERSION.name} > 0"
 
+/**
+ * PreparedStatement bind order (note: these bind params all apply to the vertex entity set):
+ *
+ * 1. entityKeyIds
+ * 2. entitySetIds
+ * 3. entityKeyIds
+ * 4. entitySetIds
+ * 5. partitions
+ */
 internal fun getFilteredNeighborhoodSql(
         filter: EntityNeighborsFilter,
         srcEntitySetPartitions: Set<Int>
