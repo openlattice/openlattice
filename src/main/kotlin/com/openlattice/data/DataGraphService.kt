@@ -36,7 +36,6 @@ import com.openlattice.edm.set.ExpirationBase
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.core.GraphService
 import com.openlattice.graph.core.NeighborSets
-import com.openlattice.graph.edge.Edge
 import com.openlattice.graph.partioning.RepartitioningJob
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.PostgresColumn
@@ -134,10 +133,6 @@ class DataGraphService(
         return getNeighborEntitySets(entitySetIds)
                 .flatMap { listOf(it.srcEntitySetId, it.edgeEntitySetId, it.dstEntitySetId) }
                 .toSet()
-    }
-
-    override fun getEdgesAndNeighborsForVertex(entitySetId: UUID, entityKeyId: UUID): Stream<Edge> {
-        return graphService.getEdgesAndNeighborsForVertex(entitySetId, entityKeyId)
     }
 
     override fun getEdgeKeysOfEntitySet(

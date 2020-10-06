@@ -24,12 +24,11 @@ package com.openlattice.data
 import com.google.common.collect.ListMultimap
 import com.google.common.collect.SetMultimap
 import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
+import com.openlattice.analysis.requests.AggregationResult
 import com.openlattice.analysis.requests.FilteredNeighborsRankingAggregation
 import com.openlattice.data.storage.MetadataOption
 import com.openlattice.edm.type.PropertyType
-import com.openlattice.analysis.requests.AggregationResult
 import com.openlattice.graph.core.NeighborSets
-import com.openlattice.graph.edge.Edge
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PostgresIterable
 import org.apache.commons.lang3.tuple.Pair
@@ -163,8 +162,6 @@ interface DataGraphManager {
     ): WriteEvent
 
     fun getNeighborEntitySetIds(entitySetIds: Set<UUID>): Set<UUID>
-
-    fun getEdgesAndNeighborsForVertex(entitySetId: UUID, entityKeyId: UUID): Stream<Edge>
 
     /**
      * Returns all [DataEdgeKey]s where either src, dst and/or edge entity set ids are equal the requested entitySetId.
