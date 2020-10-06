@@ -116,7 +116,7 @@ class TransporterDatastore(
             val remoteDbname = match.groupValues[4]
             logger.info("Configuring fdw from {} to {}", localDbDatasource.jdbcUrl, remoteDbJdbc)
 
-            val queries = """
+            """
                 |create extension if not exists postgres_fdw;
                 |create server if not exists $fdwName foreign data wrapper postgres_fdw options (host '$remoteHostname', dbname '$remoteDbname', port '$remotePort');
                 |create user mapping if not exists for $localUsername server $fdwName options (user '$remoteUser', password '$remotePassword');
@@ -125,14 +125,10 @@ class TransporterDatastore(
                 |set search_path to $searchPath;
             """.trimMargin()
                     .split("\n")
-
-            queries.forEach {
-                logger.info("about to run {}", it)
-            }
-            queries.forEach { sql ->
-                logger.info("running {}", sql)
-                st.execute(sql)
-            }
+                    .forEach { sql ->
+                        logger.info("running {}", sql)
+                        st.execute(sql)
+                    }
             conn.commit()
         }
     }
@@ -279,6 +275,7 @@ class TransporterDatastore(
                 // TODO: invalidate/update this when pt types and permissions are changed
                 usersToColumnPermissions.forEach { ( username, allowedCols ) ->
                     logger.info("user $username has columns $allowedCols")
+                    grantOrgUserUsageOnschemaSql(ORG_VIEWS_SCHEMA, username)
                     allowedCols.forEach { column ->
                         stmt.addBatch("GRANT ${ApiHelpers.dbQuote(viewRoleName(entitySetName, column))} to $username")
                     }
