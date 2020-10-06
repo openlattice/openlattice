@@ -210,38 +210,16 @@ class Graph(
         )
     }
 
-    override fun getEdgesAndNeighborsForVertices(entitySetId: UUID, filter: EntityNeighborsFilter): Stream<Edge> {
-        val entitySetPartitions = partitionManager.getPartitionsByEntitySetId(
-                filter.srcEntitySetIds.orElse(setOf()) + entitySetId
-        )
-        val srcEntitySetPartitions = filter.srcEntitySetIds.orElse(setOf()).flatMap { entitySetPartitions.getValue(it) }.toSet()
-        return PostgresIterable(PreparedStatementHolderSupplier(reader, getFilteredNeighborhoodSql(filter, false, srcEntitySetPartitions)) { ps ->
-            val idsArr = PostgresArrays.createUuidArray(ps.connection, filter.entityKeyIds)
-            val partitionsArr = PostgresArrays.createIntArray(ps.connection, entitySetPartitions.getValue(entitySetId))
-            ps.setArray(1, idsArr)
-            ps.setObject(2, entitySetId)
-            ps.setArray(3, idsArr)
-            ps.setObject(4, entitySetId)
-            ps.setArray(5, partitionsArr)
-        },
-                Function<ResultSet, Edge> { ResultSetAdapters.edge(it) }
-        ).stream()
-    }
-
-    override fun getEdgesAndNeighborsForVerticesBulk(
+    override fun getEdgesAndNeighborsForVertices(
             entitySetIds: Set<UUID>,
             filter: EntityNeighborsFilter
     ): Stream<Edge> {
-        if (entitySetIds.size == 1) {
-            return getEdgesAndNeighborsForVertices(entitySetIds.first(), filter)
-        }
 
-        val entitySetPartitions = partitionManager.getPartitionsByEntitySetId(
-                filter.srcEntitySetIds.orElse(setOf()) + entitySetIds
-        )
-        val srcEntitySetPartitions = filter.srcEntitySetIds.orElse(setOf()).flatMap { entitySetPartitions.getValue(it) }.toSet()
+        val srcEntitySetIds = filter.srcEntitySetIds.orElse(setOf())
+        val entitySetPartitions = partitionManager.getPartitionsByEntitySetId(srcEntitySetIds + entitySetIds)
+        val srcEntitySetPartitions = srcEntitySetIds.flatMap { entitySetPartitions.getValue(it) }.toSet()
 
-        return PostgresIterable(PreparedStatementHolderSupplier(reader, getFilteredNeighborhoodSql(filter, true, srcEntitySetPartitions)) { ps ->
+        return PostgresIterable(PreparedStatementHolderSupplier(reader, getFilteredNeighborhoodSql(filter, srcEntitySetPartitions)) { ps ->
             val connection = ps.connection
             val idsArr = PostgresArrays.createUuidArray(connection, filter.entityKeyIds.stream())
             val entitySetIdsArr = PostgresArrays.createUuidArray(connection, entitySetIds.stream())
@@ -328,7 +306,7 @@ class Graph(
                 )
 
                 //Now we load all edges for this neighbor type into memory
-                val edges = getEdgesAndNeighborsForVerticesBulk(entitySetIds, neighborsFilter)
+                val edges = getEdgesAndNeighborsForVertices(entitySetIds, neighborsFilter)
                         .toList()
 
                 logger.info("Edges: {}", edges.size)
@@ -454,7 +432,7 @@ class Graph(
                     Optional.of(authorizedPropertyTypes.keys),
                     Optional.of(authorizedPropertyTypes.keys)
             )
-            val allNeighborEdges = getEdgesAndNeighborsForVerticesBulk(entitySetIds, allNeighborsFilter)
+            val allNeighborEdges = getEdgesAndNeighborsForVertices(entitySetIds, allNeighborsFilter)
             val associationEntityKeyIds = mutableMapOf<UUID, Optional<MutableSet<UUID>>>()
             val neighborEntityKeyIds = mutableMapOf<UUID, Optional<MutableSet<UUID>>>()
             val edges = mutableMapOf<UUID, MutableMap<UUID, UUID>>()
@@ -1176,15 +1154,11 @@ private val BULK_NON_TOMBSTONED_NEIGHBORHOOD_SQL = "$BULK_NEIGHBORHOOD_SQL AND $
 
 internal fun getFilteredNeighborhoodSql(
         filter: EntityNeighborsFilter,
-        multipleEntitySetIds: Boolean,
         srcEntitySetPartitions: Set<Int>
 ): String {
 
-    var (srcSql, dstSql) = if (multipleEntitySetIds) {
-        SRC_IDS_AND_ENTITY_SETS_SQL to DST_IDS_AND_ENTITY_SETS_AND_PARTITION_SQL
-    } else {
-        SRC_IDS_SQL to DST_IDS_AND_PARTITION_SQL
-    }
+    var srcSql = SRC_IDS_AND_ENTITY_SETS_SQL
+    var dstSql = DST_IDS_AND_ENTITY_SETS_AND_PARTITION_SQL
 
     if (filter.dstEntitySetIds.isPresent) {
         val dstEntitySetIds = filter.dstEntitySetIds.get()
