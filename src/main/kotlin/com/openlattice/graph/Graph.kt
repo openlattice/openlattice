@@ -1193,10 +1193,9 @@ internal fun getFilteredNeighborhoodSql(
     return """
       SELECT *
       FROM ${E.name}
-      WHERE (
-        ( $srcSql ) OR ( $dstSql )
-      ) AND
-        ${VERSION.name} > 0
+      WHERE 
+        ( ( $srcSql ) OR ( $dstSql ) ) 
+        AND ${VERSION.name} > 0
    """.trimIndent()
 }
 
