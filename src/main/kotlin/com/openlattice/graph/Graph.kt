@@ -1134,8 +1134,8 @@ private val EDGE_IDS_SQL = "${EDGE_ENTITY_KEY_ID.name} = ANY(?) AND ${EDGE_ENTIT
 private val DST_IDS_SQL = "${DST_ENTITY_KEY_ID.name} = ANY(?) AND ${DST_ENTITY_SET_ID.name} = ?"
 private val DST_IDS_AND_PARTITION_SQL = "${DST_ENTITY_KEY_ID.name} = ANY(?) AND ${DST_ENTITY_SET_ID.name} = ? AND ${PARTITION.name} = ANY(?)"
 
-private val SRC_IDS_AND_ENTITY_SETS_SQL = "${SRC_ENTITY_KEY_ID.name} = ANY(?) AND ${SRC_ENTITY_SET_ID.name} = ANY(?)"
-private val DST_IDS_AND_ENTITY_SETS_AND_PARTITION_SQL = "${DST_ENTITY_KEY_ID.name} = ANY(?) AND ${DST_ENTITY_SET_ID.name} = ANY(?) AND ${PARTITION.name} = ANY(?)"
+private val DEFAULT_NEIGHBORHOOD_SRC_FILTER = "${SRC_ENTITY_KEY_ID.name} = ANY(?) AND ${SRC_ENTITY_SET_ID.name} = ANY(?)"
+private val DEFAULT_NEIGHBORHOOD_DST_FILTER = "${DST_ENTITY_KEY_ID.name} = ANY(?) AND ${DST_ENTITY_SET_ID.name} = ANY(?) AND ${PARTITION.name} = ANY(?)"
 
 //private val REPARTITION_SQL = "INSERT INTO ${E.name} SELECT $REPARTITION_COLUMNS FROM ${E.name} INNER JOIN (select id as entity_set_id, partitions from entity_sets) as es using (entity_set_id) WHERE entity_set_id = ? AND "
 
@@ -1167,8 +1167,8 @@ internal fun getFilteredNeighborhoodSql(
         srcEntitySetPartitions: Set<Int>
 ): String {
 
-    var srcSql = SRC_IDS_AND_ENTITY_SETS_SQL
-    var dstSql = DST_IDS_AND_ENTITY_SETS_AND_PARTITION_SQL
+    var srcSql = DEFAULT_NEIGHBORHOOD_SRC_FILTER
+    var dstSql = DEFAULT_NEIGHBORHOOD_DST_FILTER
 
     if (filter.dstEntitySetIds.isPresent) {
         val dstEntitySetIdsSql = entitySetFilterClause(DST_ENTITY_SET_ID, filter.dstEntitySetIds)
