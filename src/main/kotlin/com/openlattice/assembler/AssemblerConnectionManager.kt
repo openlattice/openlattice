@@ -26,6 +26,7 @@ import com.codahale.metrics.MetricRegistry.name
 import com.codahale.metrics.Timer
 import com.google.common.eventbus.EventBus
 import com.google.common.eventbus.Subscribe
+import com.openlattice.ApiHelpers
 import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationRoleName
 import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationUserId
 import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresRoleName
@@ -811,7 +812,7 @@ internal fun createRoleIfNotExistsSql(dbRole: String): String {
             "      FROM   pg_catalog.pg_roles\n" +
             "      WHERE  rolname = '$dbRole') THEN\n" +
             "\n" +
-            "      CREATE ROLE ${quote(
+            "      CREATE ROLE ${ApiHelpers.dbQuote(
                     dbRole
             )} NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN;\n" +
             "   END IF;\n" +
@@ -828,7 +829,7 @@ internal fun createUserIfNotExistsSql(dbUser: String, dbUserPassword: String): S
             "      FROM   pg_catalog.pg_roles\n" +
             "      WHERE  rolname = '$dbUser') THEN\n" +
             "\n" +
-            "      CREATE ROLE ${quote(
+            "      CREATE ROLE ${ApiHelpers.dbQuote(
                     dbUser
             )} NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT LOGIN ENCRYPTED PASSWORD '$dbUserPassword';\n" +
             "   END IF;\n" +
@@ -845,7 +846,7 @@ internal fun dropOwnedIfExistsSql(dbUser: String): String {
             "      FROM   pg_catalog.pg_roles\n" +
             "      WHERE  rolname = '$dbUser') THEN\n" +
             "\n" +
-            "      DROP OWNED BY ${quote(
+            "      DROP OWNED BY ${ApiHelpers.dbQuote(
                     dbUser
             )} ;\n" +
             "   END IF;\n" +
@@ -866,7 +867,7 @@ internal fun dropUserIfExistsSql(dbUser: String): String {
             "      FROM   pg_catalog.pg_roles\n" +
             "      WHERE  rolname = '$dbUser') THEN\n" +
             "\n" +
-            "      DROP ROLE ${quote(
+            "      DROP ROLE ${ApiHelpers.dbQuote(
                     dbUser
             )} ;\n" +
             "   END IF;\n" +

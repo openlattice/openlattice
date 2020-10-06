@@ -4,6 +4,8 @@ import com.geekbeast.configuration.postgres.PostgresConfiguration
 import com.kryptnostic.rhizome.configuration.RhizomeConfiguration
 import com.openlattice.ApiHelpers
 import com.openlattice.assembler.AssemblerConfiguration
+import com.openlattice.assembler.AssemblerConnectionManager
+import com.openlattice.assembler.createRoleIfNotExistsSql
 import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
 import com.openlattice.transporter.createEntitySetView
@@ -214,11 +216,9 @@ class TransporterDatastore(
     }
 
     fun destroyTransportedEntitySetFromOrg( organizationId: UUID, entitySetName: String ) {
-        connectOrgDb( organizationId ).use { hds ->
-            hds.connection.use { conn ->
-                conn.createStatement().use { stmt ->
-                    stmt.executeUpdate( dropOrgViewTable( entitySetName ))
-                }
+        connectOrgDb( organizationId ).connection.use { conn ->
+            conn.createStatement().use { stmt ->
+                stmt.executeUpdate( dropOrgViewTable( entitySetName ))
             }
         }
     }
@@ -256,6 +256,7 @@ class TransporterDatastore(
             entitySetName: String,
             usersToColumnPermissions: Map<String, List<String>>
     ) {
+        val allColumnsWithPermissions = usersToColumnPermissions.values.flatten().toSet()
         connectOrgDb(organizationId).connection.use { conn ->
             conn.createStatement().use { stmt ->
                 stmt.executeUpdate(
@@ -266,16 +267,25 @@ class TransporterDatastore(
                                 getOrgFdw( organizationId )
                         )
                 )
-                // TODO - need to apply these as roles due to the maximum row width thing
+                allColumnsWithPermissions.forEach { columnName ->
+                    val roleName = viewRoleName(entitySetName, columnName)
+                    stmt.execute( createRoleIfNotExistsSql(roleName))
+                    AssemblerConnectionManager.grantSelectSql(entitySetName, roleName, listOf(columnName))
+                }
+
+                // TODO: invalidate/update this when pt types and permissions are changed
                 usersToColumnPermissions.forEach { ( username, allowedCols ) ->
                     logger.info("user $username has columns $allowedCols")
-                    // create role org_user_columnfqn
-//                        stmt.addBatch(
-//                                AssemblerConnectionManager.grantSelectSql(es.name, username, allowedCols)
-//                        )
+                    allowedCols.forEach { column ->
+                        stmt.addBatch("GRANT ${ApiHelpers.dbQuote(viewRoleName(entitySetName, column))} to $username")
+                    }
                 }
-//                    stmt.executeBatch()
+                stmt.executeBatch()
             }
         }
+    }
+
+    fun viewRoleName(entitySetName: String, columnName: String): String {
+        return "${entitySetName}_${columnName}"
     }
 }
