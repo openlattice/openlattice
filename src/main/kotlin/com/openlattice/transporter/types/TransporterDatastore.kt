@@ -254,12 +254,13 @@ class TransporterDatastore(
         connectOrgDb(organizationId).connection.use { conn ->
             conn.createStatement().use { stmt ->
                 stmt.executeUpdate(
-                        createEntitySetViewInSchema(
+                        createEntitySetViewInSchemaFromSchema(
                                 entitySetName,
                                 entitySetId,
                                 ORG_VIEWS_SCHEMA,
                                 tableName(entityTypeId),
-                                ptIdToFqnColumns
+                                ptIdToFqnColumns,
+                                ORG_FOREIGN_TABLES_SCHEMA
                         )
                 )
 

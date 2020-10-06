@@ -355,34 +355,13 @@ fun createEntitySetViewInSchemaFromSchema(
     val colsSql = propertyTypes.map { (id, ptName) ->
         val column = ApiHelpers.dbQuote(id.toString())
         val quotedPt = ApiHelpers.dbQuote(ptName.toString())
-        "$sourceSchema.$column as $quotedPt"
+        "$column as $quotedPt"
     }.joinToString()
 
     return """
             CREATE VIEW $destinationSchema.$entitySetName AS 
                 SELECT ${ID_VALUE.name} as ${ApiHelpers.dbQuote(EdmConstants.ID_FQN.toString())}, 
-                    $colsSql FROM $etTableName
-                WHERE ${ENTITY_SET_ID.name} = '$entitySetId'
-        """.trimIndent()
-}
-
-fun createEntitySetViewInSchema(
-        entitySetName: String,
-        entitySetId: UUID,
-        schema: String,
-        etTableName: String,
-        propertyTypes: Map<UUID, FullQualifiedName>
-): String {
-    val colsSql = propertyTypes.map { ( id, ptName ) ->
-        val column = ApiHelpers.dbQuote(id.toString())
-        val quotedPt = ApiHelpers.dbQuote(ptName.toString())
-        "$column as $quotedPt"
-    }.joinToString()
-
-    return """
-            CREATE VIEW $schema.$entitySetName AS 
-                SELECT ${ID_VALUE.name} as ${ApiHelpers.dbQuote(EdmConstants.ID_FQN.toString())}, 
-                    $colsSql FROM $etTableName
+                    $colsSql FROM $sourceSchema.$etTableName
                 WHERE ${ENTITY_SET_ID.name} = '$entitySetId'
         """.trimIndent()
 }
