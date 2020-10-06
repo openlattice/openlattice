@@ -45,6 +45,7 @@ import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresColumnDefinition
 import com.openlattice.postgres.PostgresTable.*
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.*
@@ -1170,48 +1171,45 @@ internal fun getFilteredNeighborhoodSql(
     var dstSql = DST_IDS_AND_ENTITY_SETS_AND_PARTITION_SQL
 
     if (filter.dstEntitySetIds.isPresent) {
-        val dstEntitySetIds = filter.dstEntitySetIds.get()
+        val dstEntitySetIdsSql = entitySetFilterClause(DST_ENTITY_SET_ID, filter.dstEntitySetIds)
 
-        if (dstEntitySetIds.isNotEmpty()) {
-            val dstEntitySetIdFilter = "${DST_ENTITY_SET_ID.name} IN (${
-                filter.dstEntitySetIds.get().joinToString(
-                        ","
-                ) { "'$it'" }
-            })"
-
-            srcSql += " AND ( $dstEntitySetIdFilter )"
-        } else {
-            srcSql = "false AND $srcSql "
-        }
+        srcSql += " AND ( $dstEntitySetIdsSql )"
     }
 
     if (filter.srcEntitySetIds.isPresent) {
-        val srcEntitySetIds = filter.srcEntitySetIds.get()
+        val srcEntitySetIdsSql = entitySetFilterClause(SRC_ENTITY_SET_ID, filter.srcEntitySetIds)
+        val srcPartitionsSql = "${PARTITION.name} = ANY('{${srcEntitySetPartitions.joinToString(",")}}')"
 
-        if (srcEntitySetIds.isNotEmpty()) {
-            val srcEntitySetIdFilter = "${SRC_ENTITY_SET_ID.name} IN (${
-                srcEntitySetIds.joinToString(
-                        ","
-                ) { "'$it'" }
-            })"
-            val srcPartitionsSql = "${PARTITION.name} = ANY('{${srcEntitySetPartitions.joinToString(",")}}')"
-
-            dstSql += " AND ( $srcEntitySetIdFilter AND $srcPartitionsSql )"
-        } else {
-            dstSql = "false AND $dstSql "
-        }
+        dstSql += " AND ( $srcEntitySetIdsSql AND $srcPartitionsSql )"
     }
 
-    if (filter.associationEntitySetIds.isPresent) {
-        srcSql += " AND ( ${EDGE_ENTITY_SET_ID.name} IN (${filter.associationEntitySetIds.get().joinToString(
-                ","
-        ) { "'$it'" }}))"
-        dstSql += " AND ( ${EDGE_ENTITY_SET_ID.name} IN (${filter.associationEntitySetIds.get().joinToString(
-                ","
-        ) { "'$it'" }}))"
+    if (filter.associationEntitySetIds.isPresent && filter.associationEntitySetIds.get().isNotEmpty()) {
+        val associationEntitySetIdsSql = entitySetFilterClause(EDGE_ENTITY_SET_ID, filter.associationEntitySetIds)
+
+        srcSql += " AND ( $associationEntitySetIdsSql )"
+        dstSql += " AND ( $associationEntitySetIdsSql )"
     }
 
-    return "SELECT * FROM ${E.name} WHERE (( $srcSql ) OR ( $dstSql )) AND ${VERSION.name} > 0"
+    return """
+      SELECT *
+      FROM ${E.name}
+      WHERE (
+        ( $srcSql ) OR ( $dstSql )
+      ) AND
+        ${VERSION.name} > 0
+   """.trimIndent()
+}
+
+private fun entitySetFilterClause(column: PostgresColumnDefinition, entitySetFilter: Optional<Set<UUID>>): String {
+    return if (entitySetFilter.isPresent) {
+        "${column.name} IN (${
+            entitySetFilter.get().joinToString(
+                    ","
+            ) { "'$it'" }
+        })"
+    } else {
+        "false"
+    }
 }
 
 private fun srcClauses(entitySetId: UUID, associationFilters: SetMultimap<UUID, UUID>): String {
