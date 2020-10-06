@@ -55,6 +55,7 @@ import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
 import com.openlattice.principals.RoleCreatedEvent
 import com.openlattice.principals.UserCreatedEvent
+import com.openlattice.transporter.types.TransporterDatastore.Companion.ORG_FOREIGN_TABLES_SCHEMA
 import com.openlattice.transporter.types.TransporterDatastore.Companion.ORG_VIEWS_SCHEMA
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
@@ -161,6 +162,7 @@ class AssemblerConnectionManager(
             createSchema(dataSource, MATERIALIZED_VIEWS_SCHEMA)
             createSchema(dataSource, INTEGRATIONS_SCHEMA)
             createSchema(dataSource, STAGING_SCHEMA)
+            createSchema(dataSource, ORG_FOREIGN_TABLES_SCHEMA)
             createSchema(dataSource, ORG_VIEWS_SCHEMA)
             configureOrganizationUser(organizationId, dataSource)
             addMembersToOrganization(organizationId, dataSource, organizations.getMembers(organizationId))
@@ -168,7 +170,7 @@ class AssemblerConnectionManager(
         }
     }
 
-    private fun createSchema(dataSource: HikariDataSource, schemaName: String) {
+    internal fun createSchema(dataSource: HikariDataSource, schemaName: String) {
         dataSource.connection.use { connection ->
             connection.createStatement().use { statement ->
                 statement.execute("CREATE SCHEMA IF NOT EXISTS $schemaName")
@@ -781,7 +783,7 @@ val MEMBER_ORG_DATABASE_PERMISSIONS = setOf("CREATE", "CONNECT", "TEMPORARY", "T
 
 private val PRINCIPALS_SQL = "SELECT ${ACL_KEY.name} FROM ${PRINCIPALS.name} WHERE ${PRINCIPAL_TYPE.name} = ?"
 
-private fun grantOrgUserPrivilegesOnSchemaSql(schemaName: String, orgUserId: String): String {
+internal fun grantOrgUserPrivilegesOnSchemaSql(schemaName: String, orgUserId: String): String {
     return "GRANT USAGE, CREATE ON SCHEMA $schemaName TO $orgUserId"
 }
 

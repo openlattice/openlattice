@@ -42,13 +42,23 @@ data class TransportEntitySetEntryProcessor(
         try {
             data.linkOrgDbToTransporterDb( organizationId )
 
-            data.destroyTransportedEntitySetFromOrg( organizationId, esName )
+            data.destroyEntitySetViewInOrgDb( organizationId, esName )
 
-            data.destroyEntitySetViewFromTransporter( esName )
+            data.destroyTransportedEntityTypeTableInOrg( organizationId, es.entityTypeId )
 
-            data.createTransporterEntitySetView( esName, es.id, es.entityTypeId, ptIdToFqnColumns )
+            // import et table from foreign server
+            data.transportEntityTypeTableToOrg( organizationId, es.entityTypeId )
 
-            data.createTransportedEntitySetInOrg( organizationId, esName, usersToColumnPermissions )
+            // create view in org db
+            data.createEntitySetViewInOrgDb(
+                    organizationId,
+                    esName,
+                    es.id,
+                    es.entityTypeId,
+                    ptIdToFqnColumns,
+                    usersToColumnPermissions
+            )
+
         } catch ( ex: Exception ) {
             logger.error("Marking entity set id as not materialized {}", entry.key, ex)
             es.flags.remove(EntitySetFlag.TRANSPORTED)

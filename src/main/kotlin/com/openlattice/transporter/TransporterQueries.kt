@@ -23,7 +23,6 @@ import com.openlattice.postgres.PostgresExpressionIndexDefinition
 import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.PostgresTableDefinition
 import com.openlattice.transporter.types.TransporterColumn
-import com.openlattice.transporter.types.TransporterDatastore.Companion.ORG_VIEWS_SCHEMA
 import com.openlattice.transporter.types.TransporterDatastore.Companion.PUBLIC_SCHEMA
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -314,16 +313,38 @@ fun transportTable(
     }
 }
 
-fun dropOrgViewTable( entitySetName: String ): String {
-    return "DROP VIEW IF EXISTS $ORG_VIEWS_SCHEMA.$entitySetName"
-}
-
 fun grantOrgUserUsageOnschemaSql(schemaName: String, orgUserId: String): String {
     return "GRANT USAGE ON SCHEMA $schemaName TO $orgUserId"
 }
 
-fun destroyEntitySetViewIfExists(entitySetName: String ): String {
-    return "DROP VIEW IF EXISTS $PUBLIC_SCHEMA.$entitySetName"
+fun dropForeignTypeTable( schema: String, entityTypeId: UUID ): String {
+    return "DROP FOREIGN TABLE IF EXISTS $schema.${tableName(entityTypeId)}"
+}
+
+fun destroyView(schema: String, entitySetName: String ): String {
+    return "DROP VIEW IF EXISTS $schema.$entitySetName"
+}
+
+fun createEntitySetViewInSchemaFromSchema(
+        entitySetName: String,
+        entitySetId: UUID,
+        destinationSchema: String,
+        etTableName: String,
+        propertyTypes: Map<UUID, FullQualifiedName>,
+        sourceSchema: String
+): String {
+    val colsSql = propertyTypes.map { (id, ptName) ->
+        val column = ApiHelpers.dbQuote(id.toString())
+        val quotedPt = ApiHelpers.dbQuote(ptName.toString())
+        "$sourceSchema.$column as $quotedPt"
+    }.joinToString()
+
+    return """
+            CREATE VIEW $destinationSchema.$entitySetName AS 
+                SELECT ${ID_VALUE.name} as ${ApiHelpers.dbQuote(EdmConstants.ID_FQN.toString())}, 
+                    $colsSql FROM $etTableName
+                WHERE ${ENTITY_SET_ID.name} = '$entitySetId'
+        """.trimIndent()
 }
 
 fun createEntitySetViewInSchema(

@@ -9,8 +9,8 @@ import com.openlattice.assembler.createRoleIfNotExistsSql
 import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
 import com.openlattice.transporter.createEntitySetViewInSchema
-import com.openlattice.transporter.destroyEntitySetViewIfExists
-import com.openlattice.transporter.dropOrgViewTable
+import com.openlattice.transporter.destroyView
+import com.openlattice.transporter.dropForeignTypeTable
 import com.openlattice.transporter.grantOrgUserUsageOnschemaSql
 import com.openlattice.transporter.tableName
 import com.zaxxer.hikari.HikariDataSource
@@ -35,7 +35,10 @@ class TransporterDatastore(
         private val PAT = Regex("""([\w:]+)://([\w_.]*):(\d+)/(\w+)""")
 
         // schema in org_* database where the view is projected
-        const val ORG_VIEWS_SCHEMA = "transporter"
+        const val ORG_VIEWS_SCHEMA = "entitysets"
+
+        // schema in org_* database where the foregin tables are accessible
+        const val ORG_FOREIGN_TABLES_SCHEMA = "transporter"
 
         // database in atlas where the data is transported
         const val TRANSPORTER_DB_NAME = "transporter"
@@ -77,7 +80,7 @@ class TransporterDatastore(
                         TRANSPORTER_DB_NAME
                 ),
                 assemblerConfiguration.server.getProperty("username"),
-                ORG_VIEWS_SCHEMA,
+                ORG_FOREIGN_TABLES_SCHEMA,
                 getOrgFdw( organizationId )
         )
     }
@@ -215,7 +218,15 @@ class TransporterDatastore(
     fun destroyTransportedEntitySetFromOrg( organizationId: UUID, entitySetName: String ) {
         connectOrgDb( organizationId ).connection.use { conn ->
             conn.createStatement().use { stmt ->
-                stmt.executeUpdate( dropOrgViewTable( entitySetName ))
+                stmt.executeUpdate( destroyView( ORG_FOREIGN_TABLES_SCHEMA, entitySetName ))
+            }
+        }
+    }
+
+    fun destroyTransportedEntityTypeTableInOrg( organizationId: UUID, entityTypeId: UUID ) {
+        connectOrgDb( organizationId ).connection.use { conn ->
+            conn.createStatement().use { stmt ->
+                stmt.executeUpdate( dropForeignTypeTable( ORG_FOREIGN_TABLES_SCHEMA, entityTypeId))
             }
         }
     }
@@ -223,7 +234,73 @@ class TransporterDatastore(
     fun destroyEntitySetViewFromTransporter( entitySetName: String ) {
         datastore().connection.use { conn ->
             conn.createStatement().use { stmt ->
-                stmt.executeUpdate( destroyEntitySetViewIfExists( entitySetName ) )
+                stmt.executeUpdate( destroyView( PUBLIC_SCHEMA, entitySetName ) )
+            }
+        }
+    }
+
+    fun destroyEntitySetViewInOrgDb( organizationId: UUID, entitySetName: String) {
+        connectOrgDb( organizationId ).connection.use { conn ->
+            conn.createStatement().use { stmt ->
+                stmt.executeUpdate( destroyView( ORG_VIEWS_SCHEMA, entitySetName))
+            }
+        }
+    }
+
+    fun createEntitySetViewInOrgDb(
+            organizationId: UUID,
+            entitySetName: String,
+            entitySetId: UUID,
+            entityTypeId: UUID,
+            ptIdToFqnColumns: Map<UUID, FullQualifiedName>,
+            usersToColumnPermissions: Map<String, List<String>>
+    ) {
+        val allColumnsWithPermissions = usersToColumnPermissions.values.flatten().toSet()
+        connectOrgDb(organizationId).connection.use { conn ->
+            conn.createStatement().use { stmt ->
+                stmt.executeUpdate(
+                        createEntitySetViewInSchema(
+                                entitySetName,
+                                entitySetId,
+                                ORG_VIEWS_SCHEMA,
+                                tableName(entityTypeId),
+                                ptIdToFqnColumns
+                        )
+                )
+                allColumnsWithPermissions.forEach { columnName ->
+                    val roleName = viewRoleName(entitySetName, columnName)
+                    stmt.execute( createRoleIfNotExistsSql(roleName))
+                    grantOrgUserUsageOnschemaSql(ORG_VIEWS_SCHEMA, roleName)
+                    AssemblerConnectionManager.grantSelectSql(entitySetName, roleName, listOf(columnName))
+                }
+
+                // TODO: invalidate/update this when pt types and permissions are changed
+                usersToColumnPermissions.forEach { ( username, allowedCols ) ->
+                    logger.info("user $username has columns $allowedCols")
+//                    grantOrgUserUsageOnschemaSql(ORG_FOREIGN_TABLES_SCHEMA, username)
+                    allowedCols.forEach { column ->
+                        stmt.addBatch("GRANT ${ApiHelpers.dbQuote(viewRoleName(entitySetName, column))} to $username")
+                    }
+                }
+                stmt.executeBatch()
+            }
+        }
+    }
+
+    fun transportEntityTypeTableToOrg(
+            organizationId: UUID,
+            entityTypeId: UUID
+    ) {
+        connectOrgDb(organizationId).connection.use { conn ->
+            conn.createStatement().use { stmt ->
+                stmt.executeUpdate(
+                        importTablesFromForeignSchema(
+                                PUBLIC_SCHEMA,
+                                setOf(tableName(entityTypeId)),
+                                ORG_FOREIGN_TABLES_SCHEMA,
+                                getOrgFdw(organizationId)
+                        )
+                )
             }
         }
     }
@@ -261,21 +338,21 @@ class TransporterDatastore(
                         importTablesFromForeignSchema(
                                 PUBLIC_SCHEMA,
                                 setOf(entitySetName),
-                                ORG_VIEWS_SCHEMA,
+                                ORG_FOREIGN_TABLES_SCHEMA,
                                 getOrgFdw( organizationId )
                         )
                 )
                 allColumnsWithPermissions.forEach { columnName ->
                     val roleName = viewRoleName(entitySetName, columnName)
                     stmt.execute( createRoleIfNotExistsSql(roleName))
-                    grantOrgUserUsageOnschemaSql(ORG_VIEWS_SCHEMA, roleName)
+                    grantOrgUserUsageOnschemaSql(ORG_FOREIGN_TABLES_SCHEMA, roleName)
                     AssemblerConnectionManager.grantSelectSql(entitySetName, roleName, listOf(columnName))
                 }
 
                 // TODO: invalidate/update this when pt types and permissions are changed
                 usersToColumnPermissions.forEach { ( username, allowedCols ) ->
                     logger.info("user $username has columns $allowedCols")
-                    grantOrgUserUsageOnschemaSql(ORG_VIEWS_SCHEMA, username)
+                    grantOrgUserUsageOnschemaSql(ORG_FOREIGN_TABLES_SCHEMA, username)
                     allowedCols.forEach { column ->
                         stmt.addBatch("GRANT ${ApiHelpers.dbQuote(viewRoleName(entitySetName, column))} to $username")
                     }

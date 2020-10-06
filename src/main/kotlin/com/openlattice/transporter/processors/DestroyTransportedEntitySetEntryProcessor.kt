@@ -23,9 +23,9 @@ class DestroyTransportedEntitySetEntryProcessor(): AbstractRhizomeEntryProcessor
         check(::data.isInitialized) { TransporterDependent.NOT_INITIALIZED }
         val es = entry.value
 
-        data.destroyTransportedEntitySetFromOrg( es.organizationId, es.name )
+        data.destroyEntitySetViewInOrgDb( es.organizationId, es.name )
 
-        data.destroyEntitySetViewFromTransporter( es.name )
+        data.destroyTransportedEntityTypeTableInOrg( es.organizationId, es.entityTypeId )
 
         es.flags.remove(EntitySetFlag.TRANSPORTED)
         entry.setValue( es )
