@@ -91,11 +91,16 @@ class PostgresLinkingQueryService(
         val clusters = getClustersForIds(candidates)
 
         lockClustersForUpdates(clusters.keys).use { conn ->
-            val resultTriple = doWork(clusters)
-            val linkingId = resultTriple.first
-            val scores = resultTriple.second
-            insertMatchScores(conn, linkingId, scores)
-            return resultTriple
+            try {
+                val resultTriple = doWork(clusters)
+                val linkingId = resultTriple.first
+                val scores = resultTriple.second
+                insertMatchScores(conn, linkingId, scores)
+                return resultTriple
+            } catch (ex: Exception) {
+                conn.rollback()
+                throw ex
+            }
         }
     }
 
@@ -214,14 +219,14 @@ class PostgresLinkingQueryService(
                 val version = System.currentTimeMillis()
                 toRemove.forEach { edk ->
                     val partition = getPartition(edk.entityKeyId, entitySetPartitions.getValue(edk.entitySetId))
+                    val partitions = PostgresArrays.createIntArray(connection, partition)
                     ps.setLong(1, version)
                     ps.setLong(2, version)
                     ps.setLong(3, version)
                     ps.setObject(4, edk.entitySetId) // esid
-                    ps.setInt(5, partition)
+                    ps.setArray(5, partitions)
                     ps.setObject(6, linkingId) // ID value
                     ps.setObject(7, edk.entityKeyId) // origin id
-                    println(ps.toString())
                     ps.addBatch()
                 }
                 return ps.executeUpdate()
