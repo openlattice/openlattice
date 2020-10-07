@@ -9,6 +9,7 @@ import com.openlattice.assembler.AssemblerConnectionManager.Companion.MATERIALIZ
 import com.openlattice.assembler.AssemblerConnectionManager.Companion.STAGING_SCHEMA
 import com.openlattice.assembler.PostgresRoles.Companion.getSecurablePrincipalIdFromUserName
 import com.openlattice.assembler.PostgresRoles.Companion.isPostgresUserName
+import com.openlattice.assembler.dropAllConnectionsToDatabaseSql
 import com.openlattice.authorization.*
 import com.openlattice.authorization.processors.PermissionMerger
 import com.openlattice.authorization.securable.SecurableObjectType
@@ -385,6 +386,7 @@ class ExternalDatabaseManagementService(
         val dbName = externalDbManager.getOrganizationDatabaseName(orgId)
         externalDbManager.connect(dbName).connection.use { conn ->
             val stmt = conn.createStatement()
+            stmt.execute(dropAllConnectionsToDatabaseSql(dbName))
             stmt.execute("DROP DATABASE $dbName")
         }
     }
