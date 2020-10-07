@@ -539,6 +539,12 @@ public final class PostgresTable {
                         .name( "principal_trees_acl_key_idx" )
                         .ifNotExists()
         );
+
+        String foo = "(" + SRC_ENTITY_SET_ID.getName()
+                +  ",( abs(" + VERSION.getName() + ") > " + LAST_TRANSPORT.getName() + "))"
+                + "OR (" + DST_ENTITY_SET_ID.getName() + ",( abs(" + VERSION.getName() + ") > " + LAST_TRANSPORT.getName() + "))"
+                + "OR (" + EDGE_ENTITY_SET_ID.getName() + ",( abs(" + VERSION.getName() + ") > " + LAST_TRANSPORT.getName() + "))";
+                System.out.println(foo);
         E.addIndexes(
                 new PostgresColumnsIndexDefinition( E, SRC_ENTITY_KEY_ID )
                         .name( "e_src_entity_key_id_idx" )
@@ -559,11 +565,17 @@ public final class PostgresTable {
                         .name( "e_edge_entity_set_id_idx" )
                         .ifNotExists(),
                 new PostgresExpressionIndexDefinition( E,
-                        "(" + SRC_ENTITY_SET_ID.getName() + ",( abs(" + VERSION.getName() + ") > " + LAST_TRANSPORT.getName() + "))"
-                                + "OR (" + DST_ENTITY_SET_ID.getName() + ",( abs(" + VERSION.getName() + ") > " + LAST_TRANSPORT.getName() + "))"
-                                + "OR (" + EDGE_ENTITY_SET_ID.getName() + ",( abs(" + VERSION.getName() + ") > " + LAST_TRANSPORT.getName() + "))")
+                        SRC_ENTITY_SET_ID.getName() + ",( abs(" + VERSION.getName() + ") > " + LAST_TRANSPORT.getName() + ")")
+                        .name( "src_edges_needing_transport_idx" )
+                        .ifNotExists(),
+                new PostgresExpressionIndexDefinition( E,
+                        DST_ENTITY_SET_ID.getName() + ",( abs(" + VERSION.getName() + ") > " + LAST_TRANSPORT.getName() + ")")
+                        .name( "dst_needing_transport_idx" )
+                        .ifNotExists(),
+                new PostgresExpressionIndexDefinition( E,
+                        EDGE_ENTITY_SET_ID.getName() + ",( abs(" + VERSION.getName() + ") > " + LAST_TRANSPORT.getName() + ")")
                         .name( "edges_needing_transport_idx" )
-                        .ifNotExists() );
+                        .ifNotExists());
 
         IDS.addIndexes(
                 new PostgresColumnsIndexDefinition( IDS, ENTITY_SET_ID )

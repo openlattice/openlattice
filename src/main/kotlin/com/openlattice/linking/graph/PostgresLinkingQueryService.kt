@@ -28,12 +28,27 @@ import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.data.storage.tombstoneLinkForEntity
 import com.openlattice.linking.EntityKeyPair
 import com.openlattice.linking.LinkingQueryService
-import com.openlattice.postgres.DataTables.*
+import com.openlattice.postgres.DataTables.LAST_INDEX
+import com.openlattice.postgres.DataTables.LAST_LINK
+import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresArrays
-import com.openlattice.postgres.PostgresColumn.*
-import com.openlattice.postgres.PostgresTable.*
+import com.openlattice.postgres.PostgresColumn.DST_ENTITY_KEY_ID
+import com.openlattice.postgres.PostgresColumn.DST_ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.ENTITY_KEY_IDS_COL
+import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.ENTITY_TYPE_ID
+import com.openlattice.postgres.PostgresColumn.ID
+import com.openlattice.postgres.PostgresColumn.ID_VALUE
+import com.openlattice.postgres.PostgresColumn.LINKING_ID
+import com.openlattice.postgres.PostgresColumn.PARTITION
+import com.openlattice.postgres.PostgresColumn.SCORE
+import com.openlattice.postgres.PostgresColumn.SRC_ENTITY_KEY_ID
+import com.openlattice.postgres.PostgresColumn.SRC_ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.VERSION
+import com.openlattice.postgres.PostgresTable.ENTITY_SETS
+import com.openlattice.postgres.PostgresTable.IDS
+import com.openlattice.postgres.PostgresTable.MATCHED_ENTITIES
 import com.openlattice.postgres.ResultSetAdapters
-import com.openlattice.postgres.lockIdsAndExecute
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.openlattice.postgres.streams.StatementHolder
@@ -378,7 +393,6 @@ private val ENTITY_KEY_IDS_OF_LINKING_IDS_SQL =
             "AND ${ENTITY_SET_ID.name} = ANY(?) " +
             "AND ${PARTITION.name} = ANY(?) " +
         "GROUP BY ${LINKING_ID.name}"
-
 
 private val LOCK_CLUSTERS_SQL = "SELECT 1 FROM ${MATCHED_ENTITIES.name} WHERE ${LINKING_ID.name} = ? FOR UPDATE"
 

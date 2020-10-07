@@ -6,6 +6,7 @@ import com.hazelcast.nio.ObjectDataOutput
 import com.openlattice.TestServer.Companion.testServer
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.AssemblerConnectionManagerDependent
+import com.openlattice.rhizome.KotlinDelegatedUUIDSet
 import com.openlattice.transporter.types.TransporterDatastore
 import com.openlattice.transporter.types.TransporterDependent
 import org.junit.Assert
@@ -53,7 +54,13 @@ class SerializersTest(val serializer: TestableSelfRegisteringStreamSerializer<An
             val inputData = dataOut.toByteArray()
             val dataIn: ObjectDataInput = ss1.createObjectDataInput(inputData)
             val actual = serializer.read(dataIn)
-            Assert.assertEquals(expected, actual)
+            if ( serializer.typeId == KotlinDelegatedUUIDSetStreamSerializer().typeId){
+                val exp = expected as KotlinDelegatedUUIDSet
+                val act = actual as KotlinDelegatedUUIDSet
+                Assert.assertArrayEquals( exp.toTypedArray(), act.toTypedArray())
+            } else {
+                Assert.assertEquals(expected, actual)
+            }
         } catch (e: Exception) {
             logger.error("Unable to serialize/deserialize type {}", serializer.clazz, e)
             throw e
