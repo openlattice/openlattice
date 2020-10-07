@@ -29,15 +29,11 @@ class KotlinDelegatedUUIDSetStreamSerializer: TestableSelfRegisteringStreamSeria
     }
 
     override fun write(out: ObjectDataOutput, `object`: KotlinDelegatedUUIDSet) {
-        val least = LongArray(`object`.size)
-        val most = LongArray(`object`.size)
-        for ((i, uuid) in `object`.withIndex()) {
-            least[i] = uuid.leastSignificantBits
-            most[i] = uuid.mostSignificantBits
+        out.writeInt( `object`.size )
+        `object`.forEach { id ->
+            out.writeLong( id.mostSignificantBits )
+            out.writeLong( id.leastSignificantBits )
         }
-        out.writeInt(`object`.size)
-        out.writeLongArray(least)
-        out.writeLongArray(most)
     }
 
     override fun read(`in`: ObjectDataInput): KotlinDelegatedUUIDSet {
@@ -47,12 +43,10 @@ class KotlinDelegatedUUIDSetStreamSerializer: TestableSelfRegisteringStreamSeria
         }
 
         val set = Sets.newLinkedHashSetWithExpectedSize<UUID>(size)
-        val least = `in`.readLongArray()
-        val most = `in`.readLongArray()
-        for ((i, long) in least.withIndex()){
-            set.add(UUID(most[i], long))
+        repeat( size ) {
+            set.add( UUID( `in`.readLong(), `in`.readLong()))
         }
 
-        return KotlinDelegatedUUIDSet(set)
+        return KotlinDelegatedUUIDSet( set )
     }
 }
