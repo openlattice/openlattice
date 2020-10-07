@@ -21,17 +21,20 @@
 package com.openlattice.graph.core;
 
 import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking;
+import com.openlattice.analysis.requests.AggregationResult;
 import com.openlattice.data.DataEdgeKey;
 import com.openlattice.data.WriteEvent;
 import com.openlattice.edm.type.PropertyType;
-import com.openlattice.analysis.requests.AggregationResult;
 import com.openlattice.graph.edge.Edge;
 import com.openlattice.postgres.streams.PostgresIterable;
 import com.openlattice.search.requests.EntityNeighborsFilter;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Stream;
-import org.jetbrains.annotations.NotNull;
 
 /**
  * Graph Object supporting CRUD operations of vertices and edges to the graph.
@@ -60,11 +63,7 @@ public interface GraphService {
             Set<UUID> entityKeyIds,
             boolean includeClearedEdges );
 
-    Stream<Edge> getEdgesAndNeighborsForVertex( UUID entitySetId, UUID vertexId );
-
-    Stream<Edge> getEdgesAndNeighborsForVertices( UUID entitySetId, EntityNeighborsFilter filter );
-
-    Stream<Edge> getEdgesAndNeighborsForVerticesBulk( Set<UUID> entitySetIds, EntityNeighborsFilter filter );
+    Stream<Edge> getEdgesAndNeighborsForVertices( Set<UUID> entitySetIds, EntityNeighborsFilter filter );
 
     Set<UUID> getEdgeEntitySetsConnectedToEntities( UUID entitySetId, Set<UUID> entityKeyIds );
 

@@ -544,7 +544,7 @@ class SearchService(
         val entitySetIdToEntityKeyId = HashMultimap.create<UUID, UUID>()
         val entitySetsIdsToAuthorizedProps = mutableMapOf<UUID, MutableMap<UUID, PropertyType>>()
 
-        graphService.getEdgesAndNeighborsForVerticesBulk(
+        graphService.getEdgesAndNeighborsForVertices(
                 allBaseEntitySetIds,
                 EntityNeighborsFilter(
                         entityKeyIds,
@@ -820,7 +820,7 @@ class SearchService(
 
         val neighbors = mutableMapOf<UUID, MutableMap<UUID, SetMultimap<UUID, NeighborEntityIds>>>()
 
-        graphService.getEdgesAndNeighborsForVerticesBulk(entitySetIds, filter).forEach { edge ->
+        graphService.getEdgesAndNeighborsForVertices(entitySetIds, filter).forEach { edge ->
 
             val isSrc = entityKeyIds.contains(edge.src.entityKeyId)
             val entityKeyId = if (isSrc) edge.src.entityKeyId else edge.dst.entityKeyId
