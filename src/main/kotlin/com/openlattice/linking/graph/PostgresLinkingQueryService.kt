@@ -28,12 +28,27 @@ import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.data.storage.tombstoneLinkForEntity
 import com.openlattice.linking.EntityKeyPair
 import com.openlattice.linking.LinkingQueryService
-import com.openlattice.postgres.DataTables.*
+import com.openlattice.postgres.DataTables.LAST_INDEX
+import com.openlattice.postgres.DataTables.LAST_LINK
+import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresArrays
-import com.openlattice.postgres.PostgresColumn.*
-import com.openlattice.postgres.PostgresTable.*
+import com.openlattice.postgres.PostgresColumn.DST_ENTITY_KEY_ID
+import com.openlattice.postgres.PostgresColumn.DST_ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.ENTITY_KEY_IDS_COL
+import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.ENTITY_TYPE_ID
+import com.openlattice.postgres.PostgresColumn.ID
+import com.openlattice.postgres.PostgresColumn.ID_VALUE
+import com.openlattice.postgres.PostgresColumn.LINKING_ID
+import com.openlattice.postgres.PostgresColumn.PARTITION
+import com.openlattice.postgres.PostgresColumn.SCORE
+import com.openlattice.postgres.PostgresColumn.SRC_ENTITY_KEY_ID
+import com.openlattice.postgres.PostgresColumn.SRC_ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.VERSION
+import com.openlattice.postgres.PostgresTable.ENTITY_SETS
+import com.openlattice.postgres.PostgresTable.IDS
+import com.openlattice.postgres.PostgresTable.MATCHED_ENTITIES
 import com.openlattice.postgres.ResultSetAdapters
-import com.openlattice.postgres.lockIdsAndExecute
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.openlattice.postgres.streams.StatementHolder
@@ -76,11 +91,16 @@ class PostgresLinkingQueryService(
         val clusters = getClustersForIds(candidates)
 
         lockClustersForUpdates(clusters.keys).use { conn ->
-            val resultTriple = doWork(clusters)
-            val linkingId = resultTriple.first
-            val scores = resultTriple.second
-            insertMatchScores(conn, linkingId, scores)
-            return resultTriple
+            try {
+                val resultTriple = doWork(clusters)
+                val linkingId = resultTriple.first
+                val scores = resultTriple.second
+                insertMatchScores(conn, linkingId, scores)
+                return resultTriple
+            } catch (ex: Exception) {
+                conn.rollback()
+                throw ex
+            }
         }
     }
 
@@ -199,14 +219,14 @@ class PostgresLinkingQueryService(
                 val version = System.currentTimeMillis()
                 toRemove.forEach { edk ->
                     val partition = getPartition(edk.entityKeyId, entitySetPartitions.getValue(edk.entitySetId))
+                    val partitions = PostgresArrays.createIntArray(connection, partition)
                     ps.setLong(1, version)
                     ps.setLong(2, version)
                     ps.setLong(3, version)
                     ps.setObject(4, edk.entitySetId) // esid
-                    ps.setInt(5, partition)
+                    ps.setArray(5, partitions)
                     ps.setObject(6, linkingId) // ID value
                     ps.setObject(7, edk.entityKeyId) // origin id
-                    println(ps.toString())
                     ps.addBatch()
                 }
                 return ps.executeUpdate()
