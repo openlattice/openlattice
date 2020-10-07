@@ -33,11 +33,9 @@ data class TransportEntitySetEntryProcessor(
         check(::data.isInitialized) { TransporterDependent.NOT_INITIALIZED }
         val es = entry.value
         val esName = es.name
-        if ( es.flags.contains(EntitySetFlag.TRANSPORTED)){
+        if ( es.flags.contains(EntitySetFlag.TRANSPORTED) ){
             return null
         }
-        es.flags.add(EntitySetFlag.TRANSPORTED)
-        entry.setValue(es)
 
         try {
             data.linkOrgDbToTransporterDb( organizationId )
@@ -58,11 +56,12 @@ data class TransportEntitySetEntryProcessor(
                     ptIdToFqnColumns,
                     usersToColumnPermissions
             )
-
+            es.flags.add(EntitySetFlag.TRANSPORTED)
         } catch ( ex: Exception ) {
             logger.error("Marking entity set id as not materialized {}", entry.key, ex)
             es.flags.remove(EntitySetFlag.TRANSPORTED)
-            entry.setValue( es )
+        } finally {
+            entry.setValue(es)
         }
         return null
     }
