@@ -22,6 +22,7 @@
 
 package com.openlattice.hazelcast.serializers;
 
+import com.google.common.collect.Sets;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers;
@@ -34,6 +35,7 @@ import com.openlattice.mapstores.TestDataFactory;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -61,7 +63,7 @@ public class EntitySetStreamSerializer implements TestableSelfRegisteringStreamS
             EntitySetFlagStreamSerializer.serialize( out, flag );
         }
 
-        StreamSerializers.serializeIntListItems( out, object.getPartitions() );
+        StreamSerializers.serializeIntList( out, object.getPartitions() );
 
         if ( object.getExpiration() != null ) {
             out.writeBoolean( true );
@@ -92,7 +94,7 @@ public class EntitySetStreamSerializer implements TestableSelfRegisteringStreamS
             flags.add( EntitySetFlagStreamSerializer.deserialize( in ) );
         }
 
-        LinkedHashSet<Integer> partitions = StreamSerializers.deserializeIntListItems( in );
+        LinkedHashSet<Integer> partitions = (LinkedHashSet<Integer>) StreamSerializers.deserializeIntList( in, Sets.newLinkedHashSet() );
 
         DataExpiration expiration;
         boolean hasExpiration = in.readBoolean();
