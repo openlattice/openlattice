@@ -559,7 +559,9 @@ public final class PostgresTable {
                         .name( "e_edge_entity_set_id_idx" )
                         .ifNotExists(),
                 new PostgresExpressionIndexDefinition( E,
-                        ENTITY_SET_ID.getName() + ",( abs(" + VERSION.getName() + ") > " + LAST_TRANSPORT.getName() + ")" )
+                        "(" + SRC_ENTITY_SET_ID.getName() + ",( abs(" + VERSION.getName() + ") > " + LAST_TRANSPORT.getName() + "))"
+                                + "OR (" + DST_ENTITY_SET_ID.getName() + ",( abs(" + VERSION.getName() + ") > " + LAST_TRANSPORT.getName() + "))"
+                                + "OR (" + EDGE_ENTITY_SET_ID.getName() + ",( abs(" + VERSION.getName() + ") > " + LAST_TRANSPORT.getName() + "))")
                         .name( "edges_needing_transport_idx" )
                         .ifNotExists() );
 
