@@ -186,16 +186,6 @@ final class TransporterService(
         }
     }
 
-//    @Subscribe
-//    fun handleClearAllData(e: ClearAllDataEvent) {
-//        data.datastore().connection.use {conn ->
-//            val st = conn.createStatement()
-//            this.transporterState.keys.forEach { etId ->
-//                st.execute("TRUNCATE TABLE ${tableName(etId)}")
-//            }
-//        }
-//    }
-
     @Subscribe
     fun handlePropertyTypesRemovedFromEntityTypeEvent(e: PropertyTypesRemovedFromEntityTypeEvent) {
         this.transporterState.executeOnKey(e.entityType.id,

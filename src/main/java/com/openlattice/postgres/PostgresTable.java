@@ -557,6 +557,10 @@ public final class PostgresTable {
                         .ifNotExists(),
                 new PostgresColumnsIndexDefinition( E, EDGE_ENTITY_SET_ID )
                         .name( "e_edge_entity_set_id_idx" )
+                        .ifNotExists(),
+                new PostgresExpressionIndexDefinition( E,
+                        ENTITY_SET_ID.getName() + ",( abs(" + VERSION.getName() + ") > " + LAST_TRANSPORT.getName() + ")" )
+                        .name( "edges_needing_transport_idx" )
                         .ifNotExists() );
 
         IDS.addIndexes(
