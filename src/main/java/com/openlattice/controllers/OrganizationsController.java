@@ -142,6 +142,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         AclKey aclKey = ensureOwner( organizationId );
 
         ensureObjectCanBeDeleted( organizationId );
+        organizations.ensureOrganizationExists( organizationId );
 
         organizations.destroyOrganization( organizationId );
         edms.deleteOrganizationExternalDatabase( organizationId );
