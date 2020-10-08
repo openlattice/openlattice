@@ -26,10 +26,6 @@ class LongIdsMapstore(hds: HikariDataSource) : AbstractBasePostgresMapstore<Stri
         return RandomUtils.nextLong()
     }
 
-    override fun loadAllKeys(): MutableIterable<String> {
-        return super.loadAllKeys()
-    }
-
     override fun bind(ps: PreparedStatement, key: String, value: Long) {
         val index = bind(ps, key)
         ps.setLong(index, value)
