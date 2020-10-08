@@ -68,6 +68,9 @@ public interface OrganizationsApi {
     String USER_ID           = "userId";
     String USER_ID_PATH      = "/{" + USER_ID + ":.*}";
 
+    String TRANSPORT         = "/transport";
+    String DESTROY           = "/destroy";
+
     // @formatter:on
 
     @GET( BASE )
@@ -84,6 +87,18 @@ public interface OrganizationsApi {
 
     @GET( BASE + ID_PATH + INTEGRATION )
     OrganizationIntegrationAccount getOrganizationIntegrationAccount( @Path( ID ) UUID organizationId );
+
+    /**
+     * Marks an entity set for transporter
+     */
+    @GET( BASE + ID_PATH + SET_ID_PATH + TRANSPORT )
+    Void transportEntitySet( @Path(ID) UUID organizationId, @Path(SET_ID) UUID entitySetId);
+
+    /**
+     * Destroys an transported entity set
+     */
+    @GET( BASE + ID_PATH + SET_ID_PATH + DESTROY )
+    Void destroyTransportedEntitySet(@Path(ID) UUID organizationId, @Path(SET_ID) UUID entitySetId);
 
     /**
      * Rolls the organization integration account credentials.
