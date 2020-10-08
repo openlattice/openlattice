@@ -1221,7 +1221,7 @@ internal fun getFilteredNeighborhoodSql(
 }
 
 private fun entitySetFilterClause(column: PostgresColumnDefinition, entitySetFilter: Optional<Set<UUID>>): String {
-    return if (entitySetFilter.isPresent) {
+    return if (entitySetFilter.get().isNotEmpty()) {
         "${column.name} IN (${
             entitySetFilter.get().joinToString { "'$it'" }
         })"
