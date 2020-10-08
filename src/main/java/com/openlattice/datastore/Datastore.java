@@ -40,6 +40,7 @@ import com.openlattice.jdbc.JdbcPod;
 import com.openlattice.postgres.PostgresPod;
 import com.openlattice.postgres.pods.ExternalDatabaseConnectionManagerPod;
 import com.openlattice.tasks.pods.TaskSchedulerPod;
+import com.openlattice.transporter.TransporterConfigurationPod;
 import com.openlattice.transporter.pods.TransporterPod;
 
 public class Datastore extends BaseRhizomeServer {
@@ -58,6 +59,7 @@ public class Datastore extends BaseRhizomeServer {
             SharedStreamSerializersPod.class,
             TaskSchedulerPod.class,
             TransporterPod.class,
+            TransporterConfigurationPod.class
     };
 
     private static final Class<?>[] webPods       = new Class<?>[] {
