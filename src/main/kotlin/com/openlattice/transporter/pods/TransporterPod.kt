@@ -62,6 +62,7 @@ class TransporterPod {
 
     @Bean
     fun transporterInitializeServiceTask(): TransporterInitializeServiceTask {
+        LoggerFactory.getLogger(TransporterPod::class.java).info("Constructing TransporterInitializeServiceTask")
         return TransporterInitializeServiceTask()
     }
 
