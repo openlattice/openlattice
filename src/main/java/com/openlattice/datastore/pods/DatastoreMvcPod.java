@@ -22,7 +22,6 @@ package com.openlattice.datastore.pods;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openlattice.admin.AdminController;
-import com.openlattice.analysis.assembler.AssemblyAnalyzationController;
 import com.openlattice.codex.controllers.CodexController;
 import com.openlattice.collection.CollectionsController;
 import com.openlattice.controllers.OrganizationsController;
@@ -72,7 +71,7 @@ import java.util.List;
                 EdmController.class, OrganizationsController.class,
                 DataStoreExceptionHandler.class, EntitySetsController.class,
                 RequestsController.class, AppController.class, GraphController.class,
-                PersistentSearchController.class, AdminController.class, AssemblyAnalyzationController.class,
+                PersistentSearchController.class, AdminController.class,
                 SubscriptionController.class, FeedsController.class, CodexController.class, CollectionsController.class,
                 DatasetController.class, AnalysisController.class
         },
