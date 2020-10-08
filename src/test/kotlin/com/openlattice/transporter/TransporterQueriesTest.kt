@@ -120,7 +120,7 @@ class TransporterQueriesTest {
                 ps.setArray(1, PostgresArrays.createIntArray(conn, listOf(1)))
                 ps.setArray(2, PostgresArrays.createUuidArray(conn, listOf(entitySetId)))
                 try {
-                    ps.executeUpdate()
+                    ps.executeQuery()
                 } catch (e: PSQLException) {
                     fail(pretty(query, e))
                 }
@@ -142,6 +142,7 @@ class TransporterQueriesTest {
             conn.prepareStatement(query).use {ps ->
                 ps.setArray(1, PostgresArrays.createIntArray(conn, listOf(1)))
                 ps.setArray(2, PostgresArrays.createUuidArray(conn, entitySetId))
+                ps.setArray(3, PostgresArrays.createUuidArray(conn, entitySetId))
                 try {
                     ps.executeUpdate()
                 } catch (e: PSQLException) {
