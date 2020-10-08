@@ -10,6 +10,7 @@ import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
 import com.openlattice.transporter.services.TransporterService
+import com.openlattice.transporter.tasks.TransporterInitializeServiceTask
 import com.openlattice.transporter.tasks.TransporterRunSyncTask
 import com.openlattice.transporter.tasks.TransporterRunSyncTaskDependencies
 import com.openlattice.transporter.types.TransporterDatastore
@@ -57,6 +58,11 @@ class TransporterPod {
                 hazelcastInstance,
                 transporterDatastore()
         )
+    }
+
+    @Bean
+    fun transporterInitializeServiceTask(): TransporterInitializeServiceTask {
+        return TransporterInitializeServiceTask()
     }
 
     @Bean
