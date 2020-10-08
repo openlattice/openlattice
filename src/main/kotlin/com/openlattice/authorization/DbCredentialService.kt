@@ -44,15 +44,15 @@ class DbCredentialService(hazelcastInstance: HazelcastInstance, val longIdServic
                 DbCredentialService::class.java
         )
         const val scope = "DB_USER_IDS"
-        const val upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        private const val upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         private const val digits = "0123456789"
-        private const val special = "!@#$%^&*()"
+        private const val special = ""//"!@#$%^&*()"
 
         private val lower = upper.toLowerCase()
         private val source = upper + lower + digits + special
         private val srcBuf = source.toCharArray()
 
-        private const val CREDENTIAL_LENGTH = 20
+        private const val CREDENTIAL_LENGTH = 29
 
         private val r = SecureRandom()
 
