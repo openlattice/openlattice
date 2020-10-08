@@ -39,6 +39,7 @@ import com.openlattice.jdbc.JdbcPod;
 import com.openlattice.postgres.PostgresPod;
 import com.openlattice.postgres.PostgresTablesPod;
 import com.openlattice.postgres.pods.ExternalDatabaseConnectionManagerPod;
+import com.openlattice.transporter.pods.TransporterPod;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -59,7 +60,8 @@ public class Indexer extends BaseRhizomeServer {
             PlasmaCoupling.class,
             PostgresPod.class,
             PostgresTablesPod.class,
-            SharedStreamSerializersPod.class
+            SharedStreamSerializersPod.class,
+            TransporterPod.class
     };
 
     private static final Class<?>[] webPods = new Class<?>[]{ IndexerServletsPod.class, IndexerSecurityPod.class };

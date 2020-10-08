@@ -79,6 +79,7 @@ import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
 import com.openlattice.scrunchie.search.ConductorElasticsearchImpl;
+import com.openlattice.transporter.types.TransporterDatastore;
 import com.zaxxer.hikari.HikariDataSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -128,6 +129,9 @@ public class IndexerServicesPod {
 
     @Inject
     private ExternalDatabaseConnectionManager externalDbConnMan;
+
+    @Inject
+    private TransporterDatastore transporterDatastore;
 
     @Bean
     public ConductorElasticsearchApi elasticsearchApi() {
@@ -337,6 +341,7 @@ public class IndexerServicesPod {
                 aclKeyReservationService(),
                 authorizationManager(),
                 organizationExternalDatabaseConfiguration,
+                transporterDatastore,
                 dbcs(),
                 hikariDataSource );
     }
