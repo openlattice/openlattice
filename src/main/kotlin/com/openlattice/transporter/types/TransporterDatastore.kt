@@ -164,7 +164,7 @@ class TransporterDatastore(
                 hds,
                 rhizomeConfig.hikariConfiguration.getProperty("username"),
                 rhizomeConfig.hikariConfiguration.getProperty("password"),
-                rhizomeConfig.hikariConfiguration.getProperty("jdbcUrl"),
+                rhizomeConfig.hikariConfiguration.getProperty("jdbcUrl").removeSuffix("?sslmode=require"),
                 assemblerConfiguration.server.getProperty("username"),
                 ENTERPRISE_FDW_SCHEMA,
                 ENTERPRISE_FDW_NAME
