@@ -55,6 +55,7 @@ import com.openlattice.notifications.sms.PhoneNumberService;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
+import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
 import com.openlattice.scrunchie.search.ConductorElasticsearchImpl;
 import com.zaxxer.hikari.HikariDataSource;
 import org.deeplearning4j.nn.modelimport.keras.KerasModelImport;
@@ -102,6 +103,9 @@ public class LinkerServicesPod {
 
     @Inject
     private MetricRegistry metricRegistry;
+
+    @Inject
+    private ExternalDatabaseConnectionManager externalDbConnMan;
 
     @Bean
     public PartitionManager partitionManager() {
@@ -164,6 +168,7 @@ public class LinkerServicesPod {
     public AssemblerConnectionManager assemblerConnectionManager() {
         return new AssemblerConnectionManager(
                 assemblerConfiguration,
+                externalDbConnMan,
                 hikariDataSource,
                 principalService(),
                 organizationsManager(),
