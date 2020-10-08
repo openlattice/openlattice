@@ -69,6 +69,12 @@ final class TransporterService(
         eventBus.register(this)
     }
 
+    private val transporterState = HazelcastMap.TRANSPORTER_DB_COLUMNS.getMap( hazelcastInstance )
+    private val entitySets = HazelcastMap.ENTITY_SETS.getMap( hazelcastInstance )
+
+    /**
+     * Initialization called by [TransporterInitializeServiceTask]
+     */
     fun initializeTransporterDatastore() {
         executor.submit {
             val entityTypes = dataModelService.entityTypes.toList()
@@ -85,9 +91,6 @@ final class TransporterService(
             logger.info("synchronization finished with {} entity type tables updated", tablesCreated)
         }
     }
-
-    private val transporterState = HazelcastMap.TRANSPORTER_DB_COLUMNS.getMap( hazelcastInstance )
-    private val entitySets = HazelcastMap.ENTITY_SETS.getMap( hazelcastInstance )
 
     /**
      *  Sync [et] from enterprise to table in atlas
