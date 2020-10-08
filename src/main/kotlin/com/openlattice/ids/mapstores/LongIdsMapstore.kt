@@ -38,8 +38,8 @@ class LongIdsMapstore(hds: HikariDataSource) : AbstractBasePostgresMapstore<Stri
     }
 
     override fun bind(ps: PreparedStatement, key: String, offset: Int): Int {
-        ps.setString(1, key)
-        return 2
+        ps.setString(offset, key)
+        return offset+1
     }
 
     override fun mapToValue(rs: ResultSet): Long {
