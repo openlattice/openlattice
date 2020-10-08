@@ -34,16 +34,9 @@ class TransporterPod {
     private lateinit var eventBus: EventBus
     @Inject
     private lateinit var executor: ListeningExecutorService
-    @Inject
-    private lateinit var externalDbConnMan: ExternalDatabaseConnectionManager
-    @Inject
-    private lateinit var assemblerConfiguration: AssemblerConfiguration
 
-    @Bean
-    fun transporterDatastore(): TransporterDatastore {
-        LoggerFactory.getLogger(TransporterPod::class.java).info("Constructing TransporterDatastore")
-        return TransporterDatastore(assemblerConfiguration, rhizome, externalDbConnMan)
-    }
+    @Inject
+    private lateinit var transporterDatastore: TransporterDatastore
 
     @Bean
     fun transporterService(): TransporterService {
@@ -55,7 +48,7 @@ class TransporterPod {
                 entitySetManager,
                 executor,
                 hazelcastInstance,
-                transporterDatastore()
+                transporterDatastore
         )
     }
 
