@@ -25,22 +25,20 @@ package com.openlattice.hazelcast.serializers;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.hazelcast.serializers.ListStreamSerializers;
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDList;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-
-import static com.kryptnostic.rhizome.hazelcast.serializers.ListStreamSerializers.DelegatedUUIDListStreamSerializer;
+import java.util.UUID;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 @Component
-public class AclKeyStreamSerializer extends DelegatedUUIDListStreamSerializer
-        implements SelfRegisteringStreamSerializer<DelegatedUUIDList> {
+public class AclKeyStreamSerializer extends ListStreamSerializers.DelegatedUUIDListStreamSerializer
+        implements TestableSelfRegisteringStreamSerializer<DelegatedUUIDList> {
     @Override
     public Class<? extends DelegatedUUIDList> getClazz() {
         return AclKey.class;
@@ -60,5 +58,10 @@ public class AclKeyStreamSerializer extends DelegatedUUIDListStreamSerializer
 
     public static AclKey deserialize( ObjectDataInput in ) throws IOException {
         return new AclKey( ListStreamSerializers.fastUUIDArrayDeserialize( in ) );
+    }
+
+    @Override
+    public DelegatedUUIDList generateTestValue() {
+        return new AclKey( UUID.randomUUID(), UUID.randomUUID() );
     }
 }

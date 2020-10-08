@@ -35,7 +35,12 @@ import com.openlattice.assembler.processors.EntitySetContainsFlagEntryProcessor
 import com.openlattice.auditing.AuditRecordEntitySetsManager
 import com.openlattice.auditing.AuditingConfiguration
 import com.openlattice.auditing.AuditingTypes
-import com.openlattice.authorization.*
+import com.openlattice.authorization.AclKey
+import com.openlattice.authorization.AuthorizationManager
+import com.openlattice.authorization.HazelcastAclKeyReservationService
+import com.openlattice.authorization.Permission
+import com.openlattice.authorization.Principal
+import com.openlattice.authorization.Principals
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.authorization.securable.SecurableObjectType.PropertyTypeInEntitySet
 import com.openlattice.controllers.exceptions.ResourceNotFoundException

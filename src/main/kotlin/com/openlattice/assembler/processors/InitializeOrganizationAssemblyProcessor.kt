@@ -37,7 +37,7 @@ private val logger = LoggerFactory.getLogger(InitializeOrganizationAssemblyProce
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 
-class InitializeOrganizationAssemblyProcessor(val dbName: String) :
+class InitializeOrganizationAssemblyProcessor( val dbName: String ) :
         AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(),
         AssemblerConnectionManagerDependent<InitializeOrganizationAssemblyProcessor>,
         Offloadable {
@@ -74,5 +74,18 @@ class InitializeOrganizationAssemblyProcessor(val dbName: String) :
         return ExecutionService.OFFLOADABLE_EXECUTOR
     }
 
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
 
+        other as InitializeOrganizationAssemblyProcessor
+
+        if (dbName != other.dbName) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return dbName.hashCode()
+    }
 }

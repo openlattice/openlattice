@@ -111,8 +111,7 @@ public class JavaDateTimeHelper {
      */
     public OffsetDateTime parseFromOffsetDateTime( String date ) {
         try {
-            OffsetDateTime odt = OffsetDateTime.parse( date );
-            return odt;
+            return OffsetDateTime.parse( date );
         } catch ( DateTimeParseException eAutoParseODT ) {
             return null;
         }

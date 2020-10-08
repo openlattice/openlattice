@@ -25,7 +25,6 @@ import com.hazelcast.spi.impl.executionservice.ExecutionService
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.AssemblerConnectionManagerDependent
 import com.openlattice.assembler.OrganizationAssembly
-import com.openlattice.assembler.PostgresDatabases
 import com.openlattice.authorization.SecurablePrincipal
 import com.openlattice.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
 import java.util.*
@@ -46,8 +45,7 @@ data class RemoveMembersFromOrganizationAssemblyProcessor(val principals: Collec
         }
 
         check(::acm.isInitialized) { AssemblerConnectionManagerDependent.NOT_INITIALIZED }
-        val dbName = acm.getOrganizationDatabaseName(organizationId)
-        acm.connect(dbName).let { dataSource -> acm.removeMembersFromOrganization(dbName, dataSource, principals) }
+        acm.removeMembersFromOrganization(organizationId, principals)
 
         return null
     }

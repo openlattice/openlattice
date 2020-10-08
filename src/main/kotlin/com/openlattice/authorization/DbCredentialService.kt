@@ -63,13 +63,25 @@ class DbCredentialService(hazelcastInstance: HazelcastInstance, val longIdServic
             }
             return String(cred)
         }
+
+        private fun buildPostgresUsername(securablePrincipal: SecurablePrincipal): String {
+            return "ol-internal|user|${securablePrincipal.id}"
+        }
     }
 
     private val dbCreds: IMap<String, MaterializedViewAccount> = HazelcastMap.DB_CREDS.getMap(hazelcastInstance)
 
+    fun getDbCredential(user: SecurablePrincipal): MaterializedViewAccount? = dbCreds[buildPostgresUsername(user)]
+
     fun getDbCredential(userId: String): MaterializedViewAccount? = dbCreds[userId]
 
+    fun getDbUsername(user: SecurablePrincipal): String = dbCreds.getValue(buildPostgresUsername(user)).username
+
     fun getDbUsername(userId: String): String = dbCreds.getValue(userId).username
+
+    fun getOrCreateUserCredentials(user: SecurablePrincipal): MaterializedViewAccount {
+        return getOrCreateUserCredentials(buildPostgresUsername(user))
+    }
 
     fun getOrCreateUserCredentials(userId: String): MaterializedViewAccount {
         return if (dbCreds.containsKey(userId)) {
@@ -92,6 +104,10 @@ class DbCredentialService(hazelcastInstance: HazelcastInstance, val longIdServic
             logger.info("Generated credentials for user id {} with username {}", userId, username)
             return MoreObjects.firstNonNull(dbCreds.putIfAbsent(userId, account), account)
         }
+    }
+
+    fun deleteUserCredential(user: SecurablePrincipal) {
+        dbCreds.delete(buildPostgresUsername(user))
     }
 
     fun deleteUserCredential(userId: String) {

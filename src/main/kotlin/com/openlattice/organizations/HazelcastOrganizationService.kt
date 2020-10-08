@@ -2,8 +2,6 @@ package com.openlattice.organizations
 
 import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Preconditions
-import com.google.common.base.Preconditions.checkState
-import com.google.common.collect.ImmutableSet
 import com.google.common.collect.Iterables
 import com.google.common.eventbus.EventBus
 import com.hazelcast.core.HazelcastInstance
@@ -11,16 +9,20 @@ import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.openlattice.assembler.Assembler
 import com.openlattice.assembler.PostgresDatabases
-import com.openlattice.assembler.PostgresDatabases.Companion.buildDefaultOrganizationDatabaseName
 import com.openlattice.authorization.*
 import com.openlattice.authorization.mapstores.PrincipalMapstore
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.hazelcast.processors.GetMembersOfOrganizationEntryProcessor
 import com.openlattice.notifications.sms.PhoneNumberService
 import com.openlattice.notifications.sms.SmsEntitySetInformation
 import com.openlattice.organization.OrganizationPrincipal
 import com.openlattice.organization.roles.Role
-import com.openlattice.organizations.events.*
+import com.openlattice.organizations.events.MembersAddedToOrganizationEvent
+import com.openlattice.organizations.events.MembersRemovedFromOrganizationEvent
+import com.openlattice.organizations.events.OrganizationCreatedEvent
+import com.openlattice.organizations.events.OrganizationDeletedEvent
+import com.openlattice.organizations.events.OrganizationUpdatedEvent
 import com.openlattice.organizations.mapstores.CONNECTIONS_INDEX
 import com.openlattice.organizations.mapstores.MEMBERS_INDEX
 import com.openlattice.organizations.processors.OrganizationEntryProcessor
@@ -138,12 +140,8 @@ class HazelcastOrganizationService(
         initializeOrganizationPrincipals(principal, organization)
         initializeOrganization(organization)
 
-
         // set up organization database
-        val orgDatabase = assembler.createOrganizationAndReturnOid(
-                organization,
-                buildDefaultOrganizationDatabaseName(organization.id)
-        )
+        val orgDatabase = assembler.createOrganizationAndReturnOid( organization.id )
         organizationDatabases.set(organization.id, orgDatabase)
 
         if (membersToAdd.isNotEmpty()) {
@@ -202,13 +200,6 @@ class HazelcastOrganizationService(
                 }.asIterable()
     }
 
-    fun ensureOrganizationExists(id: UUID) {
-        checkState(
-                organizations.containsKey(id),
-                "Organization [$id] does not exist."
-        )
-    }
-
     fun destroyOrganization(organizationId: UUID) {
         // Remove all roles
         val aclKey = AclKey(organizationId)
@@ -257,6 +248,13 @@ class HazelcastOrganizationService(
         return organizations[organizationId]?.emailDomains ?: setOf()
     }
 
+    fun ensureOrganizationExists(id: UUID) {
+        Preconditions.checkState(
+                organizations.containsKey(id),
+                "Organization [$id] does not exist."
+        )
+    }
+
     @Timed
     fun setEmailDomains(organizationId: UUID, emailDomains: Set<String>) {
         organizations.executeOnKey(organizationId, OrganizationEntryProcessor { organization ->
@@ -284,7 +282,7 @@ class HazelcastOrganizationService(
 
     @Timed
     fun getMembers(organizationId: UUID): Set<Principal> {
-        return organizations[organizationId]?.members ?: setOf()
+        return organizations.executeOnKey( organizationId, GetMembersOfOrganizationEntryProcessor() ) ?: setOf()
     }
 
     @Timed

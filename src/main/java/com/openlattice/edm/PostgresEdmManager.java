@@ -21,26 +21,33 @@
 package com.openlattice.edm;
 
 import com.google.common.collect.Maps;
-import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.map.IMap;
-import com.hazelcast.query.Predicates;
 import com.openlattice.data.PropertyUsageSummary;
-import com.openlattice.hazelcast.HazelcastMap;
-import com.openlattice.postgres.*;
-import com.openlattice.postgres.mapstores.EntitySetMapstore;
+import com.openlattice.postgres.PostgresArrays;
+import com.openlattice.postgres.ResultSetAdapters;
 import com.openlattice.postgres.streams.PostgresIterable;
 import com.openlattice.postgres.streams.StatementHolder;
 import com.zaxxer.hikari.HikariDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.*;
+import java.sql.Array;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import static com.openlattice.postgres.PostgresColumn.*;
-import static com.openlattice.postgres.PostgresTable.*;
+import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID;
+import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_NAME;
+import static com.openlattice.postgres.PostgresColumn.ENTITY_TYPE_ID;
+import static com.openlattice.postgres.PostgresColumn.ID;
+import static com.openlattice.postgres.PostgresColumn.NAME;
+import static com.openlattice.postgres.PostgresColumn.PROPERTY_TYPE_ID;
+import static com.openlattice.postgres.PostgresColumn.VERSION;
+import static com.openlattice.postgres.PostgresTable.DATA;
+import static com.openlattice.postgres.PostgresTable.ENTITY_SETS;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;

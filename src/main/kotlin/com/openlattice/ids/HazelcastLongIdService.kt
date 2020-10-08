@@ -1,7 +1,6 @@
 package com.openlattice.ids
 
 import com.geekbeast.hazelcast.HazelcastClientProvider
-import com.hazelcast.core.HazelcastInstance
 import com.openlattice.hazelcast.HazelcastClient
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.ids.processors.LongIdsGeneratingProcessor

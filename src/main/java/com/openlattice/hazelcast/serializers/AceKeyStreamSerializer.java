@@ -22,18 +22,19 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.openlattice.authorization.AceKey;
-import com.openlattice.authorization.Principal;
-import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
+import com.openlattice.authorization.AceKey;
 import com.openlattice.authorization.AclKey;
-import java.io.IOException;
+import com.openlattice.authorization.Principal;
+import com.openlattice.hazelcast.StreamSerializerTypeIds;
+import com.openlattice.mapstores.TestDataFactory;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
+
 @Component
-public class AceKeyStreamSerializer implements SelfRegisteringStreamSerializer<AceKey> {
+public class AceKeyStreamSerializer implements TestableSelfRegisteringStreamSerializer<AceKey> {
 
     @Override
     public void write( ObjectDataOutput out, AceKey object )
@@ -64,4 +65,7 @@ public class AceKeyStreamSerializer implements SelfRegisteringStreamSerializer<A
         return AceKey.class;
     }
 
+    @Override public AceKey generateTestValue() {
+        return new AceKey( TestDataFactory.aclKey(), TestDataFactory.userPrincipal() );
+    }
 }

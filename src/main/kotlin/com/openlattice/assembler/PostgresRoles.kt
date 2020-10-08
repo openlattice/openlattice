@@ -1,6 +1,5 @@
 package com.openlattice.assembler
 
-import com.openlattice.authorization.SecurablePrincipal
 import com.openlattice.organization.roles.Role
 import java.util.*
 import java.util.regex.Pattern
@@ -17,11 +16,6 @@ private val USERNAME_REGEX = Pattern.compile(".*(\\|).*(\\|).*")
  */
 class PostgresRoles private constructor() {
     companion object {
-        @JvmStatic
-        fun buildPostgresUsername(securablePrincipal: SecurablePrincipal): String {
-            return "$INTERNAL_PREFIX|user|${securablePrincipal.id}"
-        }
-
         @JvmStatic
         fun buildOrganizationUserId(organizationId: UUID): String {
             return "$INTERNAL_PREFIX|organization|$organizationId"
