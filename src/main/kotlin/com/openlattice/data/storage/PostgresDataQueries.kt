@@ -7,12 +7,26 @@ import com.openlattice.analysis.requests.Filter
 import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.edm.PostgresEdmTypeConverter
 import com.openlattice.edm.type.PropertyType
-import com.openlattice.postgres.*
+import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.DataTables.LAST_WRITE
-import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.IndexType
+import com.openlattice.postgres.PostgresArrays
+import com.openlattice.postgres.PostgresColumn.ENTITY_KEY_IDS_COL
+import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.HASH
+import com.openlattice.postgres.PostgresColumn.ID
+import com.openlattice.postgres.PostgresColumn.ID_VALUE
+import com.openlattice.postgres.PostgresColumn.ORIGIN_ID
+import com.openlattice.postgres.PostgresColumn.PARTITION
+import com.openlattice.postgres.PostgresColumn.PROPERTY_TYPE_ID
+import com.openlattice.postgres.PostgresColumn.VERSION
+import com.openlattice.postgres.PostgresColumn.VERSIONS
+import com.openlattice.postgres.PostgresColumnDefinition
+import com.openlattice.postgres.PostgresDataTables
 import com.openlattice.postgres.PostgresDataTables.Companion.dataTableValueColumns
 import com.openlattice.postgres.PostgresDataTables.Companion.getColumnDefinition
 import com.openlattice.postgres.PostgresDataTables.Companion.getSourceDataColumnName
+import com.openlattice.postgres.PostgresDatatype
 import com.openlattice.postgres.PostgresTable.DATA
 import com.openlattice.postgres.PostgresTable.IDS
 import java.sql.PreparedStatement
@@ -751,6 +765,20 @@ fun upsertPropertyValueSql(propertyType: PropertyType): String {
             "END"
 }
 
+/**
+ *
+ * UPDATE DATA:
+ * 1. Set ORIGIN_ID: linkingID
+ * 2. where ENTITY_SET_ID: uuid
+ * 3. and ID_VALUE: UUID
+ * 4. and PARTITION: int
+ */
+fun updateLinkingId(): String {
+    return """
+        UPDATE ${DATA.name} SET ${ORIGIN_ID.name} = ?
+        WHERE ${ENTITY_SET_ID.name} = ?, ${ID_VALUE.name} = ?, ${PARTITION.name} = ?
+    """.trimIndent()
+}
 
 /**
  * Used to C(~RUD~) a link from linker
