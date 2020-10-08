@@ -1,6 +1,5 @@
 package com.openlattice.transporter.tasks
 
-import com.openlattice.organizations.tasks.OrganizationsInitializationTask
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies
 import com.openlattice.tasks.Task
@@ -25,8 +24,7 @@ class TransporterInitializeServiceTask: HazelcastInitializationTask<TransporterR
 
     override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
         return setOf(
-                PostConstructInitializerTaskDependencies.PostConstructInitializerTask::class.java,
-                OrganizationsInitializationTask::class.java
+                PostConstructInitializerTaskDependencies.PostConstructInitializerTask::class.java
         )
     }
 
