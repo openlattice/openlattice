@@ -66,6 +66,10 @@ final class TransporterService(
     private val transporter = data.datastore()
 
     init {
+        eventBus.register(this)
+    }
+
+    fun initializeTransporterDatastore() {
         executor.submit {
             val entityTypes = dataModelService.entityTypes.toList()
             logger.info("initializing DataTransporterService with {} types", entityTypes.size)
@@ -80,7 +84,6 @@ final class TransporterService(
             }
             logger.info("synchronization finished with {} entity type tables updated", tablesCreated)
         }
-        eventBus.register(this)
     }
 
     private val transporterState = HazelcastMap.TRANSPORTER_DB_COLUMNS.getMap( hazelcastInstance )

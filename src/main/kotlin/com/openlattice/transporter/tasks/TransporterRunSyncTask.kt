@@ -24,9 +24,12 @@ class TransporterRunSyncTask : HazelcastFixedRateTask<TransporterRunSyncTaskDepe
         return TimeUnit.SECONDS
     }
 
+    fun initializeTransporterDatastore() {
+        getDependency().service.initializeTransporterDatastore()
+    }
+
     override fun runTask() {
-        val dep = getDependency()
-        dep.service.pollOnce()
+        getDependency().service.pollOnce()
     }
 
     override fun getName(): String {

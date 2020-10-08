@@ -19,7 +19,7 @@ class TransporterInitializeServiceTask: HazelcastInitializationTask<TransporterR
     }
 
     override fun initialize(dependencies: TransporterRunSyncTask) {
-        dependencies.runTask()
+        dependencies.initializeTransporterDatastore()
     }
 
     override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
