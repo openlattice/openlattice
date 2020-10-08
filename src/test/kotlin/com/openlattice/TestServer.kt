@@ -24,15 +24,18 @@ import com.google.common.eventbus.EventBus
 import com.hazelcast.core.HazelcastInstance
 import com.kryptnostic.rhizome.configuration.ConfigurationConstants
 import com.kryptnostic.rhizome.core.RhizomeApplicationServer
+import com.openlattice.assembler.pods.AssemblerConfigurationPod
 import com.openlattice.auditing.pods.AuditingConfigurationPod
 import com.openlattice.auth0.Auth0Pod
 import com.openlattice.datastore.constants.DatastoreProfiles
+import com.openlattice.edm.PostgresEdmManager
 import com.openlattice.hazelcast.pods.MapstoresPod
 import com.openlattice.hazelcast.pods.SharedStreamSerializersPod
 import com.openlattice.hazelcast.pods.TestPod
 import com.openlattice.jdbc.JdbcPod
 import com.openlattice.postgres.PostgresPod
 import com.openlattice.postgres.PostgresTablesPod
+import com.openlattice.postgres.pods.ExternalDatabaseConnectionManagerPod
 import com.zaxxer.hikari.HikariDataSource
 
 open class TestServer {
@@ -41,12 +44,14 @@ open class TestServer {
         @JvmField
         val testServer = RhizomeApplicationServer(
                 Auth0Pod::class.java,
+                AssemblerConfigurationPod::class.java,
                 MapstoresPod::class.java,
                 JdbcPod::class.java,
                 PostgresPod::class.java,
                 SharedStreamSerializersPod::class.java,
                 PostgresTablesPod::class.java,
                 AuditingConfigurationPod::class.java,
+                ExternalDatabaseConnectionManagerPod::class.java,
                 TestPod::class.java
         )
 
@@ -56,15 +61,16 @@ open class TestServer {
         @JvmField
         val hds: HikariDataSource
 
-
         init {
             testServer.sprout(ConfigurationConstants.Profiles.LOCAL_CONFIGURATION_PROFILE, PostgresPod.PROFILE,
                     DatastoreProfiles.MEDIA_LOCAL_PROFILE)
 
             hazelcastInstance = testServer.context.getBean(HazelcastInstance::class.java)
             hds = testServer.context.getBean(HikariDataSource::class.java)
+            val edm = PostgresEdmManager(hds)
 
             testServer.context.getBean(EventBus::class.java)
+                    .register(edm)
         }
     }
 }

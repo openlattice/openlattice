@@ -4,16 +4,16 @@ import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers
 import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.collections.CollectionTemplateType
 import com.openlattice.collections.EntityTypeCollection
 import com.openlattice.hazelcast.StreamSerializerTypeIds
+import com.openlattice.mapstores.TestDataFactory
 import org.springframework.stereotype.Component
 import java.util.*
 import kotlin.collections.LinkedHashSet
 
 @Component
-class EntityTypeCollectionStreamSerializer : SelfRegisteringStreamSerializer<EntityTypeCollection> {
+class EntityTypeCollectionStreamSerializer : TestableSelfRegisteringStreamSerializer<EntityTypeCollection> {
     override fun getTypeId(): Int {
         return StreamSerializerTypeIds.ENTITY_TYPE_COLLECTION.ordinal
     }
@@ -52,5 +52,7 @@ class EntityTypeCollectionStreamSerializer : SelfRegisteringStreamSerializer<Ent
         return EntityTypeCollection(id, type, title, description, schemas, template)
     }
 
-
+    override fun generateTestValue(): EntityTypeCollection {
+        return TestDataFactory.entityTypeCollection()
+    }
 }

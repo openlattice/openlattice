@@ -21,25 +21,37 @@
 
 package com.openlattice.assembler
 
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.kryptnostic.rhizome.configuration.Configuration
+import com.kryptnostic.rhizome.configuration.ConfigurationKey
+import com.kryptnostic.rhizome.configuration.SimpleConfigurationKey
 import com.kryptnostic.rhizome.configuration.annotation.ReloadableConfiguration
 import java.util.*
 
+private const val configFileName = "assembler.yaml"
+
 /**
+ * [server] is a remote server that data will be transported to and assembled upon
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-@ReloadableConfiguration(uri = "assembler.yaml")
+@ReloadableConfiguration(uri= configFileName)
 data class AssemblerConfiguration(
-        val server: Properties,
-        val foreignHost: String,
-        val foreignDbName: String,
-        val foreignPort: Short,
-        val foreignUsername: String,
-        val foreignPassword: String,
-        val ssl: Boolean = true
-) {
+        @JsonProperty val server: Properties,
+        @JsonProperty val ssl: Boolean = true
+): Configuration {
+
+    companion object {
+        @JvmStatic
+        @get:JvmName("key")
+        val key = SimpleConfigurationKey(configFileName)
+    }
+
+    override fun getKey(): ConfigurationKey {
+        return AssemblerConfiguration.key
+    }
+
     override fun toString(): String {
-        return "AssemblerConfiguration(server=$server, foreignHost='$foreignHost', foreignDbName='$foreignDbName', " +
-                "foreignPort=$foreignPort, foreignUsername='$foreignUsername', ssl=$ssl)"
+        return "AssemblerConfiguration(server=$server, ssl=$ssl)"
     }
 }

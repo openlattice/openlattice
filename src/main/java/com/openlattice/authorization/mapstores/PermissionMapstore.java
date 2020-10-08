@@ -20,9 +20,6 @@
 
 package com.openlattice.authorization.mapstores;
 
-import static com.openlattice.postgres.PostgresArrays.createTextArray;
-import static com.openlattice.postgres.PostgresArrays.createUuidArray;
-
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
@@ -50,6 +47,8 @@ import com.openlattice.postgres.PostgresTableDefinition;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore;
 import com.zaxxer.hikari.HikariDataSource;
+import org.apache.commons.lang3.StringUtils;
+
 import java.sql.Array;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -59,7 +58,9 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import org.apache.commons.lang3.StringUtils;
+
+import static com.openlattice.postgres.PostgresArrays.createTextArray;
+import static com.openlattice.postgres.PostgresArrays.createUuidArray;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;

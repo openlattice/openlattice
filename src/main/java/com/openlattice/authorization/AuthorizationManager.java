@@ -181,7 +181,7 @@ public interface AuthorizationManager {
             Set<Principal> principals );
 
     Set<Permission> getSecurableObjectPermissions(
-            AclKey aclKeys,
+            AclKey aclKey,
             Set<Principal> principals );
 
     Acl getAllSecurableObjectPermissions( AclKey key );

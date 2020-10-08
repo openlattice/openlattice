@@ -22,14 +22,14 @@
 
 package com.openlattice.authorization;
 
-import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
-import static com.openlattice.authorization.EdmAuthorizationHelper.WRITE_PERMISSION;
-
 import com.openlattice.IdConstants;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.edm.type.PropertyType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.EnumSet;
@@ -40,8 +40,10 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import static com.openlattice.authorization.EdmAuthorizationHelper.TRANSPORT_PERMISSION;
+import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
+import static com.openlattice.authorization.EdmAuthorizationHelper.WRITE_PERMISSION;
 
 public interface AuthorizingComponent {
     Set<UUID> internalIds = Arrays.stream( IdConstants.values() ).map( IdConstants::getId )
@@ -71,6 +73,10 @@ public interface AuthorizingComponent {
 
     default boolean owns( AclKey aclKey ) {
         return isAuthorized( Permission.OWNER ).test( new AclKey( aclKey ) );
+    }
+
+    default void ensureTransportAccess( AclKey aclKey ) {
+        accessCheck( aclKey, TRANSPORT_PERMISSION );
     }
 
     default void ensureReadAccess( AclKey aclKey ) {
@@ -123,7 +129,6 @@ public interface AuthorizingComponent {
                     authorizedPropertyTypes.keySet() );
             throw new ForbiddenException( "Insufficient permissions to perform operation." );
         }
-
     }
 
     default void accessCheck( Map<AclKey, EnumSet<Permission>> requiredPermissionsByAclKey ) {

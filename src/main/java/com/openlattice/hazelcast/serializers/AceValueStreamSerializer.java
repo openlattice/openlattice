@@ -20,25 +20,28 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.authorization.AceValue;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.hazelcast.StreamSerializerTypeIds;
+import com.openlattice.mapstores.TestDataFactory;
+import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.util.EnumSet;
 
-import org.springframework.stereotype.Component;
-
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 @Component
-public class AceValueStreamSerializer implements SelfRegisteringStreamSerializer<AceValue> {
+public class AceValueStreamSerializer implements TestableSelfRegisteringStreamSerializer<AceValue> {
+    @Override public AceValue generateTestValue() {
+        return TestDataFactory.aceValue();
+    }
+
     private static final SecurableObjectType[] lookup = SecurableObjectType.values();
 
     @Override

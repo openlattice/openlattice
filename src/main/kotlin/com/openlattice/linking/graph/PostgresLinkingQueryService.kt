@@ -399,7 +399,6 @@ private val ENTITY_KEY_IDS_OF_LINKING_IDS_SQL =
             "AND ${PARTITION.name} = ANY(?) " +
         "GROUP BY ${LINKING_ID.name}"
 
-
 private val LOCK_CLUSTERS_SQL = "SELECT 1 FROM ${MATCHED_ENTITIES.name} WHERE ${LINKING_ID.name} = ? FOR UPDATE"
 
 private val CLUSTER_CONTAINING_SQL = "SELECT * FROM ${MATCHED_ENTITIES.name} WHERE ${LINKING_ID.name} = ANY(?)"
