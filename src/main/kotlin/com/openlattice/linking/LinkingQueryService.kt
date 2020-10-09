@@ -65,7 +65,7 @@ interface LinkingQueryService {
             doWork: ( clusters: Map<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>>  ) -> Triple<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>, Boolean>
     ): Triple<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>, Boolean>
 
-    fun updateLinkingInformation(linkingId: UUID, cluster: Map<UUID, LinkedHashSet<UUID>>)
+    fun updateLinkingInformation(linkingId: UUID, newMember: EntityDataKey, cluster: Map<UUID, LinkedHashSet<UUID>>)
 
     fun createLinks(linkingId: UUID, toAdd: Set<EntityDataKey>): Int
 

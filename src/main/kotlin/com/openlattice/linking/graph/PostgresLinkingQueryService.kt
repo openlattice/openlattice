@@ -141,6 +141,7 @@ class PostgresLinkingQueryService(
         }) { ResultSetAdapters.entitySetId(it) to ResultSetAdapters.id(it) }
     }
 
+    // Unused
     override fun updateIdsTable(clusterId: UUID, newMember: EntityDataKey): Int {
         val entitySetPartitions = partitionManager.getEntitySetPartitions(newMember.entitySetId).toList()
         val partition = getPartition(newMember.entityKeyId, entitySetPartitions)
@@ -211,20 +212,29 @@ class PostgresLinkingQueryService(
         }
     }
 
-    override fun updateLinkingInformation(linkingId: UUID, cluster: Map<UUID, LinkedHashSet<UUID>>) {
+    override fun updateLinkingInformation(linkingId: UUID, newMember: EntityDataKey, cluster: Map<UUID, LinkedHashSet<UUID>>) {
+        val entitySetPartitions = partitionManager.getEntitySetPartitions(newMember.entitySetId).toList()
+        val partition = getPartition(newMember.entityKeyId, entitySetPartitions)
         hds.connection.use { connection ->
-            connection.prepareStatement(updateLinkingId()).use { ps ->
+            connection.prepareStatement(updateLinkingId()).use { dataPs ->
                 cluster.forEach { (esid, ekids) ->
                     val partitionsForEsid = getPartitionsAsPGArray(connection, esid)
                     ekids.forEach { ekid ->
-                        ps.setObject(1, linkingId)
-                        ps.setObject(2, esid)
-                        ps.setObject(3, ekid)
-                        ps.setArray(4, partitionsForEsid)
-                        ps.addBatch()
+                        dataPs.setObject(1, linkingId)
+                        dataPs.setObject(2, esid)
+                        dataPs.setObject(3, ekid)
+                        dataPs.setArray(4, partitionsForEsid)
+                        dataPs.addBatch()
                     }
-                    ps.executeBatch()
+                    dataPs.executeBatch()
                 }
+            }
+            connection.prepareStatement(UPDATE_LINKED_ENTITIES_SQL).use { idsPs ->
+                idsPs.setObject(1, linkingId)
+                idsPs.setObject(2, newMember.entitySetId)
+                idsPs.setObject(3, newMember.entityKeyId)
+                idsPs.setInt(4, partition)
+                idsPs.executeUpdate()
             }
         }
     }
@@ -440,9 +450,11 @@ private val INSERT_SQL = "INSERT INTO ${MATCHED_ENTITIES.name} ($COLUMNS) VALUES
 /**
  * IDS queries
  */
-private val UPDATE_LINKED_ENTITIES_SQL = "UPDATE ${IDS.name} " +
-        "SET ${LINKING_ID.name} = ?, ${LAST_LINK.name} = now() " +
-        "WHERE ${PARTITION.name} = ? AND ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name}= ?"
+private val UPDATE_LINKED_ENTITIES_SQL = """
+        UPDATE ${IDS.name} 
+        SET ${LINKING_ID.name} = ?, ${LAST_LINK.name} = now() 
+        WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ? AND ${PARTITION.name} = ?
+""".trimIndent()
 
 private val ENTITY_KEY_IDS_NEEDING_LINKING = "SELECT ${ENTITY_SET_ID.name},${ID.name} " +
         "FROM ${IDS.name} " +
