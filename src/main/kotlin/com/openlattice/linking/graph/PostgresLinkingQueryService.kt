@@ -214,15 +214,13 @@ class PostgresLinkingQueryService(
     override fun updateLinkingInformation(linkingId: UUID, cluster: Map<UUID, LinkedHashSet<UUID>>) {
         hds.connection.use { connection ->
             connection.prepareStatement(updateLinkingId()).use { ps ->
-                val version = System.currentTimeMillis()
                 cluster.forEach { (esid, ekids) ->
                     val partitionsForEsid = getPartitionsAsPGArray(connection, esid)
                     ekids.forEach { ekid ->
                         ps.setObject(1, linkingId)
-                        ps.setLong(2, version)
-                        ps.setObject(3, esid)
-                        ps.setObject(4, ekid)
-                        ps.setArray(5, partitionsForEsid)
+                        ps.setObject(2, esid)
+                        ps.setObject(3, ekid)
+                        ps.setArray(4, partitionsForEsid)
                         ps.addBatch()
                     }
                     ps.executeBatch()

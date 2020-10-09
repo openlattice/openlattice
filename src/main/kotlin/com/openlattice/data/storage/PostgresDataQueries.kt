@@ -776,7 +776,7 @@ fun upsertPropertyValueSql(propertyType: PropertyType): String {
 fun updateLinkingId(): String {
     return """
         UPDATE ${DATA.name} SET ${ORIGIN_ID.name} = ?
-        WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ? AND ${PARTITION.name} = ?
+        WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ? AND ${PARTITION.name} = ANY(?)
     """.trimIndent()
 }
 
