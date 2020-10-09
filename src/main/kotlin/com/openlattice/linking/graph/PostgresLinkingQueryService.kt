@@ -225,8 +225,8 @@ class PostgresLinkingQueryService(
                         ps.setArray(5, partitionsForEsid)
                         ps.addBatch()
                     }
+                    ps.executeBatch()
                 }
-                ps.executeUpdate()
             }
         }
     }
