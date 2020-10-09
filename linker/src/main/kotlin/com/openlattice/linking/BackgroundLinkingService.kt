@@ -124,8 +124,6 @@ class BackgroundLinkingService(
 
     private val limiter = Semaphore(configuration.parallelism)
 
-    private val CREATE_LINKING_ROWS_IN_DATA = false
-
     @Suppress("UNUSED")
     private val linkingWorker = if (isLinkingEnabled()) executor.submit {
         while (true) {

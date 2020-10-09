@@ -31,7 +31,7 @@ class RealtimeLinkingController(
     private lateinit var authz: AuthorizationManager
 
     private val entitySetBlacklist = lc.blacklist
-    private val whitelist = lc.whitelist.orElse(setOf())
+    private val priorityEntitySets = lc.whitelist.orElseGet { setOf() }
     private val linkableTypes = edm.getEntityTypeUuids(lc.entityTypes)
 
     override fun getAuthorizationManager(): AuthorizationManager {
@@ -50,7 +50,7 @@ class RealtimeLinkingController(
     override fun getLinkingFinishedEntitySets(): Set<UUID> {
         ensureAdminAccess()
         val linkableEntitySets = lqs
-                .getLinkableEntitySets(linkableTypes, entitySetBlacklist, whitelist)
+                .getLinkableEntitySets(linkableTypes, entitySetBlacklist, priorityEntitySets)
                 .toSet()
         val entitySetsNeedLinking = lqs.getEntitiesNotLinked(linkableEntitySets).map { it.first }
         return linkableEntitySets.minus(entitySetsNeedLinking)
