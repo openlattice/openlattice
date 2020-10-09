@@ -3,7 +3,11 @@ package com.openlattice.linking.controllers
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
 import com.openlattice.datastore.services.EdmManager
-import com.openlattice.linking.*
+import com.openlattice.linking.EntityKeyPair
+import com.openlattice.linking.LinkingConfiguration
+import com.openlattice.linking.LinkingQueryService
+import com.openlattice.linking.MatchedEntityPair
+import com.openlattice.linking.RealtimeLinkingApi
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.PathVariable
@@ -27,7 +31,7 @@ class RealtimeLinkingController(
     private lateinit var authz: AuthorizationManager
 
     private val entitySetBlacklist = lc.blacklist
-    private val whitelist = lc.whitelist
+    private val priorityEntitySets = lc.whitelist.orElseGet { setOf() }
     private val linkableTypes = edm.getEntityTypeUuids(lc.entityTypes)
 
     override fun getAuthorizationManager(): AuthorizationManager {
@@ -46,7 +50,7 @@ class RealtimeLinkingController(
     override fun getLinkingFinishedEntitySets(): Set<UUID> {
         ensureAdminAccess()
         val linkableEntitySets = lqs
-                .getLinkableEntitySets(linkableTypes, entitySetBlacklist, whitelist.orElse(setOf()))
+                .getLinkableEntitySets(linkableTypes, entitySetBlacklist, priorityEntitySets)
                 .toSet()
         val entitySetsNeedLinking = lqs.getEntitiesNotLinked(linkableEntitySets).map { it.first }
         return linkableEntitySets.minus(entitySetsNeedLinking)

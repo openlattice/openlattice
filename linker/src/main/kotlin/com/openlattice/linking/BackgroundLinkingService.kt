@@ -60,7 +60,6 @@ class BackgroundLinkingService(
         private val lqs: LinkingQueryService,
         private val linkingFeedbackService: PostgresLinkingFeedbackService,
         private val linkableTypes: Set<UUID>,
-        private val linkingLogService: LinkingLogService,
         private val configuration: LinkingConfiguration
 ) {
     companion object {
@@ -185,7 +184,7 @@ class BackgroundLinkingService(
                     }
                     lqs.insertMatchScores(conn, clusterId, scoredCluster.cluster)
                 }
-                insertMatches(clusterId, candidate, scoredCluster.cluster, false)
+                insertMatches(clusterId, candidate, scoredCluster.cluster)
             } catch (ex: Exception) {
                 logger.error("An error occurred while performing linking.", ex)
                 throw IllegalStateException("Error occured while performing linking.", ex)
@@ -215,7 +214,7 @@ class BackgroundLinkingService(
             //Decision that needs to be made is whether to start new cluster or merge into existing cluster.
             //No locks are required since any items that block to this element will be skipped.
             try {
-                val result = lqs.lockClustersDoWorkAndCommit( candidate, dataKeys, { clusters ->
+                val result = lqs.lockClustersDoWorkAndCommit( candidate, dataKeys) { clusters ->
                     val maybeBestCluster = clusters
                             .asSequence()
                             .map { cluster -> cluster(candidate, cluster, ::completeLinkCluster) }
@@ -230,8 +229,8 @@ class BackgroundLinkingService(
                     val cluster = matcher.match(block).second
                     //TODO: When creating new cluster do we really need to re-match or can we assume score of 1.0?
                     return@lockClustersDoWorkAndCommit Triple(linkingId, cluster, true)
-                })
-                insertMatches( result.first, candidate, result.second, result.third )
+                }
+                insertMatches( result.first, candidate, result.second )
             } catch (ex: Exception) {
                 logger.error("An error occurred while performing linking.", ex)
                 throw IllegalStateException("Error occured while performing linking.", ex)
@@ -270,46 +269,15 @@ class BackgroundLinkingService(
     private fun insertMatches(
             linkingId: UUID,
             newMember: EntityDataKey,
-            scores: Map<EntityDataKey, Map<EntityDataKey, Double>>,
-            newCluster: Boolean
+            scores: Map<EntityDataKey, Map<EntityDataKey, Double>>
     ) {
-        lqs.updateIdsTable(linkingId, newMember)
-
-        var toRemove = setOf<EntityDataKey>()
-        var toAdd = setOf<EntityDataKey>()
-        val oldCluster = if (newCluster) {
-            mapOf()
-        } else {
-            linkingLogService.readLatestLinkLog(linkingId)
-        }
-
         val scoresAsEsidToEkids = (collectKeys(scores) + newMember)
                 .groupBy { edk -> edk.entitySetId }
-                .mapValues { (esid, edks) ->
-                    val newEdks = edks.toSet()
-                    val oldEdks = (oldCluster[esid] ?: setOf()).mapTo(mutableSetOf(), { EntityDataKey(esid, it) })
-
-                    toAdd = Sets.union(toAdd, Sets.difference(newEdks, oldEdks))
-                    toRemove = Sets.union(toRemove, Sets.difference(oldEdks, newEdks))
+                .mapValues { (_, edks) ->
 
                     Sets.newLinkedHashSet(edks.map { it.entityKeyId })
                 }
-
-        /* TODO: we do an upsert into data table for every member in the cluster regardless of score */
-        if (newCluster) {
-            lqs.createOrUpdateLink(linkingId, scoresAsEsidToEkids)
-        } else {
-            logger.debug("Writing ${toAdd.size} new links")
-            logger.debug("Removing ${toRemove.size} old links")
-
-            if (toAdd.isNotEmpty()) {
-                lqs.createLinks(linkingId, toAdd)
-            }
-            if (toRemove.isNotEmpty()) {
-                lqs.tombstoneLinks(linkingId, toRemove)
-            }
-        }
-        linkingLogService.createOrUpdateCluster(linkingId, scoresAsEsidToEkids, newCluster)
+        lqs.updateLinkingInformation( linkingId, newMember, scoresAsEsidToEkids )
     }
 
     /**
