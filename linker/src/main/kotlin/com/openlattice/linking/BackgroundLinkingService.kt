@@ -271,7 +271,7 @@ class BackgroundLinkingService(
     private fun insertMatches(
             linkingId: UUID,
             newMember: EntityDataKey,
-            scores: Map<EntityDataKey, Map<EntityDataKey, Double>>,
+            scores: Map<EntityDataKey, Map<EntityDataKey, Double>>
     ) {
         lqs.updateIdsTable(linkingId, newMember)
         val scoresAsEsidToEkids = (collectKeys(scores) + newMember)
