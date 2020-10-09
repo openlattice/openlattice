@@ -88,9 +88,6 @@ public class LinkerPostConfigurationServicesPod {
     private PartitionManager partitionManager;
 
     @Inject
-    private LinkingLogService linkingLogService;
-
-    @Inject
     private EntitySetManager entitySetManager;
 
     @Inject
@@ -180,13 +177,7 @@ public class LinkerPostConfigurationServicesPod {
                 lqs(),
                 postgresLinkingFeedbackQueryService(),
                 edm.getEntityTypeUuids( linkingConfiguration.getEntityTypes() ),
-                linkingLogService,
                 linkingConfiguration );
-    }
-
-    @Bean
-    public LinkingLogService linkingLogService() {
-        return new PostgresLinkingLogService( hikariDataSource, defaultObjectMapper );
     }
 
     @Bean
