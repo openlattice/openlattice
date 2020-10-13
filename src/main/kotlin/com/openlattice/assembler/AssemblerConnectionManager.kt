@@ -793,11 +793,7 @@ internal fun createRoleIfNotExistsSql(dbRole: String): String {
             "      FROM   pg_catalog.pg_roles\n" +
             "      WHERE  rolname = '$dbRole') THEN\n" +
             "\n" +
-            "      CREATE ROLE ${
-                ApiHelpers.dbQuote(
-                        dbRole
-                )
-            } NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN;\n" +
+            "      CREATE ROLE ${ApiHelpers.dbQuote(dbRole)} NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN;\n" +
             "   END IF;\n" +
             "END\n" +
             "\$do\$;"
@@ -812,11 +808,7 @@ internal fun createUserIfNotExistsSql(dbUser: String, dbUserPassword: String): S
             "      FROM   pg_catalog.pg_roles\n" +
             "      WHERE  rolname = '$dbUser') THEN\n" +
             "\n" +
-            "      CREATE ROLE ${
-                ApiHelpers.dbQuote(
-                        dbUser
-                )
-            } NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT LOGIN ENCRYPTED PASSWORD '$dbUserPassword';\n" +
+            "      CREATE ROLE ${ApiHelpers.dbQuote(dbUser)} NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT LOGIN ENCRYPTED PASSWORD '$dbUserPassword';\n" +
             "   END IF;\n" +
             "END\n" +
             "\$do\$;"
@@ -831,11 +823,7 @@ internal fun dropOwnedIfExistsSql(dbUser: String): String {
             "      FROM   pg_catalog.pg_roles\n" +
             "      WHERE  rolname = '$dbUser') THEN\n" +
             "\n" +
-            "      DROP OWNED BY ${
-                ApiHelpers.dbQuote(
-                        dbUser
-                )
-            } ;\n" +
+            "      DROP OWNED BY ${ApiHelpers.dbQuote(dbUser)} ;\n" +
             "   END IF;\n" +
             "END\n" +
             "\$do\$;"
@@ -854,11 +842,7 @@ internal fun dropUserIfExistsSql(dbUser: String): String {
             "      FROM   pg_catalog.pg_roles\n" +
             "      WHERE  rolname = '$dbUser') THEN\n" +
             "\n" +
-            "      DROP ROLE ${
-                ApiHelpers.dbQuote(
-                        dbUser
-                )
-            } ;\n" +
+            "      DROP ROLE ${ApiHelpers.dbQuote(dbUser)} ;\n" +
             "   END IF;\n" +
             "END\n" +
             "\$do\$;"
