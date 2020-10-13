@@ -72,7 +72,7 @@ class PostgresGraphQueryService(
             val arr = PostgresArrays.createUuidArray(ps.connection, ids)
             ps.setArray(1, arr)
         }) {
-            ResultSetAdapters.id(rs) to ResultSetAdapters.entitySetId(rs)
+            ResultSetAdapters.id(it) to ResultSetAdapters.entitySetId(it)
         }.toMap()
     }
 
