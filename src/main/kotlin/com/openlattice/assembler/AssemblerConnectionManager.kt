@@ -100,9 +100,8 @@ class AssemblerConnectionManager(
 
         @JvmStatic
         val INTEGRATIONS_SCHEMA = "integrations"
-
         @JvmStatic
-        val MATERIALIZED_VIEWS_SCHEMA = "openlattice"
+        val OPENLATTICE_SCHEMA = "openlattice"
         @JvmStatic
         val TRANSPORTED_VIEWS_SCHEMA = "ol"
         @JvmStatic
@@ -113,7 +112,7 @@ class AssemblerConnectionManager(
 
         @JvmStatic
         fun entitySetNameTableName(entitySetName: String): String {
-            return "$MATERIALIZED_VIEWS_SCHEMA.${quote(entitySetName)}"
+            return "$OPENLATTICE_SCHEMA.${quote(entitySetName)}"
         }
 
         /**
@@ -159,7 +158,7 @@ class AssemblerConnectionManager(
 
         extDbManager.connect(dbName).let { dataSource ->
             configureRolesInDatabase(dataSource)
-            createSchema(dataSource, MATERIALIZED_VIEWS_SCHEMA)
+            createSchema(dataSource, OPENLATTICE_SCHEMA)
             createSchema(dataSource, INTEGRATIONS_SCHEMA)
             createSchema(dataSource, STAGING_SCHEMA)
             createSchema(dataSource, ORG_FOREIGN_TABLES_SCHEMA)
@@ -187,7 +186,7 @@ class AssemblerConnectionManager(
                                 false,
                                 INTEGRATIONS_SCHEMA,
                                 TRANSPORTED_VIEWS_SCHEMA,
-                                MATERIALIZED_VIEWS_SCHEMA,
+                                OPENLATTICE_SCHEMA,
                                 PUBLIC_SCHEMA,
                                 STAGING_SCHEMA
                         )
@@ -200,9 +199,9 @@ class AssemblerConnectionManager(
         val dbOrgUser = quote(dbCredentialService.getDbUsername(buildOrganizationUserId(organizationId)))
         dataSource.connection.createStatement().use { statement ->
             //Allow usage and create on schema openlattice to organization user
-            statement.execute(grantOrgUserPrivilegesOnSchemaSql(MATERIALIZED_VIEWS_SCHEMA, dbOrgUser))
+            statement.execute(grantOrgUserPrivilegesOnSchemaSql(OPENLATTICE_SCHEMA, dbOrgUser))
             statement.execute(grantOrgUserPrivilegesOnSchemaSql(STAGING_SCHEMA, dbOrgUser))
-            statement.execute(setSearchPathSql(dbOrgUser, true, MATERIALIZED_VIEWS_SCHEMA, STAGING_SCHEMA))
+            statement.execute(setSearchPathSql(dbOrgUser, true, OPENLATTICE_SCHEMA, STAGING_SCHEMA))
         }
     }
 
@@ -472,7 +471,7 @@ class AssemblerConnectionManager(
                         // also grant select on edges (if at least 1 entity set is materialized to make sure edges
                         // materialized view exist)
                         if (authorizedPropertyTypesOfEntitySets.isNotEmpty()) {
-                            val edgesTableName = "$MATERIALIZED_VIEWS_SCHEMA.${E.name}"
+                            val edgesTableName = "$OPENLATTICE_SCHEMA.${E.name}"
                             val grantSelectSql = grantSelectSql(edgesTableName, postgresUserName, listOf())
                             stmt.addBatch(grantSelectSql)
                         }
@@ -677,17 +676,17 @@ class AssemblerConnectionManager(
             connection.createStatement().use { statement ->
                 logger.info(
                         "Granting USAGE on {} schema, and granting USAGE and CREATE on {} schema for users: {}",
-                        MATERIALIZED_VIEWS_SCHEMA,
+                        OPENLATTICE_SCHEMA,
                         STAGING_SCHEMA,
                         PUBLIC_SCHEMA,
                         userIds
                 )
-                statement.execute("GRANT USAGE ON SCHEMA $MATERIALIZED_VIEWS_SCHEMA TO $userIdsSql")
+                statement.execute("GRANT USAGE ON SCHEMA $OPENLATTICE_SCHEMA TO $userIdsSql")
                 statement.execute("GRANT USAGE, CREATE ON SCHEMA $STAGING_SCHEMA TO $userIdsSql")
                 //Set the search path for the user
-                logger.info("Setting search_path to $MATERIALIZED_VIEWS_SCHEMA,$TRANSPORTED_VIEWS_SCHEMA for users $userIds")
+                logger.info("Setting search_path to $OPENLATTICE_SCHEMA,$TRANSPORTED_VIEWS_SCHEMA for users $userIds")
                 userIds.forEach { userId ->
-                    statement.addBatch(setSearchPathSql(userId, true, MATERIALIZED_VIEWS_SCHEMA, STAGING_SCHEMA, TRANSPORTED_VIEWS_SCHEMA))
+                    statement.addBatch(setSearchPathSql(userId, true, OPENLATTICE_SCHEMA, STAGING_SCHEMA, TRANSPORTED_VIEWS_SCHEMA))
                 }
                 statement.executeBatch()
             }
@@ -700,7 +699,7 @@ class AssemblerConnectionManager(
         val dbName = extDbManager.getOrganizationDatabaseName(organizationId)
         logger.info(
                 "Removing users $userIds from database $dbName, schema usage and all privileges on all tables in schemas {} and {}",
-                MATERIALIZED_VIEWS_SCHEMA,
+                OPENLATTICE_SCHEMA,
                 STAGING_SCHEMA
         )
 
@@ -708,8 +707,8 @@ class AssemblerConnectionManager(
             conn.createStatement().use { stmt ->
                 stmt.execute(revokePrivilegesOnDatabaseSql(dbName, userIdsSql))
 
-                stmt.execute(revokePrivilegesOnSchemaSql(MATERIALIZED_VIEWS_SCHEMA, userIdsSql))
-                stmt.execute(revokePrivilegesOnTablesInSchemaSql(MATERIALIZED_VIEWS_SCHEMA, userIdsSql))
+                stmt.execute(revokePrivilegesOnSchemaSql(OPENLATTICE_SCHEMA, userIdsSql))
+                stmt.execute(revokePrivilegesOnTablesInSchemaSql(OPENLATTICE_SCHEMA, userIdsSql))
 
                 stmt.execute(revokePrivilegesOnSchemaSql(STAGING_SCHEMA, userIdsSql))
                 stmt.execute(revokePrivilegesOnTablesInSchemaSql(STAGING_SCHEMA, userIdsSql))
