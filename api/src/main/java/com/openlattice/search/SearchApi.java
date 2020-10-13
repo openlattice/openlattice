@@ -21,9 +21,12 @@ package com.openlattice.search;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.data.requests.NeighborEntityDetails;
 import com.openlattice.data.requests.NeighborEntityIds;
-import com.openlattice.edm.EntitySet;
 import com.openlattice.search.requests.*;
-import retrofit2.http.*;
+import retrofit2.http.Body;
+import retrofit2.http.GET;
+import retrofit2.http.PATCH;
+import retrofit2.http.POST;
+import retrofit2.http.Path;
 
 import java.util.List;
 import java.util.Map;
@@ -287,6 +290,17 @@ public interface SearchApi {
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Body EntityNeighborsFilter filter );
 
+    /**
+     * Loads all neighbors of multiple entities of the same entity set that are connected by an association, and returns
+     * the entityKeyIds of those neighbors.
+     *
+     * @param entitySetId The base entity set id that neighbors will be loaded for
+     * @param filter      optional constraints on entityKeyIds to include and filters on src/dst/edge entity set ids
+     *                    * @return A map from each entity id to a list of objects containing information about the neighbors and
+     *                    * associations of that entity
+     * @return A map from entityKeyId (from filter) -> association entity set id -> neighbor entity set id -> object
+     * containing the association entityKeyId, neighbor entityKeyId, and directionality for the edge
+     */
     @POST( BASE + ENTITY_SET_ID_PATH + NEIGHBORS + ADVANCED + IDS )
     Map<UUID, Map<UUID, SetMultimap<UUID, NeighborEntityIds>>> executeFilteredEntityNeighborIdsSearch(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
