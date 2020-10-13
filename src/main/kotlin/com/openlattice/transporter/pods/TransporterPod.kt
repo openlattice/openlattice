@@ -3,14 +3,12 @@ package com.openlattice.transporter.pods
 import com.google.common.eventbus.EventBus
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
-import com.kryptnostic.rhizome.configuration.RhizomeConfiguration
-import com.openlattice.assembler.AssemblerConfiguration
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
-import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
 import com.openlattice.transporter.services.TransporterService
 import com.openlattice.transporter.tasks.TransporterInitializeServiceTask
+import com.openlattice.transporter.tasks.TransporterRunSyncTask
 import com.openlattice.transporter.tasks.TransporterRunSyncTaskDependencies
 import com.openlattice.transporter.types.TransporterDatastore
 import org.slf4j.LoggerFactory
@@ -20,8 +18,6 @@ import javax.inject.Inject
 
 @Configuration
 class TransporterPod {
-    @Inject
-    private lateinit var rhizome: RhizomeConfiguration
     @Inject
     private lateinit var entitySetManager: EntitySetManager
     @Inject
@@ -64,5 +60,9 @@ class TransporterPod {
         return TransporterRunSyncTaskDependencies(transporterService())
     }
 
-
+    @Bean
+    fun transporterRunSyncTask(): TransporterRunSyncTask {
+        LoggerFactory.getLogger(TransporterPod::class.java).info("Constructing TransporterRunSyncTask")
+        return TransporterRunSyncTask()
+    }
 }
