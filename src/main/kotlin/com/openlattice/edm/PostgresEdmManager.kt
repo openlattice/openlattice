@@ -66,8 +66,12 @@ class PostgresEdmManager(private val hds: HikariDataSource) {
     }
 
     fun countEntitySetsOfEntityTypes(entityTypeIds: Set<UUID?>?): Map<UUID, Long> {
-        val query = "SELECT " + PostgresColumn.ENTITY_TYPE_ID.name + ", COUNT(*) FROM " + PostgresTable.ENTITY_SETS.name + " WHERE " + PostgresColumn.ENTITY_TYPE_ID
-                .name + " = ANY( ? ) GROUP BY " + PostgresColumn.ENTITY_TYPE_ID.name
+        val query = """
+            SELECT ${ENTITY_TYPE_ID.name}, COUNT(*)
+            FROM ${ENTITY_SETS.name}
+            WHERE ${ENTITY_TYPE_ID.name} = ANY(?) 
+            GROUP BY ${ENTITY_TYPE_ID.name}
+        """.trimIndent()
 
         return try {
             BasePostgresIterable(PreparedStatementHolderSupplier(hds, query) { ps ->
