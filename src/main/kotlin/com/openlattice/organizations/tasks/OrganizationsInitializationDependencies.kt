@@ -32,6 +32,5 @@ data class OrganizationsInitializationDependencies @JvmOverloads constructor(
         val organizationService: HazelcastOrganizationService,
         val spm: SecurePrincipalsManager,
         val partitionManager: PartitionManager,
-        val configuration: ConductorConfiguration,
-        val isNoOp: Boolean = false
+        val configuration: ConductorConfiguration
 ) : HazelcastTaskDependencies
