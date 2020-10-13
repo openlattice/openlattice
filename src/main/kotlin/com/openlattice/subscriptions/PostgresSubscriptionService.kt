@@ -7,15 +7,13 @@ import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.SUBSCRIPTIONS
 import com.openlattice.postgres.ResultSetAdapters
-import com.openlattice.postgres.streams.PostgresIterable
-import com.openlattice.postgres.streams.StatementHolder
+import com.openlattice.postgres.streams.BasePostgresIterable
+import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.util.*
-import java.util.function.Function
-import java.util.function.Supplier
 
 class PostgresSubscriptionService(
         private val hds: HikariDataSource,
@@ -107,16 +105,9 @@ class PostgresSubscriptionService(
             resultMappingFunc: (rs: ResultSet) -> T,
             statementFunction: (ps: PreparedStatement, conn: Connection) -> PreparedStatement = { ps: PreparedStatement, conn: Connection -> ps }
     ): Iterable<T> {
-        return PostgresIterable(
-                Supplier {
-                    val connection = hds.connection
-                    connection.autoCommit = false
-                    val ps = statementFunction(connection.prepareStatement(sql), connection)
-                    val rs = ps.executeQuery()
-                    StatementHolder(connection, ps, rs)
-                },
-                Function<ResultSet, T> { rs -> resultMappingFunc(rs) }
-        )
+        return BasePostgresIterable(PreparedStatementHolderSupplier(hds, sql, 0, false) {
+            statementFunction(it, it.connection)
+        }) { rs -> resultMappingFunc(rs) }
     }
 
 }

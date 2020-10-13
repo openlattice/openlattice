@@ -9,17 +9,17 @@ import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.PERSISTENT_SEARCHES
 import com.openlattice.postgres.ResultSetAdapters
-import com.openlattice.postgres.streams.PostgresIterable
-import com.openlattice.postgres.streams.StatementHolder
+import com.openlattice.postgres.streams.BasePostgresIterable
+import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.openlattice.search.requests.PersistentSearch
 import com.openlattice.search.requests.SearchConstraints
 import com.zaxxer.hikari.HikariDataSource
-import java.sql.*
 import java.sql.Array
+import java.sql.Connection
+import java.sql.PreparedStatement
+import java.sql.Statement
 import java.time.OffsetDateTime
 import java.util.*
-import java.util.function.Function
-import java.util.function.Supplier
 
 class PersistentSearchService(private val hds: HikariDataSource, private val spm: SecurePrincipalsManager) {
 
@@ -46,12 +46,11 @@ class PersistentSearchService(private val hds: HikariDataSource, private val spm
     }
 
     fun loadPersistentSearchesForUser(includeExpired: Boolean): Iterable<PersistentSearch> {
-        return PostgresIterable(Supplier<StatementHolder> {
-            val connection = hds.connection
-            val stmt = connection.createStatement()
-            val rs = stmt.executeQuery(loadPersistentSearchesSql(connection, includeExpired))
-            StatementHolder(connection, stmt, rs)
-        }, Function<ResultSet, PersistentSearch> { ResultSetAdapters.persistentSearch(it) })
+        return BasePostgresIterable(PreparedStatementHolderSupplier(hds, loadPersistentSearchesSql(includeExpired)) { ps ->
+            ps.setArray(1, getUserAclKeyArray(ps.connection))
+        }) {
+            ResultSetAdapters.persistentSearch(it)
+        }
     }
 
     fun updatePersistentSearchLastRead(id: UUID, lastRead: OffsetDateTime) {
@@ -100,9 +99,11 @@ class PersistentSearchService(private val hds: HikariDataSource, private val spm
                 EMAILS.name
         )
 
-        return "INSERT INTO ${PERSISTENT_SEARCHES.name} (${columns.joinToString(
-                ","
-        )}) VALUES ('${search.id}'::uuid, '${getUserAclKeyArray(connection)}', '${search.lastRead}', '${search.expiration}', " +
+        return "INSERT INTO ${PERSISTENT_SEARCHES.name} (${
+            columns.joinToString(
+                    ","
+            )
+        }) VALUES ('${search.id}'::uuid, '${getUserAclKeyArray(connection)}', '${search.lastRead}', '${search.expiration}', " +
                 "'${search.type}', ?::jsonb, ?::jsonb, ?)"
     }
 
@@ -122,8 +123,8 @@ class PersistentSearchService(private val hds: HikariDataSource, private val spm
                 "WHERE id = '$id' AND ${ACL_KEY.name} = '${getUserAclKeyArray(connection)}'"
     }
 
-    private fun loadPersistentSearchesSql(connection: Connection, includeExpired: Boolean): String {
-        var sql = "SELECT * FROM ${PERSISTENT_SEARCHES.name} WHERE ${ACL_KEY.name} = '${getUserAclKeyArray(connection)}'"
+    private fun loadPersistentSearchesSql(includeExpired: Boolean): String {
+        var sql = "SELECT * FROM ${PERSISTENT_SEARCHES.name} WHERE ${ACL_KEY.name} = ?"
         if (!includeExpired) {
             sql += " AND ${EXPIRATION_DATE.name} > now()"
         }
