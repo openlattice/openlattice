@@ -21,9 +21,7 @@ package com.openlattice.edm
 
 import com.openlattice.data.PropertyUsageSummary
 import com.openlattice.postgres.PostgresArrays
-import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.PostgresColumn.*
-import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.PostgresTable.DATA
 import com.openlattice.postgres.PostgresTable.ENTITY_SETS
 import com.openlattice.postgres.ResultSetAdapters
