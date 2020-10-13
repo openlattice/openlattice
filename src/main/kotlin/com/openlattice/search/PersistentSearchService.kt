@@ -99,11 +99,8 @@ class PersistentSearchService(private val hds: HikariDataSource, private val spm
                 EMAILS.name
         )
 
-        return "INSERT INTO ${PERSISTENT_SEARCHES.name} (${
-            columns.joinToString(
-                    ","
-            )
-        }) VALUES ('${search.id}'::uuid, '${getUserAclKeyArray(connection)}', '${search.lastRead}', '${search.expiration}', " +
+        return "INSERT INTO ${PERSISTENT_SEARCHES.name} ( ${columns.joinToString()} ) " +
+                "VALUES ('${search.id}'::uuid, '${getUserAclKeyArray(connection)}', '${search.lastRead}', '${search.expiration}', " +
                 "'${search.type}', ?::jsonb, ?::jsonb, ?)"
     }
 
