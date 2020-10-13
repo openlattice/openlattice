@@ -265,7 +265,7 @@ class TransporterDatastore(
                 )
 
                 usersToColumnPermissions.forEach { (username, allowedCols) ->
-                    logger.info("user $username has columns $allowedCols")
+                    logger.debug("user {} has columns {}", username, allowedCols)
                     stmt.execute( setUserInhertRolePrivileges(username))
                     stmt.execute( grantUsageOnschemaSql(ORG_VIEWS_SCHEMA, username))
                     stmt.execute( revokeTablePermissionsForRole(ORG_VIEWS_SCHEMA, entitySetName, username) )
