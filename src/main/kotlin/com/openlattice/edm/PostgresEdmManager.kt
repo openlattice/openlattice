@@ -22,7 +22,10 @@ package com.openlattice.edm
 import com.openlattice.data.PropertyUsageSummary
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn
+import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable
+import com.openlattice.postgres.PostgresTable.DATA
+import com.openlattice.postgres.PostgresTable.ENTITY_SETS
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
@@ -37,20 +40,19 @@ import java.util.*
 class PostgresEdmManager(private val hds: HikariDataSource) {
     fun getPropertyUsageSummary(propertyTypeId: UUID?): Iterable<PropertyUsageSummary> {
         val wrappedEntitySetsTableName = "wrapped_entity_sets"
-        val getPropertyTypeSummary = String.format("WITH %1\$s AS (SELECT %2\$s, %3\$s AS %4\$s, %5\$s FROM %6\$s) " +
-                "SELECT %2\$s, %4\$s, %7\$s, COUNT(*) FROM %8\$s LEFT JOIN %1\$s ON %7\$s = %1\$s.id " +
-                "WHERE %9\$s > 0 AND %10\$s = ? GROUP BY ( %2\$s , %4\$s, %7\$s )",
-                wrappedEntitySetsTableName,
-                PostgresColumn.ENTITY_TYPE_ID.name,
-                PostgresColumn.NAME.name,
-                PostgresColumn.ENTITY_SET_NAME.name,
-                PostgresColumn.ID.name,
-                PostgresTable.ENTITY_SETS.name,
-                PostgresColumn.ENTITY_SET_ID.name,
-                PostgresTable.DATA.name,
-                PostgresColumn.VERSION.name,
-                PostgresColumn.PROPERTY_TYPE_ID.name
-        )
+
+        val getPropertyTypeSummary = """
+          WITH $wrappedEntitySetsTableName AS (
+            SELECT ${ENTITY_TYPE_ID.name}, ${NAME.name} AS entity_set_name, ${ID.name}
+            FROM ${ENTITY_SETS.name}
+         ) SELECT ${ENTITY_TYPE_ID.name}, entity_set_name, ${ENTITY_SET_ID.name}, COUNT(*)
+           FROM ${DATA.name}
+           LEFT JOIN $wrappedEntitySetsTableName
+             ON ${ENTITY_SET_ID.name} = $wrappedEntitySetsTableName.${ID.name}
+             WHERE ${VERSION.name} > 0 AND ${PROPERTY_TYPE_ID.name} = ?
+             GROUP BY ( ${ENTITY_TYPE_ID.name}, entity_set_name, ${ENTITY_SET_ID.name} )
+        """.trimIndent()
+
         return BasePostgresIterable(PreparedStatementHolderSupplier(hds, getPropertyTypeSummary) { ps ->
             ps.setObject(1, propertyTypeId)
         }) { rs ->
