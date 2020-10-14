@@ -157,7 +157,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     public Void transportEntitySet( @PathVariable(ID) UUID organizationId, @PathVariable(SET_ID) UUID entitySetId) {
         organizations.ensureOrganizationExists(organizationId);
         ensureRead( organizationId );
-        ensureTransportAccess( new AclKey( organizationId ));
+        ensureTransportAccess( new AclKey( entitySetId ) );
         edms.transportEntitySet( organizationId, entitySetId );
         return null;
     }
