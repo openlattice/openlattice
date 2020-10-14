@@ -3,25 +3,8 @@ package com.openlattice.transporter
 import com.openlattice.ApiHelpers
 import com.openlattice.IdConstants
 import com.openlattice.edm.EdmConstants
-import com.openlattice.postgres.PostgresArrays
-import com.openlattice.postgres.PostgresColumn.DST_ENTITY_KEY_ID
-import com.openlattice.postgres.PostgresColumn.DST_ENTITY_SET_ID
-import com.openlattice.postgres.PostgresColumn.EDGE_ENTITY_KEY_ID
-import com.openlattice.postgres.PostgresColumn.EDGE_ENTITY_SET_ID
-import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
-import com.openlattice.postgres.PostgresColumn.ID_VALUE
-import com.openlattice.postgres.PostgresColumn.LAST_TRANSPORT
-import com.openlattice.postgres.PostgresColumn.LINKING_ID
-import com.openlattice.postgres.PostgresColumn.ORIGIN_ID
-import com.openlattice.postgres.PostgresColumn.PARTITION
-import com.openlattice.postgres.PostgresColumn.PROPERTY_TYPE_ID
-import com.openlattice.postgres.PostgresColumn.SRC_ENTITY_KEY_ID
-import com.openlattice.postgres.PostgresColumn.SRC_ENTITY_SET_ID
-import com.openlattice.postgres.PostgresColumn.VERSION
-import com.openlattice.postgres.PostgresColumnDefinition
-import com.openlattice.postgres.PostgresExpressionIndexDefinition
-import com.openlattice.postgres.PostgresTable
-import com.openlattice.postgres.PostgresTableDefinition
+import com.openlattice.postgres.*
+import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.transporter.types.TransporterColumn
 import com.openlattice.transporter.types.TransporterDatastore.Companion.PUBLIC_SCHEMA
 import com.zaxxer.hikari.HikariDataSource
@@ -84,7 +67,7 @@ fun tableDefinition(entityTypeId: UUID, propertyColumns: Collection<PostgresColu
             ID_VALUE
     )
     definition.addIndexes(
-            PostgresExpressionIndexDefinition(definition, "(${ORIGIN_ID.name} != '${IdConstants.EMPTY_ORIGIN_ID.id}')" )
+            PostgresExpressionIndexDefinition(definition, "(${ORIGIN_ID.name} != '${IdConstants.EMPTY_ORIGIN_ID.id}')")
                     .name(ApiHelpers.dbQuote(indexPrefix + "origin_id"))
                     .ifNotExists()
                     .concurrent()
@@ -158,7 +141,7 @@ fun updateRowsForPropertyType(
     val modifyDestination = "UPDATE $destTable t " +
             "SET $destinationColumn = src.$destinationColumn " +
             "FROM src " +
-            "WHERE " + pkCols.joinToString(" AND ") { "t.${it.name} = src.${it.name}"}
+            "WHERE " + pkCols.joinToString(" AND ") { "t.${it.name} = src.${it.name}" }
     return "WITH src as ($updateLastTransport), " +
             "inserted as ($createMissingRows) " +
             modifyDestination
@@ -251,9 +234,11 @@ fun updateRowsForEdges(): String {
     val deleteRow = "DELETE FROM ${MAT_EDGES_TABLE.name} t " +
             "USING src " +
             "WHERE src.${VERSION.name} = 0 " +
-            " AND ${pk.joinToString(" AND ") {
-                "t.${it} = src.${it}" 
-            }} "
+            " AND ${
+                pk.joinToString(" AND ") {
+                    "t.${it} = src.${it}"
+                }
+            } "
     return "WITH src as ($selectFromE), " +
             "inserts as ($createMissingRows) " +
             deleteRow
@@ -289,7 +274,7 @@ fun transportTable(
         conn: Connection,
         logger: Logger,
         removedColumns: List<PostgresColumnDefinition> = listOf()
-){
+) {
     var lastSql = ""
     try {
         conn.createStatement().use { st ->
@@ -298,7 +283,7 @@ fun transportTable(
             lastSql = addAllMissingColumnsQuery(table, table.columns)
             st.execute(lastSql)
 
-            if ( removedColumns.isNotEmpty() ){
+            if (removedColumns.isNotEmpty()) {
                 lastSql = removeColumnsQuery(table, removedColumns)
                 st.execute(lastSql)
             }
@@ -318,7 +303,7 @@ fun setUserInhertRolePrivileges(role: String): String {
 }
 
 fun revokeTablePermissionsForRole(schema: String, entitySetName: String, role: String): String {
-    return "REVOKE ALL PRIVILEGES ON $schema.$entitySetName FROM ${ApiHelpers.dbQuote(role)}"
+    return "REVOKE ALL PRIVILEGES ON $schema.${ApiHelpers.dbQuote(entitySetName)} FROM ${ApiHelpers.dbQuote(role)}"
 }
 
 fun grantUsageOnschemaSql(schemaName: String, orgUserId: String): String {
@@ -326,7 +311,7 @@ fun grantUsageOnschemaSql(schemaName: String, orgUserId: String): String {
 }
 
 fun grantSelectOnColumnsToRoles(schema: String, entitySetName: String, role: String, columns: List<String>): String {
-    if ( columns.isEmpty()){
+    if (columns.isEmpty()) {
         return ""
     }
     val columnsSql = columns.joinToString {
@@ -336,19 +321,19 @@ fun grantSelectOnColumnsToRoles(schema: String, entitySetName: String, role: Str
     return "GRANT SELECT ( $columnsSql ) ON $schema.$entitySetName TO ${ApiHelpers.dbQuote(role)}"
 }
 
-fun dropForeignTypeTable( schema: String, entityTypeId: UUID ): String {
+fun dropForeignTypeTable(schema: String, entityTypeId: UUID): String {
     return "DROP FOREIGN TABLE IF EXISTS $schema.${tableName(entityTypeId)}"
 }
 
-fun destroyView(schema: String, entitySetName: String ): String {
-    return "DROP VIEW IF EXISTS $schema.$entitySetName"
+fun destroyView(schema: String, entitySetName: String): String {
+    return "DROP VIEW IF EXISTS $schema.${ApiHelpers.dbQuote(entitySetName)}"
 }
 
 fun createEntitySetViewInSchemaFromSchema(
         entitySetName: String,
         entitySetId: UUID,
         destinationSchema: String,
-        etTableName: String,
+        entityTypeId: UUID,
         propertyTypes: Map<UUID, FullQualifiedName>,
         sourceSchema: String
 ): String {
@@ -359,9 +344,9 @@ fun createEntitySetViewInSchemaFromSchema(
     }.joinToString()
 
     return """
-            CREATE VIEW $destinationSchema.$entitySetName AS 
+            CREATE VIEW $destinationSchema.${ApiHelpers.dbQuote(entitySetName)} AS 
                 SELECT ${ID_VALUE.name} as ${ApiHelpers.dbQuote(EdmConstants.ID_FQN.toString())}, 
-                    $colsSql FROM $sourceSchema.$etTableName
+                    $colsSql FROM $sourceSchema.${tableName(entityTypeId)}
                 WHERE ${ENTITY_SET_ID.name} = '$entitySetId'
         """.trimIndent()
 }

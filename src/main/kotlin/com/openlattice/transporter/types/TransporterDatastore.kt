@@ -60,14 +60,14 @@ class TransporterDatastore(
             initializeFDW(rhizome.postgresConfiguration.get())
         }
         val sp = ensureSearchPath(hds.connection)
-        if ( !sp.contains( ENTERPRISE_FDW_SCHEMA )) {
+        if (!sp.contains(ENTERPRISE_FDW_SCHEMA)) {
             logger.error("bad search path: {}", sp)
         }
     }
 
-    fun linkOrgDbToTransporterDb( organizationId: UUID ) {
+    fun linkOrgDbToTransporterDb(organizationId: UUID) {
         createFdwBetweenDatabases(
-                connectOrgDb( organizationId ),
+                connectOrgDb(organizationId),
                 assemblerConfiguration.server.getProperty("username"),
                 assemblerConfiguration.server.getProperty("password"),
                 exConnMan.appendDatabaseToJdbcPartial(
@@ -76,7 +76,7 @@ class TransporterDatastore(
                 ),
                 assemblerConfiguration.server.getProperty("username"),
                 ORG_FOREIGN_TABLES_SCHEMA,
-                getOrgFdw( organizationId )
+                getOrgFdw(organizationId)
         )
     }
 
@@ -93,7 +93,7 @@ class TransporterDatastore(
             fdwName: String
     ) {
         var searchPath = ensureSearchPath(localDbDatasource.connection)
-        if ( !searchPath.contains(localSchema) ){
+        if (!searchPath.contains(localSchema)) {
             searchPath = "$searchPath, $localSchema"
         }
 
@@ -108,7 +108,8 @@ class TransporterDatastore(
                 }
             }
 
-            val match = PAT.matchEntire(remoteDbJdbc) ?: throw IllegalArgumentException("Invalid jdbc url: $remoteDbJdbc")
+            val match = PAT.matchEntire(remoteDbJdbc)
+                    ?: throw IllegalArgumentException("Invalid jdbc url: $remoteDbJdbc")
             val remoteHostname = match.groupValues[2]
             val remotePort = match.groupValues[3].toInt()
             val remoteDbname = match.groupValues[4]
@@ -137,7 +138,7 @@ class TransporterDatastore(
             localSchema: String,
             usingFdwName: String
     ): String {
-        val tablesClause = if ( remoteTables.isEmpty() ){
+        val tablesClause = if (remoteTables.isEmpty()) {
             ""
         } else {
             "LIMIT TO (${remoteTables.joinToString(",")})"
@@ -145,13 +146,13 @@ class TransporterDatastore(
         return "import foreign schema $remoteSchema $tablesClause from server $usingFdwName INTO $localSchema;"
     }
 
-    private fun ensureSearchPath( connection: Connection): String {
+    private fun ensureSearchPath(connection: Connection): String {
         logger.info("checking search path for current user")
-        connection.createStatement().executeQuery( "show search_path" ).use {
+        connection.createStatement().executeQuery("show search_path").use {
             it.next()
             val searchPath = it.getString(1)
             logger.info(searchPath)
-            if ( searchPath == null ) {
+            if (searchPath == null) {
                 logger.error("bad search path: {}", searchPath)
                 return ""
             }
@@ -203,41 +204,41 @@ class TransporterDatastore(
     }
 
     fun connectOrgDb(organizationId: UUID): HikariDataSource {
-        return exConnMan.connectToOrg( organizationId )
+        return exConnMan.connectToOrg(organizationId)
     }
 
-    fun getOrgFdw( organizationId: UUID ): String {
+    fun getOrgFdw(organizationId: UUID): String {
         return ApiHelpers.dbQuote("fdw_$organizationId")
     }
 
-    fun destroyTransportedEntitySetFromOrg( organizationId: UUID, entitySetName: String ) {
-        connectOrgDb( organizationId ).connection.use { conn ->
+    fun destroyTransportedEntitySetFromOrg(organizationId: UUID, entitySetName: String) {
+        connectOrgDb(organizationId).connection.use { conn ->
             conn.createStatement().use { stmt ->
-                stmt.executeUpdate( destroyView( ORG_FOREIGN_TABLES_SCHEMA, entitySetName ))
+                stmt.executeUpdate(destroyView(ORG_FOREIGN_TABLES_SCHEMA, entitySetName))
             }
         }
     }
 
-    fun destroyTransportedEntityTypeTableInOrg( organizationId: UUID, entityTypeId: UUID ) {
-        connectOrgDb( organizationId ).connection.use { conn ->
+    fun destroyTransportedEntityTypeTableInOrg(organizationId: UUID, entityTypeId: UUID) {
+        connectOrgDb(organizationId).connection.use { conn ->
             conn.createStatement().use { stmt ->
-                stmt.executeUpdate( dropForeignTypeTable( ORG_FOREIGN_TABLES_SCHEMA, entityTypeId))
+                stmt.executeUpdate(dropForeignTypeTable(ORG_FOREIGN_TABLES_SCHEMA, entityTypeId))
             }
         }
     }
 
-    fun destroyEntitySetViewFromTransporter( entitySetName: String ) {
+    fun destroyEntitySetViewFromTransporter(entitySetName: String) {
         datastore().connection.use { conn ->
             conn.createStatement().use { stmt ->
-                stmt.executeUpdate( destroyView( PUBLIC_SCHEMA, entitySetName ) )
+                stmt.executeUpdate(destroyView(PUBLIC_SCHEMA, entitySetName))
             }
         }
     }
 
-    fun destroyEntitySetViewInOrgDb( organizationId: UUID, entitySetName: String) {
-        connectOrgDb( organizationId ).connection.use { conn ->
+    fun destroyEntitySetViewInOrgDb(organizationId: UUID, entitySetName: String) {
+        connectOrgDb(organizationId).connection.use { conn ->
             conn.createStatement().use { stmt ->
-                stmt.executeUpdate( destroyView( ORG_VIEWS_SCHEMA, entitySetName))
+                stmt.executeUpdate(destroyView(ORG_VIEWS_SCHEMA, entitySetName))
             }
         }
     }
@@ -258,7 +259,7 @@ class TransporterDatastore(
                                 entitySetName,
                                 entitySetId,
                                 ORG_VIEWS_SCHEMA,
-                                tableName(entityTypeId),
+                                entityTypeId,
                                 ptIdToFqnColumns,
                                 ORG_FOREIGN_TABLES_SCHEMA
                         )
@@ -266,24 +267,24 @@ class TransporterDatastore(
 
                 usersToColumnPermissions.forEach { (username, allowedCols) ->
                     logger.debug("user {} has columns {}", username, allowedCols)
-                    stmt.execute( setUserInhertRolePrivileges(username))
-                    stmt.execute( grantUsageOnschemaSql(ORG_VIEWS_SCHEMA, username))
-                    stmt.execute( revokeTablePermissionsForRole(ORG_VIEWS_SCHEMA, entitySetName, username) )
+                    stmt.execute(setUserInhertRolePrivileges(username))
+                    stmt.execute(grantUsageOnschemaSql(ORG_VIEWS_SCHEMA, username))
+                    stmt.execute(revokeTablePermissionsForRole(ORG_VIEWS_SCHEMA, entitySetName, username))
 
                     allPermissions.addAll(allowedCols)
                 }
 
                 allPermissions.forEach { columnName ->
                     val roleName = viewRoleName(entitySetName, columnName)
-                    stmt.execute( createRoleIfNotExistsSql(roleName))
-                    stmt.execute( grantUsageOnschemaSql(ORG_VIEWS_SCHEMA, roleName))
-                    stmt.execute( revokeTablePermissionsForRole(ORG_VIEWS_SCHEMA, entitySetName, roleName) )
-                    stmt.execute( grantSelectOnColumnsToRoles(ORG_VIEWS_SCHEMA, entitySetName, roleName, listOf(columnName)) )
+                    stmt.execute(createRoleIfNotExistsSql(roleName))
+                    stmt.execute(grantUsageOnschemaSql(ORG_VIEWS_SCHEMA, roleName))
+                    stmt.execute(revokeTablePermissionsForRole(ORG_VIEWS_SCHEMA, entitySetName, roleName))
+                    stmt.execute(grantSelectOnColumnsToRoles(ORG_VIEWS_SCHEMA, entitySetName, roleName, listOf(columnName)))
                 }
 
                 conn.createStatement().use { batch ->
                     // TODO: invalidate/update this when pt types and permissions are changed
-                    usersToColumnPermissions.forEach { ( username, allowedCols ) ->
+                    usersToColumnPermissions.forEach { (username, allowedCols) ->
                         allowedCols.forEach { column ->
                             batch.addBatch("GRANT ${ApiHelpers.dbQuote(viewRoleName(entitySetName, column))} to ${ApiHelpers.dbQuote(username)}")
                         }
