@@ -33,12 +33,7 @@ import com.openlattice.assembler.Assembler;
 import com.openlattice.assembler.AssemblerConfiguration;
 import com.openlattice.assembler.AssemblerConnectionManager;
 import com.openlattice.assembler.pods.AssemblerConfigurationPod;
-import com.openlattice.auditing.AuditRecordEntitySetsManager;
-import com.openlattice.auditing.AuditingConfiguration;
-import com.openlattice.auditing.AuditingManager;
-import com.openlattice.auditing.AuditingProfiles;
-import com.openlattice.auditing.LocalAuditingService;
-import com.openlattice.auditing.S3AuditingService;
+import com.openlattice.auditing.*;
 import com.openlattice.auditing.pods.AuditingConfigurationPod;
 import com.openlattice.authorization.*;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
@@ -145,7 +140,7 @@ public class IndexerServicesPod {
 
     @Bean
     public DbCredentialService dbcs() {
-        return new DbCredentialService( hazelcastInstance,longIdService() );
+        return new DbCredentialService( hazelcastInstance, longIdService() );
     }
 
     @Bean
@@ -172,7 +167,6 @@ public class IndexerServicesPod {
                 dbcs(),
                 hikariDataSource,
                 authorizationManager(),
-                edmAuthorizationHelper(),
                 principalService(),
                 metricRegistry,
                 hazelcastInstance,
@@ -333,7 +327,8 @@ public class IndexerServicesPod {
         return new DataGraphService( graphApi(), idService(), entityDatastore(), jobService() );
     }
 
-    @Bean ExternalDatabaseManagementService edms() {
+    @Bean
+    public ExternalDatabaseManagementService edms() {
         return new ExternalDatabaseManagementService(
                 hazelcastInstance,
                 externalDbConnMan,
