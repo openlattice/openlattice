@@ -156,7 +156,6 @@ public class LinkerServicesPod {
                 dbcs(),
                 hikariDataSource,
                 authorizationManager(),
-                edmAuthorizationHelper(),
                 principalService(),
                 metricRegistry,
                 hazelcastInstance,
@@ -193,11 +192,6 @@ public class LinkerServicesPod {
                 phoneNumberService(),
                 partitionManager(),
                 assembler() );
-    }
-
-    @Bean
-    public EdmAuthorizationHelper edmAuthorizationHelper() {
-        return new EdmAuthorizationHelper( dataModelService(), authorizationManager(), entitySetManager() );
     }
 
     @Bean
@@ -256,8 +250,8 @@ public class LinkerServicesPod {
     @Bean
     @Profile( DL4J )
     public Matcher dl4jMatcher() throws IOException {
-        final var modelStream = Thread.currentThread().getContextClassLoader().getResourceAsStream( "model.bin" );
-        final var fqnToIdMap = dataModelService().getFqnToIdMap( PersonProperties.FQNS );
+        var modelStream = Thread.currentThread().getContextClassLoader().getResourceAsStream( "model.bin" );
+        var fqnToIdMap = dataModelService().getFqnToIdMap( PersonProperties.FQNS );
         return new SocratesMatcher(
                 ModelSerializer.restoreMultiLayerNetwork( modelStream ),
                 fqnToIdMap,
@@ -268,9 +262,9 @@ public class LinkerServicesPod {
     @Bean
     public Matcher kerasMatcher() throws IOException, InvalidKerasConfigurationException,
             UnsupportedKerasConfigurationException {
-        final String simpleMlp = new ClassPathResource( "model_2019-01-30.h5" ).getFile().getPath();
-        final MultiLayerNetwork model = KerasModelImport.importKerasSequentialModelAndWeights( simpleMlp );
-        final var fqnToIdMap = dataModelService().getFqnToIdMap( PersonProperties.FQNS );
+        String simpleMlp = new ClassPathResource( "model_2019-01-30.h5" ).getFile().getPath();
+        MultiLayerNetwork model = KerasModelImport.importKerasSequentialModelAndWeights( simpleMlp );
+        var fqnToIdMap = dataModelService().getFqnToIdMap( PersonProperties.FQNS );
         return new SocratesMatcher( model, fqnToIdMap, postgresLinkingFeedbackQueryService() );
     }
 

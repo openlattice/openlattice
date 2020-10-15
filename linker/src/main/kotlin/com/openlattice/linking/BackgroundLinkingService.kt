@@ -214,7 +214,7 @@ class BackgroundLinkingService(
             //Decision that needs to be made is whether to start new cluster or merge into existing cluster.
             //No locks are required since any items that block to this element will be skipped.
             try {
-                val result = lqs.lockClustersDoWorkAndCommit( candidate, dataKeys) { clusters ->
+                val (linkingId, scores) = lqs.lockClustersDoWorkAndCommit( candidate, dataKeys) { clusters ->
                     val maybeBestCluster = clusters
                             .asSequence()
                             .map { cluster -> cluster(candidate, cluster, ::completeLinkCluster) }
@@ -230,7 +230,7 @@ class BackgroundLinkingService(
                     //TODO: When creating new cluster do we really need to re-match or can we assume score of 1.0?
                     return@lockClustersDoWorkAndCommit Triple(linkingId, cluster, true)
                 }
-                insertMatches( result.first, candidate, result.second )
+                insertMatches( linkingId, candidate, scores )
             } catch (ex: Exception) {
                 logger.error("An error occurred while performing linking.", ex)
                 throw IllegalStateException("Error occured while performing linking.", ex)
