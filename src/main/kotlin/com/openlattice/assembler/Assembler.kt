@@ -127,7 +127,7 @@ class Assembler(
         if (isEntitySetMaterialized(entitySetId)) {
             materializedEntitySets.executeOnEntries(
                     AddFlagsToMaterializedEntitySetProcessor(setOf(flag)),
-                    entitySetIdPredicate(entitySetId) as Predicate<EntitySetAssemblyKey, MaterializedEntitySet>
+                    entitySetIdPredicate(entitySetId)
             )
             assemblies.executeOnEntries(
                     AddFlagsToOrganizationMaterializedEntitySetProcessor(entitySetId, setOf(flag)),
@@ -190,7 +190,7 @@ class Assembler(
             )
 
             val entitySetAssembliesToDelete = materializedEntitySets.keySet(
-                    entitySetIdPredicate(entitySetDeletedEvent.entitySetId) as Predicate<EntitySetAssemblyKey, MaterializedEntitySet>
+                    entitySetIdPredicate(entitySetDeletedEvent.entitySetId)
             )
             deleteEntitySetAssemblies(entitySetAssembliesToDelete)
         }
@@ -385,7 +385,7 @@ class Assembler(
                 as Predicate<EntitySetAssemblyKey, MaterializedEntitySet>
     }
 
-    private fun entitySetIdInOrganizationPredicate(entitySetId: UUID): Predicate<*, *> {
+    private fun entitySetIdInOrganizationPredicate(entitySetId: UUID): Predicate<EntitySetAssemblyKey, MaterializedEntitySet> {
         return Predicates.equal<EntitySetAssemblyKey, MaterializedEntitySet>(
                 OrganizationAssemblyMapstore.MATERIALIZED_ENTITY_SETS_ID_INDEX,
                 entitySetId

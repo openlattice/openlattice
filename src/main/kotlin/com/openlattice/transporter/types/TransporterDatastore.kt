@@ -5,6 +5,7 @@ import com.kryptnostic.rhizome.configuration.RhizomeConfiguration
 import com.openlattice.ApiHelpers
 import com.openlattice.assembler.AssemblerConfiguration
 import com.openlattice.assembler.createRoleIfNotExistsSql
+import com.openlattice.edm.EdmConstants
 import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
 import com.openlattice.transporter.*
@@ -26,6 +27,7 @@ class TransporterDatastore(
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(TransporterDatastore::class.java)
+
         // 0 = whole string, 1 = prefix, 2 = hostname, 3 = port, 4 = database
         private val PAT = Regex("""([\w:]+)://([\w_.]*):(\d+)/(\w+)""")
 
@@ -251,6 +253,7 @@ class TransporterDatastore(
             ptIdToFqnColumns: Map<UUID, FullQualifiedName>,
             usersToColumnPermissions: Map<String, List<String>>
     ) {
+        val olIdAsString = EdmConstants.ID_FQN.toString()
         val allPermissions = mutableSetOf<String>()
         connectOrgDb(organizationId).connection.use { conn ->
             conn.createStatement().use { stmt ->
@@ -279,14 +282,15 @@ class TransporterDatastore(
                     stmt.execute(createRoleIfNotExistsSql(roleName))
                     stmt.execute(grantUsageOnschemaSql(ORG_VIEWS_SCHEMA, roleName))
                     stmt.execute(revokeTablePermissionsForRole(ORG_VIEWS_SCHEMA, entitySetName, roleName))
-                    stmt.execute(grantSelectOnColumnsToRoles(ORG_VIEWS_SCHEMA, entitySetName, roleName, listOf(columnName)))
+                    // grant openlattice.@id cølumn explicitly
+                    stmt.execute(grantSelectOnColumnsToRoles(ORG_VIEWS_SCHEMA, entitySetName, roleName, listOf(columnName, olIdAsString)))
                 }
 
                 conn.createStatement().use { batch ->
                     // TODO: invalidate/update this when pt types and permissions are changed
                     usersToColumnPermissions.forEach { (username, allowedCols) ->
                         allowedCols.forEach { column ->
-                            batch.addBatch("GRANT ${ApiHelpers.dbQuote(viewRoleName(entitySetName, column))} to ${ApiHelpers.dbQuote(username)}")
+                            batch.addBatch(grantRoleToUser(viewRoleName(entitySetName, column), username))
                         }
                     }
                     batch.executeBatch()
@@ -311,9 +315,5 @@ class TransporterDatastore(
                 )
             }
         }
-    }
-
-    fun viewRoleName(entitySetName: String, columnName: String): String {
-        return "${entitySetName}_${columnName}"
     }
 }

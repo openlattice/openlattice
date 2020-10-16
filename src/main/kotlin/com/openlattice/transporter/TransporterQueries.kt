@@ -310,17 +310,6 @@ fun grantUsageOnschemaSql(schemaName: String, orgUserId: String): String {
     return "GRANT USAGE ON SCHEMA $schemaName TO ${ApiHelpers.dbQuote(orgUserId)}"
 }
 
-fun grantSelectOnColumnsToRoles(schema: String, entitySetName: String, role: String, columns: List<String>): String {
-    if (columns.isEmpty()) {
-        return ""
-    }
-    val columnsSql = columns.joinToString {
-        ApiHelpers.dbQuote(it)
-    }
-
-    return "GRANT SELECT ( $columnsSql ) ON $schema.$entitySetName TO ${ApiHelpers.dbQuote(role)}"
-}
-
 fun dropForeignTypeTable(schema: String, entityTypeId: UUID): String {
     return "DROP FOREIGN TABLE IF EXISTS $schema.${tableName(entityTypeId)}"
 }
@@ -349,4 +338,23 @@ fun createEntitySetViewInSchemaFromSchema(
                     $colsSql FROM $sourceSchema.${tableName(entityTypeId)}
                 WHERE ${ENTITY_SET_ID.name} = '$entitySetId'
         """.trimIndent()
+}
+
+fun grantRoleToUser(roleName: String, username: String): String {
+    return "GRANT ${ApiHelpers.dbQuote(roleName)})} to ${ApiHelpers.dbQuote(username)}"
+}
+
+fun grantSelectOnColumnsToRoles(schema: String, entitySetName: String, role: String, columns: List<String>): String {
+    if (columns.isEmpty()) {
+        return ""
+    }
+    val columnsSql = columns.joinToString {
+        ApiHelpers.dbQuote(it)
+    }
+
+    return "GRANT SELECT ( $columnsSql ) ON $schema.${ApiHelpers.dbQuote(entitySetName)} TO ${ApiHelpers.dbQuote(role)}"
+}
+
+fun viewRoleName(entitySetName: String, columnName: String): String {
+    return "${ApiHelpers.dbQuote(entitySetName)}_${ApiHelpers.dbQuote(columnName)}"
 }
