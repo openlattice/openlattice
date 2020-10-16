@@ -48,6 +48,8 @@ class TransporterDatastore(
 
         // fdw name for atlas <-> production fdw
         const val ENTERPRISE_FDW_NAME = "enterprise"
+
+        private val OPENLATTICE_ID_AS_STRING = EdmConstants.ID_FQN.toString()
     }
 
     private var hds: HikariDataSource = exConnMan.createDataSource(
@@ -245,16 +247,40 @@ class TransporterDatastore(
         }
     }
 
+    fun destroyEdgeViewInOrgDb(organizationId: UUID, entitySetName: String) {
+        connectOrgDb(organizationId).connection.use { conn ->
+            conn.createStatement().use { stmt ->
+                stmt.executeUpdate(destroyEdgeView(ORG_VIEWS_SCHEMA, entitySetName))
+            }
+        }
+    }
+
+    fun createEdgeViewInOrgDb(
+            organizationId: UUID,
+            entitySetName: String,
+            entitySetId: UUID
+    ) {
+        connectOrgDb(organizationId).connection.use { conn ->
+            conn.createStatement().use { stmt ->
+                stmt.executeUpdate(
+                        createEdgeSetViewInSchema(
+                                entitySetName,
+                                entitySetId,
+                                ORG_VIEWS_SCHEMA,
+                                ORG_FOREIGN_TABLES_SCHEMA
+                        )
+                )
+            }
+        }
+    }
+
     fun createEntitySetViewInOrgDb(
             organizationId: UUID,
             entitySetName: String,
             entitySetId: UUID,
             entityTypeId: UUID,
-            ptIdToFqnColumns: Map<UUID, FullQualifiedName>,
-            usersToColumnPermissions: Map<String, List<String>>
+            ptIdToFqnColumns: Map<UUID, FullQualifiedName>
     ) {
-        val olIdAsString = EdmConstants.ID_FQN.toString()
-        val allPermissions = mutableSetOf<String>()
         connectOrgDb(organizationId).connection.use { conn ->
             conn.createStatement().use { stmt ->
                 stmt.executeUpdate(
@@ -267,7 +293,18 @@ class TransporterDatastore(
                                 ORG_FOREIGN_TABLES_SCHEMA
                         )
                 )
+            }
+        }
+    }
 
+    fun applyViewAndEdgePermissions(
+            organizationId: UUID,
+            entitySetName: String,
+            usersToColumnPermissions: Map<String, List<String>>
+    ) {
+        connectOrgDb(organizationId).connection.use { conn ->
+            conn.createStatement().use { stmt ->
+                val allPermissions = mutableSetOf<String>()
                 usersToColumnPermissions.forEach { (username, allowedCols) ->
                     logger.debug("user {} has columns {}", username, allowedCols)
                     stmt.execute(setUserInhertRolePrivileges(username))
@@ -283,37 +320,61 @@ class TransporterDatastore(
                     stmt.execute(grantUsageOnschemaSql(ORG_VIEWS_SCHEMA, roleName))
                     stmt.execute(revokeTablePermissionsForRole(ORG_VIEWS_SCHEMA, entitySetName, roleName))
                     // grant openlattice.@id cølumn explicitly
-                    stmt.execute(grantSelectOnColumnsToRoles(ORG_VIEWS_SCHEMA, entitySetName, roleName, listOf(columnName, olIdAsString)))
-                }
-
-                conn.createStatement().use { batch ->
-                    // TODO: invalidate/update this when pt types and permissions are changed
-                    usersToColumnPermissions.forEach { (username, allowedCols) ->
-                        allowedCols.forEach { column ->
-                            batch.addBatch(grantRoleToUser(viewRoleName(entitySetName, column), username))
-                        }
-                    }
-                    batch.executeBatch()
+                    stmt.execute(grantSelectOnColumnsToRoles(ORG_VIEWS_SCHEMA, entitySetName, roleName, listOf(columnName, OPENLATTICE_ID_AS_STRING)))
+                    stmt.execute(grantSelectOnColumnsToRoles(ORG_VIEWS_SCHEMA, edgeViewName(entitySetName), roleName, MAT_EDGES_TABLE.columns.map { it.name }.toList()))
                 }
             }
+
+            conn.createStatement().use { batch ->
+                // TODO: invalidate/update this when pt types and permissions are changed
+                usersToColumnPermissions.forEach { (username, allowedCols) ->
+                    allowedCols.forEach { column ->
+                        batch.addBatch(grantRoleToUser(viewRoleName(entitySetName, column), username))
+                    }
+                }
+                batch.executeBatch()
+            }
         }
+    }
+
+    private fun transportTableToOrg(
+            organizationId: UUID,
+            fromSchemaName: String,
+            fromTableName: String,
+            toSchemaName: String
+    ) {
+        connectOrgDb(organizationId).connection.use { conn ->
+            conn.createStatement().use { stmt ->
+                stmt.executeUpdate(
+                        importTablesFromForeignSchema(
+                                fromSchemaName,
+                                setOf(fromTableName),
+                                toSchemaName,
+                                getOrgFdw(organizationId)
+                        )
+                )
+            }
+        }
+    }
+
+    fun transportEdgesTableToOrg(organizationId: UUID) {
+        transportTableToOrg(
+                organizationId,
+                PUBLIC_SCHEMA,
+                MAT_EDGES_TABLE_NAME,
+                ORG_FOREIGN_TABLES_SCHEMA
+        )
     }
 
     fun transportEntityTypeTableToOrg(
             organizationId: UUID,
             entityTypeId: UUID
     ) {
-        connectOrgDb(organizationId).connection.use { conn ->
-            conn.createStatement().use { stmt ->
-                stmt.executeUpdate(
-                        importTablesFromForeignSchema(
-                                PUBLIC_SCHEMA,
-                                setOf(tableName(entityTypeId)),
-                                ORG_FOREIGN_TABLES_SCHEMA,
-                                getOrgFdw(organizationId)
-                        )
-                )
-            }
-        }
+        transportTableToOrg(
+                organizationId,
+                PUBLIC_SCHEMA,
+                tableName(entityTypeId),
+                ORG_FOREIGN_TABLES_SCHEMA
+        )
     }
 }
