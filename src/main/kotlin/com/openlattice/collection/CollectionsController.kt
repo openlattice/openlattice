@@ -28,8 +28,8 @@ import javax.inject.Inject
 import kotlin.streams.toList
 
 @SuppressFBWarnings(
-        value = ["BC_BAD_CAST_TO_ABSTRACT_COLLECTION"],
-        justification = "Allowing kotlin collection mapping cast to List")
+        value = ["BC_BAD_CAST_TO_ABSTRACT_COLLECTION", "RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"],
+        justification = "Allowing kotlin collection mapping cast to List and underlying redundant nullchecks")
 @RestController
 @RequestMapping(CONTROLLER)
 class CollectionsController : CollectionsApi, AuthorizingComponent {
@@ -136,12 +136,16 @@ class CollectionsController : CollectionsApi, AuthorizingComponent {
     @RequestMapping(path = [ENTITY_TYPE_PATH + ENTITY_TYPE_COLLECTION_ID_PATH], method = [RequestMethod.DELETE])
     override fun deleteEntityTypeCollection(@PathVariable(ENTITY_TYPE_COLLECTION_ID) entityTypeCollectionId: UUID) {
         ensureAdminAccess()
+        collectionsManager.ensureEntityTypeCollectionExists(entityTypeCollectionId)
+
         collectionsManager.deleteEntityTypeCollection(entityTypeCollectionId)
     }
 
     @RequestMapping(path = [ENTITY_SET_PATH + ENTITY_SET_COLLECTION_ID_PATH], method = [RequestMethod.DELETE])
     override fun deleteEntitySetCollection(@PathVariable(ENTITY_SET_COLLECTION_ID) entitySetCollectionId: UUID) {
         ensureOwnerAccess(AclKey(entitySetCollectionId))
+        collectionsManager.ensureEntitySetCollectionExists(entitySetCollectionId)
+
         collectionsManager.deleteEntitySetCollection(entitySetCollectionId)
     }
 

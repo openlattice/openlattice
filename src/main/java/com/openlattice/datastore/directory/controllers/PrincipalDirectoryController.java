@@ -24,7 +24,6 @@ import com.auth0.client.mgmt.ManagementAPI;
 import com.auth0.exception.Auth0Exception;
 import com.auth0.json.mgmt.users.User;
 import com.codahale.metrics.annotation.Timed;
-import com.openlattice.assembler.PostgresRoles;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.directory.MaterializedViewAccount;
@@ -175,8 +174,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
             method = RequestMethod.GET,
             produces = MediaType.APPLICATION_JSON_VALUE )
     public MaterializedViewAccount getMaterializedViewAccount() {
-        final var principal = PostgresRoles.buildPostgresUsername( Principals.getCurrentSecurablePrincipal() );
-        return dbCredService.getDbCredential( principal );
+        return dbCredService.getDbCredential( Principals.getCurrentSecurablePrincipal() );
     }
 
     @Timed
@@ -247,7 +245,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
         spm.deletePrincipal( securablePrincipal.getAclKey() );
 
         //Remove from materialized view account
-        dbCredService.deleteUserCredential( PostgresRoles.buildPostgresUsername( securablePrincipal ) );
+        dbCredService.deleteUserCredential(  securablePrincipal );
 
         //Delete from auth0
         userDirectoryService.deleteUser( userId );

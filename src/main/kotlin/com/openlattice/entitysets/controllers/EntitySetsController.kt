@@ -24,7 +24,11 @@ import com.google.common.base.Preconditions
 import com.google.common.collect.ImmutableMap
 import com.google.common.collect.Lists
 import com.google.common.collect.Maps
-import com.openlattice.auditing.*
+import com.openlattice.auditing.AuditEventType
+import com.openlattice.auditing.AuditRecordEntitySetsManager
+import com.openlattice.auditing.AuditableEvent
+import com.openlattice.auditing.AuditingComponent
+import com.openlattice.auditing.AuditingManager
 import com.openlattice.authorization.*
 import com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION
 import com.openlattice.authorization.securable.SecurableObjectType
@@ -95,7 +99,6 @@ constructor(
     override fun getAuditingManager(): AuditingManager {
         return auditingManager
     }
-
 
     @Timed
     @RequestMapping(path = [LINKING + ID_PATH], method = [RequestMethod.PUT])

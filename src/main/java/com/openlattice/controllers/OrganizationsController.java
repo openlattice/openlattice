@@ -142,11 +142,34 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         AclKey aclKey = ensureOwner( organizationId );
 
         ensureObjectCanBeDeleted( organizationId );
+        organizations.ensureOrganizationExists( organizationId );
 
         organizations.destroyOrganization( organizationId );
         edms.deleteOrganizationExternalDatabase( organizationId );
         authorizations.deletePermissions( aclKey );
         securableObjectTypes.deleteSecurableObjectType( new AclKey( organizationId ) );
+        return null;
+    }
+
+    @Override
+    @GetMapping( value = ID_PATH + SET_ID_PATH + TRANSPORT, produces = MediaType.APPLICATION_JSON_VALUE )
+    @ResponseStatus( HttpStatus.OK )
+    public Void transportEntitySet( @PathVariable(ID) UUID organizationId, @PathVariable(SET_ID) UUID entitySetId) {
+        organizations.ensureOrganizationExists(organizationId);
+        ensureRead( organizationId );
+        ensureTransportAccess( new AclKey( entitySetId ) );
+        edms.transportEntitySet( organizationId, entitySetId );
+        return null;
+    }
+
+    @Override
+    @GetMapping( value = ID_PATH + SET_ID_PATH + DESTROY , produces = MediaType.APPLICATION_JSON_VALUE )
+    @ResponseStatus( HttpStatus.OK )
+    public Void destroyTransportedEntitySet(@PathVariable(ID) UUID organizationId, @PathVariable(SET_ID) UUID entitySetId) {
+        organizations.ensureOrganizationExists(organizationId);
+        ensureRead( organizationId );
+        ensureTransportAccess( new AclKey( organizationId ));
+        edms.destroyTransportedEntitySet( entitySetId );
         return null;
     }
 
@@ -623,11 +646,28 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     }
 
     @Timed
-    @PostMapping( value = PROMOTE + ID_PATH, consumes = MediaType.APPLICATION_JSON_VALUE )
+    @PostMapping( value = PROMOTE + ID_PATH, consumes = MediaType.TEXT_PLAIN_VALUE )
     @Override
     public Void promoteStagingTable( @PathVariable( ID ) UUID organizationId, @RequestBody String tableName ) {
         ensureOwner( organizationId );
         edms.promoteStagingTable( organizationId, tableName );
+        return null;
+    }
+
+    @Override
+    @GetMapping( value = ID_PATH + DATABASE, produces = MediaType.APPLICATION_JSON_VALUE )
+    public String getOrganizationDatabaseName( @PathVariable( ID ) UUID organizationId ) {
+        ensureRead( organizationId );
+        return organizations.getOrganizationDatabaseName( organizationId );
+    }
+
+    @Override
+    @PatchMapping( value = ID_PATH + DATABASE, consumes = { MediaType.TEXT_PLAIN_VALUE, MediaType.APPLICATION_FORM_URLENCODED_VALUE } )
+    public Void renameOrganizationDatabase(
+            @PathVariable( ID ) UUID organizationId,
+            @RequestBody String newDatabaseName ) {
+        ensureOwner( organizationId );
+        organizations.renameOrganizationDatabase( organizationId, newDatabaseName );
         return null;
     }
 

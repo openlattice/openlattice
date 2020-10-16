@@ -37,15 +37,9 @@ import com.openlattice.assembler.Assembler;
 import com.openlattice.assembler.AssemblerConfiguration;
 import com.openlattice.assembler.AssemblerConnectionManager;
 import com.openlattice.assembler.AssemblerDependencies;
-import com.openlattice.assembler.AssemblerQueryService;
 import com.openlattice.assembler.pods.AssemblerConfigurationPod;
 import com.openlattice.assembler.tasks.UserCredentialSyncTask;
-import com.openlattice.auditing.AuditRecordEntitySetsManager;
-import com.openlattice.auditing.AuditingConfiguration;
-import com.openlattice.auditing.AuditingManager;
-import com.openlattice.auditing.AuditingProfiles;
-import com.openlattice.auditing.LocalAuditingService;
-import com.openlattice.auditing.S3AuditingService;
+import com.openlattice.auditing.*;
 import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.auth0.AwsAuth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
@@ -67,12 +61,7 @@ import com.openlattice.data.storage.aws.AwsDataSinkService;
 import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datastore.configuration.DatastoreConfiguration;
 import com.openlattice.datastore.configuration.ReadonlyDatasourceSupplier;
-import com.openlattice.datastore.services.AnalysisService;
-import com.openlattice.datastore.services.DatastoreElasticsearchImpl;
-import com.openlattice.datastore.services.EdmManager;
-import com.openlattice.datastore.services.EdmService;
-import com.openlattice.datastore.services.EntitySetManager;
-import com.openlattice.datastore.services.EntitySetService;
+import com.openlattice.datastore.services.*;
 import com.openlattice.directory.Auth0UserDirectoryService;
 import com.openlattice.directory.LocalUserDirectoryService;
 import com.openlattice.directory.UserDirectoryService;
@@ -98,6 +87,7 @@ import com.openlattice.organizations.pods.OrganizationExternalDatabaseConfigurat
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.PostgresTableManager;
+import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
 import com.openlattice.requests.HazelcastRequestsManager;
 import com.openlattice.requests.RequestQueryService;
 import com.openlattice.search.PersistentSearchService;
@@ -106,6 +96,7 @@ import com.openlattice.subscriptions.PostgresSubscriptionService;
 import com.openlattice.subscriptions.SubscriptionService;
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies;
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask;
+import com.openlattice.transporter.types.TransporterDatastore;
 import com.openlattice.twilio.TwilioConfiguration;
 import com.openlattice.twilio.pods.TwilioConfigurationPod;
 import com.openlattice.users.Auth0SyncService;
@@ -181,6 +172,12 @@ public class DatastoreServicesPod {
 
     @Inject
     private ResolvedPrincipalTreesMapLoader rptml;
+
+    @Inject
+    private ExternalDatabaseConnectionManager externalDbConnMan;
+
+    @Inject
+    private TransporterDatastore transporterDatastore;
 
     @Bean
     public PostgresUserApi pgUserApi() {
@@ -309,7 +306,6 @@ public class DatastoreServicesPod {
                 dcs(),
                 hikariDataSource,
                 authorizationManager(),
-                edmAuthorizationHelper(),
                 principalService(),
                 metricRegistry,
                 hazelcastInstance,
@@ -354,7 +350,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public AssemblerDependencies assemblerDependencies() {
-        return new AssemblerDependencies( hikariDataSource, dcs(), assemblerConnectionManager() );
+        return new AssemblerDependencies( hikariDataSource, dcs(), externalDbConnMan, assemblerConnectionManager() );
     }
 
     @Bean
@@ -467,8 +463,8 @@ public class DatastoreServicesPod {
 
     @Bean
     public ReadonlyDatasourceSupplier rds() {
-        final var pgConfig = datastoreConfiguration.getReadOnlyReplica();
-        final HikariDataSource reader;
+        var pgConfig = datastoreConfiguration.getReadOnlyReplica();
+        HikariDataSource reader;
 
         if ( pgConfig.isEmpty() ) {
             reader = hikariDataSource;
@@ -495,18 +491,15 @@ public class DatastoreServicesPod {
 
     @Bean
     public AssemblerConnectionManager assemblerConnectionManager() {
-        return new AssemblerConnectionManager( assemblerConfiguration,
+        return new AssemblerConnectionManager(
+                assemblerConfiguration,
+                externalDbConnMan,
                 hikariDataSource,
                 principalService(),
                 organizationsManager(),
                 dcs(),
                 eventBus,
                 metricRegistry );
-    }
-
-    @Bean
-    public AssemblerQueryService assemblerQueryService() {
-        return new AssemblerQueryService( dataModelService() );
     }
 
     @Bean
@@ -596,11 +589,12 @@ public class DatastoreServicesPod {
     public ExternalDatabaseManagementService edms() {
         return new ExternalDatabaseManagementService(
                 hazelcastInstance,
-                assemblerConnectionManager(),
+                externalDbConnMan,
                 principalService(),
                 aclKeyReservationService(),
                 authorizationManager(),
                 organizationExternalDatabaseConfiguration,
+                transporterDatastore,
                 dcs(),
                 hikariDataSource );
     }
