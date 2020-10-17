@@ -20,6 +20,7 @@ private val transportTimestampColumn: PostgresColumnDefinition = LAST_TRANSPORT
 private const val BATCH_LIMIT = 10_000
 
 val MAT_EDGES_TABLE = edgesTableDefinition()
+const val MAT_EDGES_TABLE_NAME = "et_edges"
 
 fun unquotedTableName(entityTypeId: UUID): String {
     return "et_$entityTypeId"
@@ -34,7 +35,7 @@ internal fun tableNameWithSchema(schema: String, entityTypeId: UUID): String {
 }
 
 fun edgesTableDefinition(): PostgresTableDefinition {
-    val definition = PostgresTableDefinition("${PUBLIC_SCHEMA}.et_edges")
+    val definition = PostgresTableDefinition("$PUBLIC_SCHEMA.$MAT_EDGES_TABLE_NAME")
     definition.addColumns(
             SRC_ENTITY_SET_ID,
             SRC_ENTITY_KEY_ID,
@@ -314,6 +315,10 @@ fun dropForeignTypeTable(schema: String, entityTypeId: UUID): String {
     return "DROP FOREIGN TABLE IF EXISTS $schema.${tableName(entityTypeId)}"
 }
 
+fun destroyEdgeView(schema: String, entitySetName: String): String {
+    return "DROP VIEW IF EXISTS $schema.${ApiHelpers.dbQuote(edgeViewName(entitySetName))}"
+}
+
 fun destroyView(schema: String, entitySetName: String): String {
     return "DROP VIEW IF EXISTS $schema.${ApiHelpers.dbQuote(entitySetName)}"
 }
@@ -340,8 +345,23 @@ fun createEntitySetViewInSchemaFromSchema(
         """.trimIndent()
 }
 
+fun createEdgeSetViewInSchema(
+        entitySetName: String,
+        entitySetId: UUID,
+        destinationSchema: String,
+        sourceSchema: String
+): String {
+    return """
+        CREATE VIEW $destinationSchema.${ApiHelpers.dbQuote(edgeViewName(entitySetName))} AS
+            SELECT * FROM $sourceSchema.${MAT_EDGES_TABLE_NAME}
+            WHERE ${SRC_ENTITY_SET_ID.name} = '$entitySetId'
+            OR ${DST_ENTITY_SET_ID.name} = '$entitySetId'
+            OR ${EDGE_ENTITY_SET_ID.name} = '$entitySetId'
+    """.trimIndent()
+}
+
 fun grantRoleToUser(roleName: String, username: String): String {
-    return "GRANT ${ApiHelpers.dbQuote(roleName)})} to ${ApiHelpers.dbQuote(username)}"
+    return "GRANT ${ApiHelpers.dbQuote(roleName)} to ${ApiHelpers.dbQuote(username)}"
 }
 
 fun grantSelectOnColumnsToRoles(schema: String, entitySetName: String, role: String, columns: List<String>): String {
@@ -355,6 +375,13 @@ fun grantSelectOnColumnsToRoles(schema: String, entitySetName: String, role: Str
     return "GRANT SELECT ( $columnsSql ) ON $schema.${ApiHelpers.dbQuote(entitySetName)} TO ${ApiHelpers.dbQuote(role)}"
 }
 
+/**
+ * The below are intentionally unquoted
+ */
+fun edgeViewName(entitySetName: String): String {
+    return "${entitySetName}_edges"
+}
+
 fun viewRoleName(entitySetName: String, columnName: String): String {
-    return "${ApiHelpers.dbQuote(entitySetName)}_${ApiHelpers.dbQuote(columnName)}"
+    return "${entitySetName}_$columnName"
 }
