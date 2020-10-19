@@ -28,6 +28,7 @@ import com.openlattice.edm.events.*
 import com.openlattice.edm.type.AssociationType
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
+import com.openlattice.graph.PagedNeighborRequest
 import com.openlattice.graph.core.GraphService
 import com.openlattice.graph.edge.Edge
 import com.openlattice.organizations.Organization
@@ -496,11 +497,13 @@ class SearchService(
     @Timed
     fun executeEntityNeighborSearch(
             entitySetIds: Set<UUID>,
-            filter: EntityNeighborsFilter,
+            pagedNeighborRequest: PagedNeighborRequest,
             principals: Set<Principal>
     ): Map<UUID, List<NeighborEntityDetails>> {
         val sw1 = Stopwatch.createStarted()
         val sw2 = Stopwatch.createStarted()
+
+        val filter = pagedNeighborRequest.filter
 
         logger.debug("Starting Entity Neighbor Search...")
         if (filter.associationEntitySetIds.isPresent && filter.associationEntitySetIds.get().isEmpty()) {
@@ -544,15 +547,7 @@ class SearchService(
         val entitySetIdToEntityKeyId = HashMultimap.create<UUID, UUID>()
         val entitySetsIdsToAuthorizedProps = mutableMapOf<UUID, MutableMap<UUID, PropertyType>>()
 
-        graphService.getEdgesAndNeighborsForVertices(
-                allBaseEntitySetIds,
-                EntityNeighborsFilter(
-                        entityKeyIds,
-                        filter.srcEntitySetIds,
-                        filter.dstEntitySetIds,
-                        filter.associationEntitySetIds
-                )
-        ).forEach { edge ->
+        graphService.getEdgesAndNeighborsForVertices(allBaseEntitySetIds, pagedNeighborRequest).forEach { edge ->
             edges.add(edge)
             allEntitySetIds.add(edge.edge.entitySetId)
             allEntitySetIds.add(
@@ -820,7 +815,7 @@ class SearchService(
 
         val neighbors = mutableMapOf<UUID, MutableMap<UUID, SetMultimap<UUID, NeighborEntityIds>>>()
 
-        graphService.getEdgesAndNeighborsForVertices(entitySetIds, filter).forEach { edge ->
+        graphService.getEdgesAndNeighborsForVertices(entitySetIds, PagedNeighborRequest(filter)).forEach { edge ->
 
             val isSrc = entityKeyIds.contains(edge.src.entityKeyId)
             val entityKeyId = if (isSrc) edge.src.entityKeyId else edge.dst.entityKeyId

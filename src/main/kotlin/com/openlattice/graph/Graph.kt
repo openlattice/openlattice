@@ -29,12 +29,7 @@ import com.google.common.collect.ImmutableList
 import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
 import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
-import com.openlattice.analysis.requests.AggregationResult
-import com.openlattice.analysis.requests.AggregationType
-import com.openlattice.analysis.requests.EntityAggregationResult
-import com.openlattice.analysis.requests.FilteredNeighborsRankingAggregationResult
-import com.openlattice.analysis.requests.NeighborhoodRankingAggregationResult
-import com.openlattice.analysis.requests.WeightedRankingAggregation
+import com.openlattice.analysis.requests.*
 import com.openlattice.data.DataEdgeKey
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.EntityKeyIdService
@@ -52,25 +47,15 @@ import com.openlattice.graph.edge.Edge
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn
-import com.openlattice.postgres.PostgresColumn.DST_ENTITY_KEY_ID
-import com.openlattice.postgres.PostgresColumn.DST_ENTITY_SET_ID
-import com.openlattice.postgres.PostgresColumn.EDGE_COMP_1
-import com.openlattice.postgres.PostgresColumn.EDGE_COMP_2
-import com.openlattice.postgres.PostgresColumn.EDGE_ENTITY_KEY_ID
-import com.openlattice.postgres.PostgresColumn.EDGE_ENTITY_SET_ID
-import com.openlattice.postgres.PostgresColumn.ID_VALUE
-import com.openlattice.postgres.PostgresColumn.LAST_TRANSPORT
-import com.openlattice.postgres.PostgresColumn.LINKING_ID
-import com.openlattice.postgres.PostgresColumn.PARTITION
-import com.openlattice.postgres.PostgresColumn.SRC_ENTITY_KEY_ID
-import com.openlattice.postgres.PostgresColumn.SRC_ENTITY_SET_ID
-import com.openlattice.postgres.PostgresColumn.VERSION
-import com.openlattice.postgres.PostgresColumn.VERSIONS
+import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresColumnDefinition
 import com.openlattice.postgres.PostgresTable.E
 import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.ResultSetAdapters
-import com.openlattice.postgres.streams.*
+import com.openlattice.postgres.streams.BasePostgresIterable
+import com.openlattice.postgres.streams.PostgresIterable
+import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
+import com.openlattice.postgres.streams.StatementHolder
 import com.openlattice.search.requests.EntityNeighborsFilter
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
@@ -234,14 +219,17 @@ class Graph(
 
     override fun getEdgesAndNeighborsForVertices(
             entitySetIds: Set<UUID>,
-            filter: EntityNeighborsFilter
+            pagedNeighborRequest: PagedNeighborRequest
     ): Stream<Edge> {
+
+        val filter = pagedNeighborRequest.filter
+        val limit = pagedNeighborRequest.pageSize
 
         val srcEntitySetIds = filter.srcEntitySetIds.orElse(setOf())
         val entitySetPartitions = partitionManager.getPartitionsByEntitySetId(srcEntitySetIds + entitySetIds)
         val srcEntitySetPartitions = srcEntitySetIds.flatMap { entitySetPartitions.getValue(it) }.toSet()
 
-        return PostgresIterable(PreparedStatementHolderSupplier(reader, getFilteredNeighborhoodSql(filter, srcEntitySetPartitions)) { ps ->
+        return PostgresIterable(PreparedStatementHolderSupplier(reader, getFilteredNeighborhoodSql(pagedNeighborRequest, srcEntitySetPartitions, limit)) { ps ->
             val connection = ps.connection
             val idsArr = PostgresArrays.createUuidArray(connection, filter.entityKeyIds.stream())
             val entitySetIdsArr = PostgresArrays.createUuidArray(connection, entitySetIds.stream())
@@ -328,7 +316,7 @@ class Graph(
                 )
 
                 //Now we load all edges for this neighbor type into memory
-                val edges = getEdgesAndNeighborsForVertices(entitySetIds, neighborsFilter)
+                val edges = getEdgesAndNeighborsForVertices(entitySetIds, PagedNeighborRequest(neighborsFilter))
                         .toList()
 
                 logger.info("Edges: {}", edges.size)
@@ -454,7 +442,7 @@ class Graph(
                     Optional.of(authorizedPropertyTypes.keys),
                     Optional.of(authorizedPropertyTypes.keys)
             )
-            val allNeighborEdges = getEdgesAndNeighborsForVertices(entitySetIds, allNeighborsFilter)
+            val allNeighborEdges = getEdgesAndNeighborsForVertices(entitySetIds, PagedNeighborRequest(allNeighborsFilter))
             val associationEntityKeyIds = mutableMapOf<UUID, Optional<MutableSet<UUID>>>()
             val neighborEntityKeyIds = mutableMapOf<UUID, Optional<MutableSet<UUID>>>()
             val edges = mutableMapOf<UUID, MutableMap<UUID, UUID>>()
@@ -1174,6 +1162,16 @@ private val DEFAULT_NEIGHBORHOOD_DST_FILTER = "${DST_ENTITY_KEY_ID.name} = ANY(?
 private val BULK_NEIGHBORHOOD_SQL = "SELECT * FROM ${E.name} WHERE (($SRC_IDS_SQL) OR ($DST_IDS_SQL) OR ($EDGE_IDS_SQL))"
 private val BULK_NON_TOMBSTONED_NEIGHBORHOOD_SQL = "$BULK_NEIGHBORHOOD_SQL AND ${VERSION.name} > 0"
 
+
+private val PAGED_NEIGHBOR_SEARCH_ORDER_COLS = listOf(
+        SRC_ENTITY_SET_ID,
+        SRC_ENTITY_KEY_ID,
+        EDGE_ENTITY_SET_ID,
+        EDGE_ENTITY_KEY_ID,
+        DST_ENTITY_SET_ID,
+        DST_ENTITY_KEY_ID
+).map { it.name }
+
 /**
  * PreparedStatement bind order (note: these bind params all apply to the vertex entity set):
  *
@@ -1184,9 +1182,14 @@ private val BULK_NON_TOMBSTONED_NEIGHBORHOOD_SQL = "$BULK_NEIGHBORHOOD_SQL AND $
  * 5. partitions
  */
 internal fun getFilteredNeighborhoodSql(
-        filter: EntityNeighborsFilter,
+        pagedNeighborRequest: PagedNeighborRequest,
         srcEntitySetPartitions: Set<Int>
 ): String {
+
+    val filter = pagedNeighborRequest.filter
+    val limit = pagedNeighborRequest.pageSize
+    val bookmark = pagedNeighborRequest.bookmark
+
 
     var vertexAsSrcSql = DEFAULT_NEIGHBORHOOD_SRC_FILTER
     var vertexAsDstSql = DEFAULT_NEIGHBORHOOD_DST_FILTER
@@ -1211,12 +1214,32 @@ internal fun getFilteredNeighborhoodSql(
         vertexAsDstSql += " AND ( $associationEntitySetIdsSql )"
     }
 
+    val limitClause = if (limit > 0) "LIMIT $limit" else ""
+
+    val bookmarkClause = if (bookmark != null) {
+        """
+            AND ( ${PAGED_NEIGHBOR_SEARCH_ORDER_COLS.joinToString()} ) > (
+              '${bookmark.src.entitySetId}',
+              '${bookmark.src.entityKeyId}',
+              '${bookmark.edge.entitySetId}',
+              '${bookmark.edge.entityKeyId}',
+              '${bookmark.dst.entitySetId}',
+              '${bookmark.dst.entityKeyId}'
+            )
+        """.trimIndent()
+    } else {
+        ""
+    }
+
     return """
       SELECT *
       FROM ${E.name}
       WHERE 
         ( ( $vertexAsDstSql ) OR ( $vertexAsSrcSql ) ) 
         AND ${VERSION.name} > 0
+        $bookmarkClause
+      ORDER BY ${PAGED_NEIGHBOR_SEARCH_ORDER_COLS.joinToString()}
+      $limitClause
    """.trimIndent()
 }
 

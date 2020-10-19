@@ -9,6 +9,7 @@ import com.openlattice.edm.EdmConstants
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.edm.type.PropertyType
+import com.openlattice.graph.PagedNeighborRequest
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.PERSISTENT_SEARCHES
 import com.openlattice.postgres.ResultSetAdapters
@@ -167,11 +168,13 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
             val entitySets = dependencies.entitySets.getAll(entitySetIds).values.groupBy { it.isLinking }
             val neighborsById = dependencies.searchService.executeEntityNeighborSearch(
                     entitySets.getOrDefault(false, listOf()).map { it.id }.toSet(),
-                    EntityNeighborsFilter(
-                            getHitEntityKeyIds(results.hits),
-                            Optional.empty(),
-                            Optional.empty(),
-                            Optional.of(getAuthorizedAssociationEntitySets(allUserPrincipals))
+                    PagedNeighborRequest(
+                            EntityNeighborsFilter(
+                                    getHitEntityKeyIds(results.hits),
+                                    Optional.empty(),
+                                    Optional.empty(),
+                                    Optional.of(getAuthorizedAssociationEntitySets(allUserPrincipals))
+                            )
                     ),
                     allUserPrincipals
             )
