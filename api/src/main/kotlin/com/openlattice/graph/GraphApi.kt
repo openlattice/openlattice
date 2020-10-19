@@ -38,6 +38,7 @@ const val ENTITY_SET_ID = "entitySetId"
 const val ENTITY_SET_ID_PATH = "/{$ENTITY_SET_ID}"
 const val ID = "id"
 const val ID_PATH = "/{$ID}"
+const val PAGE = "/page"
 const val QUERY = "/query"
 const val RESULT = "/result"
 
@@ -61,4 +62,10 @@ interface GraphApi {
             @Path(ENTITY_SET_ID) entitySetId: UUID,
             @Body query: NeighborhoodQuery
     ): Neighborhood
+
+    @POST(BASE + NEIGHBORS + ENTITY_SET_ID_PATH + PAGE)
+    fun getPageOfNeighbors(
+            @Path(ENTITY_SET_ID) entitySetId: UUID,
+            @Body pagedNeighborRequest: PagedNeighborRequest
+    )
 }
