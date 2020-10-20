@@ -1441,6 +1441,32 @@ paths:
             application/json:
               schema:
                 type: integer
+  /datastore/entity-sets/{entitySetId}/partitions:
+    put:
+      summary: Used to repartition an entity set. This will shuffle corresponding ids, edges, and data table rows for the entity set.
+      operationId: repartitionEntitySet
+      parameters:
+        - name: entitySetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: integer
+      tags: [entitySets]
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
             
   ###################
   ## DATA SET APIs ##
@@ -1674,7 +1700,7 @@ paths:
         "200":
           description: Success
 
-  /datastore/organization-database/{organizationId}/{tableName}/external-database-table:
+  /datastore/organization-database/{organizationId}/{tableId}/external-database-table:
     get:
       summary: Gets an OrganizationExternalDatabaseTable object, which represents an organization's table in an external database. 
       operationId: getExternalDatabaseTable
@@ -1685,11 +1711,12 @@ paths:
           schema:
             type: string
             format: uuid
-        - name: tableName
+        - name: tableId
           in: path
           required: true
           schema:
             type: string
+            format: uuid
       tags:
         - dataset
       security:
@@ -1702,6 +1729,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/OrganizationExternalDatabaseTable"      
+  /datastore/organization-database/{organizationId}/{tableName}/external-database-table:
     patch:
       summary: Updates an OrganizationExternalDatabaseTable object's fields that are included within the given metadata.
       operationId: updateExternalDatabaseTable
@@ -1778,7 +1806,43 @@ paths:
       responses:
         "200":
           description: Success
-
+  /datastore/organization-database/{organizationId}/{tableId}/{rowCount}/data:
+    get:
+      summary: Gets an OrganizationExternalDatabaseTable object with user specified number of rows of raw data for an organization
+      operationId: getExternalDatabaseTableData
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: tableId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: rowCount
+          in: path
+          required: true
+          schema:
+            type: integer
+      tags:
+        - dataset
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object    
+      
 
 
 
@@ -3931,6 +3995,53 @@ paths:
       responses:
         "200":
           description: Success
+  /datastore/organizations/{organizationId}/database:
+    get:
+      summary: Get database name for an organization
+      operationId: getOrganizationDatabaseName
+      tags:
+        - organizations
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: string
+    patch:
+      summary: Rename the database of organization
+      operationId: renameOrganizationDatabase
+      tags:
+        - organizations
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: string
+      responses:
+        "200":
+          description: Success
 
   ##################
   ## LINKING APIs ##
@@ -4848,10 +4959,33 @@ paths:
   #   delete:
   #     summary: Uninstall an app for an organization
   #     operationId: uninstallApp
-  # /datastore/app/config:
-  #   get:
-  #     summary: Get available app configurations
-  #     operationId: getAvailableAppConfigs
+  /datastore/app/config:
+    get:
+      summary: Get available app configurations
+      operationId: getAvailableAppConfigs
+      tags:
+        - app
+      parameters:
+        - name: appId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserAppConfig"
+                  
+      
   # /datastore/app/config/update/{appId}/{organizationId}:
   #   post:
   #     summary: Update the App Configuration Settings
@@ -6335,7 +6469,24 @@ components:
           type: array
           items:
             type: string
-
+    UserAppConfig:
+      type: object
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        entitySetCollectionId:
+          type: string
+          format: uuid
+        roles:
+          type: array
+          items:
+            type: string
+            format: uuid
+        settings:
+          type: object
+          additionalProperties:
+            type: object
 
 tags:
   - name: edm

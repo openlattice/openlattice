@@ -21,9 +21,12 @@ package com.openlattice.search;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.data.requests.NeighborEntityDetails;
 import com.openlattice.data.requests.NeighborEntityIds;
-import com.openlattice.edm.EntitySet;
 import com.openlattice.search.requests.*;
-import retrofit2.http.*;
+import retrofit2.http.Body;
+import retrofit2.http.GET;
+import retrofit2.http.PATCH;
+import retrofit2.http.POST;
+import retrofit2.http.Path;
 
 import java.util.List;
 import java.util.Map;
@@ -74,15 +77,16 @@ public interface SearchApi {
     int MAX_SEARCH_RESULTS = 10000;
 
     /**
-     * The query, entityType, and propertyTypes params are all optional, but at least one must be specified otherwise an
-     * error will be thrown. All specified params are required to be present in each entity set returned. If entityType
-     * and propertyTypes are both specified, the propertyTypes param will be ignored.
+     * The query, entityType, propertyTypes, and organizationId params are all optional, but at least one must be specified
+     * otherwise an error will be thrown. All specified params are required to be present in each entity set returned.
+     * If entityType and propertyTypes are both specified, the propertyTypes param will be ignored.
      *
-     * @param search A JSON object that contains between three and five parameters. Required parameters are "start" and
-     *               "maxHits, which specify the hit number to start returning results on for paging and the maximum number
+     * @param search A JSON object that contains between three and six parameters. Required parameters are "start" and
+     *               "maxHits", which specify the hit number to start returning results on for paging and the maximum number
      *               of hits to return. Optional parameters are "query" (specifies the keywords used to perform the
-     *               search), "eid" (UUID of the entity type of the entity sets that will be returned), and "pid" (a set of
-     *               UUIDs of property types belonging to the entity sets that will be returned). All three of these
+     *               search), "eid" (UUID of the entity type of the entity sets that will be returned), "pid" (a set of
+     *               UUIDs of property types belonging to the entity sets that will be returned), and "organizationId"
+     *               (which filters results to entity sets belonging to the requested organization). All four of these
      *               parameters are optional, but at least one must be specified otherwise an error will be thrown. If eid
      *               and pid are both specified, the pid param will be ignored.
      * @return A search result object, containing the total number of hits for the given query, and the hits themselves
@@ -286,6 +290,17 @@ public interface SearchApi {
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Body EntityNeighborsFilter filter );
 
+    /**
+     * Loads all neighbors of multiple entities of the same entity set that are connected by an association, and returns
+     * the entityKeyIds of those neighbors.
+     *
+     * @param entitySetId The base entity set id that neighbors will be loaded for
+     * @param filter      optional constraints on entityKeyIds to include and filters on src/dst/edge entity set ids
+     *                    * @return A map from each entity id to a list of objects containing information about the neighbors and
+     *                    * associations of that entity
+     * @return A map from entityKeyId (from filter) -> association entity set id -> neighbor entity set id -> object
+     * containing the association entityKeyId, neighbor entityKeyId, and directionality for the edge
+     */
     @POST( BASE + ENTITY_SET_ID_PATH + NEIGHBORS + ADVANCED + IDS )
     Map<UUID, Map<UUID, SetMultimap<UUID, NeighborEntityIds>>> executeFilteredEntityNeighborIdsSearch(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
