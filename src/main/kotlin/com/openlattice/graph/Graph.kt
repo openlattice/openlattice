@@ -229,7 +229,7 @@ class Graph(
         val entitySetPartitions = partitionManager.getPartitionsByEntitySetId(srcEntitySetIds + entitySetIds)
         val srcEntitySetPartitions = srcEntitySetIds.flatMap { entitySetPartitions.getValue(it) }.toSet()
 
-        return PostgresIterable(PreparedStatementHolderSupplier(reader, getFilteredNeighborhoodSql(pagedNeighborRequest, srcEntitySetPartitions, limit)) { ps ->
+        return PostgresIterable(PreparedStatementHolderSupplier(reader, getFilteredNeighborhoodSql(pagedNeighborRequest, srcEntitySetPartitions)) { ps ->
             val connection = ps.connection
             val idsArr = PostgresArrays.createUuidArray(connection, filter.entityKeyIds.stream())
             val entitySetIdsArr = PostgresArrays.createUuidArray(connection, entitySetIds.stream())

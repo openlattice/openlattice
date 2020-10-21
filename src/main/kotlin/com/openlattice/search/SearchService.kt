@@ -494,6 +494,88 @@ class SearchService(
         )
     }
 
+    private fun getAuthorizedFilterEntitySetOptions(
+            entitySetIds: Set<UUID>,
+            filter: EntityNeighborsFilter,
+            principals: Set<Principal>
+    ): EntityNeighborsFilter {
+
+        val srcEntitySetIds = mutableSetOf<UUID>()
+        val dstEntitySetIds = mutableSetOf<UUID>()
+        val associationEntitySetIds = mutableSetOf<UUID>()
+
+        graphService.getNeighborEntitySets(entitySetIds).forEach { neighborSet ->
+            srcEntitySetIds.add(neighborSet.srcEntitySetId)
+            dstEntitySetIds.add(neighborSet.dstEntitySetId)
+            associationEntitySetIds.add(neighborSet.edgeEntitySetId)
+        }
+
+        val authorizedEntitySetIds = authorizations
+                .accessChecksForPrincipals(
+                        (srcEntitySetIds + dstEntitySetIds + associationEntitySetIds).map { esId ->
+                            AccessCheck(AclKey(esId), READ_PERMISSION)
+                        }.toSet(),
+                        principals
+                )
+                .filter { auth -> auth.permissions.getValue(Permission.READ) }
+                .map { auth -> auth.aclKey.first() }
+                .collect(Collectors.toSet())
+
+        val srcFilteredEntitySetIds = filter.srcEntitySetIds.orElse(srcEntitySetIds)
+                .filter { srcEntitySetIds.contains(it) && authorizedEntitySetIds.contains(it) }.toSet()
+        val dstFilteredEntitySetIds = filter.dstEntitySetIds.orElse(dstEntitySetIds)
+                .filter { dstEntitySetIds.contains(it) && authorizedEntitySetIds.contains(it) }.toSet()
+        val associationFilteredEntitySetIds = filter.associationEntitySetIds.orElse(associationEntitySetIds)
+                .filter { associationEntitySetIds.contains(it) && authorizedEntitySetIds.contains(it) }.toSet()
+
+        return EntityNeighborsFilter(
+                filter.entityKeyIds,
+                Optional.of(srcFilteredEntitySetIds),
+                Optional.of(dstFilteredEntitySetIds),
+                Optional.of(associationFilteredEntitySetIds)
+        )
+    }
+
+    private fun getAuthorizedPropertyTypesOfEntitySets(
+            entitySetIds: Set<UUID>,
+            principals: Set<Principal>
+    ): Map<UUID, Map<UUID, PropertyType>> {
+
+        val entityTypeIdsByEntitySet = entitySetService.getEntityTypeIdsByEntitySetIds(entitySetIds)
+        val entityTypesById = dataModelService.getEntityTypesAsMap(entityTypeIdsByEntitySet.values.toSet())
+
+        val propertyTypesById = dataModelService
+                .getPropertyTypesAsMap(entityTypesById.values.flatMap { it.properties }.toSet())
+
+        val accessChecks = entityTypeIdsByEntitySet.entries
+                .flatMap { (entitySetId, entityTypeId) ->
+                    entityTypesById
+                            .getValue(entityTypeId)
+                            .properties
+                            .map { propertyTypeId ->
+                                AccessCheck(
+                                        AclKey(entitySetId, propertyTypeId),
+                                        READ_PERMISSION
+                                )
+                            }
+                }.toSet()
+
+        val entitySetsIdsToAuthorizedProps = mutableMapOf<UUID, MutableMap<UUID, PropertyType>>()
+
+        authorizations
+                .accessChecksForPrincipals(accessChecks, principals)
+                .forEach { auth ->
+                    if (auth.permissions.getValue(Permission.READ)) {
+                        val esId = auth.aclKey[0]
+                        val propertyTypeId = auth.aclKey[1]
+                        entitySetsIdsToAuthorizedProps
+                                .getValue(esId)[propertyTypeId] = propertyTypesById.getValue(propertyTypeId)
+                    }
+                }
+
+        return entitySetsIdsToAuthorizedProps
+    }
+
     @Timed
     fun executeEntityNeighborSearch(
             entitySetIds: Set<UUID>,
@@ -503,7 +585,19 @@ class SearchService(
         val sw1 = Stopwatch.createStarted()
         val sw2 = Stopwatch.createStarted()
 
-        val filter = pagedNeighborRequest.filter
+        val filter = getAuthorizedFilterEntitySetOptions(
+                entitySetIds,
+                pagedNeighborRequest.filter,
+                principals
+        )
+
+        val allEntitySets = filter.srcEntitySetIds.get() + filter.dstEntitySetIds.get() + filter.associationEntitySetIds.get()
+
+        val entitySetsIdsToAuthorizedProps = getAuthorizedPropertyTypesOfEntitySets(
+                allEntitySets,
+                principals
+        )
+        val entitySetsById = entitySetService.getEntitySetsAsMap(allEntitySets)
 
         logger.debug("Starting Entity Neighbor Search...")
         if (filter.associationEntitySetIds.isPresent && filter.associationEntitySetIds.get().isEmpty()) {
@@ -545,7 +639,6 @@ class SearchService(
         val allEntitySetIds = Sets.newHashSet<UUID>()
         val authorizedEdgeESIdsToVertexESIds = Maps.newHashMap<UUID, MutableSet<UUID>>()
         val entitySetIdToEntityKeyId = HashMultimap.create<UUID, UUID>()
-        val entitySetsIdsToAuthorizedProps = mutableMapOf<UUID, MutableMap<UUID, PropertyType>>()
 
         graphService.getEdgesAndNeighborsForVertices(allBaseEntitySetIds, pagedNeighborRequest).forEach { edge ->
             edges.add(edge)
@@ -564,58 +657,6 @@ class SearchService(
         )
         sw1.reset().start()
 
-        val authorizedEntitySetIds = authorizations
-                .accessChecksForPrincipals(
-                        allEntitySetIds.map { esId -> AccessCheck(AclKey(esId), READ_PERMISSION) }.toSet(),
-                        principals
-                )
-                .filter { auth -> auth.permissions.getValue(Permission.READ) }
-                .map { auth -> auth.aclKey.first() }
-                .collect(Collectors.toSet())
-
-        val entitySetsById = entitySetService.getEntitySetsAsMap(authorizedEntitySetIds)
-
-        val entityTypesById = dataModelService
-                .getEntityTypesAsMap(entitySetsById.values.map { entitySet ->
-                    entitySetsIdsToAuthorizedProps[entitySet.id] = mutableMapOf()
-                    authorizedEdgeESIdsToVertexESIds[entitySet.id] = mutableSetOf()
-                    entitySet.entityTypeId
-                }.toSet())
-
-        val propertyTypesById = dataModelService
-                .getPropertyTypesAsMap(entityTypesById.values.flatMap { it.properties }.toSet())
-
-        val accessChecks = entitySetsById.values
-                .flatMap { entitySet ->
-                    entityTypesById
-                            .getValue(entitySet.entityTypeId)
-                            .properties
-                            .map { propertyTypeId ->
-                                AccessCheck(
-                                        AclKey(entitySet.getId(), propertyTypeId),
-                                        READ_PERMISSION
-                                )
-                            }
-                }.toSet()
-
-        authorizations
-                .accessChecksForPrincipals(accessChecks, principals)
-                .forEach { auth ->
-                    if (auth.permissions.getValue(Permission.READ)) {
-                        val esId = auth.aclKey[0]
-                        val propertyTypeId = auth.aclKey[1]
-                        entitySetsIdsToAuthorizedProps
-                                .getValue(esId)[propertyTypeId] = propertyTypesById.getValue(propertyTypeId)
-                    }
-                }
-
-        logger.debug(
-                "Access checks for entity sets and their properties finished in {} ms",
-                sw1.elapsed(TimeUnit.MILLISECONDS)
-        )
-
-        sw1.reset().start()
-
         edges.forEach { edge ->
             val edgeEntityKeyId = edge.edge.entityKeyId
             val neighborEntityKeyId = if ((entityKeyIds.contains(edge.src.entityKeyId)))
@@ -628,14 +669,9 @@ class SearchService(
             else
                 edge.src.entitySetId
 
-            if (entitySetsIdsToAuthorizedProps.containsKey(edgeEntitySetId)) {
-                entitySetIdToEntityKeyId.put(edgeEntitySetId, edgeEntityKeyId)
-
-                if (entitySetsIdsToAuthorizedProps.containsKey(neighborEntitySetId)) {
-                    authorizedEdgeESIdsToVertexESIds.getValue(edgeEntitySetId).add(neighborEntitySetId)
-                    entitySetIdToEntityKeyId.put(neighborEntitySetId, neighborEntityKeyId)
-                }
-            }
+            entitySetIdToEntityKeyId.put(edgeEntitySetId, edgeEntityKeyId)
+            entitySetIdToEntityKeyId.put(neighborEntitySetId, neighborEntityKeyId)
+            authorizedEdgeESIdsToVertexESIds.getValue(edgeEntitySetId).add(neighborEntitySetId)
 
         }
         logger.debug("Edge and neighbor entity key ids collected in {} ms", sw1.elapsed(TimeUnit.MILLISECONDS))
@@ -649,27 +685,21 @@ class SearchService(
         val entities = Maps.newHashMap<UUID, Map<FullQualifiedName, Set<Any>>>()
         entitiesByEntitySetId.values.forEach { entries ->
             entries.forEach { entry ->
-                entities.put(
-                        getEntityKeyId(entry), entry
-                )
+                entities[getEntityKeyId(entry)] = entry
             }
         }
 
         val entityNeighbors = Maps.newConcurrentMap<UUID, MutableList<NeighborEntityDetails>>()
 
         // create a NeighborEntityDetails object for each edge based on authorizations
-        edges.stream().forEach { edge ->
+        edges.forEach { edge ->
             val vertexIsSrc = entityKeyIds.contains(edge.key.src.entityKeyId)
-            val entityId = if ((vertexIsSrc))
+            val entityKeyId = if (vertexIsSrc)
                 edge.key.src.entityKeyId
             else
                 edge.key.dst.entityKeyId
-            if (!entityNeighbors.containsKey(entityId)) {
-                entityNeighbors.put(
-                        entityId, Collections.synchronizedList(
-                        Lists.newArrayList()
-                )
-                )
+            if (!entityNeighbors.containsKey(entityKeyId)) {
+                entityNeighbors[entityKeyId] = Collections.synchronizedList(Lists.newArrayList())
             }
             val neighbor = getNeighborEntityDetails(
                     edge,
@@ -679,7 +709,7 @@ class SearchService(
                     entities
             )
             if (neighbor != null) {
-                entityNeighbors.getValue(entityId).add(neighbor)
+                entityNeighbors.getValue(entityKeyId).add(neighbor)
             }
         }
         logger.debug("Neighbor entity details collected in {} ms", sw1.elapsed(TimeUnit.MILLISECONDS))
