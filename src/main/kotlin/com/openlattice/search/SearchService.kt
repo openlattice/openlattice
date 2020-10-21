@@ -12,7 +12,9 @@ import com.openlattice.authorization.*
 import com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
+import com.openlattice.data.DataEdgeKey
 import com.openlattice.data.DeleteType
+import com.openlattice.data.EntityDataKey
 import com.openlattice.data.events.EntitiesDeletedEvent
 import com.openlattice.data.events.EntitiesUpsertedEvent
 import com.openlattice.data.requests.NeighborEntityDetails
@@ -693,24 +695,32 @@ class SearchService(
 
         // create a NeighborEntityDetails object for each edge based on authorizations
         edges.forEach { edge ->
-            val vertexIsSrc = entityKeyIds.contains(edge.key.src.entityKeyId)
-            val entityKeyId = if (vertexIsSrc)
-                edge.key.src.entityKeyId
-            else
-                edge.key.dst.entityKeyId
-            if (!entityNeighbors.containsKey(entityKeyId)) {
-                entityNeighbors[entityKeyId] = Collections.synchronizedList(Lists.newArrayList())
+
+            mapOf(
+                    edge.key to true,
+                    DataEdgeKey(edge.key.dst, edge.key.src, edge.key.edge) to false
+            ).forEach { (directedEdge, vertexIsSrc) ->
+
+                val vertexEntityKeyId = directedEdge.src.entityKeyId
+                val neighborDetails = getNeighborEntityDetails(
+                        directedEdge.edge,
+                        directedEdge.dst,
+                        vertexIsSrc,
+                        entitySetsById,
+                        entities
+                )
+
+                if (entityKeyIds.contains(directedEdge.src.entityKeyId) && neighborDetails != null) {
+
+                    if (!entityNeighbors.containsKey(vertexEntityKeyId)) {
+                        entityNeighbors[vertexEntityKeyId] = mutableListOf()
+                    }
+
+                    entityNeighbors.getValue(vertexEntityKeyId).add(neighborDetails)
+                }
+
             }
-            val neighbor = getNeighborEntityDetails(
-                    edge,
-                    authorizedEdgeESIdsToVertexESIds,
-                    entitySetsById,
-                    vertexIsSrc,
-                    entities
-            )
-            if (neighbor != null) {
-                entityNeighbors.getValue(entityKeyId).add(neighbor)
-            }
+
         }
         logger.debug("Neighbor entity details collected in {} ms", sw1.elapsed(TimeUnit.MILLISECONDS))
 
@@ -723,58 +733,34 @@ class SearchService(
 
         }
 
-        entityNeighbors.entries
-                .removeIf { entry -> !filter.entityKeyIds.contains(entry.key) }
-
         logger.debug("Finished entity neighbor search in {} ms", sw2.elapsed(TimeUnit.MILLISECONDS))
         return entityNeighbors
     }
 
     private fun getNeighborEntityDetails(
-            edge: Edge,
-            authorizedEdgeESIdsToVertexESIds: Map<UUID, Set<UUID>>,
-            entitySetsById: Map<UUID, EntitySet>,
+            associationEDK: EntityDataKey,
+            neighborEDK: EntityDataKey,
             vertexIsSrc: Boolean,
+            entitySetsById: Map<UUID, EntitySet>,
             entities: Map<UUID, Map<FullQualifiedName, Set<Any>>>
     ): NeighborEntityDetails? {
 
-        val edgeEntitySetId = edge.edge.entitySetId
-        if (authorizedEdgeESIdsToVertexESIds.containsKey(edgeEntitySetId)) {
-            val neighborEntityKeyId = if (vertexIsSrc)
-                edge.dst.entityKeyId
-            else
-                edge.src.entityKeyId
-            val neighborEntitySetId = if (vertexIsSrc)
-                edge.dst.entitySetId
-            else
-                edge.src.entitySetId
+        val edgeDetails = entities[associationEDK.entityKeyId]
+        val neighborDetails = entities[neighborEDK.entityKeyId]
 
-            val edgeDetails = entities[edge.edge.entityKeyId]
-            if (edgeDetails != null) {
-                if (authorizedEdgeESIdsToVertexESIds.getValue(edgeEntitySetId).contains(neighborEntitySetId)) {
-                    val neighborDetails = entities[neighborEntityKeyId]
-
-                    if (neighborDetails != null) {
-                        return NeighborEntityDetails(
-                                entitySetsById[edgeEntitySetId],
-                                edgeDetails,
-                                entitySetsById[neighborEntitySetId],
-                                neighborEntityKeyId,
-                                neighborDetails,
-                                vertexIsSrc
-                        )
-                    }
-
-                } else {
-                    return NeighborEntityDetails(
-                            entitySetsById[edgeEntitySetId],
-                            edgeDetails,
-                            vertexIsSrc
-                    )
-                }
-            }
+        if (edgeDetails == null || neighborDetails == null) {
+            return null
         }
-        return null
+
+        return NeighborEntityDetails(
+                entitySetsById[associationEDK.entitySetId],
+                edgeDetails,
+                entitySetsById[neighborEDK.entitySetId],
+                neighborEDK.entityKeyId,
+                neighborDetails,
+                vertexIsSrc
+        )
+
     }
 
     @Timed
