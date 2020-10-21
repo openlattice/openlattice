@@ -80,7 +80,7 @@ public class ArithmeticTransform extends Transformation<Map<String, String>> {
     }
 
     @Override
-    public Object apply( Map<String, String> row ) {
+    public Double apply( Map<String, String> row ) {
 
         Object leftTransformed = row;
         for ( Transformation t : leftTransforms ) {
@@ -109,7 +109,7 @@ public class ArithmeticTransform extends Transformation<Map<String, String>> {
                 return left / right;
             default:
                 throw new IllegalStateException( String
-                        .format( "Unknown operator in ArithmeticTransformation: {}", operator ) );
+                        .format( "Unknown operator in ArithmeticTransformation: %s", operator ) );
         }
     }
 

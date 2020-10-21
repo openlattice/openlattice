@@ -16,8 +16,8 @@ import java.util.function.BiFunction;
 public class JavaDateTimeHelper {
     private static final Logger logger = LoggerFactory.getLogger( JavaDateTimeHelper.class );
 
-    private       ZoneId   zoneId;
-    private       boolean  shouldAddTimezone;
+    private final ZoneId   zoneId;
+    private final boolean  shouldAddTimezone;
     private final String[] datePatterns;
 
     public JavaDateTimeHelper( TimeZone tz, String[] datePatterns, Boolean shouldAddTimezone ) {
