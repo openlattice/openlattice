@@ -5,6 +5,7 @@ import com.kryptnostic.rhizome.configuration.RhizomeConfiguration
 import com.openlattice.ApiHelpers
 import com.openlattice.assembler.AssemblerConfiguration
 import com.openlattice.assembler.createRoleIfNotExistsSql
+import com.openlattice.edm.EdmConstants
 import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
 import com.openlattice.transporter.*
@@ -26,6 +27,7 @@ class TransporterDatastore(
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(TransporterDatastore::class.java)
+
         // 0 = whole string, 1 = prefix, 2 = hostname, 3 = port, 4 = database
         private val PAT = Regex("""([\w:]+)://([\w_.]*):(\d+)/(\w+)""")
 
@@ -46,6 +48,8 @@ class TransporterDatastore(
 
         // fdw name for atlas <-> production fdw
         const val ENTERPRISE_FDW_NAME = "enterprise"
+
+        private val OPENLATTICE_ID_AS_STRING = EdmConstants.ID_FQN.toString()
     }
 
     private var hds: HikariDataSource = exConnMan.createDataSource(
@@ -60,14 +64,14 @@ class TransporterDatastore(
             initializeFDW(rhizome.postgresConfiguration.get())
         }
         val sp = ensureSearchPath(hds.connection)
-        if ( !sp.contains( ENTERPRISE_FDW_SCHEMA )) {
+        if (!sp.contains(ENTERPRISE_FDW_SCHEMA)) {
             logger.error("bad search path: {}", sp)
         }
     }
 
-    fun linkOrgDbToTransporterDb( organizationId: UUID ) {
+    fun linkOrgDbToTransporterDb(organizationId: UUID) {
         createFdwBetweenDatabases(
-                connectOrgDb( organizationId ),
+                connectOrgDb(organizationId),
                 assemblerConfiguration.server.getProperty("username"),
                 assemblerConfiguration.server.getProperty("password"),
                 exConnMan.appendDatabaseToJdbcPartial(
@@ -76,7 +80,7 @@ class TransporterDatastore(
                 ),
                 assemblerConfiguration.server.getProperty("username"),
                 ORG_FOREIGN_TABLES_SCHEMA,
-                getOrgFdw( organizationId )
+                getOrgFdw(organizationId)
         )
     }
 
@@ -93,7 +97,7 @@ class TransporterDatastore(
             fdwName: String
     ) {
         var searchPath = ensureSearchPath(localDbDatasource.connection)
-        if ( !searchPath.contains(localSchema) ){
+        if (!searchPath.contains(localSchema)) {
             searchPath = "$searchPath, $localSchema"
         }
 
@@ -108,7 +112,8 @@ class TransporterDatastore(
                 }
             }
 
-            val match = PAT.matchEntire(remoteDbJdbc) ?: throw IllegalArgumentException("Invalid jdbc url: $remoteDbJdbc")
+            val match = PAT.matchEntire(remoteDbJdbc)
+                    ?: throw IllegalArgumentException("Invalid jdbc url: $remoteDbJdbc")
             val remoteHostname = match.groupValues[2]
             val remotePort = match.groupValues[3].toInt()
             val remoteDbname = match.groupValues[4]
@@ -137,7 +142,7 @@ class TransporterDatastore(
             localSchema: String,
             usingFdwName: String
     ): String {
-        val tablesClause = if ( remoteTables.isEmpty() ){
+        val tablesClause = if (remoteTables.isEmpty()) {
             ""
         } else {
             "LIMIT TO (${remoteTables.joinToString(",")})"
@@ -145,13 +150,13 @@ class TransporterDatastore(
         return "import foreign schema $remoteSchema $tablesClause from server $usingFdwName INTO $localSchema;"
     }
 
-    private fun ensureSearchPath( connection: Connection): String {
+    private fun ensureSearchPath(connection: Connection): String {
         logger.info("checking search path for current user")
-        connection.createStatement().executeQuery( "show search_path" ).use {
+        connection.createStatement().executeQuery("show search_path").use {
             it.next()
             val searchPath = it.getString(1)
             logger.info(searchPath)
-            if ( searchPath == null ) {
+            if (searchPath == null) {
                 logger.error("bad search path: {}", searchPath)
                 return ""
             }
@@ -203,41 +208,68 @@ class TransporterDatastore(
     }
 
     fun connectOrgDb(organizationId: UUID): HikariDataSource {
-        return exConnMan.connectToOrg( organizationId )
+        return exConnMan.connectToOrg(organizationId)
     }
 
-    fun getOrgFdw( organizationId: UUID ): String {
+    fun getOrgFdw(organizationId: UUID): String {
         return ApiHelpers.dbQuote("fdw_$organizationId")
     }
 
-    fun destroyTransportedEntitySetFromOrg( organizationId: UUID, entitySetName: String ) {
-        connectOrgDb( organizationId ).connection.use { conn ->
+    fun destroyTransportedEntitySetFromOrg(organizationId: UUID, entitySetName: String) {
+        connectOrgDb(organizationId).connection.use { conn ->
             conn.createStatement().use { stmt ->
-                stmt.executeUpdate( destroyView( ORG_FOREIGN_TABLES_SCHEMA, entitySetName ))
+                stmt.executeUpdate(destroyView(ORG_FOREIGN_TABLES_SCHEMA, entitySetName))
             }
         }
     }
 
-    fun destroyTransportedEntityTypeTableInOrg( organizationId: UUID, entityTypeId: UUID ) {
-        connectOrgDb( organizationId ).connection.use { conn ->
+    fun destroyTransportedEntityTypeTableInOrg(organizationId: UUID, entityTypeId: UUID) {
+        connectOrgDb(organizationId).connection.use { conn ->
             conn.createStatement().use { stmt ->
-                stmt.executeUpdate( dropForeignTypeTable( ORG_FOREIGN_TABLES_SCHEMA, entityTypeId))
+                stmt.executeUpdate(dropForeignTypeTable(ORG_FOREIGN_TABLES_SCHEMA, entityTypeId))
             }
         }
     }
 
-    fun destroyEntitySetViewFromTransporter( entitySetName: String ) {
+    fun destroyEntitySetViewFromTransporter(entitySetName: String) {
         datastore().connection.use { conn ->
             conn.createStatement().use { stmt ->
-                stmt.executeUpdate( destroyView( PUBLIC_SCHEMA, entitySetName ) )
+                stmt.executeUpdate(destroyView(PUBLIC_SCHEMA, entitySetName))
             }
         }
     }
 
-    fun destroyEntitySetViewInOrgDb( organizationId: UUID, entitySetName: String) {
-        connectOrgDb( organizationId ).connection.use { conn ->
+    fun destroyEntitySetViewInOrgDb(organizationId: UUID, entitySetName: String) {
+        connectOrgDb(organizationId).connection.use { conn ->
             conn.createStatement().use { stmt ->
-                stmt.executeUpdate( destroyView( ORG_VIEWS_SCHEMA, entitySetName))
+                stmt.executeUpdate(destroyView(ORG_VIEWS_SCHEMA, entitySetName))
+            }
+        }
+    }
+
+    fun destroyEdgeViewInOrgDb(organizationId: UUID, entitySetName: String) {
+        connectOrgDb(organizationId).connection.use { conn ->
+            conn.createStatement().use { stmt ->
+                stmt.executeUpdate(destroyEdgeView(ORG_VIEWS_SCHEMA, entitySetName))
+            }
+        }
+    }
+
+    fun createEdgeViewInOrgDb(
+            organizationId: UUID,
+            entitySetName: String,
+            entitySetId: UUID
+    ) {
+        connectOrgDb(organizationId).connection.use { conn ->
+            conn.createStatement().use { stmt ->
+                stmt.executeUpdate(
+                        createEdgeSetViewInSchema(
+                                entitySetName,
+                                entitySetId,
+                                ORG_VIEWS_SCHEMA,
+                                ORG_FOREIGN_TABLES_SCHEMA
+                        )
+                )
             }
         }
     }
@@ -247,10 +279,8 @@ class TransporterDatastore(
             entitySetName: String,
             entitySetId: UUID,
             entityTypeId: UUID,
-            ptIdToFqnColumns: Map<UUID, FullQualifiedName>,
-            usersToColumnPermissions: Map<String, List<String>>
+            ptIdToFqnColumns: Map<UUID, FullQualifiedName>
     ) {
-        val allPermissions = mutableSetOf<String>()
         connectOrgDb(organizationId).connection.use { conn ->
             conn.createStatement().use { stmt ->
                 stmt.executeUpdate(
@@ -258,53 +288,68 @@ class TransporterDatastore(
                                 entitySetName,
                                 entitySetId,
                                 ORG_VIEWS_SCHEMA,
-                                tableName(entityTypeId),
+                                entityTypeId,
                                 ptIdToFqnColumns,
                                 ORG_FOREIGN_TABLES_SCHEMA
                         )
                 )
+            }
+        }
+    }
 
+    fun applyViewAndEdgePermissions(
+            organizationId: UUID,
+            entitySetName: String,
+            usersToColumnPermissions: Map<String, List<String>>
+    ) {
+        connectOrgDb(organizationId).connection.use { conn ->
+            conn.createStatement().use { stmt ->
+                val allPermissions = mutableSetOf<String>()
                 usersToColumnPermissions.forEach { (username, allowedCols) ->
                     logger.debug("user {} has columns {}", username, allowedCols)
-                    stmt.execute( setUserInhertRolePrivileges(username))
-                    stmt.execute( grantUsageOnschemaSql(ORG_VIEWS_SCHEMA, username))
-                    stmt.execute( revokeTablePermissionsForRole(ORG_VIEWS_SCHEMA, entitySetName, username) )
+                    stmt.execute(setUserInhertRolePrivileges(username))
+                    stmt.execute(grantUsageOnschemaSql(ORG_VIEWS_SCHEMA, username))
+                    stmt.execute(revokeTablePermissionsForRole(ORG_VIEWS_SCHEMA, entitySetName, username))
 
                     allPermissions.addAll(allowedCols)
                 }
 
                 allPermissions.forEach { columnName ->
                     val roleName = viewRoleName(entitySetName, columnName)
-                    stmt.execute( createRoleIfNotExistsSql(roleName))
-                    stmt.execute( grantUsageOnschemaSql(ORG_VIEWS_SCHEMA, roleName))
-                    stmt.execute( revokeTablePermissionsForRole(ORG_VIEWS_SCHEMA, entitySetName, roleName) )
-                    stmt.execute( grantSelectOnColumnsToRoles(ORG_VIEWS_SCHEMA, entitySetName, roleName, listOf(columnName)) )
+                    stmt.execute(createRoleIfNotExistsSql(roleName))
+                    stmt.execute(grantUsageOnschemaSql(ORG_VIEWS_SCHEMA, roleName))
+                    stmt.execute(revokeTablePermissionsForRole(ORG_VIEWS_SCHEMA, entitySetName, roleName))
+                    // grant openlattice.@id cølumn explicitly
+                    stmt.execute(grantSelectOnColumnsToRoles(ORG_VIEWS_SCHEMA, entitySetName, roleName, listOf(columnName, OPENLATTICE_ID_AS_STRING)))
+                    stmt.execute(grantSelectOnColumnsToRoles(ORG_VIEWS_SCHEMA, edgeViewName(entitySetName), roleName, MAT_EDGES_TABLE.columns.map { it.name }.toList()))
                 }
+            }
 
-                conn.createStatement().use { batch ->
-                    // TODO: invalidate/update this when pt types and permissions are changed
-                    usersToColumnPermissions.forEach { ( username, allowedCols ) ->
-                        allowedCols.forEach { column ->
-                            batch.addBatch("GRANT ${ApiHelpers.dbQuote(viewRoleName(entitySetName, column))} to ${ApiHelpers.dbQuote(username)}")
-                        }
+            conn.createStatement().use { batch ->
+                // TODO: invalidate/update this when pt types and permissions are changed
+                usersToColumnPermissions.forEach { (username, allowedCols) ->
+                    allowedCols.forEach { column ->
+                        batch.addBatch(grantRoleToUser(viewRoleName(entitySetName, column), username))
                     }
-                    batch.executeBatch()
                 }
+                batch.executeBatch()
             }
         }
     }
 
-    fun transportEntityTypeTableToOrg(
+    private fun transportTableToOrg(
             organizationId: UUID,
-            entityTypeId: UUID
+            fromSchemaName: String,
+            fromTableName: String,
+            toSchemaName: String
     ) {
         connectOrgDb(organizationId).connection.use { conn ->
             conn.createStatement().use { stmt ->
                 stmt.executeUpdate(
                         importTablesFromForeignSchema(
-                                PUBLIC_SCHEMA,
-                                setOf(tableName(entityTypeId)),
-                                ORG_FOREIGN_TABLES_SCHEMA,
+                                fromSchemaName,
+                                setOf(fromTableName),
+                                toSchemaName,
                                 getOrgFdw(organizationId)
                         )
                 )
@@ -312,7 +357,24 @@ class TransporterDatastore(
         }
     }
 
-    fun viewRoleName(entitySetName: String, columnName: String): String {
-        return "${entitySetName}_${columnName}"
+    fun transportEdgesTableToOrg(organizationId: UUID) {
+        transportTableToOrg(
+                organizationId,
+                PUBLIC_SCHEMA,
+                MAT_EDGES_TABLE_NAME,
+                ORG_FOREIGN_TABLES_SCHEMA
+        )
+    }
+
+    fun transportEntityTypeTableToOrg(
+            organizationId: UUID,
+            entityTypeId: UUID
+    ) {
+        transportTableToOrg(
+                organizationId,
+                PUBLIC_SCHEMA,
+                tableName(entityTypeId),
+                ORG_FOREIGN_TABLES_SCHEMA
+        )
     }
 }

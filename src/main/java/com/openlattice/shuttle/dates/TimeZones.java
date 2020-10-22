@@ -50,18 +50,16 @@ public final class TimeZones {
      * @param timezoneString - String with Timezone
      */
     public static TimeZone checkTimezone( String timezoneString ) {
-        if ( timezoneString != null ) {
-            TimeZone timezone = TimeZone.getTimeZone( timezoneString );
-
-            if ( ! timezone.getID().equals( timezoneString ) ) {
-                throw new IllegalArgumentException(
-                        "Invalid timezone id " + timezoneString + " requested" );
-            }
-            return timezone;
-
+        if ( timezoneString == null ) {
+            return Constants.DEFAULT_TIMEZONE;
         }
 
-        return Constants.DEFAULT_TIMEZONE;
+        TimeZone timezone = TimeZone.getTimeZone( timezoneString );
+        if ( ! timezone.getID().equals( timezoneString ) ) {
+            throw new IllegalArgumentException(
+                    "Invalid timezone id " + timezoneString + " requested" );
+        }
+        return timezone;
     }
 
     public static void checkTimezonesMatch( OffsetDateTime odt, ZoneId tzId ) {
