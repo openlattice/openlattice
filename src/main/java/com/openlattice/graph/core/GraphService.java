@@ -26,7 +26,7 @@ import com.openlattice.data.DataEdgeKey;
 import com.openlattice.data.WriteEvent;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.graph.edge.Edge;
-import com.openlattice.postgres.streams.PostgresIterable;
+import com.openlattice.postgres.streams.BasePostgresIterable;
 import com.openlattice.search.requests.EntityNeighborsFilter;
 
 import java.util.List;
@@ -52,13 +52,13 @@ public interface GraphService {
      * entitySetId.
      * If includeClearedEdges is set to true, it will also return cleared (version < 0) entities.
      */
-    PostgresIterable<DataEdgeKey> getEdgeKeysOfEntitySet( UUID entitySetId, boolean includeClearedEdges );
+    BasePostgresIterable<DataEdgeKey> getEdgeKeysOfEntitySet( UUID entitySetId, boolean includeClearedEdges );
 
     /**
      * Returns all {@link DataEdgeKey}s that include requested entityKeyIds either as src, dst and/or edge.
      * If includeClearedEdges is set to true, it will also return cleared (version < 0) entities.
      */
-    PostgresIterable<DataEdgeKey> getEdgeKeysContainingEntities(
+    BasePostgresIterable<DataEdgeKey> getEdgeKeysContainingEntities(
             UUID entitySetId,
             Set<UUID> entityKeyIds,
             boolean includeClearedEdges );

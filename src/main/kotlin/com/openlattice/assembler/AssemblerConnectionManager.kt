@@ -30,11 +30,7 @@ import com.openlattice.ApiHelpers
 import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationRoleName
 import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationUserId
 import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresRoleName
-import com.openlattice.authorization.DbCredentialService
-import com.openlattice.authorization.Principal
-import com.openlattice.authorization.PrincipalType
-import com.openlattice.authorization.SecurablePrincipal
-import com.openlattice.authorization.SystemRole
+import com.openlattice.authorization.*
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.organization.OrganizationEntitySetFlag
@@ -42,17 +38,13 @@ import com.openlattice.organization.roles.Role
 import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.DataTables.quote
-import com.openlattice.postgres.PostgresColumn.ACL_KEY
-import com.openlattice.postgres.PostgresColumn.ENTITY_KEY_IDS_COL
-import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
-import com.openlattice.postgres.PostgresColumn.ID_VALUE
-import com.openlattice.postgres.PostgresColumn.PRINCIPAL_TYPE
+import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.E
 import com.openlattice.postgres.PostgresTable.PRINCIPALS
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
-import com.openlattice.postgres.streams.PostgresIterable
-import com.openlattice.postgres.streams.StatementHolder
+import com.openlattice.postgres.streams.BasePostgresIterable
+import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.openlattice.principals.RoleCreatedEvent
 import com.openlattice.principals.UserCreatedEvent
 import com.openlattice.transporter.types.TransporterDatastore.Companion.ORG_FOREIGN_TABLES_SCHEMA
@@ -63,8 +55,6 @@ import org.springframework.stereotype.Component
 import java.sql.Connection
 import java.sql.Statement
 import java.util.*
-import java.util.function.Function
-import java.util.function.Supplier
 import kotlin.NoSuchElementException
 
 private val logger = LoggerFactory.getLogger(AssemblerConnectionManager::class.java)
@@ -103,8 +93,10 @@ class AssemblerConnectionManager(
 
         @JvmStatic
         val MATERIALIZED_VIEWS_SCHEMA = "openlattice"
+
         @JvmStatic
         val TRANSPORTED_VIEWS_SCHEMA = "ol"
+
         @JvmStatic
         val PUBLIC_SCHEMA = "public"
 
@@ -274,7 +266,7 @@ class AssemblerConnectionManager(
         }
     }
 
-    private fun createOrganizationDatabase(organizationId: UUID, dbName: String ) {
+    private fun createOrganizationDatabase(organizationId: UUID, dbName: String) {
         val db = quote(dbName)
         val dbRole = buildOrganizationRoleName(dbName)
 
@@ -484,7 +476,7 @@ class AssemblerConnectionManager(
             columns: List<String>
     ): String {
         val postgresUserName = when (principal.type) {
-            PrincipalType.USER -> dbCredentialService.getDbUsername( securePrincipalsManager.getPrincipal( principal.id ))
+            PrincipalType.USER -> dbCredentialService.getDbUsername(securePrincipalsManager.getPrincipal(principal.id))
             PrincipalType.ROLE -> buildPostgresRoleName(securePrincipalsManager.lookupRole(principal))
             else -> throw IllegalArgumentException(
                     "Only ${PrincipalType.USER} and ${PrincipalType.ROLE} principal " +
@@ -553,28 +545,20 @@ class AssemblerConnectionManager(
         }
     }
 
-    fun getAllRoles(): PostgresIterable<Role> {
-        return PostgresIterable(
-                Supplier {
-                    val conn = hds.connection
-                    val ps = conn.prepareStatement(PRINCIPALS_SQL)
-                    ps.setString(1, PrincipalType.ROLE.name)
-                    StatementHolder(conn, ps, ps.executeQuery())
-                },
-                Function { securePrincipalsManager.getSecurablePrincipal(ResultSetAdapters.aclKey(it)) as Role }
-        )
+    fun getAllRoles(): BasePostgresIterable<Role> {
+        return BasePostgresIterable(PreparedStatementHolderSupplier(hds, PRINCIPALS_SQL) { ps ->
+            ps.setString(1, PrincipalType.ROLE.name)
+        }) {
+            securePrincipalsManager.getSecurablePrincipal(ResultSetAdapters.aclKey(it)) as Role
+        }
     }
 
-    fun getAllUsers(): PostgresIterable<SecurablePrincipal> {
-        return PostgresIterable(
-                Supplier {
-                    val conn = hds.connection
-                    val ps = conn.prepareStatement(PRINCIPALS_SQL)
-                    ps.setString(1, PrincipalType.USER.name)
-                    StatementHolder(conn, ps, ps.executeQuery())
-                },
-                Function { securePrincipalsManager.getSecurablePrincipal(ResultSetAdapters.aclKey(it)) }
-        )
+    fun getAllUsers(): BasePostgresIterable<SecurablePrincipal> {
+        return BasePostgresIterable(PreparedStatementHolderSupplier(hds, PRINCIPALS_SQL) { ps ->
+            ps.setString(1, PrincipalType.USER.name)
+        }) {
+            securePrincipalsManager.getSecurablePrincipal(ResultSetAdapters.aclKey(it))
+        }
     }
 
     private fun configureRolesInDatabase(dataSource: HikariDataSource) {
@@ -801,9 +785,7 @@ internal fun createRoleIfNotExistsSql(dbRole: String): String {
             "      FROM   pg_catalog.pg_roles\n" +
             "      WHERE  rolname = '$dbRole') THEN\n" +
             "\n" +
-            "      CREATE ROLE ${ApiHelpers.dbQuote(
-                    dbRole
-            )} NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN;\n" +
+            "      CREATE ROLE ${ApiHelpers.dbQuote(dbRole)} NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN;\n" +
             "   END IF;\n" +
             "END\n" +
             "\$do\$;"
@@ -818,9 +800,7 @@ internal fun createUserIfNotExistsSql(dbUser: String, dbUserPassword: String): S
             "      FROM   pg_catalog.pg_roles\n" +
             "      WHERE  rolname = '$dbUser') THEN\n" +
             "\n" +
-            "      CREATE ROLE ${ApiHelpers.dbQuote(
-                    dbUser
-            )} NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT LOGIN ENCRYPTED PASSWORD '$dbUserPassword';\n" +
+            "      CREATE ROLE ${ApiHelpers.dbQuote(dbUser)} NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT LOGIN ENCRYPTED PASSWORD '$dbUserPassword';\n" +
             "   END IF;\n" +
             "END\n" +
             "\$do\$;"
@@ -835,9 +815,7 @@ internal fun dropOwnedIfExistsSql(dbUser: String): String {
             "      FROM   pg_catalog.pg_roles\n" +
             "      WHERE  rolname = '$dbUser') THEN\n" +
             "\n" +
-            "      DROP OWNED BY ${ApiHelpers.dbQuote(
-                    dbUser
-            )} ;\n" +
+            "      DROP OWNED BY ${ApiHelpers.dbQuote(dbUser)} ;\n" +
             "   END IF;\n" +
             "END\n" +
             "\$do\$;"
@@ -856,9 +834,7 @@ internal fun dropUserIfExistsSql(dbUser: String): String {
             "      FROM   pg_catalog.pg_roles\n" +
             "      WHERE  rolname = '$dbUser') THEN\n" +
             "\n" +
-            "      DROP ROLE ${ApiHelpers.dbQuote(
-                    dbUser
-            )} ;\n" +
+            "      DROP ROLE ${ApiHelpers.dbQuote(dbUser)} ;\n" +
             "   END IF;\n" +
             "END\n" +
             "\$do\$;"

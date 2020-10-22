@@ -9,13 +9,10 @@ import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.linking.mapstores.*
 import com.openlattice.postgres.PostgresTable.LINKING_FEEDBACK
 import com.openlattice.postgres.ResultSetAdapters
-import com.openlattice.postgres.streams.PostgresIterable
-import com.openlattice.postgres.streams.StatementHolder
+import com.openlattice.postgres.streams.BasePostgresIterable
+import com.openlattice.postgres.streams.StatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
-import java.sql.ResultSet
 import java.util.*
-import java.util.function.Function
-import java.util.function.Supplier
 
 const val FETCH_SIZE = 100_000
 
@@ -29,20 +26,9 @@ class PostgresLinkingFeedbackService(private val hds: HikariDataSource, hazelcas
 
     fun getLinkingFeedback(): Iterable<EntityLinkingFeedback> {
         // since we are not using an entryprocessor after retriveing all the feedback, it's easier to just query them
-        return PostgresIterable(
-                Supplier<StatementHolder> {
-                    val connection = hds.connection
-                    connection.autoCommit = false
-                    val stmt = connection.prepareStatement(SELECT_ALL_SQL)
-                    stmt.fetchSize = FETCH_SIZE
-                    val rs = stmt.executeQuery()
-
-                    StatementHolder(connection, stmt, rs)
-                },
-                Function<ResultSet, EntityLinkingFeedback> {
-                    ResultSetAdapters.entityLinkingFeedback(it)
-                }
-        )
+        return BasePostgresIterable(StatementHolderSupplier(hds, SELECT_ALL_SQL, FETCH_SIZE, false)) {
+            ResultSetAdapters.entityLinkingFeedback(it)
+        }
     }
 
     fun hasFeedbacks(feedbackType: FeedbackType, entity: EntityDataKey): Boolean {

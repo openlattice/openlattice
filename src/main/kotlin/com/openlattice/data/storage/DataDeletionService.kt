@@ -15,7 +15,7 @@ import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.core.GraphService
 import com.openlattice.postgres.PostgresMetaDataProperties
-import com.openlattice.postgres.streams.PostgresIterable
+import com.openlattice.postgres.streams.BasePostgresIterable
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.stream.Collectors
@@ -404,7 +404,7 @@ class DataDeletionService(
     private fun collectAssociations(
             entitySetId: UUID,
             entityKeyIds: Optional<Set<UUID>>,
-            includeClearedEdges: Boolean): PostgresIterable<DataEdgeKey> {
+            includeClearedEdges: Boolean): BasePostgresIterable<DataEdgeKey> {
         return if (entityKeyIds.isPresent)
             dgm.getEdgesConnectedToEntities(entitySetId, entityKeyIds.get(), includeClearedEdges)
         else

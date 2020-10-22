@@ -30,7 +30,6 @@ import com.openlattice.data.storage.MetadataOption
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.core.NeighborSets
 import com.openlattice.postgres.streams.BasePostgresIterable
-import com.openlattice.postgres.streams.PostgresIterable
 import org.apache.commons.lang3.tuple.Pair
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.nio.ByteBuffer
@@ -167,7 +166,7 @@ interface DataGraphManager {
      * Returns all [DataEdgeKey]s where either src, dst and/or edge entity set ids are equal the requested entitySetId.
      * If includeClearedEdges is set to true, it will also return cleared (version < 0) entities.
      */
-    fun getEdgeKeysOfEntitySet(entitySetId: UUID, includeClearedEdges: Boolean): PostgresIterable<DataEdgeKey>
+    fun getEdgeKeysOfEntitySet(entitySetId: UUID, includeClearedEdges: Boolean): BasePostgresIterable<DataEdgeKey>
 
     /**
      * Returns all [DataEdgeKey]s that include requested entityKeyIds either as src, dst and/or edge with the requested
@@ -176,7 +175,7 @@ interface DataGraphManager {
      */
     fun getEdgesConnectedToEntities(
             entitySetId: UUID, entityKeyIds: Set<UUID>, includeClearedEdges: Boolean
-    ): PostgresIterable<DataEdgeKey>
+    ): BasePostgresIterable<DataEdgeKey>
 
     fun getExpiringEntitiesFromEntitySet(
             entitySetId: UUID,
