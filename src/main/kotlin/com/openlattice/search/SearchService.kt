@@ -578,14 +578,87 @@ class SearchService(
         return entitySetsIdsToAuthorizedProps
     }
 
+    private fun getLinkingEntitySets(entitySetIds: Set<UUID>): Map<UUID, EntitySet> {
+        return entitySetService
+                .getEntitySetsAsMap(entitySetIds)
+                .filter { !it.value.isLinking }
+    }
+
+    private fun getBaseEntitySetIdsOfLinkingEntitySets(
+            linkingEntitySets: Map<UUID, EntitySet>,
+            principals: Set<Principal>
+    ): Set<UUID> {
+        if (linkingEntitySets.isEmpty()) {
+            return mutableSetOf()
+        }
+
+        return linkingEntitySets
+                .values
+                .map { it.linkedEntitySets }
+                .filter { esIds ->
+                    esIds.all { esId ->
+                        authorizations.checkIfHasPermissions(AclKey(esId), principals, READ_PERMISSION)
+                    }
+                }.flatten().toSet()
+
+    }
+
+    private fun getEntityKeyIdsByLinkingId(
+            linkingEntitySets: Map<UUID, EntitySet>,
+            entityKeyIds: Set<UUID>
+    ): Map<UUID, Set<UUID>> {
+        if (linkingEntitySets.isEmpty()) {
+            return mutableMapOf()
+        }
+
+        val normalEntitySetIds = linkingEntitySets.values.flatMap { it.linkedEntitySets }.toSet()
+
+        return getEntityKeyIdsByLinkingIds(entityKeyIds, normalEntitySetIds)
+    }
+
+    private fun getEntityKeyIdsToQueryFor(
+            entityKeyIdsByLinkingId: Map<UUID, Set<UUID>>,
+            filterEntityKeyIds: Set<UUID>
+    ): Set<UUID> {
+        if (entityKeyIdsByLinkingId.isEmpty()) {
+            return filterEntityKeyIds
+        }
+
+        val entityKeyIds = filterEntityKeyIds.toMutableSet()
+
+        entityKeyIdsByLinkingId.values.forEach { entityKeyIds.addAll(it) }
+        entityKeyIds.removeAll(entityKeyIdsByLinkingId.keys) // remove linking ids
+
+        return entityKeyIds
+    }
+
+    private fun getNeighborEntitySetIdToEntityKeyIdForEdges(edges: List<Edge>, entityKeyIds: Set<UUID>): SetMultimap<UUID, UUID> {
+        val entitySetIdToEntityKeyId = HashMultimap.create<UUID, UUID>()
+
+        edges.forEach { edge ->
+            entitySetIdToEntityKeyId.put(edge.edge.entitySetId, edge.edge.entitySetId)
+
+            if (entityKeyIds.contains(edge.src.entityKeyId)) {
+                entitySetIdToEntityKeyId.put(edge.dst.entitySetId, edge.dst.entityKeyId)
+            }
+
+            if (entityKeyIds.contains(edge.dst.entityKeyId)) {
+                entitySetIdToEntityKeyId.put(edge.src.entitySetId, edge.src.entityKeyId)
+            }
+        }
+
+        return entitySetIdToEntityKeyId
+    }
+
     @Timed
     fun executeEntityNeighborSearch(
             entitySetIds: Set<UUID>,
             pagedNeighborRequest: PagedNeighborRequest,
             principals: Set<Principal>
     ): Map<UUID, List<NeighborEntityDetails>> {
-        val sw1 = Stopwatch.createStarted()
-        val sw2 = Stopwatch.createStarted()
+
+
+        /* Load all possible association/neighbor entity set combos and perform auth checks **/
 
         val filter = getAuthorizedFilterEntitySetOptions(
                 entitySetIds,
@@ -601,88 +674,29 @@ class SearchService(
         )
         val entitySetsById = entitySetService.getEntitySetsAsMap(allEntitySets)
 
-        logger.debug("Starting Entity Neighbor Search...")
         if (filter.associationEntitySetIds.isPresent && filter.associationEntitySetIds.get().isEmpty()) {
-            logger.debug("Missing association entity set ids.. returning empty result")
+            logger.info("Missing association entity set ids.. returning empty result")
             return ImmutableMap.of()
         }
 
-        val linkingEntitySets = entitySetService
-                .getEntitySetsAsMap(entitySetIds)
-                .values
-                .filter { !it.isLinking }
 
-        var entityKeyIdsByLinkingId: Map<UUID, Set<UUID>> = ImmutableMap.of()
+        /* Handle linking entity sets, if present */
 
-        val entityKeyIds = Sets.newHashSet(filter.entityKeyIds)
-        val allBaseEntitySetIds = Sets.newHashSet(entitySetIds)
+        val linkingEntitySets = getLinkingEntitySets(entitySetIds)
 
-        if (linkingEntitySets.isNotEmpty()) {
-            val normalEntitySetIds = linkingEntitySets.flatMap { it.linkedEntitySets }.toSet()
+        val allBaseEntitySetIds = entitySetIds + getBaseEntitySetIdsOfLinkingEntitySets(linkingEntitySets, principals)
+        val entityKeyIdsByLinkingId = getEntityKeyIdsByLinkingId(linkingEntitySets, filter.entityKeyIds)
+        val entityKeyIds = getEntityKeyIdsToQueryFor(entityKeyIdsByLinkingId, filter.entityKeyIds)
 
-            entityKeyIdsByLinkingId = getEntityKeyIdsByLinkingIds(entityKeyIds, normalEntitySetIds)
-            entityKeyIdsByLinkingId.values.forEach { entityKeyIds.addAll(it) }
-            entityKeyIds.removeAll(entityKeyIdsByLinkingId.keys) // remove linking ids
 
-            //TODO: This like an odd spot to place this general logic.
-            // normal entity sets within 1 linking entity set are only authorized if all of them is authorized
-            val authorizedNormalEntitySetIds = linkingEntitySets
-                    .map { it.linkedEntitySets }
-                    .filter { esIds ->
-                        esIds.all { esId ->
-                            authorizations.checkIfHasPermissions(AclKey(esId), principals, READ_PERMISSION)
-                        }
-                    }.flatten().toSet()
+        /* Load authorized edges and their corresponding neighbor data */
 
-            allBaseEntitySetIds.addAll(authorizedNormalEntitySetIds)
-        }
+        val edges = graphService.getEdgesAndNeighborsForVertices(allBaseEntitySetIds, pagedNeighborRequest).toList()
 
-        val edges = Lists.newArrayList<Edge>()
-        val allEntitySetIds = Sets.newHashSet<UUID>()
-        val authorizedEdgeESIdsToVertexESIds = Maps.newHashMap<UUID, MutableSet<UUID>>()
-        val entitySetIdToEntityKeyId = HashMultimap.create<UUID, UUID>()
-
-        graphService.getEdgesAndNeighborsForVertices(allBaseEntitySetIds, pagedNeighborRequest).forEach { edge ->
-            edges.add(edge)
-            allEntitySetIds.add(edge.edge.entitySetId)
-            allEntitySetIds.add(
-                    if (entityKeyIds.contains(edge.src.entityKeyId))
-                        edge.dst.entitySetId
-                    else
-                        edge.src.entitySetId
-            )
-        }
-        logger.debug(
-                "Get edges and neighbors for vertices query for {} ids finished in {} ms",
-                filter.entityKeyIds.size,
-                sw1.elapsed(TimeUnit.MILLISECONDS)
-        )
-        sw1.reset().start()
-
-        edges.forEach { edge ->
-            val edgeEntityKeyId = edge.edge.entityKeyId
-            val neighborEntityKeyId = if ((entityKeyIds.contains(edge.src.entityKeyId)))
-                edge.dst.entityKeyId
-            else
-                edge.src.entityKeyId
-            val edgeEntitySetId = edge.edge.entitySetId
-            val neighborEntitySetId = if ((entityKeyIds.contains(edge.src.entityKeyId)))
-                edge.dst.entitySetId
-            else
-                edge.src.entitySetId
-
-            entitySetIdToEntityKeyId.put(edgeEntitySetId, edgeEntityKeyId)
-            entitySetIdToEntityKeyId.put(neighborEntitySetId, neighborEntityKeyId)
-            authorizedEdgeESIdsToVertexESIds.getValue(edgeEntitySetId).add(neighborEntitySetId)
-
-        }
-        logger.debug("Edge and neighbor entity key ids collected in {} ms", sw1.elapsed(TimeUnit.MILLISECONDS))
-        sw1.reset().start()
+        val entitySetIdToEntityKeyId = getNeighborEntitySetIdToEntityKeyIdForEdges(edges, entityKeyIds)
 
         val entitiesByEntitySetId = dataManager
                 .getEntitiesAcrossEntitySets(entitySetIdToEntityKeyId, entitySetsIdsToAuthorizedProps)
-        logger.debug("Get entities across entity sets query finished in {} ms", sw1.elapsed(TimeUnit.MILLISECONDS))
-        sw1.reset().start()
 
         val entities = Maps.newHashMap<UUID, Map<FullQualifiedName, Set<Any>>>()
         entitiesByEntitySetId.values.forEach { entries ->
@@ -691,9 +705,10 @@ class SearchService(
             }
         }
 
+
+        /* Format neighbor data into the expected return format */
         val entityNeighbors = Maps.newConcurrentMap<UUID, MutableList<NeighborEntityDetails>>()
 
-        // create a NeighborEntityDetails object for each edge based on authorizations
         edges.forEach { edge ->
 
             mapOf(
@@ -722,7 +737,6 @@ class SearchService(
             }
 
         }
-        logger.debug("Neighbor entity details collected in {} ms", sw1.elapsed(TimeUnit.MILLISECONDS))
 
         /* Map linkingIds to the collection of neighbors for all entityKeyIds in the cluster */
         entityKeyIdsByLinkingId.forEach { (linkingId, normalEntityKeyIds) ->
@@ -733,7 +747,6 @@ class SearchService(
 
         }
 
-        logger.debug("Finished entity neighbor search in {} ms", sw2.elapsed(TimeUnit.MILLISECONDS))
         return entityNeighbors
     }
 
