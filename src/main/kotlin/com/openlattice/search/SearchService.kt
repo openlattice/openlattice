@@ -631,7 +631,7 @@ class SearchService(
     }
 
     private fun getNeighborEntitySetIdToEntityKeyIdForEdges(edges: List<Edge>, entityKeyIds: Set<UUID>): SetMultimap<UUID, UUID> {
-        val entitySetIdToEntityKeyId = Map<UUID, Set<UUID>>()
+        val entitySetIdToEntityKeyId = HashMultimap.create<UUID, UUID>()
 
         edges.forEach { edge ->
             entitySetIdToEntityKeyId.put(edge.edge.entitySetId, edge.edge.entitySetId)
