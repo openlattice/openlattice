@@ -2,7 +2,6 @@ package com.openlattice.search
 
 import com.codahale.metrics.MetricRegistry
 import com.codahale.metrics.annotation.Timed
-import com.google.common.base.Stopwatch
 import com.google.common.collect.*
 import com.google.common.eventbus.EventBus
 import com.google.common.eventbus.Subscribe
@@ -44,7 +43,6 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.time.OffsetDateTime
 import java.util.*
-import java.util.concurrent.TimeUnit
 import java.util.stream.Collectors
 import kotlin.streams.toList
 
@@ -633,7 +631,7 @@ class SearchService(
     }
 
     private fun getNeighborEntitySetIdToEntityKeyIdForEdges(edges: List<Edge>, entityKeyIds: Set<UUID>): SetMultimap<UUID, UUID> {
-        val entitySetIdToEntityKeyId = HashMultimap.create<UUID, UUID>()
+        val entitySetIdToEntityKeyId = Map<UUID, Set<UUID>>()
 
         edges.forEach { edge ->
             entitySetIdToEntityKeyId.put(edge.edge.entitySetId, edge.edge.entitySetId)
@@ -828,19 +826,22 @@ class SearchService(
     @Timed
     fun executeEntityNeighborIdsSearch(
             entitySetIds: Set<UUID>,
-            filter: EntityNeighborsFilter,
+            requestedFilter: EntityNeighborsFilter,
             principals: Set<Principal>
     ): Map<UUID, Map<UUID, SetMultimap<UUID, NeighborEntityIds>>> {
-        val sw1 = Stopwatch.createStarted()
 
-        logger.info("Starting Reduced Entity Neighbor Search...")
+        val filter = getAuthorizedFilterEntitySetOptions(
+                entitySetIds,
+                requestedFilter,
+                principals
+        )
+
         if (filter.associationEntitySetIds.isPresent && filter.associationEntitySetIds.get().isEmpty()) {
             logger.info("Missing association entity set ids. Returning empty result.")
             return ImmutableMap.of()
         }
 
         val entityKeyIds = filter.entityKeyIds
-        val allEntitySetIds = Sets.newHashSet<UUID>()
 
         val neighbors = mutableMapOf<UUID, MutableMap<UUID, SetMultimap<UUID, NeighborEntityIds>>>()
 
@@ -861,44 +862,7 @@ class SearchService(
                     .getOrPut(edge.edge.entitySetId) { HashMultimap.create<UUID, NeighborEntityIds>() }
                     .put(neighborEntityDataKey.entitySetId, neighborEntityIds)
 
-
-            allEntitySetIds.add(edge.edge.entitySetId)
-            allEntitySetIds.add(neighborEntityDataKey.entitySetId)
-
         }
-
-        val unauthorizedEntitySetIds = authorizations
-                .accessChecksForPrincipals(
-                        allEntitySetIds
-                                .map { esId ->
-                                    AccessCheck(
-                                            AclKey(esId),
-                                            READ_PERMISSION
-                                    )
-                                }.toSet(), principals
-                )
-                .filter { auth -> !auth.permissions.getValue(Permission.READ) }
-                .map { auth -> auth.aclKey[0] }
-                .collect(Collectors.toSet())
-
-        if (unauthorizedEntitySetIds.size > 0) {
-
-            neighbors.values.forEach { associationMap ->
-                associationMap.values.forEach { neighborsMap ->
-                    neighborsMap.entries()
-                            .removeIf { neighborEntry -> unauthorizedEntitySetIds.contains(neighborEntry.key) }
-                }
-                associationMap.entries.removeIf { entry ->
-                    (unauthorizedEntitySetIds.contains(
-                            entry.key
-                    ) || entry.value.size() == 0)
-                }
-
-            }
-
-        }
-
-        logger.info("Reduced entity neighbor search took {} ms", sw1.elapsed(TimeUnit.MILLISECONDS))
 
         return neighbors
     }
