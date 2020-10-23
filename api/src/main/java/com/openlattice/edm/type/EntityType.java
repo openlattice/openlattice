@@ -19,7 +19,6 @@
 package com.openlattice.edm.type;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
@@ -158,7 +157,6 @@ public class EntityType extends AbstractSchemaAssociatedSecurableType {
         return category;
     }
 
-
     public void addPrimaryKeys( Set<UUID> propertyTypeIds ) {
         key.addAll( checkNotNull( propertyTypeIds, "Property type ids cannot be null." ) );
     }
@@ -187,14 +185,17 @@ public class EntityType extends AbstractSchemaAssociatedSecurableType {
 
     @Override
     public boolean equals( Object o ) {
-        if ( this == o )
+        if ( this == o ) {
             return true;
-        if ( o == null || getClass() != o.getClass() )
+        }
+        if ( o == null || getClass() != o.getClass() ) {
             return false;
-        if ( !super.equals( o ) )
+        }
+        if ( !super.equals( o ) ) {
             return false;
-        EntityType that = ( EntityType ) o;
-        return h == that.h &&
+        }
+        EntityType that = (EntityType) o;
+        return hashCode() == that.hashCode() &&
                 shards == that.shards &&
                 Objects.equals( key, that.key ) &&
                 Objects.equals( baseType, that.baseType ) &&
@@ -205,9 +206,9 @@ public class EntityType extends AbstractSchemaAssociatedSecurableType {
 
     @Override
     public int hashCode() {
-        if ( h != 0 ) {
-            return h;
+        if ( h == 0 ) {
+            h = Objects.hash( super.hashCode(), key, baseType, shards, category, propertyTags, properties );
         }
-        return h = Objects.hash( super.hashCode(), key, baseType, shards, category, propertyTags, properties );
+        return h;
     }
 }

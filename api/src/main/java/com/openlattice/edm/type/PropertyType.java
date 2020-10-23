@@ -76,7 +76,7 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
                 schemas );
         this.datatype = Preconditions.checkNotNull( datatype, "PropertyType datatype cannot be null" );
         if ( enumValues.isPresent() ) {
-            if (enumValues.get().size() > 0) {
+            if ( enumValues.get().size() > 0 ) {
                 checkArgument( ALLOWED_UNDERLYING_TYPES.contains( datatype ), "Only certain types are allowed" );
                 this.enumValues.addAll( enumValues.get() );
             }
@@ -212,7 +212,7 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
 
     @JsonIgnore
     public void setPii( boolean pii ) {
-        this.piiField = pii;
+        piiField = pii;
     }
 
     @JsonProperty( SerializationConstants.MULTI_VALUED )
@@ -231,7 +231,7 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
     }
 
     @JsonProperty( SerializationConstants.ENUM_VALUES )
-    @JsonInclude(value = Include.NON_EMPTY)
+    @JsonInclude( value = Include.NON_EMPTY )
     public LinkedHashSet<String> getEnumValues() {
         return enumValues;
     }
@@ -241,23 +241,33 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
         this.postgresIndexType = postgresIndexType;
     }
 
-    @Override public boolean equals( Object o ) {
-        if ( this == o ) { return true; }
-        if ( !( o instanceof PropertyType ) ) { return false; }
-        if ( !super.equals( o ) ) { return false; }
+    @Override
+    public boolean equals( Object o ) {
+        if ( this == o ) {
+            return true;
+        }
+        if ( o == null || getClass() != o.getClass() ) {
+            return false;
+        }
+        if ( !super.equals( o ) ) {
+            return false;
+        }
         PropertyType that = (PropertyType) o;
-        return multiValued == that.multiValued &&
+        return hashCode() == that.hashCode() &&
+                multiValued == that.multiValued &&
                 piiField == that.piiField &&
+                Objects.equals( enumValues, that.enumValues ) &&
                 datatype == that.datatype &&
-                analyzer == that.analyzer;
+                analyzer == that.analyzer &&
+                postgresIndexType == that.postgresIndexType;
     }
 
-    @Override public int hashCode() {
+    @Override
+    public int hashCode() {
         if ( h == 0 ) {
-            return h = Objects.hash( super.hashCode(), multiValued, datatype, piiField, analyzer );
-        } else {
-            return h;
+            h = Objects.hash( super.hashCode(), multiValued, piiField, enumValues, datatype, analyzer, postgresIndexType );
         }
+        return h;
     }
 
     @Override
