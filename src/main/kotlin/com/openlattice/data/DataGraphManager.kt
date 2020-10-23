@@ -130,7 +130,7 @@ interface DataGraphManager {
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent
 
-    fun createAssociations(associations: Set<DataEdgeKey>): WriteEvent
+    fun createAssociations(associations: MutableSet<DataEdgeKey>): WriteEvent
 
     fun createAssociations(
             associations: ListMultimap<UUID, DataEdge>,

@@ -301,7 +301,7 @@ class DataGraphService(
         return eds.replacePropertiesInEntities(entitySetId, replacementProperties, authorizedPropertyTypes)
     }
 
-    override fun createAssociations(associations: Set<DataEdgeKey>): WriteEvent {
+    override fun createAssociations(associations: MutableSet<DataEdgeKey>): WriteEvent {
         return graphService.createEdges(associations)
     }
 
@@ -324,7 +324,7 @@ class DataGraphService(
 
                     val edgeKeys = it.value.asSequence().mapIndexed { index, dataEdge ->
                         DataEdgeKey(dataEdge.src, dataEdge.dst, EntityDataKey(entitySetId, ids[index]))
-                    }.toSet()
+                    }.toMutableSet()
                     val sw = Stopwatch.createStarted()
                     val edgeWrite = graphService.createEdges(edgeKeys)
                     logger.info(
