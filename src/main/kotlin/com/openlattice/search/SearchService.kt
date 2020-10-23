@@ -569,7 +569,7 @@ class SearchService(
                         val esId = auth.aclKey[0]
                         val propertyTypeId = auth.aclKey[1]
                         entitySetsIdsToAuthorizedProps
-                                .getValue(esId)[propertyTypeId] = propertyTypesById.getValue(propertyTypeId)
+                                .getOrPut(esId) { mutableMapOf() }[propertyTypeId] = propertyTypesById.getValue(propertyTypeId)
                     }
                 }
 
@@ -634,7 +634,7 @@ class SearchService(
         val entitySetIdToEntityKeyId = HashMultimap.create<UUID, UUID>()
 
         edges.forEach { edge ->
-            entitySetIdToEntityKeyId.put(edge.edge.entitySetId, edge.edge.entitySetId)
+            entitySetIdToEntityKeyId.put(edge.edge.entitySetId, edge.edge.entityKeyId)
 
             if (entityKeyIds.contains(edge.src.entityKeyId)) {
                 entitySetIdToEntityKeyId.put(edge.dst.entitySetId, edge.dst.entityKeyId)
