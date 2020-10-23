@@ -18,9 +18,9 @@
 
 package com.openlattice.authorization;
 
-import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.openlattice.client.serialization.SerializationConstants;
 
 import java.time.OffsetDateTime;
 import java.util.EnumSet;
@@ -74,19 +74,24 @@ public class Ace {
     }
 
     @Override public boolean equals( Object o ) {
-        if ( this == o )
+        if ( this == o ) {
             return true;
-        if ( o == null || getClass() != o.getClass() )
+        }
+        if ( o == null || getClass() != o.getClass() ) {
             return false;
+        }
         Ace ace = (Ace) o;
-        return hashValue == ace.hashValue &&
+        return hashCode() == ace.hashCode() &&
                 Objects.equals( principal, ace.principal ) &&
                 Objects.equals( permissions, ace.permissions ) &&
                 Objects.equals( expirationDate, ace.expirationDate );
     }
 
     @Override public int hashCode() {
-        return Objects.hash( principal, permissions, expirationDate, hashValue );
+        if ( hashValue == 0 ) {
+            hashValue = Objects.hash( principal, permissions, expirationDate );
+        }
+        return hashValue;
     }
 
     @Override

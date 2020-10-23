@@ -18,17 +18,18 @@
 
 package com.openlattice.authorization;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.openlattice.client.serialization.SerializationConstants;
+import com.openlattice.util.Hashcodes;
+
 import java.util.List;
 import java.util.UUID;
 
-import com.openlattice.client.serialization.SerializationConstants;
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 public class Acl {
-    protected final List<UUID> aclKey;
-    protected final Iterable<Ace>            aces;
-    private transient int                    h = 0;
+    protected final   List<UUID>    aclKey;
+    protected final   Iterable<Ace> aces;
+    private transient int           h = 0;
 
     @JsonCreator
     public Acl(
@@ -51,27 +52,37 @@ public class Acl {
     @Override
     public int hashCode() {
         if ( h == 0 ) {
-            final int prime = 31;
-            int result = 1;
-            result = prime * result + ( ( aces == null ) ? 0 : aces.hashCode() );
-            result = prime * result + ( ( aclKey == null ) ? 0 : aclKey.hashCode() );
-            h = result;
+            h = Hashcodes.generate( aces, aclKey );
         }
         return h;
     }
 
     @Override
     public boolean equals( Object obj ) {
-        if ( this == obj ) return true;
-        if ( obj == null ) return false;
-        if ( getClass() != obj.getClass() ) return false;
+        if ( this == obj ) {
+            return true;
+        }
+        if ( obj == null ) {
+            return false;
+        }
+        if ( getClass() != obj.getClass() ) {
+            return false;
+        }
         Acl other = (Acl) obj;
         if ( aces == null ) {
-            if ( other.aces != null ) return false;
-        } else if ( !aces.equals( other.aces ) ) return false;
+            if ( other.aces != null ) {
+                return false;
+            }
+        } else if ( !aces.equals( other.aces ) ) {
+            return false;
+        }
         if ( aclKey == null ) {
-            if ( other.aclKey != null ) return false;
-        } else if ( !aclKey.equals( other.aclKey ) ) return false;
+            if ( other.aclKey != null ) {
+                return false;
+            }
+        } else if ( !aclKey.equals( other.aclKey ) ) {
+            return false;
+        }
         return true;
     }
 
