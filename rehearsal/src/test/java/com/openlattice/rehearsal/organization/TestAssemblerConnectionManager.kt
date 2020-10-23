@@ -49,7 +49,7 @@ class TestAssemblerConnectionManager {
 
         @JvmStatic
         fun connect(organizationId: UUID, config: Optional<Properties> = Optional.empty()): HikariDataSource {
-            val dbName = PostgresDatabases.buildOrganizationDatabaseName(organizationId)
+            val dbName = PostgresDatabases.buildDefaultOrganizationDatabaseName(organizationId)
             val connectionConfig = config.orElse(assemblerConfiguration.server.clone() as Properties)
 
             return AssemblerConnectionManager.createDataSource(dbName, connectionConfig, assemblerConfiguration.ssl)
