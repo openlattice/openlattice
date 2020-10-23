@@ -378,6 +378,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                                         null,
                                         0 ),
                                 principals )
+                        .getNeighbors()
                         .getOrDefault( entityKeyId, ImmutableList.of() );
             }
         }
@@ -467,9 +468,11 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                         "is empty." );
             } else {
                 result = searchService
-                        .executeEntityNeighborSearch( ImmutableSet.of( entitySetId ),
+                        .executeEntityNeighborSearch(
+                                ImmutableSet.of( entitySetId ),
                                 new PagedNeighborRequest( filter, null, 0 ),
-                                principals );
+                                principals
+                        ).getNeighbors();
             }
         }
 

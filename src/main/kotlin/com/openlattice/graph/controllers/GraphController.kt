@@ -120,10 +120,10 @@ constructor(
     override fun getPageOfNeighbors(
             @PathVariable(ENTITY_SET_ID) entitySetId: UUID,
             @RequestBody pagedNeighborRequest: PagedNeighborRequest
-    ) {
+    ): NeighborPage {
         ensureReadAccess(AclKey(entitySetId))
 
-        searchService.executeEntityNeighborSearch(
+        return searchService.executeEntityNeighborSearch(
                 setOf(entitySetId),
                 pagedNeighborRequest,
                 Principals.getCurrentPrincipals()
