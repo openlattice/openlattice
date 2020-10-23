@@ -129,9 +129,8 @@ class AssemblyAnalyzationController : AssemblyAnalyzationApi, AuthorizingCompone
                     edmService.getPropertyTypeFqn(it.key).fullQualifiedNameAsString to it.value.map { it.filter }
                 }.toMap()
 
-        val connection = HikariDataSource().connection
         val aggregationValues = assemblerQueryService.simpleAggregation(
-                connection,
+                HikariDataSource(),
                 srcEntitySetName, edgeEntitySetName, dstEntitySetName,
                 srcGroupColumns, edgeGroupColumns, dstGroupColumns,
                 srcAggregates, edgeAggregates, dstAggregates,
