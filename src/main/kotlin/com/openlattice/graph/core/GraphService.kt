@@ -34,7 +34,7 @@ import java.util.stream.Stream
  * Graph Object supporting CRUD operations of vertices and edges to the graph.
  */
 interface GraphService {
-    fun createEdges(keys: MutableSet<DataEdgeKey>): WriteEvent
+    fun createEdges(keys: Set<DataEdgeKey>): WriteEvent
 
     fun clearEdges(keys: Iterable<DataEdgeKey>): Int
 
