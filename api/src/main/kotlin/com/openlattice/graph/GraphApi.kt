@@ -67,5 +67,5 @@ interface GraphApi {
     fun getPageOfNeighbors(
             @Path(ENTITY_SET_ID) entitySetId: UUID,
             @Body pagedNeighborRequest: PagedNeighborRequest
-    )
+    ): NeighborPage
 }
