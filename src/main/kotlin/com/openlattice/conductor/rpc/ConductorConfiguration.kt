@@ -16,7 +16,7 @@ private val key = SimpleConfigurationKey("conductor.yaml")
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 @ReloadableConfiguration(uri = "conductor.yaml")
-class ConductorConfiguration(
+data class ConductorConfiguration(
         @JsonProperty("reportEmailAddress") val reportEmailAddress: String,
         @JsonProperty("searchConfiguration") val searchConfiguration: SearchConfiguration,
         @JsonProperty("bootstrap-connection") val connection: Optional<Set<String>>

@@ -90,6 +90,7 @@ import static com.openlattice.postgres.PostgresColumn.LAST_PROPAGATE;
 import static com.openlattice.postgres.PostgresColumn.LAST_READ;
 import static com.openlattice.postgres.PostgresColumn.LAST_REFRESH;
 import static com.openlattice.postgres.PostgresColumn.LAST_SYNC;
+import static com.openlattice.postgres.PostgresColumn.LAST_TRANSPORT;
 import static com.openlattice.postgres.PostgresColumn.LINKED;
 import static com.openlattice.postgres.PostgresColumn.LINKED_ENTITY_SETS;
 import static com.openlattice.postgres.PostgresColumn.LINKING_ID;
@@ -102,6 +103,7 @@ import static com.openlattice.postgres.PostgresColumn.NAME;
 import static com.openlattice.postgres.PostgresColumn.NAMESPACE;
 import static com.openlattice.postgres.PostgresColumn.NAME_SET;
 import static com.openlattice.postgres.PostgresColumn.NULLABLE_TITLE;
+import static com.openlattice.postgres.PostgresColumn.OID;
 import static com.openlattice.postgres.PostgresColumn.ORDINAL_POSITION;
 import static com.openlattice.postgres.PostgresColumn.ORGANIZATION;
 import static com.openlattice.postgres.PostgresColumn.ORGANIZATION_ID;
@@ -202,8 +204,9 @@ public final class PostgresTable {
                             EDGE_ENTITY_SET_ID,
                             EDGE_ENTITY_KEY_ID,
                             VERSION,
-                            VERSIONS )
-                    .primaryKey( PARTITION,
+                            VERSIONS,
+                            LAST_TRANSPORT )
+            .primaryKey( PARTITION,
                             SRC_ENTITY_KEY_ID,
                             DST_ENTITY_KEY_ID,
                             EDGE_ENTITY_KEY_ID )
@@ -331,7 +334,8 @@ public final class PostgresTable {
                             LAST_LINK,
                             LAST_PROPAGATE,
                             LAST_MIGRATE,
-                            LAST_LINK_INDEX )
+                            LAST_LINK_INDEX,
+                            LAST_TRANSPORT )
                     .primaryKey( ID_VALUE, PARTITION )
                     .distributionColumn( PARTITION );
     public static final PostgresTableDefinition ID_GENERATION    =
@@ -403,7 +407,10 @@ public final class PostgresTable {
             new PostgresTableDefinition( "organization_assemblies" )
                     .addColumns( ORGANIZATION_ID, INITIALIZED )
                     .primaryKey( ORGANIZATION_ID );
-
+    public static final PostgresTableDefinition ORGANIZATION_DATABASES   =
+            new PostgresTableDefinition( "organization_databases" )
+                    .addColumns( ID, OID, NAME )
+                    .setUnique( NAME );
     public static final PostgresTableDefinition ORGANIZATION_EXTERNAL_DATABASE_COLUMN =
             new PostgresTableDefinition( "organization_external_database_columns" )
                     .addColumns(
@@ -532,6 +539,7 @@ public final class PostgresTable {
                         .name( "principal_trees_acl_key_idx" )
                         .ifNotExists()
         );
+
         E.addIndexes(
                 new PostgresColumnsIndexDefinition( E, SRC_ENTITY_KEY_ID )
                         .name( "e_src_entity_key_id_idx" )
@@ -550,7 +558,19 @@ public final class PostgresTable {
                         .ifNotExists(),
                 new PostgresColumnsIndexDefinition( E, EDGE_ENTITY_SET_ID )
                         .name( "e_edge_entity_set_id_idx" )
-                        .ifNotExists() );
+                        .ifNotExists(),
+                new PostgresExpressionIndexDefinition( E,
+                        SRC_ENTITY_SET_ID.getName() + ",( abs(" + VERSION.getName() + ") > " + LAST_TRANSPORT.getName() + ")")
+                        .name( "src_edges_needing_transport_idx" )
+                        .ifNotExists(),
+                new PostgresExpressionIndexDefinition( E,
+                        DST_ENTITY_SET_ID.getName() + ",( abs(" + VERSION.getName() + ") > " + LAST_TRANSPORT.getName() + ")")
+                        .name( "dst_needing_transport_idx" )
+                        .ifNotExists(),
+                new PostgresExpressionIndexDefinition( E,
+                        EDGE_ENTITY_SET_ID.getName() + ",( abs(" + VERSION.getName() + ") > " + LAST_TRANSPORT.getName() + ")")
+                        .name( "edges_needing_transport_idx" )
+                        .ifNotExists());
 
         IDS.addIndexes(
                 new PostgresColumnsIndexDefinition( IDS, ENTITY_SET_ID )
@@ -619,6 +639,11 @@ public final class PostgresTable {
                                 + ",(" + LAST_PROPAGATE.getName() + " < " + LAST_WRITE.getName() + ")"
                                 + ",(" + VERSION.getName() + " > 0)" )
                         .name( "ids_needing_propagation_idx" )
+                        .ifNotExists(),
+                new PostgresExpressionIndexDefinition( IDS,
+                        ENTITY_SET_ID.getName()
+                                + ",( abs(" + VERSION.getName() + ") > " + LAST_TRANSPORT.getName() + ")" )
+                        .name( "ids_needing_transport_idx" )
                         .ifNotExists()
         );
 

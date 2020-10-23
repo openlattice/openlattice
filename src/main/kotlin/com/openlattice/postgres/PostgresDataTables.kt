@@ -4,9 +4,19 @@ import com.google.common.cache.CacheBuilder
 import com.google.common.cache.CacheLoader
 import com.openlattice.IdConstants
 import com.openlattice.edm.PostgresEdmTypeConverter
+import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.DataTables.quote
-import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.HASH
+import com.openlattice.postgres.PostgresColumn.ID_VALUE
+import com.openlattice.postgres.PostgresColumn.LAST_PROPAGATE
+import com.openlattice.postgres.PostgresColumn.LAST_TRANSPORT
+import com.openlattice.postgres.PostgresColumn.ORIGIN_ID
+import com.openlattice.postgres.PostgresColumn.PARTITION
+import com.openlattice.postgres.PostgresColumn.PROPERTY_TYPE_ID
+import com.openlattice.postgres.PostgresColumn.VERSION
+import com.openlattice.postgres.PostgresColumn.VERSIONS
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 
 /**
@@ -50,6 +60,7 @@ class PostgresDataTables {
                 HASH,
                 LAST_WRITE,
                 LAST_PROPAGATE,
+                LAST_TRANSPORT,
                 VERSION,
                 VERSIONS
         )
@@ -144,10 +155,17 @@ class PostgresDataTables {
                     .ifNotExists()
                     .desc()
 
-            val readDataIndex = PostgresExpressionIndexDefinition(tableDefinition, "(${ORIGIN_ID.name} != '${IdConstants.EMPTY_ORIGIN_ID.id}')" )
-                    .name(prefix+"_read_data_idx")
+            val readDataIndex = PostgresExpressionIndexDefinition(tableDefinition, "(${ORIGIN_ID.name} != '${IdConstants.EMPTY_ORIGIN_ID.id}')")
+                    .name(prefix + "_read_data_idx")
                     .ifNotExists()
 
+            val needsPropagateIndex = PostgresExpressionIndexDefinition(tableDefinition, "(${LAST_WRITE.name} > ${LAST_PROPAGATE.name})")
+                    .name(prefix + "_last_propagate_idx")
+                    .ifNotExists()
+
+            val needsTransportIndex = PostgresExpressionIndexDefinition(tableDefinition,  "${ENTITY_SET_ID.name},( abs(${VERSION.name}) > ${LAST_TRANSPORT.name})")
+                    .name("data_needing_transport_idx")
+                    .ifNotExists()
 
             tableDefinition.addIndexes(
                     idIndex,
@@ -159,7 +177,9 @@ class PostgresDataTables {
                     propertyTypeIdIndex,
                     currentPropertiesForEntitySetIndex,
                     currentPropertiesForEntityIndex,
-                    readDataIndex
+                    readDataIndex,
+                    needsPropagateIndex,
+                    needsTransportIndex
             )
 
             return tableDefinition
@@ -208,6 +228,14 @@ class PostgresDataTables {
                 IndexType.NONE -> "n_${datatype.name}"
                 else -> throw IllegalStateException("Unsupported index type: $indexType")
             }
+        }
+
+        @JvmStatic
+        fun getSourceDataColumnName(propertyType: PropertyType): String {
+            return getSourceDataColumnName(
+                    PostgresEdmTypeConverter.map(propertyType.datatype),
+                    propertyType.postgresIndexType
+            )
         }
     }
 }

@@ -36,13 +36,11 @@ import com.openlattice.edm.set.ExpirationBase
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.core.GraphService
 import com.openlattice.graph.core.NeighborSets
-import com.openlattice.graph.edge.Edge
 import com.openlattice.graph.partioning.RepartitioningJob
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.PostgresDataTables
 import com.openlattice.postgres.streams.BasePostgresIterable
-import com.openlattice.postgres.streams.PostgresIterable
 import org.apache.commons.lang3.NotImplementedException
 import org.apache.commons.lang3.tuple.Pair
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
@@ -136,18 +134,14 @@ class DataGraphService(
                 .toSet()
     }
 
-    override fun getEdgesAndNeighborsForVertex(entitySetId: UUID, entityKeyId: UUID): Stream<Edge> {
-        return graphService.getEdgesAndNeighborsForVertex(entitySetId, entityKeyId)
-    }
-
     override fun getEdgeKeysOfEntitySet(
             entitySetId: UUID, includeClearedEdges: Boolean
-    ): PostgresIterable<DataEdgeKey> {
+    ): BasePostgresIterable<DataEdgeKey> {
         return graphService.getEdgeKeysOfEntitySet(entitySetId, includeClearedEdges)
     }
 
     override fun getEdgesConnectedToEntities(entitySetId: UUID, entityKeyIds: Set<UUID>, includeClearedEdges: Boolean)
-            : PostgresIterable<DataEdgeKey> {
+            : BasePostgresIterable<DataEdgeKey> {
         return graphService.getEdgeKeysContainingEntities(entitySetId, entityKeyIds, includeClearedEdges)
     }
 

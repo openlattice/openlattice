@@ -151,6 +151,21 @@ public class EdmService implements EdmManager {
         }
     }
 
+    public void ensureEntityTypeExists( UUID entityTypeId ) {
+        Preconditions.checkState(
+                entityTypes.containsKey(entityTypeId),
+                "Entity type " + entityTypeId.toString() + " does not exist."
+        );
+    }
+
+
+    public void ensurePropertyTypeExists( UUID propertyTypeId ) {
+        Preconditions.checkState(
+                entityTypes.containsKey(propertyTypeId),
+                "Property type " + propertyTypeId.toString() + " does not exist."
+        );
+    }
+
     @Override
     public void deleteEntityType( UUID entityTypeId ) {
         /*

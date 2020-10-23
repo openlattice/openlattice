@@ -23,15 +23,15 @@ package com.openlattice.hazelcast.serializers;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers;
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.authorization.AclKeySet;
+import com.openlattice.hazelcast.InternalTestDataFactory;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 
 @Component
-public class AclKeySetStreamSerializer implements SelfRegisteringStreamSerializer<AclKeySet> {
+public class AclKeySetStreamSerializer implements TestableSelfRegisteringStreamSerializer<AclKeySet> {
     @Override public Class<? extends AclKeySet> getClazz() {
         return AclKeySet.class;
     }
@@ -55,5 +55,10 @@ public class AclKeySetStreamSerializer implements SelfRegisteringStreamSerialize
 
     @Override public void destroy() {
 
+    }
+
+    @Override
+    public AclKeySet generateTestValue() {
+        return InternalTestDataFactory.aclKeySet();
     }
 }

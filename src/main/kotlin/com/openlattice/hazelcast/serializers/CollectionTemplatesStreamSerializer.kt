@@ -1,18 +1,16 @@
 package com.openlattice.hazelcast.serializers
 
-import com.google.common.collect.Maps
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.collections.CollectionTemplates
+import com.openlattice.hazelcast.InternalTestDataFactory
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import org.springframework.stereotype.Component
 import java.util.*
-import java.util.concurrent.ConcurrentMap
 
 @Component
-class CollectionTemplatesStreamSerializer : SelfRegisteringStreamSerializer<CollectionTemplates> {
+class CollectionTemplatesStreamSerializer : TestableSelfRegisteringStreamSerializer<CollectionTemplates> {
 
     companion object {
 
@@ -55,6 +53,10 @@ class CollectionTemplatesStreamSerializer : SelfRegisteringStreamSerializer<Coll
 
     override fun read(`in`: ObjectDataInput): CollectionTemplates {
         return deserialize(`in`)
+    }
+
+    override fun generateTestValue(): CollectionTemplates {
+        return InternalTestDataFactory.collectionTemplates()
     }
 
 }

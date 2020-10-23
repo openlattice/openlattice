@@ -21,7 +21,7 @@
 
 package com.openlattice.assembler
 
-import java.util.*
+import com.google.common.base.Preconditions.checkArgument
 
 /**
  *
@@ -29,9 +29,20 @@ import java.util.*
  */
 class PostgresDatabases private constructor() {
     companion object {
+        private const val MIN_LENGTH = 8
+        private const val MAX_LENGTH = 50
+        private val DB_NAME_CHARS = Regex("[a-zA-Z0-9_\\-]*")
+
         @JvmStatic
-        fun buildOrganizationDatabaseName(organizationId: UUID): String {
-            return "org_${organizationId.toString().replace("-","").toLowerCase()}"
+        fun assertDatabaseNameIsValid(name: String) {
+            checkArgument(name.length in MIN_LENGTH..MAX_LENGTH,
+                    "Database name $name is invalid: names must be between " +
+                            "$MIN_LENGTH and $MAX_LENGTH characters, inclusive."
+            )
+
+            checkArgument(DB_NAME_CHARS.containsMatchIn(name), "Database name $name contains " +
+                    "invalid characters. Names can contain only alphanumeric characters, dashes, and underscores.")
+
         }
     }
 }

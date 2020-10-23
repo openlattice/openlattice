@@ -320,6 +320,12 @@ public final class PostgresColumn {
             TIMESTAMPTZ )
             .withDefault( "'-infinity'" )
             .notNull();
+    public static final String                   LAST_TRANSPORT_FIELD              = "last_transport";
+    public static final PostgresColumnDefinition LAST_TRANSPORT                    = new PostgresColumnDefinition(
+            LAST_TRANSPORT_FIELD,
+            BIGINT )
+            .withDefault( -1 )
+            .notNull();
     public static final String                   LINKED_ENTITY_SETS_FIELD          = "linked_entity_sets";
     public static final PostgresColumnDefinition LINKED_ENTITY_SETS                =
             new PostgresColumnDefinition( LINKED_ENTITY_SETS_FIELD, UUID_ARRAY );
@@ -362,6 +368,10 @@ public final class PostgresColumn {
     public static final String                   NULLABLE_TITLE_FIELD              = "title";
     public static final PostgresColumnDefinition NULLABLE_TITLE                    =
             new PostgresColumnDefinition( NULLABLE_TITLE_FIELD, TEXT );
+    public static final String                   OID_FIELD                         = "oid";
+    public static final PostgresColumnDefinition OID                               = new PostgresColumnDefinition(
+            OID_FIELD,
+            INTEGER );
     public static final String                   ORDINAL_POSITION_FIELD            = "ordinal_position";
     public static final PostgresColumnDefinition ORDINAL_POSITION                  =
             new PostgresColumnDefinition( ORDINAL_POSITION_FIELD, INTEGER ).notNull();

@@ -20,14 +20,15 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.edm.types.processors.AddPrimaryKeysToEntityTypeProcessor;
-import java.io.IOException;
+import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import org.springframework.stereotype.Component;
+
+import java.io.IOException;
 
 @Component
 public class AddPrimaryKeysToEntityTypeProcessorStreamSerializer
@@ -38,8 +39,7 @@ public class AddPrimaryKeysToEntityTypeProcessorStreamSerializer
     }
 
     @Override
-    public void write(
-            ObjectDataOutput out, AddPrimaryKeysToEntityTypeProcessor object ) throws IOException {
+    public void write( ObjectDataOutput out, AddPrimaryKeysToEntityTypeProcessor object ) throws IOException {
         SetStreamSerializers.fastUUIDSetSerialize( out, object.getPropertyTypeIds() );
     }
 

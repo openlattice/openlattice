@@ -27,18 +27,21 @@ import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers;
 import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.data.DataExpiration;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
+import com.openlattice.mapstores.TestDataFactory;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.EnumSet;
+import java.util.LinkedHashSet;
+import java.util.Set;
+import java.util.UUID;
 
 @Component
-public class EntitySetStreamSerializer implements SelfRegisteringStreamSerializer<EntitySet> {
+public class EntitySetStreamSerializer implements TestableSelfRegisteringStreamSerializer<EntitySet> {
 
     @Override
     public void write( ObjectDataOutput out, EntitySet object ) throws IOException {
@@ -90,8 +93,7 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
             flags.add( EntitySetFlagStreamSerializer.deserialize( in ) );
         }
 
-        LinkedHashSet<Integer> partitions = (LinkedHashSet<Integer>) StreamSerializers
-                .deserializeIntList( in, Sets.newLinkedHashSet() );
+        LinkedHashSet<Integer> partitions = (LinkedHashSet<Integer>) StreamSerializers.deserializeIntList( in, Sets.newLinkedHashSet() );
 
         DataExpiration expiration;
         boolean hasExpiration = in.readBoolean();
@@ -130,4 +132,7 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
         return EntitySet.class;
     }
 
+    @Override public EntitySet generateTestValue() {
+        return TestDataFactory.entitySet();
+    }
 }

@@ -202,7 +202,7 @@ class CollectionsManager(
     fun addTypeToEntityTypeCollectionTemplate(id: UUID, collectionTemplateType: CollectionTemplateType) {
 
         ensureEntityTypeCollectionExists(id)
-        ensureEntityTypeExists(collectionTemplateType.entityTypeId)
+        edmManager.ensureEntityTypeExists(collectionTemplateType.entityTypeId)
 
         val entityTypeCollection = entityTypeCollections[id]!!
         if (entityTypeCollection.template.any { it.id == collectionTemplateType.id || it.name == collectionTemplateType.name }) {
@@ -352,20 +352,13 @@ class CollectionsManager(
 
     /** validation **/
 
-
-    private fun ensureEntityTypeExists(id: UUID) {
-        if (!edmManager.checkEntityTypeExists(id)) {
-            throw IllegalArgumentException("Entity type $id does not exist")
-        }
-    }
-
-    private fun ensureEntityTypeCollectionExists(id: UUID) {
+    fun ensureEntityTypeCollectionExists(id: UUID) {
         if (!entityTypeCollections.containsKey(id)) {
             throw IllegalStateException("EntityTypeCollection $id does not exist.")
         }
     }
 
-    private fun ensureEntitySetCollectionExists(id: UUID) {
+    fun ensureEntitySetCollectionExists(id: UUID) {
         if (!entitySetCollections.containsKey(id)) {
             throw IllegalStateException("EntitySetCollection $id does not exist.")
         }

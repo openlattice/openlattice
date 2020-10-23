@@ -2,12 +2,13 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.AssemblerConnectionManagerDependent
 import com.openlattice.assembler.processors.InitializeOrganizationAssemblyProcessor
 import com.openlattice.hazelcast.StreamSerializerTypeIds
+import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
 import org.springframework.stereotype.Component
+import java.util.*
 
 /**
  *
@@ -16,7 +17,7 @@ import org.springframework.stereotype.Component
 
 @Component
 class InitializeOrganizationAssemblyProcessorStreamSerializer
-    : SelfRegisteringStreamSerializer<InitializeOrganizationAssemblyProcessor>,
+    : TestableSelfRegisteringStreamSerializer<InitializeOrganizationAssemblyProcessor>,
         AssemblerConnectionManagerDependent<Void?> {
     private lateinit var acm: AssemblerConnectionManager
 
@@ -24,12 +25,8 @@ class InitializeOrganizationAssemblyProcessorStreamSerializer
         return InitializeOrganizationAssemblyProcessor::class.java
     }
 
-    override fun write(out: ObjectDataOutput, obj: InitializeOrganizationAssemblyProcessor) {
-
-    }
-
-    override fun read(input: ObjectDataInput): InitializeOrganizationAssemblyProcessor {
-        return InitializeOrganizationAssemblyProcessor().init(acm)
+    override fun read(`in`: ObjectDataInput): InitializeOrganizationAssemblyProcessor {
+        return InitializeOrganizationAssemblyProcessor(`in`.readUTF()).init(acm)
     }
 
     override fun getTypeId(): Int {
@@ -39,5 +36,15 @@ class InitializeOrganizationAssemblyProcessorStreamSerializer
     override fun init(acm: AssemblerConnectionManager): Void? {
         this.acm = acm
         return null
+    }
+
+    override fun generateTestValue(): InitializeOrganizationAssemblyProcessor {
+        return InitializeOrganizationAssemblyProcessor(
+                ExternalDatabaseConnectionManager.buildDefaultOrganizationDatabaseName( UUID.randomUUID() )
+        )
+    }
+
+    override fun write(out: ObjectDataOutput, `object`: InitializeOrganizationAssemblyProcessor) {
+        out.writeUTF(`object`.dbName)
     }
 }

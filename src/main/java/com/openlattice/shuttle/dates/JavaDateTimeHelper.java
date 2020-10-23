@@ -16,8 +16,8 @@ import java.util.function.BiFunction;
 public class JavaDateTimeHelper {
     private static final Logger logger = LoggerFactory.getLogger( JavaDateTimeHelper.class );
 
-    private       ZoneId   zoneId;
-    private       boolean  shouldAddTimezone;
+    private final ZoneId   zoneId;
+    private final boolean  shouldAddTimezone;
     private final String[] datePatterns;
 
     public JavaDateTimeHelper( TimeZone tz, String[] datePatterns, Boolean shouldAddTimezone ) {
@@ -111,8 +111,7 @@ public class JavaDateTimeHelper {
      */
     public OffsetDateTime parseFromOffsetDateTime( String date ) {
         try {
-            OffsetDateTime odt = OffsetDateTime.parse( date );
-            return odt;
+            return OffsetDateTime.parse( date );
         } catch ( DateTimeParseException eAutoParseODT ) {
             return null;
         }

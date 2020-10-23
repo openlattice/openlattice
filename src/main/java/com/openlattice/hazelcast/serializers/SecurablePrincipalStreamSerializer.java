@@ -20,18 +20,19 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.SecurablePrincipal;
+import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.openlattice.organization.OrganizationPrincipal;
 import com.openlattice.organization.roles.Role;
+import org.springframework.stereotype.Component;
+
 import java.io.IOException;
 import java.util.Optional;
-import org.springframework.stereotype.Component;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -60,8 +61,7 @@ public class SecurablePrincipalStreamSerializer implements SelfRegisteringStream
     }
 
     public static void serialize( ObjectDataOutput out, SecurablePrincipal object ) throws IOException {
-        Principal principal = object.getPrincipal();
-        PrincipalStreamSerializer.serialize( out, principal );
+        PrincipalStreamSerializer.serialize( out, object.getPrincipal() );
         AclKeyStreamSerializer.serialize( out, object.getAclKey() );
         out.writeUTF( object.getTitle() );
         out.writeUTF( object.getDescription() );

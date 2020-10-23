@@ -33,10 +33,7 @@ public class DateTimeTransform extends Transformation<String> {
     public DateTimeTransform(
             @JsonProperty( Constants.PATTERN ) String[] pattern
     ) {
-        this(
-                pattern,
-                null
-        );
+        this( pattern, null );
     }
 
     @JsonProperty( value = Constants.PATTERN, required = false )
@@ -53,8 +50,7 @@ public class DateTimeTransform extends Transformation<String> {
     public Object applyValue( String o ) {
         final JavaDateTimeHelper dtHelper = new JavaDateTimeHelper( this.timezone,
                 this.pattern, this.shouldAddTimezone );
-        Object out = dtHelper.parseDateTime( o );
-        return out;
+        return dtHelper.parseDateTime( o );
     }
 
 }

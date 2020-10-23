@@ -22,19 +22,18 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.PrincipalType;
-import java.io.IOException;
+import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import org.springframework.stereotype.Component;
+
+import java.io.IOException;
 
 @Component
 public class PrincipalStreamSerializer implements SelfRegisteringStreamSerializer<Principal> {
-
-    private static final PrincipalType[] principalTypes = PrincipalType.values();
 
     @Override
     public void write( ObjectDataOutput out, Principal object ) throws IOException {
@@ -60,12 +59,12 @@ public class PrincipalStreamSerializer implements SelfRegisteringStreamSerialize
     }
 
     public static void serialize( ObjectDataOutput out, Principal object ) throws IOException {
-        out.writeInt( object.getType().ordinal() );
+        PrincipalTypeStreamSerializer.serialize(out, object.getType());
         out.writeUTF( object.getId() );
     }
 
     public static Principal deserialize( ObjectDataInput in ) throws IOException {
-        PrincipalType type = principalTypes[ in.readInt() ];
+        PrincipalType type = PrincipalTypeStreamSerializer.deserialize( in );
         String id = in.readUTF();
         return new Principal( type, id );
     }

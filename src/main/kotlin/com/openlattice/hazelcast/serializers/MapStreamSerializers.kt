@@ -1,10 +1,8 @@
 package com.openlattice.hazelcast.serializers
 
-import com.google.common.collect.Maps
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.hazelcast.serializers.ListStreamSerializers
-import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers
 import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.util.*
@@ -19,6 +17,7 @@ class MapStreamSerializers {
             ListStreamSerializers.fastUUIDListSerialize(out, keys)
             ListStreamSerializers.fastUUIDListSerialize(out, values)
         }
+
         @Throws(IOException::class)
         fun readUUIDUUIDMap(`in`: ObjectDataInput): MutableMap<UUID, UUID> {
             val keys = ListStreamSerializers.fastUUIDListDeserialize(`in`)
