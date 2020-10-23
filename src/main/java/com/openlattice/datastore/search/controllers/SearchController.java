@@ -35,7 +35,6 @@ import com.openlattice.data.requests.NeighborEntityIds;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.EntitySetManager;
 import com.openlattice.edm.EntitySet;
-import com.openlattice.graph.PagedNeighborRequest;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.Organization;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
@@ -173,7 +172,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             results = searchService.executeSearch( searchConstraints, authorizedPropertyTypesByEntitySet );
         }
 
-        final List<AuditableEvent> searchEvents = new ArrayList( entitySetIds.length );
+        List<AuditableEvent> searchEvents = new ArrayList( entitySetIds.length );
         for ( int i = 0; i < entitySetIds.length; i++ ) {
             searchEvents.add( new AuditableEvent(
                     spm.getCurrentUserId(),
@@ -214,8 +213,8 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     @Override
     @Timed
     public DataSearchResult executeEntitySetDataQuery(
-            @PathVariable( ENTITY_SET_ID ) final UUID entitySetId,
-            @RequestBody final SearchTerm searchTerm ) {
+            @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
+            @RequestBody SearchTerm searchTerm ) {
 
         return searchEntitySetData(
                 SearchConstraints.simpleSearchConstraints(
@@ -234,8 +233,8 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     @Override
     @Timed
     public DataSearchResult executeAdvancedEntitySetDataQuery(
-            @PathVariable( ENTITY_SET_ID ) final UUID entitySetId,
-            @RequestBody final AdvancedSearch search ) {
+            @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
+            @RequestBody AdvancedSearch search ) {
 
         return searchEntitySetData(
                 SearchConstraints.advancedSearchConstraints(
@@ -300,7 +299,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             produces = { MediaType.APPLICATION_JSON_VALUE } )
     @Override
     @Timed
-    public SearchResult executeEntityTypeCollectionSearch( @RequestBody final SearchTerm searchTerm ) {
+    public SearchResult executeEntityTypeCollectionSearch( @RequestBody SearchTerm searchTerm ) {
         return searchService.executeEntityTypeCollectionSearch( searchTerm.getSearchTerm(),
                 searchTerm.getStart(),
                 searchTerm.getMaxHits() );
@@ -312,7 +311,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             produces = { MediaType.APPLICATION_JSON_VALUE } )
     @Override
     @Timed
-    public SearchResult executeEntitySetCollectionSearch( @RequestBody final SearchTerm searchTerm ) {
+    public SearchResult executeEntitySetCollectionSearch( @RequestBody SearchTerm searchTerm ) {
         return searchService.executeEntitySetCollectionQuery( searchTerm.getSearchTerm(),
                 searchTerm.getStart(),
                 searchTerm.getMaxHits() );
@@ -324,7 +323,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             produces = { MediaType.APPLICATION_JSON_VALUE } )
     @Override
     @Timed
-    public SearchResult executeFQNEntityTypeSearch( @RequestBody final FQNSearchTerm searchTerm ) {
+    public SearchResult executeFQNEntityTypeSearch( @RequestBody FQNSearchTerm searchTerm ) {
         return searchService.executeFQNEntityTypeSearch( searchTerm.getNamespace(),
                 searchTerm.getName(),
                 searchTerm.getStart(),
@@ -337,7 +336,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             produces = { MediaType.APPLICATION_JSON_VALUE } )
     @Override
     @Timed
-    public SearchResult executeFQNPropertyTypeSearch( @RequestBody final FQNSearchTerm searchTerm ) {
+    public SearchResult executeFQNPropertyTypeSearch( @RequestBody FQNSearchTerm searchTerm ) {
         return searchService.executeFQNPropertyTypeSearch( searchTerm.getNamespace(),
                 searchTerm.getName(),
                 searchTerm.getStart(),
@@ -351,15 +350,15 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     @Override
     @Timed
     public List<NeighborEntityDetails> executeEntityNeighborSearch(
-            @PathVariable( ENTITY_SET_ID ) final UUID entitySetId,
-            @PathVariable( ENTITY_KEY_ID ) final UUID entityKeyId ) {
+            @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
+            @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId ) {
         List<NeighborEntityDetails> neighbors = Lists.newArrayList();
 
-        final Set<Principal> principals = Principals.getCurrentPrincipals();
+        Set<Principal> principals = Principals.getCurrentPrincipals();
 
         if ( authorizations.checkIfHasPermissions( new AclKey( entitySetId ), principals,
                 EnumSet.of( Permission.READ ) ) ) {
-            final EntitySet es = entitySetManager.getEntitySet( entitySetId );
+            EntitySet es = entitySetManager.getEntitySet( entitySetId );
 
             checkState( es != null, "Could not find entity set with id: " + entitySetId.toString() );
 
@@ -376,18 +375,14 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             } else {
                 neighbors = searchService
                         .executeEntityNeighborSearch( ImmutableSet.of( entitySetId ),
-                                new PagedNeighborRequest( new EntityNeighborsFilter( ImmutableSet.of( entityKeyId ) ),
-                                        null,
-                                        0 ),
-                                principals )
-                        .getNeighbors()
+                                new EntityNeighborsFilter( ImmutableSet.of( entityKeyId ) ), principals )
                         .getOrDefault( entityKeyId, ImmutableList.of() );
             }
         }
 
-        final UUID userId = spm.getCurrentUserId();
+        UUID userId = spm.getCurrentUserId();
 
-        final SetMultimap<UUID, UUID> neighborsByEntitySet = HashMultimap.create();
+        SetMultimap<UUID, UUID> neighborsByEntitySet = HashMultimap.create();
         neighbors.forEach( neighborEntityDetails -> {
             neighborsByEntitySet.put( neighborEntityDetails.getAssociationEntitySet().getId(),
                     getEntityKeyId( neighborEntityDetails.getAssociationDetails() ) );
@@ -397,7 +392,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             }
         } );
 
-        final List<AuditableEvent> events = new ArrayList<>( neighborsByEntitySet.keySet().size() + 1 );
+        List<AuditableEvent> events = new ArrayList<>( neighborsByEntitySet.keySet().size() + 1 );
         events.add( new AuditableEvent(
                 userId,
                 new AclKey( entitySetId ),
@@ -409,7 +404,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                 Optional.empty()
         ) );
 
-        for ( final UUID neighborEntitySetId : neighborsByEntitySet.keySet() ) {
+        for ( UUID neighborEntitySetId : neighborsByEntitySet.keySet() ) {
             events.add( new AuditableEvent(
                     userId,
                     new AclKey( neighborEntitySetId ),
@@ -434,8 +429,8 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     @Override
     @Timed
     public Map<UUID, List<NeighborEntityDetails>> executeEntityNeighborSearchBulk(
-            @PathVariable( ENTITY_SET_ID ) final UUID entitySetId,
-            @RequestBody final Set<UUID> entityKeyIds ) {
+            @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
+            @RequestBody Set<UUID> entityKeyIds ) {
         return executeFilteredEntityNeighborSearch( entitySetId, new EntityNeighborsFilter( entityKeyIds ) );
     }
 
@@ -446,15 +441,15 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     @Override
     @Timed
     public Map<UUID, List<NeighborEntityDetails>> executeFilteredEntityNeighborSearch(
-            @PathVariable( ENTITY_SET_ID ) final UUID entitySetId,
-            @RequestBody final EntityNeighborsFilter filter ) {
-        final Set<Principal> principals = Principals.getCurrentPrincipals();
+            @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
+            @RequestBody EntityNeighborsFilter filter ) {
+        Set<Principal> principals = Principals.getCurrentPrincipals();
 
         Map<UUID, List<NeighborEntityDetails>> result = Maps.newHashMap();
         if ( authorizations.checkIfHasPermissions( new AclKey( entitySetId ), principals,
                 EnumSet.of( Permission.READ ) ) ) {
 
-            final EntitySet es = entitySetManager.getEntitySet( entitySetId );
+            EntitySet es = entitySetManager.getEntitySet( entitySetId );
 
             checkState( es != null, "Could not find entity set with id: " + entitySetId.toString() );
 
@@ -470,18 +465,14 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                         "is empty." );
             } else {
                 result = searchService
-                        .executeEntityNeighborSearch(
-                                ImmutableSet.of( entitySetId ),
-                                new PagedNeighborRequest( filter, null, 0 ),
-                                principals
-                        ).getNeighbors();
+                        .executeEntityNeighborSearch( ImmutableSet.of( entitySetId ), filter, principals );
             }
         }
 
 
         /* audit */
 
-        final ListMultimap<UUID, UUID> neighborsByEntitySet = ArrayListMultimap.create();
+        ListMultimap<UUID, UUID> neighborsByEntitySet = ArrayListMultimap.create();
 
         result.values().forEach( neighborList ->
                 neighborList.forEach( neighborEntityDetails -> {
@@ -494,24 +485,24 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                 } )
         );
 
-        final List<AuditableEvent> events = new ArrayList<>( neighborsByEntitySet.keySet().size() + 1 );
-        final UUID userId = spm.getCurrentUserId();
+        List<AuditableEvent> events = new ArrayList<>( neighborsByEntitySet.keySet().size() + 1 );
+        UUID userId = spm.getCurrentUserId();
 
         int segments = filter.getEntityKeyIds().size() / AuditingComponent.MAX_ENTITY_KEY_IDS_PER_EVENT;
         if ( filter.getEntityKeyIds().size() % AuditingComponent.MAX_ENTITY_KEY_IDS_PER_EVENT != 0 ) {
             segments++;
         }
 
-        final List<UUID> entityKeyIdsAsList = Lists.newArrayList( filter.getEntityKeyIds() );
+        List<UUID> entityKeyIdsAsList = Lists.newArrayList( filter.getEntityKeyIds() );
 
         for ( int i = 0; i < segments; i++ ) {
 
-            final int fromIndex = i * AuditingComponent.MAX_ENTITY_KEY_IDS_PER_EVENT;
-            final int toIndex = i == segments - 1 ?
+            int fromIndex = i * AuditingComponent.MAX_ENTITY_KEY_IDS_PER_EVENT;
+            int toIndex = i == segments - 1 ?
                     entityKeyIdsAsList.size() :
                     ( i + 1 ) * AuditingComponent.MAX_ENTITY_KEY_IDS_PER_EVENT;
 
-            final Set<UUID> segmentOfIds = Sets.newHashSet( entityKeyIdsAsList.subList( fromIndex, toIndex ) );
+            Set<UUID> segmentOfIds = Sets.newHashSet( entityKeyIdsAsList.subList( fromIndex, toIndex ) );
 
             events.add( new AuditableEvent(
                     userId,
@@ -529,8 +520,8 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             ) );
         }
 
-        for ( final UUID neighborEntitySetId : neighborsByEntitySet.keySet() ) {
-            final List<UUID> neighbors = neighborsByEntitySet.get( neighborEntitySetId );
+        for ( UUID neighborEntitySetId : neighborsByEntitySet.keySet() ) {
+            List<UUID> neighbors = neighborsByEntitySet.get( neighborEntitySetId );
 
             int neighborSegments = neighbors.size() / AuditingComponent.MAX_ENTITY_KEY_IDS_PER_EVENT;
             if ( neighbors.size() % AuditingComponent.MAX_ENTITY_KEY_IDS_PER_EVENT != 0 ) {
@@ -539,8 +530,8 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
 
             for ( int i = 0; i < neighborSegments; i++ ) {
 
-                final int fromIndex = i * AuditingComponent.MAX_ENTITY_KEY_IDS_PER_EVENT;
-                final int toIndex = i == neighborSegments - 1 ?
+                int fromIndex = i * AuditingComponent.MAX_ENTITY_KEY_IDS_PER_EVENT;
+                int toIndex = i == neighborSegments - 1 ?
                         neighbors.size() :
                         ( i + 1 ) * AuditingComponent.MAX_ENTITY_KEY_IDS_PER_EVENT;
 
@@ -569,15 +560,15 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     @Override
     @Timed
     public Map<UUID, Map<UUID, SetMultimap<UUID, NeighborEntityIds>>> executeFilteredEntityNeighborIdsSearch(
-            @PathVariable( ENTITY_SET_ID ) final UUID entitySetId,
-            @RequestBody final EntityNeighborsFilter filter ) {
-        final Set<Principal> principals = Principals.getCurrentPrincipals();
+            @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
+            @RequestBody EntityNeighborsFilter filter ) {
+        Set<Principal> principals = Principals.getCurrentPrincipals();
 
         Map<UUID, Map<UUID, SetMultimap<UUID, NeighborEntityIds>>> result = Maps.newHashMap();
         if ( authorizations.checkIfHasPermissions( new AclKey( entitySetId ), principals,
                 EnumSet.of( Permission.READ ) ) ) {
 
-            final EntitySet es = entitySetManager.getEntitySet( entitySetId );
+            EntitySet es = entitySetManager.getEntitySet( entitySetId );
 
             checkState( es != null, "Could not find entity set with id: " + entitySetId.toString() );
 
@@ -606,7 +597,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
 
         /* audit */
 
-        final SetMultimap<UUID, UUID> neighborsByEntitySet = HashMultimap.create();
+        SetMultimap<UUID, UUID> neighborsByEntitySet = HashMultimap.create();
 
         result.values().forEach( associationMap ->
                 associationMap.forEach( ( associationEsId, association ) -> {
@@ -619,8 +610,8 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                 } )
         );
 
-        final List<AuditableEvent> events = new ArrayList<>( neighborsByEntitySet.keySet().size() + 1 );
-        final UUID userId = spm.getCurrentUserId();
+        List<AuditableEvent> events = new ArrayList<>( neighborsByEntitySet.keySet().size() + 1 );
+        UUID userId = spm.getCurrentUserId();
 
         events.add( new AuditableEvent(
                 userId,
@@ -633,7 +624,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                 Optional.empty()
         ) );
 
-        for ( final UUID neighborEntitySetId : neighborsByEntitySet.keySet() ) {
+        for ( UUID neighborEntitySetId : neighborsByEntitySet.keySet() ) {
             events.add( new AuditableEvent(
                     userId,
                     new AclKey( neighborEntitySetId ),
@@ -671,7 +662,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             method = RequestMethod.GET )
     @Override
     @Timed
-    public Void triggerEntitySetDataIndex( @PathVariable( ENTITY_SET_ID ) final UUID entitySetId ) {
+    public Void triggerEntitySetDataIndex( @PathVariable( ENTITY_SET_ID ) UUID entitySetId ) {
         ensureAdminAccess();
         searchService.triggerEntitySetDataIndex( entitySetId );
         return null;
@@ -695,7 +686,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     @Timed
     public Void triggerAllOrganizationsIndex() {
         ensureAdminAccess();
-        final List<Organization> allOrganizations = Lists.newArrayList(
+        List<Organization> allOrganizations = Lists.newArrayList(
                 organizationService.getOrganizations(
                         getAccessibleObjects( SecurableObjectType.Organization,
                                 EnumSet.of( Permission.READ ) ) // TODO: other access check??
@@ -711,7 +702,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             method = RequestMethod.GET )
     @Override
     @Timed
-    public Void triggerOrganizationIndex( @PathVariable( ORGANIZATION_ID ) final UUID organizationId ) {
+    public Void triggerOrganizationIndex( @PathVariable( ORGANIZATION_ID ) UUID organizationId ) {
         ensureAdminAccess();
         searchService.triggerOrganizationIndex( organizationService.getOrganization( organizationId ) );
         return null;
@@ -721,24 +712,24 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
         return auditingManager;
     }
 
-    private static Set<UUID> getEntityKeyIdsFromSearchResult( final DataSearchResult searchResult ) {
+    private static Set<UUID> getEntityKeyIdsFromSearchResult( DataSearchResult searchResult ) {
         return searchResult.getHits().stream().map( SearchController::getEntityKeyId ).collect( Collectors.toSet() );
     }
 
-    private static UUID getEntityKeyId( final Map<FullQualifiedName, Set<Object>> entity ) {
+    private static UUID getEntityKeyId( Map<FullQualifiedName, Set<Object>> entity ) {
         return SearchService.getEntityKeyId( entity );
     }
 
-    private void validateSearch( final SearchConstraints searchConstraints ) {
+    private void validateSearch( SearchConstraints searchConstraints ) {
 
         /* Check sort is valid */
-        final SortDefinition sort = searchConstraints.getSortDefinition();
+        SortDefinition sort = searchConstraints.getSortDefinition();
         switch ( sort.getSortType() ) {
             case field:
             case geoDistance: {
-                final UUID sortPropertyTypeId = sort.getPropertyTypeId();
-                final EdmPrimitiveTypeKind datatype = edm.getPropertyType( sortPropertyTypeId ).getDatatype();
-                final Set<EdmPrimitiveTypeKind> allowedDatatypes = sort.getSortType().getAllowedDatatypes();
+                UUID sortPropertyTypeId = sort.getPropertyTypeId();
+                EdmPrimitiveTypeKind datatype = edm.getPropertyType( sortPropertyTypeId ).getDatatype();
+                Set<EdmPrimitiveTypeKind> allowedDatatypes = sort.getSortType().getAllowedDatatypes();
                 if ( !allowedDatatypes.contains( datatype ) ) {
                     throw new IllegalArgumentException(
                             "SortType " + sort.getSortType() + " cannot be executed on property type "
