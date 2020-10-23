@@ -29,6 +29,7 @@ import com.openlattice.edm.events.*
 import com.openlattice.edm.type.AssociationType
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
+import com.openlattice.graph.NeighborPage
 import com.openlattice.graph.PagedNeighborRequest
 import com.openlattice.graph.core.GraphService
 import com.openlattice.graph.edge.Edge
@@ -653,7 +654,7 @@ class SearchService(
             entitySetIds: Set<UUID>,
             pagedNeighborRequest: PagedNeighborRequest,
             principals: Set<Principal>
-    ): Map<UUID, List<NeighborEntityDetails>> {
+    ): NeighborPage {
 
 
         /* Load all possible association/neighbor entity set combos and perform auth checks **/
@@ -674,7 +675,7 @@ class SearchService(
 
         if (filter.associationEntitySetIds.isPresent && filter.associationEntitySetIds.get().isEmpty()) {
             logger.info("Missing association entity set ids.. returning empty result")
-            return ImmutableMap.of()
+            return NeighborPage(linkedMapOf(), null)
         }
 
 
@@ -703,9 +704,8 @@ class SearchService(
             }
         }
 
-
         /* Format neighbor data into the expected return format */
-        val entityNeighbors = Maps.newConcurrentMap<UUID, MutableList<NeighborEntityDetails>>()
+        val entityNeighbors = Maps.newLinkedHashMap<UUID, MutableList<NeighborEntityDetails>>()
 
         edges.forEach { edge ->
 
@@ -745,7 +745,7 @@ class SearchService(
 
         }
 
-        return entityNeighbors
+        return NeighborPage(entityNeighbors, edges.lastOrNull()?.key)
     }
 
     private fun getNeighborEntityDetails(

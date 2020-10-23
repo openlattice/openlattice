@@ -177,7 +177,7 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
                             )
                     ),
                     allUserPrincipals
-            )
+            ).neighbors
             sendAlertsForNewWrites(userSecurablePrincipal, persistentSearch, results, neighborsById)
             val lastReadDateTime = getLatestRead(results.hits)
             logger.info(
