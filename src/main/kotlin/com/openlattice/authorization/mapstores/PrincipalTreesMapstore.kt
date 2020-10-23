@@ -36,14 +36,11 @@ import com.openlattice.postgres.PostgresColumn.ACL_KEY
 import com.openlattice.postgres.PostgresColumn.PRINCIPAL_OF_ACL_KEY
 import com.openlattice.postgres.PostgresTable.PRINCIPAL_TREES
 import com.openlattice.postgres.ResultSetAdapters
-import com.openlattice.postgres.streams.PostgresIterable
-import com.openlattice.postgres.streams.StatementHolder
+import com.openlattice.postgres.streams.BasePostgresIterable
+import com.openlattice.postgres.streams.StatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import java.sql.ResultSet
-import java.util.function.Function
-import java.util.function.Supplier
 
 /**
  *
@@ -76,9 +73,11 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
                     entry.value.forEach {
                         stmt.addBatch(
                                 "INSERT INTO ${PRINCIPAL_TREES.name} " +
-                                        "VALUES (${toPostgres(aclKey)}, ${toPostgres(
-                                                it
-                                        )}) ON CONFLICT DO NOTHING"
+                                        "VALUES (${toPostgres(aclKey)}, ${
+                                            toPostgres(
+                                                    it
+                                            )
+                                        }) ON CONFLICT DO NOTHING"
                         )
                     }
                 }
@@ -92,15 +91,10 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
     }
 
     override fun loadAllKeys(): Iterable<AclKey> {
-        return PostgresIterable<AclKey>(Supplier {
-            logger.info("Load all iterator requested for ${this.mapName}")
-            val connection = hds.connection
-            val stmt = connection.createStatement()
-            val rs = stmt.executeQuery("SELECT distinct(${ACL_KEY.name}) from ${PRINCIPAL_TREES.name}")
+        val sql = "SELECT distinct(${ACL_KEY.name}) from ${PRINCIPAL_TREES.name}"
+        logger.info("Load all iterator requested for ${this.mapName}")
 
-            StatementHolder(connection, stmt, rs)
-        }, Function<ResultSet, AclKey> { ResultSetAdapters.aclKey(it) }
-        )
+        return BasePostgresIterable(StatementHolderSupplier(hds, sql)) { ResultSetAdapters.aclKey(it) }
     }
 
     @Timed
@@ -110,22 +104,14 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
 
     @Timed
     override fun loadAll(keys: Collection<AclKey>): Map<AclKey, AclKeySet> {
-        val data = PostgresIterable<Pair<AclKey, AclKey>>(
-                Supplier {
-                    val connection = hds.connection
-                    val stmt = connection.createStatement()
+        val sql = "SELECT * from ${PRINCIPAL_TREES.name} " +
+                "WHERE ${ACL_KEY.name} " +
+                "IN (" + keys.joinToString(",") { toPostgres(it) } + ")"
 
-                    val sql = "SELECT * from ${PRINCIPAL_TREES.name} " +
-                            "WHERE ${ACL_KEY.name} " +
-                            "IN (" + keys.joinToString(",") { toPostgres(it) } + ")"
+        val data = BasePostgresIterable(StatementHolderSupplier(hds, sql)) {
+            ResultSetAdapters.aclKey(it) to ResultSetAdapters.principalOfAclKey(it)
+        }
 
-                    StatementHolder(connection, stmt, stmt.executeQuery(sql))
-                },
-
-                Function<ResultSet, Pair<AclKey, AclKey>> {
-                    ResultSetAdapters.aclKey(it) to ResultSetAdapters.principalOfAclKey(it)
-                }
-        )
         val map = mutableMapOf<AclKey, AclKeySet>()
         data.forEach { map.getOrPut(it.first) { AclKeySet() }.add(it.second) }
 
@@ -184,7 +170,7 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
     override fun getMapConfig(): MapConfig {
         return MapConfig(mapName)
                 .setMapStoreConfig(mapStoreConfig)
-                .addIndexConfig(IndexConfig(IndexType.HASH,INDEX))
+                .addIndexConfig(IndexConfig(IndexType.HASH, INDEX))
     }
 
     companion object {
