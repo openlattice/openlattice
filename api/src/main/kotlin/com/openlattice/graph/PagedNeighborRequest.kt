@@ -13,8 +13,8 @@ data class PagedNeighborRequest(
 ) {
     init {
         Preconditions.checkState(
-                pageSize in 1..MAX_PAGE_SIZE,
-                "pageSize must be between 1 and $MAX_PAGE_SIZE, inclusive."
+                pageSize in 0..MAX_PAGE_SIZE,
+                "pageSize must be between 0 and $MAX_PAGE_SIZE, inclusive."
         )
     }
 }
