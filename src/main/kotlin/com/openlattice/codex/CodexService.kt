@@ -308,7 +308,7 @@ class CodexService(
                 getPropertyTypes(CodexConstants.CollectionTemplateType.SENT_FROM)
         )
 
-        dataGraphManager.createAssociations(mutableSetOf(DataEdgeKey(
+        dataGraphManager.createAssociations(setOf(DataEdgeKey(
                 EntityDataKey(messageEntitySetId, messageEntityKeyId),
                 EntityDataKey(senderEntitySetId, senderEntityKeyId),
                 EntityDataKey(sentFromEntitySetId, sentFromEntityKeyId)
@@ -409,7 +409,7 @@ class CodexService(
                             EntityDataKey(contactEntitySetId, idsByEntityKey.getValue(triple.third)),
                             EntityDataKey(assocEntitySetId, idsByEntityKey.getValue(triple.second))
                     )
-                }.toMutableSet()
+                }.toSet()
         )
 
         logger.info("Integrated page of ${missingMessages.size} messages for organization $organizationId.")
