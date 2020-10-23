@@ -20,21 +20,15 @@
  */
 package com.openlattice.assembler
 
-import com.openlattice.analysis.requests.AggregationType
-import com.openlattice.analysis.requests.BaseCalculationTypes
-import com.openlattice.analysis.requests.Calculation
-import com.openlattice.analysis.requests.CalculationType
-import com.openlattice.analysis.requests.Filter
-import com.openlattice.analysis.requests.Orientation
+import com.openlattice.analysis.requests.*
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.PostgresTable
-import com.openlattice.postgres.streams.PostgresIterable
-import com.openlattice.postgres.streams.StatementHolder
+import com.openlattice.postgres.streams.BasePostgresIterable
+import com.openlattice.postgres.streams.StatementHolderSupplier
+import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
-import java.sql.Connection
-import java.util.function.Supplier
 
 @Deprecated("Unused, needs rewrite")
 class AssemblerQueryService(
@@ -50,7 +44,7 @@ class AssemblerQueryService(
     }
 
     fun simpleAggregation(
-            connection: Connection,
+            hds: HikariDataSource,
             srcEntitySetName: String, edgeEntitySetName: String, dstEntitySetName: String,
             srcGroupColumns: List<String>, edgeGroupColumns: List<String>, dstGroupColumns: List<String>,
             srcAggregates: Map<String, List<AggregationType>>, edgeAggregates: Map<String, List<AggregationType>>, dstAggregates: Map<String, List<AggregationType>>,
@@ -178,13 +172,8 @@ class AssemblerQueryService(
 
         logger.info("Simple assembly aggregate query:\n$simpleSql")
 
-        return PostgresIterable(
-                Supplier {
-                    val stmt = connection.prepareStatement(simpleSql)
-                    val rs = stmt.executeQuery()
-                    StatementHolder(connection, stmt, rs)
-                }, java.util.function.Function { rs ->
-            return@Function ((srcGroupColAliases + edgeGroupColAliases + dstGroupColAliases).map { col ->
+        return BasePostgresIterable(StatementHolderSupplier(hds, simpleSql)) { rs ->
+            ((srcGroupColAliases + edgeGroupColAliases + dstGroupColAliases).map { col ->
                 val arrayVal = rs.getArray(col)
                 col to if (arrayVal == null) {
                     null
@@ -196,13 +185,13 @@ class AssemblerQueryService(
             } + (calculationAliases).map { col ->
                 col to rs.getObject(col)
             }).toMap()
-        })
+        }
     }
 
     private fun simpleAggregationJoinSql(srcEntitySetName: String, edgeEntitySetName: String, dstEntitySetName: String,
                                  cols: String, groupingColAliases: String, aggregateCols: String, calculationCols: String,
                                  filtersSql: String): String {
-        return "SELECT $cols, $aggregateCols $calculationCols FROM ${AssemblerConnectionManager.MATERIALIZED_VIEWS_SCHEMA}.${PostgresTable.E.name} " +
+        return "SELECT $cols, $aggregateCols $calculationCols FROM ${AssemblerConnectionManager.OPENLATTICE_SCHEMA}.${PostgresTable.E.name} " +
                 "INNER JOIN ${AssemblerConnectionManager.entitySetNameTableName(srcEntitySetName)} AS $SRC_TABLE_ALIAS USING( ${PostgresColumn.ID.name} ) " +
                 "INNER JOIN ${AssemblerConnectionManager.entitySetNameTableName(edgeEntitySetName)} AS $EDGE_TABLE_ALIAS ON( $EDGE_TABLE_ALIAS.${PostgresColumn.ID.name} = ${PostgresColumn.EDGE_COMP_2.name} ) " +
                 "INNER JOIN ${AssemblerConnectionManager.entitySetNameTableName(dstEntitySetName)} AS $DST_TABLE_ALIAS ON( $DST_TABLE_ALIAS.${PostgresColumn.ID.name} = ${PostgresColumn.EDGE_COMP_1.name} ) " +

@@ -30,11 +30,7 @@ import com.openlattice.ApiHelpers
 import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationRoleName
 import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationUserId
 import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresRoleName
-import com.openlattice.authorization.DbCredentialService
-import com.openlattice.authorization.Principal
-import com.openlattice.authorization.PrincipalType
-import com.openlattice.authorization.SecurablePrincipal
-import com.openlattice.authorization.SystemRole
+import com.openlattice.authorization.*
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.organization.OrganizationEntitySetFlag
@@ -42,17 +38,13 @@ import com.openlattice.organization.roles.Role
 import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.DataTables.quote
-import com.openlattice.postgres.PostgresColumn.ACL_KEY
-import com.openlattice.postgres.PostgresColumn.ENTITY_KEY_IDS_COL
-import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
-import com.openlattice.postgres.PostgresColumn.ID_VALUE
-import com.openlattice.postgres.PostgresColumn.PRINCIPAL_TYPE
+import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.E
 import com.openlattice.postgres.PostgresTable.PRINCIPALS
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
-import com.openlattice.postgres.streams.PostgresIterable
-import com.openlattice.postgres.streams.StatementHolder
+import com.openlattice.postgres.streams.BasePostgresIterable
+import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.openlattice.principals.RoleCreatedEvent
 import com.openlattice.principals.UserCreatedEvent
 import com.openlattice.transporter.types.TransporterDatastore.Companion.ORG_FOREIGN_TABLES_SCHEMA
@@ -63,8 +55,6 @@ import org.springframework.stereotype.Component
 import java.sql.Connection
 import java.sql.Statement
 import java.util.*
-import java.util.function.Function
-import java.util.function.Supplier
 import kotlin.NoSuchElementException
 
 private val logger = LoggerFactory.getLogger(AssemblerConnectionManager::class.java)
@@ -102,9 +92,11 @@ class AssemblerConnectionManager(
         val INTEGRATIONS_SCHEMA = "integrations"
 
         @JvmStatic
-        val MATERIALIZED_VIEWS_SCHEMA = "openlattice"
+        val OPENLATTICE_SCHEMA = "openlattice"
+
         @JvmStatic
         val TRANSPORTED_VIEWS_SCHEMA = "ol"
+
         @JvmStatic
         val PUBLIC_SCHEMA = "public"
 
@@ -113,7 +105,7 @@ class AssemblerConnectionManager(
 
         @JvmStatic
         fun entitySetNameTableName(entitySetName: String): String {
-            return "$MATERIALIZED_VIEWS_SCHEMA.${quote(entitySetName)}"
+            return "$OPENLATTICE_SCHEMA.${quote(entitySetName)}"
         }
 
         /**
@@ -159,7 +151,7 @@ class AssemblerConnectionManager(
 
         extDbManager.connect(dbName).let { dataSource ->
             configureRolesInDatabase(dataSource)
-            createSchema(dataSource, MATERIALIZED_VIEWS_SCHEMA)
+            createSchema(dataSource, OPENLATTICE_SCHEMA)
             createSchema(dataSource, INTEGRATIONS_SCHEMA)
             createSchema(dataSource, STAGING_SCHEMA)
             createSchema(dataSource, ORG_FOREIGN_TABLES_SCHEMA)
@@ -187,7 +179,7 @@ class AssemblerConnectionManager(
                                 false,
                                 INTEGRATIONS_SCHEMA,
                                 TRANSPORTED_VIEWS_SCHEMA,
-                                MATERIALIZED_VIEWS_SCHEMA,
+                                OPENLATTICE_SCHEMA,
                                 PUBLIC_SCHEMA,
                                 STAGING_SCHEMA
                         )
@@ -200,9 +192,9 @@ class AssemblerConnectionManager(
         val dbOrgUser = quote(dbCredentialService.getDbUsername(buildOrganizationUserId(organizationId)))
         dataSource.connection.createStatement().use { statement ->
             //Allow usage and create on schema openlattice to organization user
-            statement.execute(grantOrgUserPrivilegesOnSchemaSql(MATERIALIZED_VIEWS_SCHEMA, dbOrgUser))
+            statement.execute(grantOrgUserPrivilegesOnSchemaSql(OPENLATTICE_SCHEMA, dbOrgUser))
             statement.execute(grantOrgUserPrivilegesOnSchemaSql(STAGING_SCHEMA, dbOrgUser))
-            statement.execute(setSearchPathSql(dbOrgUser, true, MATERIALIZED_VIEWS_SCHEMA, STAGING_SCHEMA))
+            statement.execute(setSearchPathSql(dbOrgUser, true, OPENLATTICE_SCHEMA, STAGING_SCHEMA))
         }
     }
 
@@ -274,7 +266,7 @@ class AssemblerConnectionManager(
         }
     }
 
-    private fun createOrganizationDatabase(organizationId: UUID, dbName: String ) {
+    private fun createOrganizationDatabase(organizationId: UUID, dbName: String) {
         val db = quote(dbName)
         val dbRole = buildOrganizationRoleName(dbName)
 
@@ -464,7 +456,7 @@ class AssemblerConnectionManager(
                         // also grant select on edges (if at least 1 entity set is materialized to make sure edges
                         // materialized view exist)
                         if (authorizedPropertyTypesOfEntitySets.isNotEmpty()) {
-                            val edgesTableName = "$MATERIALIZED_VIEWS_SCHEMA.${E.name}"
+                            val edgesTableName = "$OPENLATTICE_SCHEMA.${E.name}"
                             val grantSelectSql = grantSelectSql(edgesTableName, postgresUserName, listOf())
                             stmt.addBatch(grantSelectSql)
                         }
@@ -484,7 +476,7 @@ class AssemblerConnectionManager(
             columns: List<String>
     ): String {
         val postgresUserName = when (principal.type) {
-            PrincipalType.USER -> dbCredentialService.getDbUsername( securePrincipalsManager.getPrincipal( principal.id ))
+            PrincipalType.USER -> dbCredentialService.getDbUsername(securePrincipalsManager.getPrincipal(principal.id))
             PrincipalType.ROLE -> buildPostgresRoleName(securePrincipalsManager.lookupRole(principal))
             else -> throw IllegalArgumentException(
                     "Only ${PrincipalType.USER} and ${PrincipalType.ROLE} principal " +
@@ -553,28 +545,20 @@ class AssemblerConnectionManager(
         }
     }
 
-    fun getAllRoles(): PostgresIterable<Role> {
-        return PostgresIterable(
-                Supplier {
-                    val conn = hds.connection
-                    val ps = conn.prepareStatement(PRINCIPALS_SQL)
-                    ps.setString(1, PrincipalType.ROLE.name)
-                    StatementHolder(conn, ps, ps.executeQuery())
-                },
-                Function { securePrincipalsManager.getSecurablePrincipal(ResultSetAdapters.aclKey(it)) as Role }
-        )
+    fun getAllRoles(): BasePostgresIterable<Role> {
+        return BasePostgresIterable(PreparedStatementHolderSupplier(hds, PRINCIPALS_SQL) { ps ->
+            ps.setString(1, PrincipalType.ROLE.name)
+        }) {
+            securePrincipalsManager.getSecurablePrincipal(ResultSetAdapters.aclKey(it)) as Role
+        }
     }
 
-    fun getAllUsers(): PostgresIterable<SecurablePrincipal> {
-        return PostgresIterable(
-                Supplier {
-                    val conn = hds.connection
-                    val ps = conn.prepareStatement(PRINCIPALS_SQL)
-                    ps.setString(1, PrincipalType.USER.name)
-                    StatementHolder(conn, ps, ps.executeQuery())
-                },
-                Function { securePrincipalsManager.getSecurablePrincipal(ResultSetAdapters.aclKey(it)) }
-        )
+    fun getAllUsers(): BasePostgresIterable<SecurablePrincipal> {
+        return BasePostgresIterable(PreparedStatementHolderSupplier(hds, PRINCIPALS_SQL) { ps ->
+            ps.setString(1, PrincipalType.USER.name)
+        }) {
+            securePrincipalsManager.getSecurablePrincipal(ResultSetAdapters.aclKey(it))
+        }
     }
 
     private fun configureRolesInDatabase(dataSource: HikariDataSource) {
@@ -669,17 +653,17 @@ class AssemblerConnectionManager(
             connection.createStatement().use { statement ->
                 logger.info(
                         "Granting USAGE on {} schema, and granting USAGE and CREATE on {} schema for users: {}",
-                        MATERIALIZED_VIEWS_SCHEMA,
+                        OPENLATTICE_SCHEMA,
                         STAGING_SCHEMA,
                         PUBLIC_SCHEMA,
                         userIds
                 )
-                statement.execute("GRANT USAGE ON SCHEMA $MATERIALIZED_VIEWS_SCHEMA TO $userIdsSql")
+                statement.execute("GRANT USAGE ON SCHEMA $OPENLATTICE_SCHEMA TO $userIdsSql")
                 statement.execute("GRANT USAGE, CREATE ON SCHEMA $STAGING_SCHEMA TO $userIdsSql")
                 //Set the search path for the user
-                logger.info("Setting search_path to $MATERIALIZED_VIEWS_SCHEMA,$TRANSPORTED_VIEWS_SCHEMA for users $userIds")
+                logger.info("Setting search_path to $OPENLATTICE_SCHEMA,$TRANSPORTED_VIEWS_SCHEMA for users $userIds")
                 userIds.forEach { userId ->
-                    statement.addBatch(setSearchPathSql(userId, true, MATERIALIZED_VIEWS_SCHEMA, STAGING_SCHEMA, TRANSPORTED_VIEWS_SCHEMA))
+                    statement.addBatch(setSearchPathSql(userId, true, OPENLATTICE_SCHEMA, STAGING_SCHEMA, TRANSPORTED_VIEWS_SCHEMA))
                 }
                 statement.executeBatch()
             }
@@ -692,7 +676,7 @@ class AssemblerConnectionManager(
         val dbName = extDbManager.getOrganizationDatabaseName(organizationId)
         logger.info(
                 "Removing users $userIds from database $dbName, schema usage and all privileges on all tables in schemas {} and {}",
-                MATERIALIZED_VIEWS_SCHEMA,
+                OPENLATTICE_SCHEMA,
                 STAGING_SCHEMA
         )
 
@@ -700,8 +684,8 @@ class AssemblerConnectionManager(
             conn.createStatement().use { stmt ->
                 stmt.execute(revokePrivilegesOnDatabaseSql(dbName, userIdsSql))
 
-                stmt.execute(revokePrivilegesOnSchemaSql(MATERIALIZED_VIEWS_SCHEMA, userIdsSql))
-                stmt.execute(revokePrivilegesOnTablesInSchemaSql(MATERIALIZED_VIEWS_SCHEMA, userIdsSql))
+                stmt.execute(revokePrivilegesOnSchemaSql(OPENLATTICE_SCHEMA, userIdsSql))
+                stmt.execute(revokePrivilegesOnTablesInSchemaSql(OPENLATTICE_SCHEMA, userIdsSql))
 
                 stmt.execute(revokePrivilegesOnSchemaSql(STAGING_SCHEMA, userIdsSql))
                 stmt.execute(revokePrivilegesOnTablesInSchemaSql(STAGING_SCHEMA, userIdsSql))
@@ -801,9 +785,7 @@ internal fun createRoleIfNotExistsSql(dbRole: String): String {
             "      FROM   pg_catalog.pg_roles\n" +
             "      WHERE  rolname = '$dbRole') THEN\n" +
             "\n" +
-            "      CREATE ROLE ${ApiHelpers.dbQuote(
-                    dbRole
-            )} NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN;\n" +
+            "      CREATE ROLE ${ApiHelpers.dbQuote(dbRole)} NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN;\n" +
             "   END IF;\n" +
             "END\n" +
             "\$do\$;"
@@ -818,9 +800,7 @@ internal fun createUserIfNotExistsSql(dbUser: String, dbUserPassword: String): S
             "      FROM   pg_catalog.pg_roles\n" +
             "      WHERE  rolname = '$dbUser') THEN\n" +
             "\n" +
-            "      CREATE ROLE ${ApiHelpers.dbQuote(
-                    dbUser
-            )} NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT LOGIN ENCRYPTED PASSWORD '$dbUserPassword';\n" +
+            "      CREATE ROLE ${ApiHelpers.dbQuote(dbUser)} NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT LOGIN ENCRYPTED PASSWORD '$dbUserPassword';\n" +
             "   END IF;\n" +
             "END\n" +
             "\$do\$;"
@@ -835,9 +815,7 @@ internal fun dropOwnedIfExistsSql(dbUser: String): String {
             "      FROM   pg_catalog.pg_roles\n" +
             "      WHERE  rolname = '$dbUser') THEN\n" +
             "\n" +
-            "      DROP OWNED BY ${ApiHelpers.dbQuote(
-                    dbUser
-            )} ;\n" +
+            "      DROP OWNED BY ${ApiHelpers.dbQuote(dbUser)} ;\n" +
             "   END IF;\n" +
             "END\n" +
             "\$do\$;"
@@ -856,9 +834,7 @@ internal fun dropUserIfExistsSql(dbUser: String): String {
             "      FROM   pg_catalog.pg_roles\n" +
             "      WHERE  rolname = '$dbUser') THEN\n" +
             "\n" +
-            "      DROP ROLE ${ApiHelpers.dbQuote(
-                    dbUser
-            )} ;\n" +
+            "      DROP ROLE ${ApiHelpers.dbQuote(dbUser)} ;\n" +
             "   END IF;\n" +
             "END\n" +
             "\$do\$;"

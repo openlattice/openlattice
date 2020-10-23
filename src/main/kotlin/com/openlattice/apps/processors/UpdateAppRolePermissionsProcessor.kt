@@ -9,13 +9,13 @@ import kotlin.collections.MutableMap.MutableEntry
 data class UpdateAppRolePermissionsProcessor(
         val roleId: UUID,
         val permissions: Map<Permission, Map<UUID, Optional<Set<UUID>>>>
-) : AbstractRhizomeEntryProcessor<UUID, App?, Unit>() {
+) : AbstractRhizomeEntryProcessor<UUID, App?, Boolean>() {
 
-    override fun process(entry: MutableEntry<UUID, App?>) {
-        val app = entry.value
-        if (app != null) {
-            app.setRolePermissions(roleId, permissions)
-            entry.setValue(app)
-        }
+    override fun process(entry: MutableEntry<UUID, App?>): Boolean {
+        val app = entry.value ?: return false
+
+        app.setRolePermissions(roleId, permissions)
+        entry.setValue(app)
+        return true
     }
 }
