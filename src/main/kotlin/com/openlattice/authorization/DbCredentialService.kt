@@ -37,7 +37,10 @@ const val USER_PREFIX = "user"
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class DbCredentialService(hazelcastInstance: HazelcastInstance, val longIdService: HazelcastLongIdService) {
+class DbCredentialService(
+        hazelcastInstance: HazelcastInstance,
+        val longIdService: HazelcastLongIdService
+) {
 
     companion object {
         private val logger = LoggerFactory.getLogger(

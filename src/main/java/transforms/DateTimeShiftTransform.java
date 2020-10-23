@@ -3,16 +3,16 @@ package transforms;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.openlattice.shuttle.dates.JavaDateTimeHelper;
-import com.openlattice.shuttle.dates.TimeZones;
 import com.openlattice.shuttle.transformations.Transformation;
 import com.openlattice.shuttle.util.Constants;
 
+import java.time.OffsetDateTime;
+import java.util.Optional;
 import java.util.TimeZone;
 
-public class DateTimeTransform extends Transformation<String> {
+public class DateTimeShiftTransform extends Transformation<String> {
     private final String[] pattern;
     private final TimeZone timezone;
-    private final Boolean  shouldAddTimezone;
 
     /**
      * Represents a transformation from string to datetime.
@@ -21,19 +21,25 @@ public class DateTimeTransform extends Transformation<String> {
      * @param timezone: name of the timezone
      */
     @JsonCreator
-    public DateTimeTransform(
+    public DateTimeShiftTransform(
             @JsonProperty( Constants.PATTERN ) String[] pattern,
-            @JsonProperty( Constants.TIMEZONE ) String timezone
+            @JsonProperty( Constants.TIMEZONE ) Optional<String> timezone
     ) {
         this.pattern = pattern;
-        this.timezone = TimeZones.checkTimezone( timezone );
-        this.shouldAddTimezone = timezone == null;
+        if (timezone.isPresent()){
+            this.timezone = TimeZone.getTimeZone( timezone.get() );
+        } else {
+            this.timezone = Constants.DEFAULT_TIMEZONE;
+        }
     }
 
-    public DateTimeTransform(
+    public DateTimeShiftTransform(
             @JsonProperty( Constants.PATTERN ) String[] pattern
     ) {
-        this( pattern, null );
+        this(
+                pattern,
+                Optional.empty()
+        );
     }
 
     @JsonProperty( value = Constants.PATTERN, required = false )
@@ -49,8 +55,14 @@ public class DateTimeTransform extends Transformation<String> {
     @Override
     public Object applyValue( String o ) {
         final JavaDateTimeHelper dtHelper = new JavaDateTimeHelper( this.timezone,
-                this.pattern, this.shouldAddTimezone );
-        return dtHelper.parseDateTime( o );
+                pattern, false );
+        OffsetDateTime in = dtHelper.parseDateTime( o );
+        if ( in == null ) return null;
+        OffsetDateTime out = in
+                .toLocalDateTime()
+                .atZone(this.timezone.toZoneId()).toOffsetDateTime();
+
+        return out;
     }
 
 }

@@ -18,10 +18,9 @@ data class TransportEntitySetEntryProcessor(
         val ptIdToFqnColumns: Map<UUID, FullQualifiedName>,
         val organizationId: UUID,
         val usersToColumnPermissions: Map<String, List<String>>
-): AbstractRhizomeEntryProcessor<UUID, EntitySet, Void?>(),
+) : AbstractRhizomeEntryProcessor<UUID, EntitySet, Void?>(),
         Offloadable,
-        TransporterDependent<TransportEntitySetEntryProcessor>
-{
+        TransporterDependent<TransportEntitySetEntryProcessor> {
     @Transient
     private lateinit var data: TransporterDatastore
 
@@ -33,19 +32,31 @@ data class TransportEntitySetEntryProcessor(
         check(::data.isInitialized) { TransporterDependent.NOT_INITIALIZED }
         val es = entry.value
         val esName = es.name
-        if ( es.flags.contains(EntitySetFlag.TRANSPORTED) ){
+        if (es.flags.contains(EntitySetFlag.TRANSPORTED)) {
             return null
         }
 
         try {
-            data.linkOrgDbToTransporterDb( organizationId )
+            data.linkOrgDbToTransporterDb(organizationId)
 
-            data.destroyEntitySetViewInOrgDb( organizationId, esName )
+            data.destroyEdgeViewInOrgDb(organizationId, esName)
 
-            data.destroyTransportedEntityTypeTableInOrg( organizationId, es.entityTypeId )
+            data.destroyEntitySetViewInOrgDb(organizationId, esName)
+
+            data.destroyTransportedEntityTypeTableInOrg(organizationId, es.entityTypeId)
 
             // import et table from foreign server
-            data.transportEntityTypeTableToOrg( organizationId, es.entityTypeId )
+            data.transportEdgesTableToOrg(organizationId)
+
+            // import edges table from foreign server
+            data.transportEntityTypeTableToOrg(organizationId, es.entityTypeId)
+
+            // create edge view in org db
+            data.createEdgeViewInOrgDb(
+                    organizationId,
+                    esName,
+                    es.id
+            )
 
             // create view in org db
             data.createEntitySetViewInOrgDb(
@@ -53,11 +64,18 @@ data class TransportEntitySetEntryProcessor(
                     esName,
                     es.id,
                     es.entityTypeId,
-                    ptIdToFqnColumns,
+                    ptIdToFqnColumns
+            )
+
+            // create roles, apply permissions
+            data.applyViewAndEdgePermissions(
+                    organizationId,
+                    esName,
                     usersToColumnPermissions
             )
+
             es.flags.add(EntitySetFlag.TRANSPORTED)
-        } catch ( ex: Exception ) {
+        } catch (ex: Exception) {
             logger.error("Marking entity set id as not materialized {}", entry.key, ex)
             es.flags.remove(EntitySetFlag.TRANSPORTED)
         } finally {

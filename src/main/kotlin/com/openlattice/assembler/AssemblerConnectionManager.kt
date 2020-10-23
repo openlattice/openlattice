@@ -256,18 +256,10 @@ class AssemblerConnectionManager(
             principals: Collection<SecurablePrincipal>
     ) {
         extDbManager.connectToOrg(organizationId).let { dataSource ->
-            removeMembersFromOrganization( organizationId, dataSource, principals )
-        }
-    }
-
-    fun removeMembersFromOrganization(
-            organizationId: UUID,
-            dataSource: HikariDataSource,
-            principals: Collection<SecurablePrincipal>
-    ) {
-        if (principals.isNotEmpty()) {
-            val userNames = principals.map { dbCredentialService.getDbUsername(it) }
-            revokeConnectAndSchemaUsage(dataSource, organizationId, userNames)
+            if (principals.isNotEmpty()) {
+                val userNames = principals.map { dbCredentialService.getDbUsername(it) }
+                revokeConnectAndSchemaUsage(dataSource, organizationId, userNames)
+            }
         }
     }
 
@@ -736,20 +728,20 @@ class AssemblerConnectionManager(
 
     fun getDatabaseOid(dbName: String): Int {
         var oid = -1
-        try {
-            return atlas.connection.use { conn ->
+        return try {
+            atlas.connection.use { conn ->
                 conn.prepareStatement(databaseOidSql).use { ps ->
                     ps.setString(1, dbName)
                     val rs = ps.executeQuery()
                     if (rs.next()) {
                         oid = rs.getInt(1)
                     }
-                    return oid
+                    oid
                 }
             }
         } catch (e: Exception) {
             logger.error("Unable to look up OID for database {}: ", dbName, e)
-            return oid
+            oid
         }
     }
 

@@ -540,11 +540,6 @@ public final class PostgresTable {
                         .ifNotExists()
         );
 
-        String foo = "(" + SRC_ENTITY_SET_ID.getName()
-                +  ",( abs(" + VERSION.getName() + ") > " + LAST_TRANSPORT.getName() + "))"
-                + "OR (" + DST_ENTITY_SET_ID.getName() + ",( abs(" + VERSION.getName() + ") > " + LAST_TRANSPORT.getName() + "))"
-                + "OR (" + EDGE_ENTITY_SET_ID.getName() + ",( abs(" + VERSION.getName() + ") > " + LAST_TRANSPORT.getName() + "))";
-                System.out.println(foo);
         E.addIndexes(
                 new PostgresColumnsIndexDefinition( E, SRC_ENTITY_KEY_ID )
                         .name( "e_src_entity_key_id_idx" )
