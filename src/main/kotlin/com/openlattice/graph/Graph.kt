@@ -219,7 +219,6 @@ class Graph(
     ): Stream<Edge> {
 
         val filter = pagedNeighborRequest.filter
-        val limit = pagedNeighborRequest.pageSize
 
         val srcEntitySetIds = filter.srcEntitySetIds.orElse(setOf())
         val entitySetPartitions = partitionManager.getPartitionsByEntitySetId(srcEntitySetIds + entitySetIds)
