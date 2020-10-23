@@ -115,6 +115,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                         search.getOptionalEntityType(),
                         search.getOptionalPropertyTypes(),
                         search.getOptionalOrganizationId(),
+                        search.getExcludePropertyTypes(),
                         search.getStart(),
                         search.getMaxHits() );
     }
@@ -133,6 +134,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
+                        false,
                         start,
                         Math.min( maxHits, SearchApi.MAX_SEARCH_RESULTS ) );
     }
