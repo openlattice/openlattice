@@ -154,8 +154,8 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     @Override
     @GetMapping( value = ID_PATH + SET_ID_PATH + TRANSPORT, produces = MediaType.APPLICATION_JSON_VALUE )
     @ResponseStatus( HttpStatus.OK )
-    public Void transportEntitySet( @PathVariable(ID) UUID organizationId, @PathVariable(SET_ID) UUID entitySetId) {
-        organizations.ensureOrganizationExists(organizationId);
+    public Void transportEntitySet( @PathVariable( ID ) UUID organizationId, @PathVariable( SET_ID ) UUID entitySetId ) {
+        organizations.ensureOrganizationExists( organizationId );
         ensureRead( organizationId );
         ensureTransportAccess( new AclKey( entitySetId ) );
         edms.transportEntitySet( organizationId, entitySetId );
@@ -163,12 +163,12 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     }
 
     @Override
-    @GetMapping( value = ID_PATH + SET_ID_PATH + DESTROY , produces = MediaType.APPLICATION_JSON_VALUE )
+    @GetMapping( value = ID_PATH + SET_ID_PATH + DESTROY, produces = MediaType.APPLICATION_JSON_VALUE )
     @ResponseStatus( HttpStatus.OK )
-    public Void destroyTransportedEntitySet(@PathVariable(ID) UUID organizationId, @PathVariable(SET_ID) UUID entitySetId) {
-        organizations.ensureOrganizationExists(organizationId);
+    public Void destroyTransportedEntitySet( @PathVariable( ID ) UUID organizationId, @PathVariable( SET_ID ) UUID entitySetId ) {
+        organizations.ensureOrganizationExists( organizationId );
         ensureRead( organizationId );
-        ensureTransportAccess( new AclKey( organizationId ));
+        ensureTransportAccess( new AclKey( entitySetId ) );
         edms.destroyTransportedEntitySet( entitySetId );
         return null;
     }
@@ -206,18 +206,18 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             @PathVariable( ID ) UUID organizationId,
             @RequestBody EnumSet<OrganizationEntitySetFlag> flagFilter ) {
         ensureRead( organizationId );
-        final var orgPrincipal = organizations.getOrganizationPrincipal( organizationId );
+        var orgPrincipal = organizations.getOrganizationPrincipal( organizationId );
         if ( orgPrincipal == null ) {
             return null;
         }
-        final var internal = entitySetManager.getEntitySetsForOrganization( organizationId );
-        final var external = authorizations.getAuthorizedObjectsOfType(
+        var internal = entitySetManager.getEntitySetsForOrganization( organizationId );
+        var external = authorizations.getAuthorizedObjectsOfType(
                 orgPrincipal.getPrincipal(),
                 SecurableObjectType.EntitySet,
                 EnumSet.of( Permission.MATERIALIZE ) );
-        final var materialized = assembler.getMaterializedEntitySetsInOrganization( organizationId );
+        var materialized = assembler.getMaterializedEntitySetsInOrganization( organizationId );
 
-        final Map<UUID, Set<OrganizationEntitySetFlag>> entitySets = new HashMap<>( 2 * internal.size() );
+        Map<UUID, Set<OrganizationEntitySetFlag>> entitySets = new HashMap<>( 2 * internal.size() );
 
         if ( flagFilter.contains( OrganizationEntitySetFlag.INTERNAL ) ) {
             internal.forEach( entitySetId -> entitySets
@@ -311,7 +311,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             @RequestBody Integer refreshRate ) {
         ensureOwner( organizationId );
 
-        final var refreshRateInMilliSecs = getRefreshRateMillisFromMins( refreshRate );
+        var refreshRateInMilliSecs = getRefreshRateMillisFromMins( refreshRate );
 
         assembler.updateRefreshRate( organizationId, entitySetId, refreshRateInMilliSecs );
         return null;
@@ -439,7 +439,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             value = ID_PATH + PRINCIPALS + MEMBERS )
     public Iterable<OrganizationMember> getMembers( @PathVariable( ID ) UUID organizationId ) {
         ensureRead( organizationId );
-        Set<Principal> members = organizations.getMembers( organizationId );
+        Set<Principal>                 members             = organizations.getMembers( organizationId );
         Collection<SecurablePrincipal> securablePrincipals = principalService.getSecurablePrincipals( members );
         return securablePrincipals
                 .stream()
@@ -493,7 +493,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Set<Role> getRoles( @PathVariable( ID ) UUID organizationId ) {
         ensureRead( organizationId );
-        Set<Role> roles = organizations.getRoles( organizationId );
+        Set<Role>   roles                 = organizations.getRoles( organizationId );
         Set<AclKey> authorizedRoleAclKeys = getAuthorizedRoleAclKeys( roles );
         return Sets.filter( roles, role -> role != null && authorizedRoleAclKeys.contains( role.getAclKey() ) );
     }
