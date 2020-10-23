@@ -1250,6 +1250,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             Optional<String> optionalSearchTerm,
             Optional<UUID> optionalEntityType,
             Optional<Set<UUID>> optionalPropertyTypes,
+            boolean excludePropertyTypes,
             Set<AclKey> authorizedAclKeys,
             int start,
             int maxHits ) {
@@ -1294,7 +1295,14 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 .actionGet();
 
         List<Map<String, Object>> hits = Lists.newArrayList();
-        response.getHits().forEach( hit -> hits.add( hit.getSourceAsMap() ) );
+        response.getHits().forEach( hit -> {
+            Map<String, Object> entitySetResult = hit.getSourceAsMap();
+            if ( excludePropertyTypes ) {
+                entitySetResult.remove( PROPERTY_TYPES );
+            }
+            hits.add( entitySetResult );
+        } );
+
         return new SearchResult( response.getHits().getTotalHits().value, hits );
     }
 
