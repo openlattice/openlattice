@@ -26,7 +26,7 @@ import com.openlattice.data.WriteEvent
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.PagedNeighborRequest
 import com.openlattice.graph.edge.Edge
-import com.openlattice.postgres.streams.PostgresIterable
+import com.openlattice.postgres.streams.BasePostgresIterable
 import java.util.*
 import java.util.stream.Stream
 
@@ -45,7 +45,7 @@ interface GraphService {
      * entitySetId.
      * If includeClearedEdges is set to true, it will also return cleared (version < 0) entities.
      */
-    fun getEdgeKeysOfEntitySet(entitySetId: UUID, includeClearedEdges: Boolean): PostgresIterable<DataEdgeKey>
+    fun getEdgeKeysOfEntitySet(entitySetId: UUID, includeClearedEdges: Boolean): BasePostgresIterable<DataEdgeKey>
 
     /**
      * Returns all [DataEdgeKey]s that include requested entityKeyIds either as src, dst and/or edge.
@@ -55,7 +55,7 @@ interface GraphService {
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
             includeClearedEdges: Boolean
-    ): PostgresIterable<DataEdgeKey>
+    ): BasePostgresIterable<DataEdgeKey>
 
     fun getEdgesAndNeighborsForVertices(
             entitySetIds: Set<UUID>,
