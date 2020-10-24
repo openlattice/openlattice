@@ -59,6 +59,7 @@ import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
 
@@ -442,7 +443,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     @Timed
     public Map<UUID, List<NeighborEntityDetails>> executeFilteredEntityNeighborSearch(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
-            @RequestBody final EntityNeighborsFilter filter ) {
+            @RequestBody EntityNeighborsFilter filter ) {
         Set<Principal> principals = Principals.getCurrentPrincipals();
 
         Map<UUID, List<NeighborEntityDetails>> result = Maps.newHashMap();
@@ -567,7 +568,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     public Map<UUID, Map<UUID, SetMultimap<UUID, NeighborEntityIds>>> executeFilteredEntityNeighborIdsSearch(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @RequestBody EntityNeighborsFilter filter ) {
-        final Set<Principal> principals = Principals.getCurrentPrincipals();
+        Set<Principal> principals = Principals.getCurrentPrincipals();
 
         Map<UUID, Map<UUID, SetMultimap<UUID, NeighborEntityIds>>> result = Maps.newHashMap();
         if ( authorizations.checkIfHasPermissions( new AclKey( entitySetId ), principals,
@@ -709,10 +710,9 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     @Timed
     public Void triggerOrganizationIndex( @PathVariable( ORGANIZATION_ID ) UUID organizationId ) {
         ensureAdminAccess();
-        Organization organization = organizationService.getOrganization( organizationId );
-        if ( organization != null ) {
-            searchService.triggerOrganizationIndex( organization );
-        }
+        searchService.triggerOrganizationIndex( checkNotNull( organizationService.getOrganization( organizationId ),
+                "Unable to trigger organization index because organization [" + organizationId.toString()
+                        + "] does not exist." ) );
         return null;
     }
 
