@@ -1,9 +1,15 @@
 package com.openlattice.edm.tasks
 
+import com.hazelcast.core.HazelcastInstance
+import com.openlattice.apps.AppApi
+import com.openlattice.authorization.AclKey
+import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.client.RetrofitFactory
+import com.openlattice.collections.CollectionsApi
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.EdmApi
 import com.openlattice.edm.EntityDataModel
+import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies
 import com.openlattice.tasks.Task
@@ -26,6 +32,7 @@ class EdmSyncInitializerTask : HazelcastInitializationTask<EdmSyncInitializerDep
         if (dependencies.active) {
             logger.info("Start syncing EDM")
             updateEdm(dependencies.edmManager)
+            initializeEntityTypeCollectionsAndApps(dependencies.hazelcast)
             logger.info("Finished syncing EDM")
         }
     }
@@ -70,6 +77,36 @@ class EdmSyncInitializerTask : HazelcastInitializationTask<EdmSyncInitializerDep
 
         // update with differences
         edmManager.entityDataModel = edmDiff.diff
+    }
+
+    private fun initializeEntityTypeCollectionsAndApps(hazelcast: HazelcastInstance) {
+        val prodRetrofit = RetrofitFactory.newClient(RetrofitFactory.Environment.PRODUCTION)
+
+        val namesMap = HazelcastMap.NAMES.getMap(hazelcast)
+        val aclKeysMap = HazelcastMap.ACL_KEYS.getMap(hazelcast)
+        val securableObjectTypesMap = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap(hazelcast)
+        val entityTypeCollectionsMap = HazelcastMap.ENTITY_TYPE_COLLECTIONS.getMap(hazelcast)
+        val appsMap = HazelcastMap.APPS.getMap(hazelcast)
+
+        /* Initialize EntityTypeCollections */
+
+        val prodCollectionsApi = prodRetrofit.create(CollectionsApi::class.java)
+        val entityTypeCollections = prodCollectionsApi.getAllEntityTypeCollections()
+
+        namesMap.putAll(entityTypeCollections.associate { it.id to it.type.fullQualifiedNameAsString })
+        aclKeysMap.putAll(entityTypeCollections.associate { it.type.fullQualifiedNameAsString to it.id })
+        securableObjectTypesMap.putAll(entityTypeCollections.associate { AclKey(it.id) to SecurableObjectType.EntityTypeCollection })
+        entityTypeCollectionsMap.putAll(entityTypeCollections.associateBy { it.id })
+
+        /* Initialize apps */
+
+        val appApi = prodRetrofit.create(AppApi::class.java)
+        val apps = appApi.apps
+
+        namesMap.putAll(apps.associate { it.id to it.name })
+        aclKeysMap.putAll(apps.associate { it.name to it.id })
+        securableObjectTypesMap.putAll(apps.associate { AclKey(it.id) to SecurableObjectType.App })
+        appsMap.putAll(apps.associateBy { it.id })
     }
 
     /**
