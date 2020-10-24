@@ -63,6 +63,17 @@ interface GraphApi {
             @Body query: NeighborhoodQuery
     ): Neighborhood
 
+    /**
+     * Loads a page of neighbors for the given entity set as defined by the pagedNeighborRequest.
+     *
+     * @param entitySetId The id of the entity set to load neighbors for
+     * @param pagedNeighborRequest An object defining which entities to load neighbors for, what entity sets to load
+     * from, how many neighbors to return, and a paging token indicating where to begin the page of results.
+     *
+     * @return A [NeighborPage] object, containing up to the requested number of neighbors, and also a bookmark to be
+     * used as a paging token for subsequent requests.
+     *
+     */
     @POST(BASE + NEIGHBORS + ENTITY_SET_ID_PATH + PAGE)
     fun getPageOfNeighbors(
             @Path(ENTITY_SET_ID) entitySetId: UUID,
