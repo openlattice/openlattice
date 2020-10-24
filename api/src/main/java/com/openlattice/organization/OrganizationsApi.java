@@ -308,7 +308,7 @@ public interface OrganizationsApi {
      * @param tableName
      * @return
      */
-    @POST( BASE + PROMOTE )
+    @POST( BASE + PROMOTE + ID_PATH )
     Void promoteStagingTable( @Path( ID ) UUID organizationId, @Body String tableName );
 
     @GET( BASE + ID_PATH + DATABASE )
