@@ -5,7 +5,7 @@ import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.hazelcast.query.QueryConstants
-import com.openlattice.assembler.AssemblerConnectionManager.Companion.MATERIALIZED_VIEWS_SCHEMA
+import com.openlattice.assembler.AssemblerConnectionManager.Companion.OPENLATTICE_SCHEMA
 import com.openlattice.assembler.AssemblerConnectionManager.Companion.STAGING_SCHEMA
 import com.openlattice.assembler.PostgresRoles.Companion.getSecurablePrincipalIdFromUserName
 import com.openlattice.assembler.PostgresRoles.Companion.isPostgresUserName
@@ -26,21 +26,9 @@ import com.openlattice.organization.OrganizationExternalDatabaseTableColumnsPair
 import com.openlattice.organizations.mapstores.ORGANIZATION_ID_INDEX
 import com.openlattice.organizations.mapstores.TABLE_ID_INDEX
 import com.openlattice.organizations.roles.SecurePrincipalsManager
+import com.openlattice.postgres.*
 import com.openlattice.postgres.DataTables.quote
-import com.openlattice.postgres.PostgresAuthenticationRecord
-import com.openlattice.postgres.PostgresColumn
-import com.openlattice.postgres.PostgresConnectionType
-import com.openlattice.postgres.PostgresPrivileges
-import com.openlattice.postgres.PostgresTable
-import com.openlattice.postgres.PostgresTableDefinition
-import com.openlattice.postgres.ResultSetAdapters.columnName
-import com.openlattice.postgres.ResultSetAdapters.constraintType
-import com.openlattice.postgres.ResultSetAdapters.name
-import com.openlattice.postgres.ResultSetAdapters.ordinalPosition
-import com.openlattice.postgres.ResultSetAdapters.postgresAuthenticationRecord
-import com.openlattice.postgres.ResultSetAdapters.privilegeType
-import com.openlattice.postgres.ResultSetAdapters.sqlDataType
-import com.openlattice.postgres.ResultSetAdapters.user
+import com.openlattice.postgres.ResultSetAdapters.*
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.StatementHolderSupplier
@@ -670,7 +658,7 @@ class ExternalDatabaseManagementService(
     }
 
     /**
-     * Moves a table from the [MATERIALIZED_VIEWS_SCHEMA] schema to the [STAGING_SCHEMA] schema
+     * Moves a table from the [OPENLATTICE_SCHEMA] schema to the [STAGING_SCHEMA] schema
      */
     fun promoteStagingTable(organizationId: UUID, tableName: String) {
         externalDbManager.connectToOrg(organizationId).use { hds ->
@@ -685,7 +673,7 @@ class ExternalDatabaseManagementService(
     /*INTERNAL SQL QUERIES*/
     private fun getCurrentTableAndColumnNamesSql(): String {
         return selectExpression + fromExpression + leftJoinColumnsExpression +
-                "WHERE information_schema.tables.table_schema=ANY('{$MATERIALIZED_VIEWS_SCHEMA,$STAGING_SCHEMA}') " +
+                "WHERE information_schema.tables.table_schema=ANY('{$OPENLATTICE_SCHEMA,$STAGING_SCHEMA}') " +
                 "AND table_type='BASE TABLE'"
     }
 
@@ -753,7 +741,7 @@ class ExternalDatabaseManagementService(
     }
 
     private fun publishStagingTableSql(tableName: String): String {
-        return "ALTER TABLE $tableName SET SCHEMA TO $MATERIALIZED_VIEWS_SCHEMA"
+        return "ALTER TABLE ${quote(tableName)} SET SCHEMA $OPENLATTICE_SCHEMA"
     }
 
 }

@@ -23,7 +23,6 @@ package com.openlattice.assembler
 
 import com.codahale.metrics.MetricRegistry
 import com.codahale.metrics.MetricRegistry.name
-import com.google.common.collect.Sets
 import com.google.common.eventbus.EventBus
 import com.google.common.eventbus.Subscribe
 import com.hazelcast.core.HazelcastInstance
@@ -39,12 +38,9 @@ import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.DbCredentialService
 import com.openlattice.authorization.EdmAuthorizationHelper
-import com.openlattice.authorization.Principal
-import com.openlattice.authorization.PrincipalType
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.controllers.exceptions.ResourceNotFoundException
 import com.openlattice.datastore.util.Util
-import com.openlattice.edm.EntitySet
 import com.openlattice.edm.events.EntitySetDeletedEvent
 import com.openlattice.edm.events.EntitySetNameUpdatedEvent
 import com.openlattice.edm.events.EntitySetOrganizationUpdatedEvent
@@ -81,7 +77,6 @@ class Assembler(
         private val dbCredentialService: DbCredentialService,
         val hds: HikariDataSource,
         private val authorizationManager: AuthorizationManager,
-        private val edmAuthorizationHelper: EdmAuthorizationHelper,
         private val securePrincipalsManager: SecurePrincipalsManager,
         metricRegistry: MetricRegistry,
         hazelcast: HazelcastInstance,
@@ -132,7 +127,7 @@ class Assembler(
         if (isEntitySetMaterialized(entitySetId)) {
             materializedEntitySets.executeOnEntries(
                     AddFlagsToMaterializedEntitySetProcessor(setOf(flag)),
-                    entitySetIdPredicate(entitySetId) as Predicate<EntitySetAssemblyKey, MaterializedEntitySet>
+                    entitySetIdPredicate(entitySetId)
             )
             assemblies.executeOnEntries(
                     AddFlagsToOrganizationMaterializedEntitySetProcessor(entitySetId, setOf(flag)),
@@ -195,7 +190,7 @@ class Assembler(
             )
 
             val entitySetAssembliesToDelete = materializedEntitySets.keySet(
-                    entitySetIdPredicate(entitySetDeletedEvent.entitySetId) as Predicate<EntitySetAssemblyKey, MaterializedEntitySet>
+                    entitySetIdPredicate(entitySetDeletedEvent.entitySetId)
             )
             deleteEntitySetAssemblies(entitySetAssembliesToDelete)
         }
@@ -248,7 +243,7 @@ class Assembler(
 
     fun createOrganizationAndReturnOid(organizationId: UUID): OrganizationDatabase {
         val dbName = ExternalDatabaseConnectionManager.buildDefaultOrganizationDatabaseName(organizationId)
-        createOrganization(organizationId, dbName )
+        createOrganization(organizationId, dbName)
 
         val oid = acm.getDatabaseOid(dbName)
         return OrganizationDatabase(oid, dbName)
@@ -327,55 +322,6 @@ class Assembler(
         )
     }
 
-    private fun getAuthorizedPropertiesOfPrincipals(
-            entitySet: EntitySet,
-            materializablePropertyTypes: Map<UUID, PropertyType>
-    ): Map<Principal, Set<PropertyType>> {
-        // collect all principals of type user, role, which have read access on entityset
-        val authorizedPrincipals = getReadAuthorizedUsersAndRolesOnEntitySet(entitySet.id)
-
-        val propertyCheckFunction: (Principal) -> (Map<UUID, PropertyType>) = { principal ->
-            // only grant select on authorized columns if principal has read access on every normal entity set
-            // within the linking entity set
-            if (entitySet.isLinking &&
-                    !entitySet.linkedEntitySets.all {
-                        authorizationManager.checkIfHasPermissions(
-                                AclKey(it),
-                                setOf(principal),
-                                EdmAuthorizationHelper.READ_PERMISSION
-                        )
-                    }
-            ) {
-                mapOf()
-            } else {
-                edmAuthorizationHelper.getAuthorizedPropertyTypes(
-                        entitySet.id,
-                        EdmAuthorizationHelper.READ_PERMISSION,
-                        materializablePropertyTypes,
-                        setOf(principal)
-                )
-            }
-        }
-
-        // collect all authorized property types for principals which have read access on entity set
-        return authorizedPrincipals
-                .map { it to propertyCheckFunction(it).values.toSet() }
-                .toMap()
-    }
-
-    private fun getAuthorizedPrincipalsForEdges(entitySetIds: Set<UUID>): Set<Principal> {
-        // collect all principals of type user, role, which have read access on entityset
-        return entitySetIds.fold(mutableSetOf()) { acc, entitySetId ->
-            Sets.union(acc, getReadAuthorizedUsersAndRolesOnEntitySet(entitySetId).toSet())
-        }
-    }
-
-    private fun getReadAuthorizedUsersAndRolesOnEntitySet(entitySetId: UUID): List<Principal> {
-        return securePrincipalsManager
-                .getAuthorizedPrincipalsOnSecurableObject(AclKey(entitySetId), EdmAuthorizationHelper.READ_PERMISSION)
-                .filter { it.type == PrincipalType.USER || it.type == PrincipalType.ROLE }
-    }
-
     fun getOrganizationIntegrationAccount(organizationId: UUID): OrganizationIntegrationAccount {
         val organizationUserId = buildOrganizationUserId(organizationId)
         val account = this.dbCredentialService.getDbCredential(organizationUserId)
@@ -388,14 +334,6 @@ class Assembler(
         val credential = dbCredentialService.rollUserCredential(organizationUserId)
         acm.updateCredentialInDatabase(organizationId, organizationUserId, credential)
         return OrganizationIntegrationAccount(organizationUserId, credential)
-    }
-
-    private fun getInternalEntitySetFlag(organizationId: UUID, entitySetId: UUID): Set<OrganizationEntitySetFlag> {
-        return if (entitySets[entitySetId]?.organizationId == organizationId) {
-            setOf(OrganizationEntitySetFlag.INTERNAL)
-        } else {
-            setOf()
-        }
     }
 
     /**
@@ -447,7 +385,7 @@ class Assembler(
                 as Predicate<EntitySetAssemblyKey, MaterializedEntitySet>
     }
 
-    private fun entitySetIdInOrganizationPredicate(entitySetId: UUID): Predicate<*, *> {
+    private fun entitySetIdInOrganizationPredicate(entitySetId: UUID): Predicate<EntitySetAssemblyKey, MaterializedEntitySet> {
         return Predicates.equal<EntitySetAssemblyKey, MaterializedEntitySet>(
                 OrganizationAssemblyMapstore.MATERIALIZED_ENTITY_SETS_ID_INDEX,
                 entitySetId

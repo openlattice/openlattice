@@ -29,12 +29,7 @@ import com.google.common.collect.ImmutableList
 import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
 import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
-import com.openlattice.analysis.requests.AggregationResult
-import com.openlattice.analysis.requests.AggregationType
-import com.openlattice.analysis.requests.EntityAggregationResult
-import com.openlattice.analysis.requests.FilteredNeighborsRankingAggregationResult
-import com.openlattice.analysis.requests.NeighborhoodRankingAggregationResult
-import com.openlattice.analysis.requests.WeightedRankingAggregation
+import com.openlattice.analysis.requests.*
 import com.openlattice.data.DataEdgeKey
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.EntityKeyIdService
@@ -52,25 +47,14 @@ import com.openlattice.graph.edge.Edge
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn
-import com.openlattice.postgres.PostgresColumn.DST_ENTITY_KEY_ID
-import com.openlattice.postgres.PostgresColumn.DST_ENTITY_SET_ID
-import com.openlattice.postgres.PostgresColumn.EDGE_COMP_1
-import com.openlattice.postgres.PostgresColumn.EDGE_COMP_2
-import com.openlattice.postgres.PostgresColumn.EDGE_ENTITY_KEY_ID
-import com.openlattice.postgres.PostgresColumn.EDGE_ENTITY_SET_ID
-import com.openlattice.postgres.PostgresColumn.ID_VALUE
-import com.openlattice.postgres.PostgresColumn.LAST_TRANSPORT
-import com.openlattice.postgres.PostgresColumn.LINKING_ID
-import com.openlattice.postgres.PostgresColumn.PARTITION
-import com.openlattice.postgres.PostgresColumn.SRC_ENTITY_KEY_ID
-import com.openlattice.postgres.PostgresColumn.SRC_ENTITY_SET_ID
-import com.openlattice.postgres.PostgresColumn.VERSION
-import com.openlattice.postgres.PostgresColumn.VERSIONS
+import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresColumnDefinition
 import com.openlattice.postgres.PostgresTable.E
 import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.ResultSetAdapters
-import com.openlattice.postgres.streams.*
+import com.openlattice.postgres.streams.BasePostgresIterable
+import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
+import com.openlattice.postgres.streams.StatementHolderSupplier
 import com.openlattice.search.requests.EntityNeighborsFilter
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
@@ -78,13 +62,10 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.security.InvalidParameterException
 import java.sql.PreparedStatement
-import java.sql.ResultSet
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.OffsetDateTime
 import java.util.*
-import java.util.function.Function
-import java.util.function.Supplier
 import java.util.stream.Stream
 import kotlin.streams.asSequence
 import kotlin.streams.toList
@@ -204,9 +185,9 @@ class Graph(
 
     override fun getEdgeKeysContainingEntities(
             entitySetId: UUID, entityKeyIds: Set<UUID>, includeClearedEdges: Boolean
-    ): PostgresIterable<DataEdgeKey> {
+    ): BasePostgresIterable<DataEdgeKey> {
         val sql = if (includeClearedEdges) BULK_NEIGHBORHOOD_SQL else BULK_NON_TOMBSTONED_NEIGHBORHOOD_SQL
-        return PostgresIterable(PreparedStatementHolderSupplier(hds, sql, BATCH_SIZE, false) { ps ->
+        return BasePostgresIterable(PreparedStatementHolderSupplier(hds, sql, BATCH_SIZE, false) { ps ->
             val idArr = PostgresArrays.createUuidArray(ps.connection, entityKeyIds)
             ps.setArray(1, idArr)
             ps.setObject(2, entitySetId)
@@ -214,22 +195,22 @@ class Graph(
             ps.setObject(4, entitySetId)
             ps.setArray(5, idArr)
             ps.setObject(6, entitySetId)
-        },
-                Function<ResultSet, DataEdgeKey> { ResultSetAdapters.edgeKey(it) }
-        )
+        }) {
+            ResultSetAdapters.edgeKey(it)
+        }
     }
 
     override fun getEdgeKeysOfEntitySet(
             entitySetId: UUID, includeClearedEdges: Boolean
-    ): PostgresIterable<DataEdgeKey> {
+    ): BasePostgresIterable<DataEdgeKey> {
         val sql = if (includeClearedEdges) NEIGHBORHOOD_OF_ENTITY_SET_SQL else NON_TOMBSTONED_NEIGHBORHOOD_OF_ENTITY_SET_SQL
-        return PostgresIterable(PreparedStatementHolderSupplier(hds, sql, BATCH_SIZE, false) { ps ->
+        return BasePostgresIterable(PreparedStatementHolderSupplier(hds, sql, BATCH_SIZE, false) { ps ->
             ps.setObject(1, entitySetId)
             ps.setObject(2, entitySetId)
             ps.setObject(3, entitySetId)
-        },
-                Function<ResultSet, DataEdgeKey> { ResultSetAdapters.edgeKey(it) }
-        )
+        }) {
+            ResultSetAdapters.edgeKey(it)
+        }
     }
 
     override fun getEdgesAndNeighborsForVertices(
@@ -241,7 +222,7 @@ class Graph(
         val entitySetPartitions = partitionManager.getPartitionsByEntitySetId(srcEntitySetIds + entitySetIds)
         val srcEntitySetPartitions = srcEntitySetIds.flatMap { entitySetPartitions.getValue(it) }.toSet()
 
-        return PostgresIterable(PreparedStatementHolderSupplier(reader, getFilteredNeighborhoodSql(filter, srcEntitySetPartitions)) { ps ->
+        return BasePostgresIterable(PreparedStatementHolderSupplier(reader, getFilteredNeighborhoodSql(filter, srcEntitySetPartitions)) { ps ->
             val connection = ps.connection
             val idsArr = PostgresArrays.createUuidArray(connection, filter.entityKeyIds.stream())
             val entitySetIdsArr = PostgresArrays.createUuidArray(connection, entitySetIds.stream())
@@ -251,9 +232,9 @@ class Graph(
             ps.setArray(3, idsArr)
             ps.setArray(4, entitySetIdsArr)
             ps.setArray(5, partitionsArr)
-        },
-                Function<ResultSet, Edge> { ResultSetAdapters.edge(it) }
-        ).stream()
+        }) {
+            ResultSetAdapters.edge(it)
+        }.stream()
     }
 
 
@@ -854,18 +835,10 @@ class Graph(
     ): Stream<Pair<EntityDataKey, Long>> {
         val countColumn = "total_count"
         val query = getTopUtilizersSql(entitySetId, srcFilters, dstFilters, limit)
-        return PostgresIterable(
-                Supplier {
-                    val connection = reader.connection
-                    val stmt = connection.createStatement()
-                    logger.info("Executing top utilizer query: {}", query)
-                    val rs = stmt.executeQuery(query)
-                    StatementHolder(connection, stmt, rs)
-                },
-                Function<ResultSet, Pair<EntityDataKey, Long>> {
-                    ResultSetAdapters.entityDataKey(it) to it.getLong(countColumn)
-                }
-        ).stream()
+
+        return BasePostgresIterable(StatementHolderSupplier(reader, query)) {
+            ResultSetAdapters.entityDataKey(it) to it.getLong(countColumn)
+        }.stream()
     }
 
     override fun getNeighborEntitySets(
@@ -907,23 +880,15 @@ class Graph(
                 "FROM ${E.name} " +
                 "WHERE ($SRC_IDS_SQL) OR ($DST_IDS_SQL) "
 
-        return PostgresIterable(
-                Supplier {
-                    val connection = reader.connection
-                    val entityKeyIdArr = PostgresArrays.createUuidArray(
-                            connection, entityKeyIds
-                    )
-
-                    val ps = connection.prepareStatement(query)
-                    ps.setArray(1, entityKeyIdArr)
-                    ps.setObject(2, entitySetId)
-                    ps.setArray(3, entityKeyIdArr)
-                    ps.setObject(4, entitySetId)
-                    val rs = ps.executeQuery()
-                    StatementHolder(connection, ps, rs)
-                },
-                Function<ResultSet, UUID> { ResultSetAdapters.edgeEntitySetId(it) }
-        ).toSet()
+        return BasePostgresIterable(PreparedStatementHolderSupplier(reader, query) { ps ->
+            val entityKeyIdArr = PostgresArrays.createUuidArray(ps.connection, entityKeyIds)
+            ps.setArray(1, entityKeyIdArr)
+            ps.setObject(2, entitySetId)
+            ps.setArray(3, entityKeyIdArr)
+            ps.setObject(4, entitySetId)
+        }) {
+            ResultSetAdapters.edgeEntitySetId(it)
+        }.toSet()
     }
 
 
@@ -934,18 +899,12 @@ class Graph(
                 "FROM ${E.name} " +
                 "WHERE ${SRC_ENTITY_SET_ID.name} = ? OR ${DST_ENTITY_SET_ID.name} = ?"
 
-        return BasePostgresIterable(
-                Supplier {
-                    val connection = reader.connection
-
-                    val ps = connection.prepareStatement(query)
-                    ps.setObject(1, entitySetId)
-                    ps.setObject(2, entitySetId)
-                    val rs = ps.executeQuery()
-                    StatementHolder(connection, ps, rs)
-                },
-                { ResultSetAdapters.edgeEntitySetId(it) }
-        ).toSet()
+        return BasePostgresIterable(PreparedStatementHolderSupplier(reader, query) { ps ->
+            ps.setObject(1, entitySetId)
+            ps.setObject(2, entitySetId)
+        }) {
+            ResultSetAdapters.edgeEntitySetId(it)
+        }.toSet()
     }
 
     private fun buildAssociationTable(
@@ -1077,7 +1036,7 @@ internal fun getLinkingId(linkingIds: Map<UUID, UUID>, entityKeyId: UUID): UUID 
 
 private val KEY_COLUMNS = E.primaryKey.map { col -> col.name }.toSet()
 
-private val INSERT_COLUMNS = E.columns.filterNot{ LAST_TRANSPORT == it }.map { it.name }.toSet()
+private val INSERT_COLUMNS = E.columns.filterNot { LAST_TRANSPORT == it }.map { it.name }.toSet()
 
 /**
  * Builds the SQL query for top utilizers.
