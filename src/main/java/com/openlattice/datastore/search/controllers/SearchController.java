@@ -469,7 +469,11 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                         "is empty." );
             } else {
                 result = searchService
-                        .executeEntityNeighborSearch( ImmutableSet.of( entitySetId ), filter, principals );
+                        .executeEntityNeighborSearch(
+                                ImmutableSet.of( entitySetId ),
+                                new PagedNeighborRequest( filter, null, 0 ),
+                                principals
+                        ).getNeighbors();
             }
         }
 
