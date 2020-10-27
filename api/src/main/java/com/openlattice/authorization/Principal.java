@@ -26,6 +26,7 @@ import com.openlattice.util.Hashcodes;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.Serializable;
+import java.util.Objects;
 
 /**
  * This class represents a principal in the OpenLattice system. It is only serializable because it is used
@@ -33,11 +34,9 @@ import java.io.Serializable;
  */
 public class Principal implements Comparable<Principal>, Serializable {
 
-    private final PrincipalType type;
-
-    private final String        id;
-
-    private transient int h = 0;
+    private final     PrincipalType type;
+    private final     String        id;
+    private transient int           h = 0;
 
     @JsonCreator
     public Principal(
@@ -57,8 +56,8 @@ public class Principal implements Comparable<Principal>, Serializable {
         return id;
     }
 
-    private String validate( String id ) {
-        Preconditions.checkArgument( StringUtils.isAllLowerCase( id ),"Principal id must be all lower case" );
+    private static String validate( String id ) {
+        Preconditions.checkArgument( StringUtils.isAllLowerCase( id ), "Principal id must be all lower case" );
         return id;
     }
 
@@ -70,17 +69,17 @@ public class Principal implements Comparable<Principal>, Serializable {
         return h;
     }
 
-    @Override
-    public boolean equals( Object obj ) {
-        if ( this == obj ) return true;
-        if ( obj == null ) return false;
-        if ( getClass() != obj.getClass() ) return false;
-        Principal other = (Principal) obj;
-        if ( id == null ) {
-            if ( other.id != null ) return false;
-        } else if ( !id.equals( other.id ) ) return false;
-        if ( type != other.type ) return false;
-        return true;
+    @Override public boolean equals( Object o ) {
+        if ( this == o ) {
+            return true;
+        }
+        if ( o == null || getClass() != o.getClass() ) {
+            return false;
+        }
+        Principal principal = (Principal) o;
+        return hashCode() == principal.hashCode() &&
+                type == principal.type &&
+                Objects.equals( id, principal.id );
     }
 
     @Override
@@ -91,11 +90,11 @@ public class Principal implements Comparable<Principal>, Serializable {
     @Override
     public int compareTo( Principal o ) {
         int result = type.compareTo( o.getType() );
-        
-        if( result == 0){
+
+        if ( result == 0 ) {
             result = id.compareTo( o.getId() );
         }
-        
+
         return result;
     }
 

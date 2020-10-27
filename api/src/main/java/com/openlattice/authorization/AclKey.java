@@ -23,6 +23,7 @@ package com.openlattice.authorization;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.collect.ImmutableList;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDList;
+
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -33,6 +34,8 @@ import java.util.stream.Collectors;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class AclKey extends DelegatedUUIDList implements Comparable<AclKey> {
+    private transient int h = 0;
+
     public AclKey( List<UUID> uuids ) {
         super( uuids );
     }
@@ -64,6 +67,27 @@ public class AclKey extends DelegatedUUIDList implements Comparable<AclKey> {
 
     public int getSize() {
         return size();
+    }
+
+    @Override public boolean equals( Object o ) {
+        if ( this == o ) {
+            return true;
+        }
+        if ( o == null || getClass() != o.getClass() ) {
+            return false;
+        }
+        if ( !super.equals( o ) ) {
+            return false;
+        }
+        AclKey uuids = (AclKey) o;
+        return hashCode() == uuids.hashCode();
+    }
+
+    @Override public int hashCode() {
+        if ( h == 0 ) {
+            h = super.hashCode();
+        }
+        return h;
     }
 
     @JsonCreator
