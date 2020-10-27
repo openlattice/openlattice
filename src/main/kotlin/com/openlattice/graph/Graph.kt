@@ -93,7 +93,7 @@ class Graph(
 
     /* Create */
 
-    override fun createEdges(keys: MutableSet<DataEdgeKey>): WriteEvent {
+    override fun createEdges(keys: Set<DataEdgeKey>): WriteEvent {
         val partitionsInfoByEntitySet = partitionManager.getPartitionsByEntitySetId(
                 keys.flatMap { listOf(it.src, it.dst, it.edge) }
                         .map { it.entitySetId }.toSet()
@@ -215,14 +215,16 @@ class Graph(
 
     override fun getEdgesAndNeighborsForVertices(
             entitySetIds: Set<UUID>,
-            filter: EntityNeighborsFilter
+            pagedNeighborRequest: PagedNeighborRequest
     ): Stream<Edge> {
+
+        val filter = pagedNeighborRequest.filter
 
         val srcEntitySetIds = filter.srcEntitySetIds.orElse(setOf())
         val entitySetPartitions = partitionManager.getPartitionsByEntitySetId(srcEntitySetIds + entitySetIds)
         val srcEntitySetPartitions = srcEntitySetIds.flatMap { entitySetPartitions.getValue(it) }.toSet()
 
-        return BasePostgresIterable(PreparedStatementHolderSupplier(reader, getFilteredNeighborhoodSql(filter, srcEntitySetPartitions)) { ps ->
+        return BasePostgresIterable(PreparedStatementHolderSupplier(reader, getFilteredNeighborhoodSql(pagedNeighborRequest, srcEntitySetPartitions)) { ps ->
             val connection = ps.connection
             val idsArr = PostgresArrays.createUuidArray(connection, filter.entityKeyIds.stream())
             val entitySetIdsArr = PostgresArrays.createUuidArray(connection, entitySetIds.stream())
@@ -309,7 +311,7 @@ class Graph(
                 )
 
                 //Now we load all edges for this neighbor type into memory
-                val edges = getEdgesAndNeighborsForVertices(entitySetIds, neighborsFilter)
+                val edges = getEdgesAndNeighborsForVertices(entitySetIds, PagedNeighborRequest(neighborsFilter))
                         .toList()
 
                 logger.info("Edges: {}", edges.size)
@@ -435,7 +437,7 @@ class Graph(
                     Optional.of(authorizedPropertyTypes.keys),
                     Optional.of(authorizedPropertyTypes.keys)
             )
-            val allNeighborEdges = getEdgesAndNeighborsForVertices(entitySetIds, allNeighborsFilter)
+            val allNeighborEdges = getEdgesAndNeighborsForVertices(entitySetIds, PagedNeighborRequest(allNeighborsFilter))
             val associationEntityKeyIds = mutableMapOf<UUID, Optional<MutableSet<UUID>>>()
             val neighborEntityKeyIds = mutableMapOf<UUID, Optional<MutableSet<UUID>>>()
             val edges = mutableMapOf<UUID, MutableMap<UUID, UUID>>()
@@ -1133,6 +1135,16 @@ private val DEFAULT_NEIGHBORHOOD_DST_FILTER = "${DST_ENTITY_KEY_ID.name} = ANY(?
 private val BULK_NEIGHBORHOOD_SQL = "SELECT * FROM ${E.name} WHERE (($SRC_IDS_SQL) OR ($DST_IDS_SQL) OR ($EDGE_IDS_SQL))"
 private val BULK_NON_TOMBSTONED_NEIGHBORHOOD_SQL = "$BULK_NEIGHBORHOOD_SQL AND ${VERSION.name} > 0"
 
+
+private val PAGED_NEIGHBOR_SEARCH_ORDER_COLS = listOf(
+        SRC_ENTITY_SET_ID,
+        SRC_ENTITY_KEY_ID,
+        EDGE_ENTITY_SET_ID,
+        EDGE_ENTITY_KEY_ID,
+        DST_ENTITY_SET_ID,
+        DST_ENTITY_KEY_ID
+).map { it.name }
+
 /**
  * PreparedStatement bind order (note: these bind params all apply to the vertex entity set):
  *
@@ -1143,9 +1155,14 @@ private val BULK_NON_TOMBSTONED_NEIGHBORHOOD_SQL = "$BULK_NEIGHBORHOOD_SQL AND $
  * 5. partitions
  */
 internal fun getFilteredNeighborhoodSql(
-        filter: EntityNeighborsFilter,
+        pagedNeighborRequest: PagedNeighborRequest,
         srcEntitySetPartitions: Set<Int>
 ): String {
+
+    val filter = pagedNeighborRequest.filter
+    val limit = pagedNeighborRequest.pageSize
+    val bookmark = pagedNeighborRequest.bookmark
+
 
     var vertexAsSrcSql = DEFAULT_NEIGHBORHOOD_SRC_FILTER
     var vertexAsDstSql = DEFAULT_NEIGHBORHOOD_DST_FILTER
@@ -1170,12 +1187,32 @@ internal fun getFilteredNeighborhoodSql(
         vertexAsDstSql += " AND ( $associationEntitySetIdsSql )"
     }
 
+    val limitClause = if (limit > 0) "LIMIT $limit" else ""
+
+    val bookmarkClause = if (bookmark != null) {
+        """
+            AND ( ${PAGED_NEIGHBOR_SEARCH_ORDER_COLS.joinToString()} ) > (
+              '${bookmark.src.entitySetId}',
+              '${bookmark.src.entityKeyId}',
+              '${bookmark.edge.entitySetId}',
+              '${bookmark.edge.entityKeyId}',
+              '${bookmark.dst.entitySetId}',
+              '${bookmark.dst.entityKeyId}'
+            )
+        """.trimIndent()
+    } else {
+        ""
+    }
+
     return """
       SELECT *
       FROM ${E.name}
       WHERE 
         ( ( $vertexAsDstSql ) OR ( $vertexAsSrcSql ) ) 
         AND ${VERSION.name} > 0
+        $bookmarkClause
+      ORDER BY ${PAGED_NEIGHBOR_SEARCH_ORDER_COLS.joinToString()}
+      $limitClause
    """.trimIndent()
 }
 
