@@ -15,7 +15,8 @@ private const val MAX_PAGE_SIZE = 10_000
  * signal to return the first page of results.
  * @param pageSize The number of neighbors to include in the response. A value of 0 will signal to return all neighbors.
  */
-data class PagedNeighborRequest(
+
+data class PagedNeighborRequest @JvmOverloads constructor(
         val filter: EntityNeighborsFilter,
         val bookmark: DataEdgeKey? = null,
         val pageSize: Int = MAX_PAGE_SIZE
