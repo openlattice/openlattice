@@ -134,6 +134,7 @@ public final class SerializationConstants {
     public static final String EVENT_TYPE                       = "auditEventType";
     public static final String EXACT                            = "exact";
     public static final String EXACT_SEARCH_FIELDS              = "exactSearchFields";
+    public static final String EXCLUDE_PROPERTY_TYPES           = "excludePropertyTypes";
     public static final String EXPIRATION                       = "expiration";
     public static final String EXPLANATION                      = "explanation";
     public static final String EXTERNAL                         = "external";

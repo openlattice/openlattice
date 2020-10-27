@@ -18,9 +18,11 @@
 
 package com.openlattice.authorization;
 
-import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
+import com.openlattice.client.serialization.SerializationConstants;
 
 import java.time.OffsetDateTime;
 import java.util.EnumSet;
@@ -29,10 +31,10 @@ import java.util.Optional;
 import java.util.Set;
 
 public class Ace {
-    private final     Principal           principal;
-    private final     EnumSet<Permission> permissions;
-    private final     OffsetDateTime      expirationDate;
-    private transient int                 hashValue = 0;
+    private final     Principal                principal;
+    private final     ImmutableSet<Permission> permissions;
+    private final     OffsetDateTime           expirationDate;
+    private transient int                      hashValue = 0;
 
     @JsonCreator
     public Ace(
@@ -40,8 +42,7 @@ public class Ace {
             @JsonProperty( SerializationConstants.PERMISSIONS ) Set<Permission> permissions,
             @JsonProperty( SerializationConstants.EXPIRATION ) Optional<OffsetDateTime> expirationDate ) {
         this.principal = principal;
-        this.permissions = EnumSet.noneOf( Permission.class );
-        this.permissions.addAll( permissions );
+        this.permissions = Sets.immutableEnumSet( permissions );
         this.expirationDate = expirationDate.orElse( OffsetDateTime.MAX );
     }
 
@@ -64,7 +65,7 @@ public class Ace {
     }
 
     @JsonProperty( SerializationConstants.PERMISSIONS )
-    public EnumSet<Permission> getPermissions() {
+    public ImmutableSet<Permission> getPermissions() {
         return permissions;
     }
 
@@ -74,19 +75,24 @@ public class Ace {
     }
 
     @Override public boolean equals( Object o ) {
-        if ( this == o )
+        if ( this == o ) {
             return true;
-        if ( o == null || getClass() != o.getClass() )
+        }
+        if ( o == null || getClass() != o.getClass() ) {
             return false;
+        }
         Ace ace = (Ace) o;
-        return hashValue == ace.hashValue &&
+        return hashCode() == ace.hashCode() &&
                 Objects.equals( principal, ace.principal ) &&
                 Objects.equals( permissions, ace.permissions ) &&
                 Objects.equals( expirationDate, ace.expirationDate );
     }
 
     @Override public int hashCode() {
-        return Objects.hash( principal, permissions, expirationDate, hashValue );
+        if ( hashValue == 0 ) {
+            hashValue = Objects.hash( principal, permissions, expirationDate );
+        }
+        return hashValue;
     }
 
     @Override
