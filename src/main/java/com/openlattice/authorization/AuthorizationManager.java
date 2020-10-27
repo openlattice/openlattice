@@ -28,12 +28,7 @@ import com.hazelcast.query.Predicate;
 import com.openlattice.authorization.securable.SecurableObjectType;
 
 import java.time.OffsetDateTime;
-import java.util.Collection;
-import java.util.EnumMap;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Stream;
 
 /**
@@ -77,7 +72,7 @@ public interface AuthorizationManager {
     void addPermission(
             AclKey aclKeys,
             Principal principal,
-            EnumSet<Permission> permissions,
+            Set<Permission> permissions,
             OffsetDateTime expirationDate );
 
     /**

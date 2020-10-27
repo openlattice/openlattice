@@ -114,7 +114,7 @@ class HazelcastAuthorizationService(
         addPermission(key, principal, permissions, OffsetDateTime.MAX)
     }
 
-    override fun addPermission(key: AclKey, principal: Principal, permissions: EnumSet<Permission>, expirationDate: OffsetDateTime) {
+    override fun addPermission(key: AclKey, principal: Principal, permissions: Set<Permission>, expirationDate: OffsetDateTime) {
         //TODO: We should do something better than reading the securable object type.
         val securableObjectType = getDefaultObjectType(securableObjectTypes, key)
 
@@ -510,7 +510,7 @@ class HazelcastAuthorizationService(
     private fun signalMaterializationPermissionChange(
             key: AclKey,
             principal: Principal,
-            permissions: EnumSet<Permission>,
+            permissions: Set<Permission>,
             securableObjectType: SecurableObjectType
     ) {
         // if there is a change in materialization permission for a property type or an entity set for an organization
