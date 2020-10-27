@@ -27,6 +27,7 @@ import com.openlattice.authorization.*
 import com.openlattice.controllers.exceptions.ForbiddenException
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.*
+import com.openlattice.search.SearchService
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
@@ -46,7 +47,8 @@ class GraphController
 constructor(
         private val graphQueryService: GraphQueryService,
         private val authorizationManager: AuthorizationManager,
-        private val edmAuthorizationHelper: EdmAuthorizationHelper
+        private val edmAuthorizationHelper: EdmAuthorizationHelper,
+        private val searchService: SearchService
 ) : GraphApi, AuthorizingComponent {
     @Timed
     @PostMapping(
@@ -107,6 +109,25 @@ constructor(
         val propertyTypes = authorizedPropertyTypes.values.flatMap { it.values }.associateBy { it.id }
         return graphQueryService.submitQuery(query, propertyTypes, authorizedPropertyTypes)
 
+    }
+
+    @Timed
+    @PostMapping(
+            value = [NEIGHBORS + ENTITY_SET_ID_PATH + PAGE],
+            consumes = [MediaType.APPLICATION_JSON_VALUE],
+            produces = [MediaType.APPLICATION_JSON_VALUE]
+    )
+    override fun getPageOfNeighbors(
+            @PathVariable(ENTITY_SET_ID) entitySetId: UUID,
+            @RequestBody pagedNeighborRequest: PagedNeighborRequest
+    ): NeighborPage {
+        ensureReadAccess(AclKey(entitySetId))
+
+        return searchService.executeEntityNeighborSearch(
+                setOf(entitySetId),
+                pagedNeighborRequest,
+                Principals.getCurrentPrincipals()
+        )
     }
 
     private fun getRequiredAuthorizations(selection: NeighborhoodSelection): Map<UUID, Set<UUID>> {
