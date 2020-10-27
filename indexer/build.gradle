@@ -38,7 +38,7 @@ plugins {
     id 'java'
     id 'maven-publish'
     id 'signing'
-    id 'com.github.spotbugs' version '3.0.0'
+    id 'com.github.spotbugs' version '4.5.1'
     id 'org.jetbrains.kotlin.jvm' version '1.3.21'
     id 'org.jetbrains.kotlin.plugin.spring' version '1.3.21'
 }
@@ -116,6 +116,13 @@ tasks.withType(Checkstyle) {
 spotbugs {
     reportLevel = 'high'
     toolVersion = "${spotbugs_annotations_version}"
+}
+
+spotbugsMain {
+    reports {
+        xml.enabled = false
+        html.enabled = true
+    }
 }
 
 jacoco {
@@ -219,11 +226,4 @@ jar {
 
 startScripts {
     classpath = files(jar.archivePath)
-}
-
-tasks.withType(com.github.spotbugs.SpotBugsTask) {
-    reports {
-        xml.enabled = false
-        html.enabled = true
-    }
 }
