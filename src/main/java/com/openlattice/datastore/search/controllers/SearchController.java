@@ -116,6 +116,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                         search.getOptionalEntityType(),
                         search.getOptionalPropertyTypes(),
                         search.getOptionalOrganizationId(),
+                        search.getExcludePropertyTypes(),
                         search.getStart(),
                         search.getMaxHits() );
     }
@@ -134,6 +135,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
+                        false,
                         start,
                         Math.min( maxHits, SearchApi.MAX_SEARCH_RESULTS ) );
     }
@@ -371,11 +373,10 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             } else {
                 neighbors = searchService
                         .executeEntityNeighborSearch( ImmutableSet.of( entitySetId ),
-                                new PagedNeighborRequest( new EntityNeighborsFilter( ImmutableSet.of( entityKeyId ) ),
-                                        null,
-                                        0 ),
+                                new PagedNeighborRequest( new EntityNeighborsFilter( ImmutableSet.of( entityKeyId ) ) ),
                                 principals )
                         .getNeighbors()
+
                         .getOrDefault( entityKeyId, ImmutableList.of() );
             }
         }
@@ -466,11 +467,10 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                         "is empty." );
             } else {
                 result = searchService
-                        .executeEntityNeighborSearch(
-                                ImmutableSet.of( entitySetId ),
-                                new PagedNeighborRequest( filter, null, 0 ),
-                                principals
-                        ).getNeighbors();
+                        .executeEntityNeighborSearch( ImmutableSet.of( entitySetId ),
+                                new PagedNeighborRequest( filter ), principals )
+                        .getNeighbors();
+
             }
         }
 
@@ -722,14 +722,6 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
         return auditingManager;
     }
 
-    private static Set<UUID> getEntityKeyIdsFromSearchResult( DataSearchResult searchResult ) {
-        return searchResult.getHits().stream().map( SearchController::getEntityKeyId ).collect( Collectors.toSet() );
-    }
-
-    private static UUID getEntityKeyId( Map<FullQualifiedName, Set<Object>> entity ) {
-        return SearchService.getEntityKeyId( entity );
-    }
-
     private void validateSearch( SearchConstraints searchConstraints ) {
 
         /* Check sort is valid */
@@ -749,6 +741,14 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                 }
             }
         }
+    }
+
+    private static Set<UUID> getEntityKeyIdsFromSearchResult( DataSearchResult searchResult ) {
+        return searchResult.getHits().stream().map( SearchController::getEntityKeyId ).collect( Collectors.toSet() );
+    }
+
+    private static UUID getEntityKeyId( Map<FullQualifiedName, Set<Object>> entity ) {
+        return SearchService.getEntityKeyId( entity );
     }
 
 }
