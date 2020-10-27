@@ -33,6 +33,7 @@ public class Search {
     private final Optional<UUID>      optionalEntityType;
     private final Optional<Set<UUID>> optionalPropertyTypes;
     private final Optional<UUID>      optionalOrganizationId;
+    private final boolean             excludePropertyTypes;
     private final int                 start;
     private final int                 maxHits;
 
@@ -42,12 +43,14 @@ public class Search {
             @JsonProperty( SerializationConstants.ENTITY_TYPE_ID ) Optional<UUID> entityType,
             @JsonProperty( SerializationConstants.PROPERTY_TYPE_IDS ) Optional<Set<UUID>> propertyTypes,
             @JsonProperty( SerializationConstants.ORGANIZATION_ID ) Optional<UUID> organizationId,
+            @JsonProperty( SerializationConstants.EXCLUDE_PROPERTY_TYPES ) Optional<Boolean> excludePropertyTypes,
             @JsonProperty( SerializationConstants.START ) int start,
             @JsonProperty( SerializationConstants.MAX_HITS ) int maxHits ) {
-        this.optionalKeyword = keyword.isPresent() ? Optional.of( keyword.get().trim() ) : Optional.empty();
-        this.optionalEntityType = entityType;
-        this.optionalPropertyTypes = propertyTypes;
-        this.optionalOrganizationId = organizationId;
+        optionalKeyword = keyword.isPresent() ? Optional.of( keyword.get().trim() ) : Optional.empty();
+        optionalEntityType = entityType;
+        optionalPropertyTypes = propertyTypes;
+        optionalOrganizationId = organizationId;
+        this.excludePropertyTypes = excludePropertyTypes.orElse( false );
         this.start = start;
         this.maxHits = Math.min( maxHits, SearchApi.MAX_SEARCH_RESULTS );
     }
@@ -70,6 +73,11 @@ public class Search {
     @JsonProperty( SerializationConstants.ORGANIZATION_ID )
     public Optional<UUID> getOptionalOrganizationId() {
         return optionalOrganizationId;
+    }
+
+    @JsonProperty( SerializationConstants.EXCLUDE_PROPERTY_TYPES )
+    public boolean getExcludePropertyTypes() {
+        return excludePropertyTypes;
     }
 
     @JsonProperty( SerializationConstants.START )
