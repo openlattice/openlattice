@@ -168,7 +168,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             results = searchService.executeSearch( searchConstraints, authorizedPropertyTypesByEntitySet );
         }
 
-        List<AuditableEvent> searchEvents = Lists.newArrayListWithExpectedSize( entitySetIds.length );
+        List<AuditableEvent> searchEvents = new ArrayList<>( entitySetIds.length );
         for ( UUID entitySetId : entitySetIds ) {
             searchEvents.add( new AuditableEvent(
                     spm.getCurrentUserId(),
@@ -491,13 +491,15 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                 } )
         );
 
-        List<AuditableEvent> events = Lists.newArrayListWithExpectedSize( neighborsByEntitySet.keySet().size() + 1 );
         UUID userId = spm.getCurrentUserId();
 
         int segments = filter.getEntityKeyIds().size() / AuditingComponent.MAX_ENTITY_KEY_IDS_PER_EVENT;
         if ( filter.getEntityKeyIds().size() % AuditingComponent.MAX_ENTITY_KEY_IDS_PER_EVENT != 0 ) {
             segments++;
         }
+
+        List<AuditableEvent> events = Lists
+                .newArrayListWithExpectedSize( neighborsByEntitySet.keySet().size() + segments );
 
         List<UUID> entityKeyIdsAsList = Lists.newArrayList( filter.getEntityKeyIds() );
 
@@ -616,7 +618,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                 } )
         );
 
-        List<AuditableEvent> events = Lists.newArrayListWithExpectedSize( neighborsByEntitySet.keySet().size() + 1 );
+        List<AuditableEvent> events = new ArrayList<>( neighborsByEntitySet.keySet().size() + 1 );
         UUID userId = spm.getCurrentUserId();
 
         events.add( new AuditableEvent(
