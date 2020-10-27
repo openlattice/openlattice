@@ -7,26 +7,12 @@ import com.openlattice.analysis.requests.Filter
 import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.edm.PostgresEdmTypeConverter
 import com.openlattice.edm.type.PropertyType
-import com.openlattice.postgres.DataTables
+import com.openlattice.postgres.*
 import com.openlattice.postgres.DataTables.LAST_WRITE
-import com.openlattice.postgres.IndexType
-import com.openlattice.postgres.PostgresArrays
-import com.openlattice.postgres.PostgresColumn.ENTITY_KEY_IDS_COL
-import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
-import com.openlattice.postgres.PostgresColumn.HASH
-import com.openlattice.postgres.PostgresColumn.ID
-import com.openlattice.postgres.PostgresColumn.ID_VALUE
-import com.openlattice.postgres.PostgresColumn.ORIGIN_ID
-import com.openlattice.postgres.PostgresColumn.PARTITION
-import com.openlattice.postgres.PostgresColumn.PROPERTY_TYPE_ID
-import com.openlattice.postgres.PostgresColumn.VERSION
-import com.openlattice.postgres.PostgresColumn.VERSIONS
-import com.openlattice.postgres.PostgresColumnDefinition
-import com.openlattice.postgres.PostgresDataTables
+import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresDataTables.Companion.dataTableValueColumns
 import com.openlattice.postgres.PostgresDataTables.Companion.getColumnDefinition
 import com.openlattice.postgres.PostgresDataTables.Companion.getSourceDataColumnName
-import com.openlattice.postgres.PostgresDatatype
 import com.openlattice.postgres.PostgresTable.DATA
 import com.openlattice.postgres.PostgresTable.IDS
 import java.sql.PreparedStatement
@@ -813,6 +799,7 @@ fun createOrUpdateLinkFromEntity(): String {
             "DO UPDATE SET " +
                 "${VERSIONS.name} = ${DATA.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
                 "${LAST_WRITE.name} = GREATEST(${DATA.name}.${LAST_WRITE.name},EXCLUDED.${LAST_WRITE.name}), " +
+                "${ORIGIN_ID.name} = EXCLUDED.${ORIGIN_ID.name}, " +
                 "${VERSION.name} = CASE " +
                     "WHEN abs(${DATA.name}.${VERSION.name}) <= EXCLUDED.${VERSION.name} " +
                     "THEN EXCLUDED.${VERSION.name} " +
