@@ -187,7 +187,8 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     public OrganizationIntegrationAccount rollOrganizationIntegrationAccount(
             @PathVariable( ID ) UUID organizationId ) {
         ensureOwner( organizationId );
-        return assembler.rollOrganizationIntegrationAccount( organizationId );
+        var account = assembler.rollIntegrationAccount( organizationId, PrincipalType.ORGANIZATION );
+        return new OrganizationIntegrationAccount( account.getUsername(), account.getCredential() );
     }
 
     @Timed
