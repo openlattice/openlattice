@@ -98,6 +98,7 @@ class SearchService(
             optionalEntityType: Optional<UUID>,
             optionalPropertyTypes: Optional<Set<UUID>>,
             optionalOrganizationId: Optional<UUID>,
+            excludePropertyTypes: Boolean,
             start: Int,
             maxHits: Int
     ): SearchResult {
@@ -123,6 +124,7 @@ class SearchService(
                     optionalQuery,
                     optionalEntityType,
                     optionalPropertyTypes,
+                    excludePropertyTypes,
                     authorizedEntitySetIds,
                     start,
                     maxHits
