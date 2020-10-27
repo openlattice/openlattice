@@ -20,7 +20,12 @@
 
 package com.openlattice.scrunchie.search;
 
-import com.google.common.collect.*;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Multimaps;
+import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.Principal;
 import com.openlattice.data.EntityDataKey;
@@ -46,6 +51,7 @@ public class ScrunchieElasticsearchTests extends BaseElasticsearchTest {
                 Optional.of( query ),
                 Optional.of( ENTITY_TYPE_ID ),
                 Optional.empty(),
+                false,
                 ImmutableSet.of( new AclKey( chicagoEmployeesEntitySetId ) ),
                 0,
                 50 );
