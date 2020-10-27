@@ -28,7 +28,14 @@ import com.openlattice.organizations.mapstores.TABLE_ID_INDEX
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.*
 import com.openlattice.postgres.DataTables.quote
-import com.openlattice.postgres.ResultSetAdapters.*
+import com.openlattice.postgres.ResultSetAdapters.columnName
+import com.openlattice.postgres.ResultSetAdapters.constraintType
+import com.openlattice.postgres.ResultSetAdapters.name
+import com.openlattice.postgres.ResultSetAdapters.ordinalPosition
+import com.openlattice.postgres.ResultSetAdapters.postgresAuthenticationRecord
+import com.openlattice.postgres.ResultSetAdapters.privilegeType
+import com.openlattice.postgres.ResultSetAdapters.sqlDataType
+import com.openlattice.postgres.ResultSetAdapters.user
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.StatementHolderSupplier
@@ -135,17 +142,17 @@ class ExternalDatabaseManagementService(
         }
     }
 
-    fun destroyTransportedEntitySet( entitySetId: UUID ) {
-        entitySets.executeOnKey( entitySetId, DestroyTransportedEntitySetEntryProcessor().init(transporterDatastore))
+    fun destroyTransportedEntitySet(entitySetId: UUID) {
+        entitySets.executeOnKey(entitySetId, DestroyTransportedEntitySetEntryProcessor().init(transporterDatastore))
     }
 
-    fun transportEntitySet( organizationId: UUID, entitySetId: UUID ) {
+    fun transportEntitySet(organizationId: UUID, entitySetId: UUID) {
         val userToPrincipalsCompletion = organizations.submitToKey(
                 organizationId,
                 GetMembersOfOrganizationEntryProcessor()
         ).thenApplyAsync { members ->
             securePrincipalsManager.bulkGetUnderlyingPrincipals(
-                    securePrincipalsManager.getSecurablePrincipals( members ).toSet()
+                    securePrincipalsManager.getSecurablePrincipals(members).toSet()
             ).mapKeys {
                 dbCredentialService.getDbUsername(it.key)
             }
@@ -159,21 +166,21 @@ class ExternalDatabaseManagementService(
         val accessCheckCompletion = entityTypeId.thenCompose { etid ->
             entityTypes.getAsync(etid!!)
         }.thenApplyAsync { entityType ->
-            entityType.properties.mapTo( mutableSetOf() ) { ptid ->
-                AccessCheck(AclKey( entitySetId, ptid ), EnumSet.of(Permission.READ))
+            entityType.properties.mapTo(mutableSetOf()) { ptid ->
+                AccessCheck(AclKey(entitySetId, ptid), EnumSet.of(Permission.READ))
             }
         }
 
         val transporterColumnsCompletion = entityTypeId.thenCompose { etid ->
-            if ( etid == null ){
+            if (etid == null) {
                 throw Exception("Entity set {} has no entity type {}")
             }
-            transporterState.submitToKey(etid, GetPropertyTypesFromTransporterColumnSetEntryProcessor() )
+            transporterState.submitToKey(etid, GetPropertyTypesFromTransporterColumnSetEntryProcessor())
         }.thenCompose { transporterPtIds ->
-            propertyTypes.submitToKeys( transporterPtIds, GetFqnFromPropertyTypeEntryProcessor() )
+            propertyTypes.submitToKeys(transporterPtIds, GetFqnFromPropertyTypeEntryProcessor())
         }
 
-        val userToPermissionsCompletion = userToPrincipalsCompletion.thenCombine( accessCheckCompletion ) { userToPrincipals, accessChecks ->
+        val userToPermissionsCompletion = userToPrincipalsCompletion.thenCombine(accessCheckCompletion) { userToPrincipals, accessChecks ->
             userToPrincipals.mapValues { (_, principals) ->
                 authorizationManager.accessChecksForPrincipals(accessChecks, principals).filter {
                     it.permissions[Permission.READ]!!
@@ -183,13 +190,13 @@ class ExternalDatabaseManagementService(
             }
         }
 
-        userToPermissionsCompletion.thenCombine( transporterColumnsCompletion ) { userToPtCols, transporterColumns ->
+        userToPermissionsCompletion.thenCombine(transporterColumnsCompletion) { userToPtCols, transporterColumns ->
             val userToEntitySetColumnNames = userToPtCols.mapValues { (_, columns) ->
                 columns.map {
                     transporterColumns.get(it).toString()
                 }
             }
-            entitySets.submitToKey( entitySetId,
+            entitySets.submitToKey(entitySetId,
                     TransportEntitySetEntryProcessor(transporterColumns, organizationId, userToEntitySetColumnNames)
                             .init(transporterDatastore)
             )
@@ -571,7 +578,7 @@ class ExternalDatabaseManagementService(
         return dbCredentialService.getDbUsername(securePrincipal)
     }
 
-    private fun areValidPermissions(permissions: EnumSet<Permission>): Boolean {
+    private fun areValidPermissions(permissions: Set<Permission>): Boolean {
         if (!(permissions.contains(Permission.OWNER) || permissions.contains(Permission.READ) || permissions.contains(Permission.WRITE))) {
             return false
         } else if (permissions.isEmpty()) {
@@ -580,7 +587,7 @@ class ExternalDatabaseManagementService(
         return true
     }
 
-    private fun getPrivilegesFromPermissions(permissions: EnumSet<Permission>): List<String> {
+    private fun getPrivilegesFromPermissions(permissions: Set<Permission>): List<String> {
         val privileges = mutableListOf<String>()
         if (permissions.contains(Permission.OWNER)) {
             privileges.add(PostgresPrivileges.ALL.toString())
