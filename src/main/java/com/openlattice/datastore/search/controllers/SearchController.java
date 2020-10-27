@@ -376,6 +376,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                                 new PagedNeighborRequest( new EntityNeighborsFilter( ImmutableSet.of( entityKeyId ) ) ),
                                 principals )
                         .getNeighbors()
+
                         .getOrDefault( entityKeyId, ImmutableList.of() );
             }
         }
@@ -469,6 +470,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                         .executeEntityNeighborSearch( ImmutableSet.of( entitySetId ),
                                 new PagedNeighborRequest( filter ), principals )
                         .getNeighbors();
+
             }
         }
 
