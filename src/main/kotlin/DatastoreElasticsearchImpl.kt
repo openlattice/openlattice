@@ -1,7 +1,6 @@
 package com.openlattice.datastore.services;
 
 import com.dataloom.mappers.ObjectMappers
-import com.dataloom.streams.StreamUtil
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.google.common.collect.*
@@ -1223,6 +1222,7 @@ class DatastoreKotlinElasticsearchImpl(
             optionalSearchTerm: Optional<String?>,
             optionalEntityType: Optional<UUID?>,
             optionalPropertyTypes: Optional<Set<UUID>?>,
+            excludePropertyTypes: Boolean,
             authorizedAclKeys: Set<AclKey>,
             start: Int,
             maxHits: Int
@@ -1285,8 +1285,15 @@ class DatastoreKotlinElasticsearchImpl(
                 .setSize(maxHits)
                 .execute()
                 .actionGet()
-        val hits: MutableList<Map<String, Any>> = Lists.newArrayList()
-        response.hits.forEach(Consumer { hit: SearchHit -> hits.add(hit.sourceAsMap) })
+
+        val hits = response.hits.map {
+            val entitySetResult = it.sourceAsMap
+            if (excludePropertyTypes) {
+                entitySetResult.remove(ConductorElasticsearchApi.PROPERTY_TYPES)
+            }
+            entitySetResult
+        }
+
         return SearchResult(response.hits.totalHits.value, hits)
     }
 

@@ -35,6 +35,7 @@ import com.openlattice.data.requests.NeighborEntityIds;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.EntitySetManager;
 import com.openlattice.edm.EntitySet;
+import com.openlattice.graph.PagedNeighborRequest;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.Organization;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
@@ -58,6 +59,7 @@ import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
 
@@ -114,6 +116,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                         search.getOptionalEntityType(),
                         search.getOptionalPropertyTypes(),
                         search.getOptionalOrganizationId(),
+                        search.getExcludePropertyTypes(),
                         search.getStart(),
                         search.getMaxHits() );
     }
@@ -132,6 +135,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
+                        false,
                         start,
                         Math.min( maxHits, SearchApi.MAX_SEARCH_RESULTS ) );
     }
@@ -147,10 +151,6 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
         validateSearch( searchConstraints );
 
         final UUID[] entitySetIds = searchConstraints.getEntitySetIds();
-
-        final LinkedHashSet<UUID> uniqueEntitySetIds = Sets.newLinkedHashSetWithExpectedSize( entitySetIds.length );
-
-        Collections.addAll( uniqueEntitySetIds, entitySetIds );
 
         Set<Principal> currentPrincipals = Principals.getCurrentPrincipals();
 
@@ -170,11 +170,11 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             results = searchService.executeSearch( searchConstraints, authorizedPropertyTypesByEntitySet );
         }
 
-        List<AuditableEvent> searchEvents = new ArrayList( entitySetIds.length );
-        for ( int i = 0; i < entitySetIds.length; i++ ) {
+        List<AuditableEvent> searchEvents = new ArrayList<>( entitySetIds.length );
+        for ( UUID entitySetId : entitySetIds ) {
             searchEvents.add( new AuditableEvent(
                     spm.getCurrentUserId(),
-                    new AclKey( entitySetIds[ i ] ),
+                    new AclKey( entitySetId ),
                     AuditEventType.SEARCH_ENTITY_SET_DATA,
                     "Entity set data searched through SearchApi.searchEntitySetData",
                     Optional.of( getEntityKeyIdsFromSearchResult( results ) ),
@@ -373,7 +373,10 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             } else {
                 neighbors = searchService
                         .executeEntityNeighborSearch( ImmutableSet.of( entitySetId ),
-                                new EntityNeighborsFilter( ImmutableSet.of( entityKeyId ) ), principals )
+                                new PagedNeighborRequest( new EntityNeighborsFilter( ImmutableSet.of( entityKeyId ) ) ),
+                                principals )
+                        .getNeighbors()
+
                         .getOrDefault( entityKeyId, ImmutableList.of() );
             }
         }
@@ -384,7 +387,8 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
         neighbors.forEach( neighborEntityDetails -> {
             neighborsByEntitySet.put( neighborEntityDetails.getAssociationEntitySet().getId(),
                     getEntityKeyId( neighborEntityDetails.getAssociationDetails() ) );
-            if ( neighborEntityDetails.getNeighborEntitySet().isPresent() ) {
+            if ( neighborEntityDetails.getNeighborEntitySet().isPresent() && neighborEntityDetails.getNeighborDetails()
+                    .isPresent() ) {
                 neighborsByEntitySet.put( neighborEntityDetails.getNeighborEntitySet().get().getId(),
                         getEntityKeyId( neighborEntityDetails.getNeighborDetails().get() ) );
             }
@@ -463,7 +467,10 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                         "is empty." );
             } else {
                 result = searchService
-                        .executeEntityNeighborSearch( ImmutableSet.of( entitySetId ), filter, principals );
+                        .executeEntityNeighborSearch( ImmutableSet.of( entitySetId ),
+                                new PagedNeighborRequest( filter ), principals )
+                        .getNeighbors();
+
             }
         }
 
@@ -476,20 +483,23 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                 neighborList.forEach( neighborEntityDetails -> {
                     neighborsByEntitySet.put( neighborEntityDetails.getAssociationEntitySet().getId(),
                             getEntityKeyId( neighborEntityDetails.getAssociationDetails() ) );
-                    if ( neighborEntityDetails.getNeighborEntitySet().isPresent() ) {
+                    if ( neighborEntityDetails.getNeighborEntitySet().isPresent() && neighborEntityDetails
+                            .getNeighborDetails().isPresent() ) {
                         neighborsByEntitySet.put( neighborEntityDetails.getNeighborEntitySet().get().getId(),
                                 getEntityKeyId( neighborEntityDetails.getNeighborDetails().get() ) );
                     }
                 } )
         );
 
-        List<AuditableEvent> events = new ArrayList<>( neighborsByEntitySet.keySet().size() + 1 );
         UUID userId = spm.getCurrentUserId();
 
         int segments = filter.getEntityKeyIds().size() / AuditingComponent.MAX_ENTITY_KEY_IDS_PER_EVENT;
         if ( filter.getEntityKeyIds().size() % AuditingComponent.MAX_ENTITY_KEY_IDS_PER_EVENT != 0 ) {
             segments++;
         }
+
+        List<AuditableEvent> events = Lists
+                .newArrayListWithExpectedSize( neighborsByEntitySet.keySet().size() + segments );
 
         List<UUID> entityKeyIdsAsList = Lists.newArrayList( filter.getEntityKeyIds() );
 
@@ -702,20 +712,14 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     @Timed
     public Void triggerOrganizationIndex( @PathVariable( ORGANIZATION_ID ) UUID organizationId ) {
         ensureAdminAccess();
-        searchService.triggerOrganizationIndex( organizationService.getOrganization( organizationId ) );
+        searchService.triggerOrganizationIndex( checkNotNull( organizationService.getOrganization( organizationId ),
+                "Unable to trigger organization index because organization [" + organizationId.toString()
+                        + "] does not exist." ) );
         return null;
     }
 
     @NotNull @Override public AuditingManager getAuditingManager() {
         return auditingManager;
-    }
-
-    private static Set<UUID> getEntityKeyIdsFromSearchResult( DataSearchResult searchResult ) {
-        return searchResult.getHits().stream().map( SearchController::getEntityKeyId ).collect( Collectors.toSet() );
-    }
-
-    private static UUID getEntityKeyId( Map<FullQualifiedName, Set<Object>> entity ) {
-        return SearchService.getEntityKeyId( entity );
     }
 
     private void validateSearch( SearchConstraints searchConstraints ) {
@@ -737,6 +741,14 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                 }
             }
         }
+    }
+
+    private static Set<UUID> getEntityKeyIdsFromSearchResult( DataSearchResult searchResult ) {
+        return searchResult.getHits().stream().map( SearchController::getEntityKeyId ).collect( Collectors.toSet() );
+    }
+
+    private static UUID getEntityKeyId( Map<FullQualifiedName, Set<Object>> entity ) {
+        return SearchService.getEntityKeyId( entity );
     }
 
 }

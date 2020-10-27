@@ -394,7 +394,9 @@ class CodexService(
 
         val idsByEntityKey = entityKeyIdService.getEntityKeyIds(entitiesByEntityKey.keys)
 
-        val allPropertyTypes = getPropertyTypes(CodexConstants.CollectionTemplateType.MESSAGES) + getPropertyTypes(associationAppType) + getPropertyTypes(CodexConstants.CollectionTemplateType.CONTACT_INFO)
+        val allPropertyTypes = getPropertyTypes(CodexConstants.CollectionTemplateType.MESSAGES) +
+                getPropertyTypes(associationAppType) +
+                getPropertyTypes(CodexConstants.CollectionTemplateType.CONTACT_INFO)
 
         entitiesByEntityKey.entries.groupBy { it.key.entitySetId }.mapValues {
             it.value.associate { entry -> idsByEntityKey.getValue(entry.key) to entry.value }
@@ -445,9 +447,8 @@ class CodexService(
     }
 
     fun retrieveMediaAsBaseSixtyFour(mediaUri: String): ListenableFuture<String> {
-        val path = if (mediaUri.endsWith(JSON_EXT)) mediaUri.substring(0, mediaUri.length - JSON_EXT.length) else mediaUri
         return executor.submit(Callable {
-            encoder.encodeToString(URL("https://api.twilio.com$path").readBytes())
+            encoder.encodeToString(URL("https://api.twilio.com${mediaUri.removeSuffix(JSON_EXT)}").readBytes())
         })
     }
 
