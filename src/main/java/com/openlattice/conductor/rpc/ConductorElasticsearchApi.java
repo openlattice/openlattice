@@ -247,6 +247,7 @@ public interface ConductorElasticsearchApi {
             Optional<String> optionalSearchTerm,
             Optional<UUID> optionalEntityType,
             Optional<Set<UUID>> optionalPropertyTypes,
+            boolean excludePropertyTypes,
             Set<AclKey> authorizedAclKeys,
             int start,
             int maxHits );

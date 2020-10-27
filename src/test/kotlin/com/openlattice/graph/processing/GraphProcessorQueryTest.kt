@@ -1,6 +1,7 @@
 package com.openlattice.graph.processing
 
 import com.openlattice.edm.type.PropertyType
+import com.openlattice.graph.PagedNeighborRequest
 import com.openlattice.graph.getFilteredNeighborhoodSql
 import com.openlattice.search.requests.EntityNeighborsFilter
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
@@ -43,7 +44,7 @@ class GraphProcessorQueryTest {
                 Optional.of(setOf(UUID.randomUUID())),
                 Optional.of(setOf(UUID.randomUUID())),
                 Optional.of(setOf(UUID.randomUUID())))
-        val query = getFilteredNeighborhoodSql(filter, setOf(1, 2, 3))
+        val query = getFilteredNeighborhoodSql(PagedNeighborRequest(filter), setOf(1, 2, 3))
 
         val uuidArray = "'{\"${UUID.randomUUID()}\"}'"
         val preparedQuery = query.replace("?", uuidArray)
