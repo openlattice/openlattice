@@ -651,6 +651,20 @@ class SearchService(
         return entitySetIdToEntityKeyId
     }
 
+    private fun getPreAuthorizedPagedNeighborRequest(
+            pagedNeighborRequest: PagedNeighborRequest,
+            preauthorizedFilter: EntityNeighborsFilter,
+            entitySetIdsWithDataAccess: Set<UUID>): PagedNeighborRequest {
+        val fullyAuthorizedFilter = EntityNeighborsFilter(
+                preauthorizedFilter.entityKeyIds,
+                Optional.of(preauthorizedFilter.srcEntitySetIds.get().filter { entitySetIdsWithDataAccess.contains(it) }.toSet()),
+                Optional.of(preauthorizedFilter.dstEntitySetIds.get().filter { entitySetIdsWithDataAccess.contains(it) }.toSet()),
+                Optional.of(preauthorizedFilter.associationEntitySetIds.get().filter { entitySetIdsWithDataAccess.contains(it) }.toSet()),
+        )
+
+        return PagedNeighborRequest(fullyAuthorizedFilter, pagedNeighborRequest.bookmark, pagedNeighborRequest.pageSize)
+    }
+
     @Timed
     fun executeEntityNeighborSearch(
             entitySetIds: Set<UUID>,
@@ -673,6 +687,13 @@ class SearchService(
                 allEntitySets,
                 principals
         )
+
+        val authorizedPagedNeighborRequest = getPreAuthorizedPagedNeighborRequest(
+                pagedNeighborRequest,
+                filter,
+                entitySetsIdsToAuthorizedProps.keys
+        )
+
         val entitySetsById = entitySetService.getEntitySetsAsMap(allEntitySets)
 
         if (filter.associationEntitySetIds.isPresent && filter.associationEntitySetIds.get().isEmpty()) {
@@ -692,7 +713,7 @@ class SearchService(
 
         /* Load authorized edges and their corresponding neighbor data */
 
-        val edges = graphService.getEdgesAndNeighborsForVertices(allBaseEntitySetIds, pagedNeighborRequest).toList()
+        val edges = graphService.getEdgesAndNeighborsForVertices(allBaseEntitySetIds, authorizedPagedNeighborRequest).toList()
 
         val entitySetIdToEntityKeyId = getNeighborEntitySetIdToEntityKeyIdForEdges(edges, entityKeyIds)
 
