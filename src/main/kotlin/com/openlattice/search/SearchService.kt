@@ -659,7 +659,7 @@ class SearchService(
                 preauthorizedFilter.entityKeyIds,
                 Optional.of(preauthorizedFilter.srcEntitySetIds.get().filter { entitySetIdsWithDataAccess.contains(it) }.toSet()),
                 Optional.of(preauthorizedFilter.dstEntitySetIds.get().filter { entitySetIdsWithDataAccess.contains(it) }.toSet()),
-                Optional.of(preauthorizedFilter.associationEntitySetIds.get().filter { entitySetIdsWithDataAccess.contains(it) }.toSet()),
+                Optional.of(preauthorizedFilter.associationEntitySetIds.get().filter { entitySetIdsWithDataAccess.contains(it) }.toSet())
         )
 
         return PagedNeighborRequest(fullyAuthorizedFilter, pagedNeighborRequest.bookmark, pagedNeighborRequest.pageSize)
