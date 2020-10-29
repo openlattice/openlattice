@@ -21,7 +21,10 @@
 package com.openlattice.scheduling.mapstores
 
 import com.dataloom.mappers.ObjectMappers
-import com.hazelcast.config.*
+import com.hazelcast.config.InMemoryFormat
+import com.hazelcast.config.IndexConfig
+import com.hazelcast.config.IndexType
+import com.hazelcast.config.MapConfig
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.InternalTestDataFactory
 import com.openlattice.postgres.PostgresTable
@@ -70,7 +73,7 @@ open class ScheduledTasksMapstore(
 
         ps.setObject(index++, value.scheduledDateTime)
         ps.setString(index++, value.task::class.java.name)
-        ps.setString(index++, taskAsJson)
+        ps.setString(index, taskAsJson)
     }
 
     override fun bind(ps: PreparedStatement, key: UUID, offset: Int): Int {
