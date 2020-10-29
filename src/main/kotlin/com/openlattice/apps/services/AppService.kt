@@ -116,7 +116,7 @@ class AppService(
     }
 
     fun deleteRoleFromApp(appId: UUID, roleId: UUID) {
-        getApp(appId)
+        ensureAppExists(appId)
         appConfigs.executeOnKeys(getAppConfigKeysForApp(appId), RemoveRoleFromAppConfigProcessor(roleId))
         apps.executeOnKey(appId, RemoveRoleFromAppProcessor(roleId))
     }
