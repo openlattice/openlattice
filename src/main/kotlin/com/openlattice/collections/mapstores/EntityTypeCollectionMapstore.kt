@@ -51,11 +51,11 @@ open class EntityTypeCollectionMapstore(
         return index
     }
 
-    override fun mapToKey(rs: ResultSet?): UUID {
+    override fun mapToKey(rs: ResultSet): UUID {
         return ResultSetAdapters.id(rs)
     }
 
-    override fun mapToValue(rs: ResultSet?): EntityTypeCollection {
+    override fun mapToValue(rs: ResultSet): EntityTypeCollection {
         return ResultSetAdapters.entityTypeCollection(rs)
     }
 

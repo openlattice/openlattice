@@ -29,10 +29,12 @@ import com.openlattice.client.serialization.SerializableFunction;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.openlattice.shuttle.conditions.Condition;
 import com.openlattice.shuttle.conditions.ConditionValueMapper;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import java.io.Serializable;
 import java.util.*;
 
+@SuppressFBWarnings( value = "SE_BAD_FIELD", justification = "External representation only" )
 public class Flight implements Serializable {
 
     private static final long serialVersionUID = 2207339044078175121L;

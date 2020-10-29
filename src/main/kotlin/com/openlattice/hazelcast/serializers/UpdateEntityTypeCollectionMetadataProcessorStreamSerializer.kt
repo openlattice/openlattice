@@ -17,11 +17,11 @@ class UpdateEntityTypeCollectionMetadataProcessorStreamSerializer : SelfRegister
         return UpdateEntityTypeCollectionMetadataProcessor::class.java
     }
 
-    override fun write(out: ObjectDataOutput?, `object`: UpdateEntityTypeCollectionMetadataProcessor) {
+    override fun write(out: ObjectDataOutput, `object`: UpdateEntityTypeCollectionMetadataProcessor) {
         MetadataUpdateStreamSerializer.serialize(out, `object`.update)
     }
 
-    override fun read(`in`: ObjectDataInput?): UpdateEntityTypeCollectionMetadataProcessor {
+    override fun read(`in`: ObjectDataInput): UpdateEntityTypeCollectionMetadataProcessor {
         val update = MetadataUpdateStreamSerializer.deserialize(`in`)
         return UpdateEntityTypeCollectionMetadataProcessor(update)
     }

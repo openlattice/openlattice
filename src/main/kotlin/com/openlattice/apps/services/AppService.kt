@@ -64,7 +64,6 @@ class AppService(
     private val appConfigs: IMap<AppConfigKey, AppTypeSetting> = hazelcast.getMap(HazelcastMap.APP_CONFIGS.name)
     private val aclKeys: IMap<String, UUID> = hazelcast.getMap(HazelcastMap.ACL_KEYS.name)
     private val entityTypeCollections: IMap<UUID, EntityTypeCollection> = hazelcast.getMap(HazelcastMap.ENTITY_TYPE_COLLECTIONS.name)
-    private val entitySetCollections: IMap<UUID, EntitySetCollection> = hazelcast.getMap(HazelcastMap.ENTITY_SET_COLLECTIONS.name)
 
     @Inject
     private lateinit var eventBus: EventBus
@@ -102,8 +101,7 @@ class AppService(
 
     fun getApp(appId: UUID): App {
         val app = apps[appId]
-        Preconditions.checkNotNull(app, "App with id $appId does not exist.")
-        return app!!
+        return checkNotNull(app) { "App with id $appId does not exist." }
     }
 
     fun getApp(name: String): App {
@@ -118,7 +116,7 @@ class AppService(
     }
 
     fun deleteRoleFromApp(appId: UUID, roleId: UUID) {
-        val app = getApp(appId)
+        ensureAppExists(appId)
         appConfigs.executeOnKeys(getAppConfigKeysForApp(appId), RemoveRoleFromAppConfigProcessor(roleId))
         apps.executeOnKey(appId, RemoveRoleFromAppProcessor(roleId))
     }
@@ -147,7 +145,7 @@ class AppService(
             /* Create the role if it doesn't already exist */
             val rolePrincipal = Principal(PrincipalType.ROLE,
                     getNextAvailableName("$organizationId|${it.title}"))
-            val role = Role(Optional.empty(), organizationId, rolePrincipal, it.title, Optional.of(it.description!!))
+            val role = Role(Optional.empty(), organizationId, rolePrincipal, it.title, Optional.of(it.description))
 
             val aclKey = if (principalsService.createSecurablePrincipalIfNotExists(userPrincipal, role))
                 role.aclKey
@@ -175,7 +173,7 @@ class AppService(
                 }
             }
 
-            it.id!! to aclKey!!
+            it.id to aclKey!!
         }.toMutableMap()
 
         /* Grant the required permissions to app roles */
@@ -204,8 +202,6 @@ class AppService(
             principal: Principal) {
         val app = getApp(appId)
 
-        Preconditions.checkNotNull(app, "The requested app with id $appId does not exist.")
-
         var entitySetCollectionId = appInstallation.entitySetCollectionId
 
         if (entitySetCollectionId == null) {
@@ -226,7 +222,7 @@ class AppService(
             settings = app.defaultSettings
         }
 
-        installApp(app, organizationId, entitySetCollectionId, principal, settings!!)
+        installApp(app, organizationId, entitySetCollectionId, principal, settings)
     }
 
     private fun installApp(

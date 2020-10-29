@@ -5,6 +5,7 @@ import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.organizations.processors.OrganizationEntryProcessor
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.io.ByteArrayInputStream
@@ -17,6 +18,7 @@ import java.io.ObjectOutputStream
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 @Component
+@SuppressFBWarnings(value = ["OBJECT_DESERIALIZATION"], justification = "Trust org EP serialization")
 class OrganizationsEntryProcessorStreamSerializer : SelfRegisteringStreamSerializer<OrganizationEntryProcessor> {
     companion object {
         private val logger = LoggerFactory.getLogger(OrganizationsEntryProcessorStreamSerializer::class.java)

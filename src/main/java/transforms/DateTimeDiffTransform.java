@@ -53,7 +53,7 @@ public class DateTimeDiffTransform extends Transformation<Map<String, String>> {
         }
 
         if (
-                StringUtils.isBlank( row.get( columns.get( 0 ) ) ) | StringUtils.isBlank( row.get( columns.get( 1 ) ) )
+                StringUtils.isBlank( row.get( columns.get( 0 ) ) ) || StringUtils.isBlank( row.get( columns.get( 1 ) ) )
         ) {
             return null;
         }

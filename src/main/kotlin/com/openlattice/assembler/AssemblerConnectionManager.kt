@@ -295,7 +295,6 @@ class AssemblerConnectionManager(
                     )
                 }
                 statement.execute(revokeAll)
-                return@use
             }
         }
     }
@@ -320,7 +319,6 @@ class AssemblerConnectionManager(
                 statement.execute(dropDb)
                 statement.execute(dropDbUser)
                 statement.execute(dropDbRole)
-                return@use
             }
         }
     }
@@ -601,8 +599,6 @@ class AssemblerConnectionManager(
                 //Don't allow users to access public schema which will contain foreign data wrapper tables.
                 logger.info("Revoking $PUBLIC_SCHEMA schema right from role: {}", role)
                 statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM ${quote(dbRole)}")
-
-                return@use
             }
         }
     }
@@ -628,8 +624,6 @@ class AssemblerConnectionManager(
                 //Don't allow users to access public schema which will contain foreign data wrapper tables.
                 logger.info("Revoking $PUBLIC_SCHEMA schema right from user {}", user)
                 statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM ${quote(dbUser)}")
-
-                return@use
             }
         }
     }
