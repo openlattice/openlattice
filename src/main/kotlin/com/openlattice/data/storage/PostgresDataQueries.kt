@@ -744,6 +744,7 @@ fun upsertPropertyValueSql(propertyType: PropertyType): String {
             "DO UPDATE SET " +
             "${VERSIONS.name} = ${DATA.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
             "${LAST_WRITE.name} = GREATEST(${DATA.name}.${LAST_WRITE.name},EXCLUDED.${LAST_WRITE.name}), " +
+            "${ORIGIN_ID.name} = EXCLUDED.${ORIGIN_ID.name}, " +
             "${VERSION.name} = CASE " +
             "WHEN abs(${DATA.name}.${VERSION.name}) <= EXCLUDED.${VERSION.name} " +
             "THEN EXCLUDED.${VERSION.name} " +
