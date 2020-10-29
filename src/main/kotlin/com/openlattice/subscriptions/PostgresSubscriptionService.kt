@@ -103,7 +103,7 @@ class PostgresSubscriptionService(
     private fun <T> execSqlSelectReturningIterable(
             sql: String,
             resultMappingFunc: (rs: ResultSet) -> T,
-            statementFunction: (ps: PreparedStatement, conn: Connection) -> PreparedStatement = { ps: PreparedStatement, _: Connection -> ps }
+            statementFunction: (ps: PreparedStatement, conn: Connection) -> PreparedStatement
     ): Iterable<T> {
         return BasePostgresIterable(PreparedStatementHolderSupplier(hds, sql, 0, false) {
             statementFunction(it, it.connection)
