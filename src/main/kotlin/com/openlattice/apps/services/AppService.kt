@@ -102,8 +102,7 @@ class AppService(
 
     fun getApp(appId: UUID): App {
         val app = apps[appId]
-        Preconditions.checkNotNull(app, "App with id $appId does not exist.")
-        return app!!
+        return checkNotNull(app) { "App with id $appId does not exist." }
     }
 
     fun getApp(name: String): App {
@@ -203,8 +202,6 @@ class AppService(
             appInstallation: AppInstallation,
             principal: Principal) {
         val app = getApp(appId)
-
-        Preconditions.checkNotNull(app, "The requested app with id $appId does not exist.")
 
         var entitySetCollectionId = appInstallation.entitySetCollectionId
 
