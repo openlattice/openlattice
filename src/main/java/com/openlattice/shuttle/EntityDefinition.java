@@ -45,7 +45,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 @JsonInclude( value = Include.NON_EMPTY )
-@SuppressFBWarnings( "SE_BAD_FIELD" )
+@SuppressFBWarnings( value = "SE_BAD_FIELD", justification = "External representation only" )
 public class EntityDefinition implements Serializable {
 
     private static final long serialVersionUID = -3565689091187367622L;

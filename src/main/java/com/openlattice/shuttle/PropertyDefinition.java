@@ -42,7 +42,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 @JsonInclude( value = Include.NON_EMPTY )
-@SuppressFBWarnings( "SE_BAD_FIELD" )
+@SuppressFBWarnings( value = "SE_BAD_FIELD", justification = "External representation only" )
 public class PropertyDefinition implements Serializable {
 
     private static final long serialVersionUID = -6759550320515138785L;

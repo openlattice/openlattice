@@ -34,7 +34,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.Serializable;
 import java.util.*;
 
-@SuppressFBWarnings( "SE_BAD_FIELD" )
+@SuppressFBWarnings( value = "SE_BAD_FIELD", justification = "External representation only" )
 public class Flight implements Serializable {
 
     private static final long serialVersionUID = 2207339044078175121L;
