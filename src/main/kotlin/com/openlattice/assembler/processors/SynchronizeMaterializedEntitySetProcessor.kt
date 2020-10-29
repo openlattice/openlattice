@@ -31,9 +31,11 @@ import com.openlattice.assembler.MaterializedEntitySet
 import com.openlattice.authorization.Principal
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import java.time.OffsetDateTime
 import java.util.*
 
+@SuppressFBWarnings(value = ["SE_BAD_FIELD"], justification = "Custom Stream Serializer is implemented")
 data class SynchronizeMaterializedEntitySetProcessor(
         val entitySet: EntitySet,
         val materializablePropertyTypes: Map<UUID, PropertyType>,

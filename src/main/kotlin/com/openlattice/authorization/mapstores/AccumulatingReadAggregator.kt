@@ -2,6 +2,7 @@ package com.openlattice.authorization.mapstores
 
 import com.hazelcast.aggregation.Aggregator
 import com.openlattice.authorization.AclKeySet
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 
 /**
  *
@@ -16,6 +17,7 @@ class AccumulatingReadAggregator<K> : Aggregator<MutableMap.MutableEntry<K, AclK
         v?.addAll(input.value)
     }
 
+    @SuppressFBWarnings("RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE")
     override fun combine(aggregator: Aggregator<*, *>) {
         val castAggregator = aggregator as AccumulatingReadAggregator<K>
         if (v == null) {

@@ -3,9 +3,7 @@ package com.openlattice.shuttle
 import com.dataloom.mappers.ObjectMappers
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.openlattice.client.serialization.SerializationConstants
-import com.openlattice.mapstores.TestDataFactory
 import java.net.URL
-import java.util.*
 
 /**
  * Represents the parameters required to create a flight plan (i.e. a Map<Flight, Payload>)
@@ -27,7 +25,7 @@ data class FlightPlanParameters(
     init {
         check(flight != null || flightFilePath != null) {"Either flight or flightFilePath must not be null"}
         if (flightFilePath != null && flight == null) {
-            this.flight = ObjectMappers.getYamlMapper().readValue(URL(flightFilePath!!), Flight::class.java)
+            this.flight = ObjectMappers.getYamlMapper().readValue(URL(flightFilePath), Flight::class.java)
         } else {
             this.flight = flight
         }

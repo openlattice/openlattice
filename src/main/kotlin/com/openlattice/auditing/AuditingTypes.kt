@@ -5,6 +5,7 @@ import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.type.AssociationType
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import java.util.*
@@ -14,6 +15,7 @@ import java.util.concurrent.locks.ReentrantLock
  *
  *
  */
+@SuppressFBWarnings(value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"], justification = "Ignore internal kotlin redundant nullchecks")
 class AuditingTypes(
         private val edm: EdmManager,
         private val auditingConfiguration: AuditingConfiguration

@@ -4,6 +4,7 @@ import com.hazelcast.aggregation.Aggregator
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.SecurablePrincipal
 import com.openlattice.organizations.SecurablePrincipalList
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 
 /**
  *
@@ -19,6 +20,7 @@ data class SecurablePrincipalAccumulator(
         v?.add(input.value)
     }
 
+    @SuppressFBWarnings("RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE")
     override fun combine(aggregator: Aggregator<*, *>) {
         val castAggregator = aggregator as SecurablePrincipalAccumulator
         if (v == null) {

@@ -30,7 +30,7 @@ import com.kryptnostic.rhizome.configuration.annotation.ReloadableConfiguration;
 @ReloadableConfiguration( uri = "twilio.yaml" )
 public class TwilioConfiguration implements Configuration {
 
-    protected static ConfigurationKey key = new SimpleConfigurationKey(
+    protected static final ConfigurationKey key = new SimpleConfigurationKey(
             "twilio.yaml" );
 
     private static final String SID_PROPERTY        = "sid";

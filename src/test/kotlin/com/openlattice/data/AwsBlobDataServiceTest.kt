@@ -12,7 +12,6 @@ import com.openlattice.ResourceConfigurationLoader
 import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.data.storage.aws.AwsBlobDataService
 import com.openlattice.datastore.configuration.DatastoreConfiguration
-import org.junit.AfterClass
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
@@ -29,7 +28,8 @@ class AwsBlobDataServiceTest {
     companion object {
         @JvmStatic
         private lateinit var byteBlobDataManager: ByteBlobDataManager
-        private var key1 = ""
+
+        private val r = Random()
 
         @BeforeClass
         @JvmStatic
@@ -69,18 +69,14 @@ class AwsBlobDataServiceTest {
             return ResourceConfigurationLoader.loadConfiguration(DatastoreConfiguration::class.java)
         }
 
-
-        @AfterClass
-        @JvmStatic
-        fun cleanUp() {
-            byteBlobDataManager.deleteObject(this.key1)
-        }
     }
 
     @Test
     fun testPutAndGetObject() {
         val data = ByteArray(10)
-        Random().nextBytes(data)
+        r.nextBytes(data)
+        var key1 = ""
+
         for (i in 1..3) {
             key1 = key1.plus(UUID.randomUUID().toString())
         }
@@ -90,13 +86,14 @@ class AwsBlobDataServiceTest {
         val returnedDataList = byteBlobDataManager.getObjects(listOf(key1))
         val returnedURL = returnedDataList[0] as URL
         val returnedData = returnedURL.readBytes()
+        byteBlobDataManager.deleteObject(key1)
         Assert.assertArrayEquals(data, returnedData)
     }
 
     @Test(expected = FileNotFoundException::class)
     fun testDeleteObject() {
         val data = ByteArray(10)
-        Random().nextBytes(data)
+        r.nextBytes(data)
         var key2 = ""
         for (i in 1..3) {
             key2 = key2.plus(UUID.randomUUID().toString()).plus("/")
@@ -113,7 +110,7 @@ class AwsBlobDataServiceTest {
     @Test
     fun testSpeedOfGetPresignedURL() {
         val data = ByteArray(10)
-        Random().nextBytes(data)
+        r.nextBytes(data)
         val keys = mutableListOf<String>()
         val numOfIterations = 10000
         for (i in 1..numOfIterations) {

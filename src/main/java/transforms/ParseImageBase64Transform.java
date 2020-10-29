@@ -3,6 +3,7 @@ package transforms;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.openlattice.shuttle.transformations.Transformation;
 
+import java.nio.charset.Charset;
 import java.util.Base64;
 
 public class ParseImageBase64Transform extends Transformation<String> {
@@ -17,6 +18,6 @@ public class ParseImageBase64Transform extends Transformation<String> {
 
     @Override
     public Object applyValue( String o ) {
-        return Base64.getEncoder().encode(o.getBytes());
+        return Base64.getEncoder().encode( o.getBytes( Charset.defaultCharset() ) );
     }
 }

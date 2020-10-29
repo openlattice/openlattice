@@ -58,4 +58,10 @@ class PermissionMapListener(private val eventBus: EventBus) : EntryAddedListener
     override fun equals(other: Any?): Boolean {
         return other != null && other is PermissionMapListener
     }
+
+    override fun hashCode(): Int {
+        return eventBus.hashCode()
+    }
+
+
 }

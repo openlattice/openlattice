@@ -19,6 +19,7 @@ import com.openlattice.postgres.PostgresTable.*
 import com.openlattice.postgres.PostgresTableDefinition
 import com.openlattice.postgres.ResultSetAdapters
 import com.zaxxer.hikari.HikariDataSource
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import java.sql.PreparedStatement
 import java.util.*
 
@@ -212,6 +213,7 @@ class RepartitioningJob(
         ps.setInt(6, state.newPartitions.size)
     }
 
+    @SuppressFBWarnings(value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"], justification = "Ignore internal kotlin redundant nullchecks")
     private fun setPartitions(entitySetId: UUID, partitions: Set<Int>) {
         require(entitySets.containsKey(entitySetId)) {
             "Entity set $entitySetId not found"
