@@ -237,7 +237,7 @@ class Assembler(
                 RenameMaterializedEntitySetProcessor(
                         entitySetNameUpdatedEvent.newName, entitySetNameUpdatedEvent.oldName
                 ).init(acm),
-                entitySetIdPredicate(entitySetNameUpdatedEvent.entitySetId) as Predicate<EntitySetAssemblyKey, MaterializedEntitySet>
+                entitySetIdPredicate(entitySetNameUpdatedEvent.entitySetId)
         )
     }
 
