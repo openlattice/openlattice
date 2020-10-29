@@ -20,6 +20,7 @@ private val transportTimestampColumn: PostgresColumnDefinition = LAST_TRANSPORT
 private const val BATCH_LIMIT = 10_000
 
 val MAT_EDGES_TABLE = edgesTableDefinition()
+val MAT_EDGES_COLUMNS_LIST = MAT_EDGES_TABLE.columns.map { it.name }.toList()
 const val MAT_EDGES_TABLE_NAME = "et_edges"
 
 fun unquotedTableName(entityTypeId: UUID): String {
@@ -261,6 +262,33 @@ fun updateLastWriteForId(): String {
             " AND ${ENTITY_SET_ID.name} = ANY(?) " +
             " AND ${ID_VALUE.name} = ? " +
             " AND abs(${VERSION.name}) > ${transportTimestampColumn.name} "
+}
+
+fun importTablesFromForeignSchemaQuery(
+    remoteSchema: String,
+    remoteTables: Set<String>,
+    localSchema: String,
+    usingFdwName: String
+): String {
+    val tablesClause = if (remoteTables.isEmpty()) {
+        ""
+    } else {
+        "LIMIT TO (${remoteTables.joinToString(",")})"
+    }
+    return "import foreign schema $remoteSchema $tablesClause from server $usingFdwName INTO $localSchema;"
+}
+
+fun checkIfTableExistsQuery(
+    schema: String,
+    table: String
+): String {
+    return """
+        SELECT EXISTS (
+            SELECT FROM information_schema.tables
+                WHERE  table_schema = '$schema'
+                AND    table_name   = '$table'
+            )
+        """.trimIndent()
 }
 
 fun addAllMissingColumnsQuery(table: PostgresTableDefinition, columns: Set<PostgresColumnDefinition>): String =
