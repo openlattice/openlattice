@@ -6,6 +6,7 @@ import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.transporter.types.TransporterDatastore
 import com.openlattice.transporter.types.TransporterDependent
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import java.util.*
@@ -14,6 +15,7 @@ import java.util.*
  *
  * @author Drew Bailey &lt;drew@openlattice.com&gt;
  */
+@SuppressFBWarnings(value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"], justification = "Ignore internal kotlin redundant nullchecks")
 data class TransportEntitySetEntryProcessor(
         val ptIdToFqnColumns: Map<UUID, FullQualifiedName>,
         val organizationId: UUID,

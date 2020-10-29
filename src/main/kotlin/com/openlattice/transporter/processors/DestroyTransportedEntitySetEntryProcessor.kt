@@ -6,11 +6,13 @@ import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.transporter.types.TransporterDatastore
 import com.openlattice.transporter.types.TransporterDependent
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import java.util.*
 
 /**
  * @author Drew Bailey &lt;drew@openlattice.com&gt;
  */
+@SuppressFBWarnings(value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"], justification = "Ignore internal kotlin redundant nullchecks")
 class DestroyTransportedEntitySetEntryProcessor(): AbstractRhizomeEntryProcessor<UUID, EntitySet, Void?>(),
         Offloadable,
         TransporterDependent<DestroyTransportedEntitySetEntryProcessor>
