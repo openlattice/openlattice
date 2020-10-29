@@ -34,11 +34,11 @@ open class OrganizationDatabasesMapstore(
         return index
     }
 
-    override fun mapToKey(rs: ResultSet?): UUID {
+    override fun mapToKey(rs: ResultSet): UUID {
         return ResultSetAdapters.id(rs)
     }
 
-    override fun mapToValue(rs: ResultSet?): OrganizationDatabase {
+    override fun mapToValue(rs: ResultSet): OrganizationDatabase {
         return ResultSetAdapters.organizationDatabase(rs)
     }
 

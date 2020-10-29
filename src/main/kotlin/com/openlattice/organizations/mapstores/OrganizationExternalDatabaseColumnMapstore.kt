@@ -1,6 +1,9 @@
 package com.openlattice.organizations.mapstores
 
-import com.hazelcast.config.*
+import com.hazelcast.config.InMemoryFormat
+import com.hazelcast.config.IndexConfig
+import com.hazelcast.config.IndexType
+import com.hazelcast.config.MapConfig
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
@@ -50,11 +53,11 @@ open class OrganizationExternalDatabaseColumnMapstore(
         return index
     }
 
-    override fun mapToKey(rs: ResultSet?): UUID {
+    override fun mapToKey(rs: ResultSet): UUID {
         return ResultSetAdapters.id(rs)
     }
 
-    override fun mapToValue(rs: ResultSet?): OrganizationExternalDatabaseColumn {
+    override fun mapToValue(rs: ResultSet): OrganizationExternalDatabaseColumn {
         return ResultSetAdapters.organizationExternalDatabaseColumn(rs)
     }
 

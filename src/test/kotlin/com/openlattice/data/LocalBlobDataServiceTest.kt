@@ -6,7 +6,10 @@ import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.data.storage.LocalBlobDataService
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
-import org.junit.*
+import org.junit.AfterClass
+import org.junit.Assert
+import org.junit.BeforeClass
+import org.junit.Test
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.*
@@ -17,7 +20,10 @@ class LocalBlobDataServiceTest {
     companion object {
         @JvmStatic
         private lateinit var byteBlobDataManager: ByteBlobDataManager
+
         private lateinit var hds: HikariDataSource
+
+        private val r = Random()
 
         @BeforeClass
         @JvmStatic
@@ -57,7 +63,7 @@ class LocalBlobDataServiceTest {
     @Test
     fun testPutAndGetObject() {
         val data = ByteArray(10)
-        Random().nextBytes(data)
+        r.nextBytes(data)
         var key1 = ""
         for (i in 1..3) {
             key1 = key1.plus(UUID.randomUUID().toString())
@@ -73,7 +79,7 @@ class LocalBlobDataServiceTest {
     @Test
     fun testDeletObject() {
         val data = ByteArray(10)
-        Random().nextBytes(data)
+        r.nextBytes(data)
         var key2 = ""
         for (i in 1..3) {
             key2 = key2.plus(UUID.randomUUID().toString()).plus("/")

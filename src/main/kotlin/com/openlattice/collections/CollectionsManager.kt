@@ -30,10 +30,12 @@ import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.hazelcast.HazelcastMap
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.springframework.stereotype.Service
 import java.util.*
 
 @Service
+@SuppressFBWarnings("NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE")
 class CollectionsManager(
         hazelcast: HazelcastInstance,
         private val edmManager: EdmManager,
