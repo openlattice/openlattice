@@ -78,7 +78,6 @@ spotbugsMain {
         xml.enabled = false
         html.enabled = true
     }
-    ignoreFailures = true
 }
 
 tasks.withType(Javadoc) {
