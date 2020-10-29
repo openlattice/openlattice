@@ -29,8 +29,10 @@ import com.openlattice.assembler.EntitySetAssemblyKey
 import com.openlattice.assembler.MaterializedEntitySet
 import com.openlattice.edm.EntitySet
 import com.openlattice.organization.OrganizationEntitySetFlag
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import java.time.OffsetDateTime
 
+@SuppressFBWarnings(value = ["SE_BAD_FIELD"], justification = "Custom Stream Serializer is implemented")
 data class RefreshMaterializedEntitySetProcessor(val entitySet: EntitySet)
     : AbstractRhizomeEntryProcessor<EntitySetAssemblyKey, MaterializedEntitySet, Void?>(),
         AssemblerConnectionManagerDependent<RefreshMaterializedEntitySetProcessor>,
