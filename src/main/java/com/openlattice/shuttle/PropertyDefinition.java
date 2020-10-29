@@ -30,13 +30,19 @@ import com.openlattice.client.serialization.SerializationConstants;
 import com.openlattice.shuttle.destinations.StorageDestination;
 import com.openlattice.shuttle.transformations.TransformValueMapper;
 import com.openlattice.shuttle.transformations.Transformation;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import com.openlattice.shuttle.transforms.ColumnTransform;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 import java.io.Serializable;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 
 @JsonInclude( value = Include.NON_EMPTY )
+@SuppressFBWarnings( "SE_BAD_FIELD" )
 public class PropertyDefinition implements Serializable {
 
     private static final long serialVersionUID = -6759550320515138785L;
