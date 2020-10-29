@@ -73,7 +73,7 @@ public class CombineDateTimeTransform extends Transformation<Map<String, String>
 
         // get time
         String t = row.get( timeColumn );
-        if ( StringUtils.isBlank( t ) | t == null ) {
+        if ( StringUtils.isBlank( t ) ) {
             return null;
         }
         final JavaDateTimeHelper tHelper = new JavaDateTimeHelper( timezone,
