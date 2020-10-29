@@ -31,8 +31,10 @@ import com.openlattice.assembler.OrganizationAssembly
 import com.openlattice.authorization.SecurablePrincipal
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import java.util.*
 
+@SuppressFBWarnings(value = ["SE_BAD_FIELD"], justification = "Custom Stream Serializer is implemented")
 data class AddMembersToOrganizationAssemblyProcessor(
         val authorizedPropertyTypesOfEntitySetsByPrincipal: Map<SecurablePrincipal, Map<EntitySet, Collection<PropertyType>>>
 ) : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(false),

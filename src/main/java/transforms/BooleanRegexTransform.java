@@ -49,21 +49,17 @@ public class BooleanRegexTransform<I extends Object> extends BooleanTransformati
     @Override
     public boolean applyCondition( Map<String, Object> row ) {
 
-        if ( !( row.containsKey( column ) ) ) {
+        if ( !row.containsKey( column ) ) {
             throw new IllegalStateException( String.format( "The column %s is not found.", column ) );
         }
 
         Object input = row.get( column );
 
-        if (! (input instanceof String) ) {
+        if ( !( input instanceof String ) ) {
             return false;
         }
 
-        if (input == null) {
-            input = "";
-        }
-
-        Matcher m = Cached.getInsensitiveMatcherForString( (String) input, this.pattern );
+        Matcher m = Cached.getInsensitiveMatcherForString( (String) input, pattern );
         return m.find();
 
     }

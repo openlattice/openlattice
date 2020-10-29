@@ -265,16 +265,20 @@ public class PersonProperties {
 
     public static double getProba(
             Map<UUID, DelegatedStringSet> entity,
-            Map<FullQualifiedName, UUID> fqnToIdMap ,
-            boolean first) {
-        final DelegatedStringSet name = first ? getFirstName(entity, fqnToIdMap) : getLastName(entity, fqnToIdMap);
-        final Map<String, Double> NameCounts = first? firstNameCounts : lastNameCounts ;
+            Map<FullQualifiedName, UUID> fqnToIdMap,
+            boolean first ) {
+        final DelegatedStringSet nameSet = first ?
+                getFirstName( entity, fqnToIdMap ) :
+                getLastName( entity, fqnToIdMap );
+        final Map<String, Double> nameCounts = first ? firstNameCounts : lastNameCounts;
 
-        if (NameCounts.containsKey(name)) {
-            return NameCounts.get(name);
-        } else {
-            return 0;
+        for ( String name : nameSet ) {
+            if ( nameCounts.containsKey( name ) ) {
+                return nameCounts.get( name );
+            }
         }
+
+        return 0;
 
     }
 //        logger.info(proba);

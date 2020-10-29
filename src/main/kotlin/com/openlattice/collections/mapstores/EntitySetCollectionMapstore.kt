@@ -1,6 +1,9 @@
 package com.openlattice.collections.mapstores
 
-import com.hazelcast.config.*
+import com.hazelcast.config.InMemoryFormat
+import com.hazelcast.config.IndexConfig
+import com.hazelcast.config.IndexType
+import com.hazelcast.config.MapConfig
 import com.openlattice.collections.EntitySetCollection
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.mapstores.TestDataFactory
@@ -51,11 +54,11 @@ open class EntitySetCollectionMapstore(
         return index
     }
 
-    override fun mapToKey(rs: ResultSet?): UUID {
+    override fun mapToKey(rs: ResultSet): UUID {
         return ResultSetAdapters.id(rs)
     }
 
-    override fun mapToValue(rs: ResultSet?): EntitySetCollection {
+    override fun mapToValue(rs: ResultSet): EntitySetCollection {
         return ResultSetAdapters.entitySetCollection(rs)
     }
 

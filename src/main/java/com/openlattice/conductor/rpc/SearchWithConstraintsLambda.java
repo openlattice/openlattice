@@ -3,12 +3,14 @@ package com.openlattice.conductor.rpc;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
 import com.openlattice.search.requests.EntityDataKeySearchResult;
 import com.openlattice.search.requests.SearchConstraints;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import java.io.Serializable;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
 
+@SuppressFBWarnings( value = "SE_BAD_FIELD", justification = "Custom Stream Serializer is implemented" )
 public class SearchWithConstraintsLambda
         implements Function<ConductorElasticsearchApi, EntityDataKeySearchResult>, Serializable {
 

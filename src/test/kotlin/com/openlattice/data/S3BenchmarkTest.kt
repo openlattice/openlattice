@@ -33,7 +33,10 @@ class S3BenchmarkTest {
     companion object {
         @JvmStatic
         private lateinit var byteBlobDataManager: ByteBlobDataManager
+
         private var keys = mutableListOf<String>()
+
+        private val r = Random()
 
         @BeforeClass
         @JvmStatic
@@ -86,7 +89,7 @@ class S3BenchmarkTest {
 
     private fun generateTestData(): ByteArray {
         val data = ByteArray(NUM_BYTES)
-        Random().nextBytes(data)
+        r.nextBytes(data)
         val numOfIterations = NUM_OBJECTS
         for (i in 1..numOfIterations) {
             var key = ""
