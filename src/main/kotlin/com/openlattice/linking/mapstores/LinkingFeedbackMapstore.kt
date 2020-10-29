@@ -1,6 +1,9 @@
 package com.openlattice.linking.mapstores
 
-import com.hazelcast.config.*
+import com.hazelcast.config.InMemoryFormat
+import com.hazelcast.config.IndexConfig
+import com.hazelcast.config.IndexType
+import com.hazelcast.config.MapConfig
 import com.openlattice.data.EntityDataKey
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.linking.EntityKeyPair
@@ -10,7 +13,7 @@ import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore
 import com.zaxxer.hikari.HikariDataSource
 import java.sql.PreparedStatement
 import java.sql.ResultSet
-import java.util.UUID
+import java.util.*
 import kotlin.random.Random
 
 const val FIRST_ENTITY_INDEX = "__key.first"
@@ -43,11 +46,11 @@ open class LinkingFeedbackMapstore(
         return offset + 4
     }
 
-    override fun mapToKey(rs: ResultSet?): EntityKeyPair {
+    override fun mapToKey(rs: ResultSet): EntityKeyPair {
         return ResultSetAdapters.entityKeyPair(rs)
     }
 
-    override fun mapToValue(rs: ResultSet?): Boolean {
+    override fun mapToValue(rs: ResultSet): Boolean {
         return ResultSetAdapters.isLinked(rs)
     }
 
