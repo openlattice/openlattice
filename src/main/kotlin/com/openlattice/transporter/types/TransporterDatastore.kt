@@ -10,6 +10,7 @@ import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
 import com.openlattice.transporter.*
 import com.zaxxer.hikari.HikariDataSource
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -70,6 +71,7 @@ class TransporterDatastore(
     }
 
     fun linkOrgDbToTransporterDb(organizationId: UUID) {
+
         createFdwBetweenDatabases(
                 connectOrgDb(organizationId),
                 assemblerConfiguration.server.getProperty("username"),
@@ -87,6 +89,10 @@ class TransporterDatastore(
     /**
      * Create FDW between [localSchema] and [remoteDb]
      */
+    @SuppressFBWarnings(
+            value = ["SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE"],
+            justification = "Only internal values provided to SQL update statment"
+    )
     private fun createFdwBetweenDatabases(
             localDbDatasource: HikariDataSource,
             remoteUser: String,
