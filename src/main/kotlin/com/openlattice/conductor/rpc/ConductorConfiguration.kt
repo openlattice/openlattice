@@ -7,9 +7,6 @@ import com.kryptnostic.rhizome.configuration.SimpleConfigurationKey
 import com.kryptnostic.rhizome.configuration.annotation.ReloadableConfiguration
 import java.util.*
 
-
-private val key = SimpleConfigurationKey("conductor.yaml")
-
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -30,5 +27,5 @@ data class ConductorConfiguration(
     override fun getKey(): ConfigurationKey {
         return ConductorConfiguration.key
     }
-    
+
 }
