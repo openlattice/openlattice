@@ -237,7 +237,7 @@ class Assembler(
                 RenameMaterializedEntitySetProcessor(
                         entitySetNameUpdatedEvent.newName, entitySetNameUpdatedEvent.oldName
                 ).init(acm),
-                entitySetIdPredicate(entitySetNameUpdatedEvent.entitySetId) as Predicate<EntitySetAssemblyKey, MaterializedEntitySet>
+                entitySetIdPredicate(entitySetNameUpdatedEvent.entitySetId)
         )
     }
 
@@ -385,8 +385,8 @@ class Assembler(
                 as Predicate<EntitySetAssemblyKey, MaterializedEntitySet>
     }
 
-    private fun entitySetIdInOrganizationPredicate(entitySetId: UUID): Predicate<EntitySetAssemblyKey, MaterializedEntitySet> {
-        return Predicates.equal<EntitySetAssemblyKey, MaterializedEntitySet>(
+    private fun entitySetIdInOrganizationPredicate(entitySetId: UUID): Predicate<UUID, OrganizationAssembly> {
+        return Predicates.equal<UUID, OrganizationAssembly>(
                 OrganizationAssemblyMapstore.MATERIALIZED_ENTITY_SETS_ID_INDEX,
                 entitySetId
         )

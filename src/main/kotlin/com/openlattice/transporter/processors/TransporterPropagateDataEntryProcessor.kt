@@ -12,6 +12,7 @@ import com.openlattice.transporter.*
 import com.openlattice.transporter.types.TransporterColumnSet
 import com.openlattice.transporter.types.TransporterDatastore
 import com.openlattice.transporter.types.TransporterDependent
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import io.prometheus.client.Counter
 import org.slf4j.LoggerFactory
 import java.util.*
@@ -19,6 +20,7 @@ import java.util.*
 /**
  * Transport data from enterprise into entity_type tables on atlas
  */
+@SuppressFBWarnings(value = ["SE_BAD_FIELD"], justification = "Custom Stream Serializer is implemented")
 class TransporterPropagateDataEntryProcessor(
         val entitySets: Set<EntitySet>,
         val entitySetPartitions: Collection<Int>

@@ -45,7 +45,7 @@ public class CombineDateTimeTransform extends Transformation<Map<String, String>
         this.timeColumn = timeColumn;
         this.timePattern = timePattern;
         this.timezone = TimeZones.checkTimezone( timezone );
-        this.shouldAddTimezone = timezone == null;
+        shouldAddTimezone = timezone == null;
     }
 
     @Override
@@ -58,11 +58,11 @@ public class CombineDateTimeTransform extends Transformation<Map<String, String>
 
         // get date
         String d = row.get( dateColumn );
-        if ( StringUtils.isBlank( d ) | d == null ) {
+        if ( StringUtils.isBlank( d ) ) {
             return null;
         }
-        final JavaDateTimeHelper dHelper = new JavaDateTimeHelper( this.timezone,
-                this.datePattern, this.shouldAddTimezone );
+        final JavaDateTimeHelper dHelper = new JavaDateTimeHelper( timezone,
+                datePattern, shouldAddTimezone );
 
         LocalDate date;
         try {
@@ -73,11 +73,11 @@ public class CombineDateTimeTransform extends Transformation<Map<String, String>
 
         // get time
         String t = row.get( timeColumn );
-        if ( StringUtils.isBlank( t ) | t == null ) {
+        if ( StringUtils.isBlank( t ) ) {
             return null;
         }
-        final JavaDateTimeHelper tHelper = new JavaDateTimeHelper( this.timezone,
-                this.timePattern, this.shouldAddTimezone );
+        final JavaDateTimeHelper tHelper = new JavaDateTimeHelper( timezone,
+                timePattern, shouldAddTimezone );
 
         LocalTime time;
         try {
@@ -92,7 +92,7 @@ public class CombineDateTimeTransform extends Transformation<Map<String, String>
         }
         LocalDateTime dateTime = LocalDateTime.of( date, time );
 
-        TimeZone tz = this.timezone;
+        TimeZone tz = timezone;
         OffsetDateTime out = dateTime.atZone( tz.toZoneId() ).toOffsetDateTime();
         return out;
     }

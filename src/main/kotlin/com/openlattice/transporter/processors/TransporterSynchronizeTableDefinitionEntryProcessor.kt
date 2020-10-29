@@ -8,6 +8,7 @@ import com.openlattice.transporter.transportTable
 import com.openlattice.transporter.types.TransporterColumnSet
 import com.openlattice.transporter.types.TransporterDatastore
 import com.openlattice.transporter.types.TransporterDependent
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.slf4j.LoggerFactory
 import java.util.*
 
@@ -15,6 +16,7 @@ import java.util.*
  * Synchronizes property table definitions for [newProperties]
  * A return value of true indicates that columns were added to or removed from the entity type tables
  */
+@SuppressFBWarnings(value = ["SE_BAD_FIELD"], justification = "Custom Stream Serializer is implemented")
 data class TransporterSynchronizeTableDefinitionEntryProcessor(
         val newProperties: Collection<PropertyType> = setOf(),
         val removedProperties: Collection<PropertyType> = setOf()
