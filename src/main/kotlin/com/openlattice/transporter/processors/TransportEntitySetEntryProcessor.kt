@@ -9,7 +9,7 @@ import com.openlattice.transporter.types.TransporterDependent
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
-import java.util.*
+import java.util.UUID
 
 /**
  *
