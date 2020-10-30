@@ -24,6 +24,7 @@ import com.auth0.client.mgmt.ManagementAPI;
 import com.auth0.exception.Auth0Exception;
 import com.auth0.json.mgmt.users.User;
 import com.codahale.metrics.annotation.Timed;
+import com.openlattice.assembler.Assembler;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.directory.MaterializedViewAccount;
@@ -74,6 +75,9 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
 
     @Inject
     private HazelcastOrganizationService organizationService;
+
+    @Inject
+    private Assembler assembler;
 
     @Timed
     @Override
@@ -175,6 +179,17 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
             produces = MediaType.APPLICATION_JSON_VALUE )
     public MaterializedViewAccount getMaterializedViewAccount() {
         return dbCredService.getDbCredential( Principals.getCurrentSecurablePrincipal() );
+    }
+
+    @Timed
+    @Override
+    @RequestMapping(
+            path = DB + CREDENTIAL,
+            method = RequestMethod.POST,
+            produces = MediaType.APPLICATION_JSON_VALUE )
+    public MaterializedViewAccount regenerateCredential() {
+        var sp = Principals.getCurrentSecurablePrincipal();
+        return assembler.rollIntegrationAccount( sp.getId(), sp.getPrincipalType() );
     }
 
     @Timed
