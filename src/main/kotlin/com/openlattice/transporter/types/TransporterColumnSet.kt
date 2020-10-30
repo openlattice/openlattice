@@ -6,7 +6,7 @@ import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.PostgresColumnDefinition
 import com.openlattice.postgres.PostgresDataTables
 import com.openlattice.postgres.PostgresDatatype
-import java.util.*
+import java.util.UUID
 
 data class TransporterColumn(
         val dataTableColumnName: String,

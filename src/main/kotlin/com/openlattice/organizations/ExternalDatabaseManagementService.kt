@@ -172,8 +172,8 @@ class ExternalDatabaseManagementService(
         }
 
         val transporterColumnsCompletion = entityTypeId.thenCompose { etid ->
-            if (etid == null) {
-                throw Exception("Entity set {} has no entity type {}")
+            requireNotNull(etid) {
+                "Entity set $entitySetId has no entity type"
             }
             transporterState.submitToKey(etid, GetPropertyTypesFromTransporterColumnSetEntryProcessor())
         }.thenCompose { transporterPtIds ->

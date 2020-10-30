@@ -10,7 +10,8 @@ import com.openlattice.transporter.types.TransporterDatastore
 import com.openlattice.transporter.types.TransporterDependent
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.springframework.stereotype.Component
-import java.util.*
+import java.util.ArrayList
+import java.util.UUID
 
 /**
  * @author Drew Bailey &lt;drew@openlattice.com&gt;

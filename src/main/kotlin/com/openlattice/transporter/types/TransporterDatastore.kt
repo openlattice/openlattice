@@ -142,20 +142,6 @@ class TransporterDatastore(
         }
     }
 
-    fun importTablesFromForeignSchema(
-            remoteSchema: String,
-            remoteTables: Set<String>,
-            localSchema: String,
-            usingFdwName: String
-    ): String {
-        val tablesClause = if (remoteTables.isEmpty()) {
-            ""
-        } else {
-            "LIMIT TO (${remoteTables.joinToString(",")})"
-        }
-        return "import foreign schema $remoteSchema $tablesClause from server $usingFdwName INTO $localSchema;"
-    }
-
     private fun ensureSearchPath(connection: Connection): String {
         logger.info("checking search path for current user")
         connection.createStatement().executeQuery("show search_path").use {
@@ -189,7 +175,7 @@ class TransporterDatastore(
                         logger.info("schema already imported, not re-importing")
                     } else {
                         stmt.executeUpdate(
-                                importTablesFromForeignSchema(
+                                importTablesFromForeignSchemaQuery(
                                         PUBLIC_SCHEMA,
                                         setOf(
                                                 PostgresTable.IDS.name,
@@ -327,7 +313,7 @@ class TransporterDatastore(
                     stmt.execute(revokeTablePermissionsForRole(ORG_VIEWS_SCHEMA, entitySetName, roleName))
                     // grant openlattice.@id cølumn explicitly
                     stmt.execute(grantSelectOnColumnsToRoles(ORG_VIEWS_SCHEMA, entitySetName, roleName, listOf(columnName, OPENLATTICE_ID_AS_STRING)))
-                    stmt.execute(grantSelectOnColumnsToRoles(ORG_VIEWS_SCHEMA, edgeViewName(entitySetName), roleName, MAT_EDGES_TABLE.columns.map { it.name }.toList()))
+                    stmt.execute(grantSelectOnColumnsToRoles(ORG_VIEWS_SCHEMA, edgeViewName(entitySetName), roleName, MAT_EDGES_COLUMNS_LIST))
                 }
             }
 
@@ -352,7 +338,7 @@ class TransporterDatastore(
         connectOrgDb(organizationId).connection.use { conn ->
             conn.createStatement().use { stmt ->
                 stmt.executeUpdate(
-                        importTablesFromForeignSchema(
+                        importTablesFromForeignSchemaQuery(
                                 fromSchemaName,
                                 setOf(fromTableName),
                                 toSchemaName,
@@ -363,7 +349,30 @@ class TransporterDatastore(
         }
     }
 
+    private fun checkIfTableExists(
+        organizationId: UUID,
+        schemaName: String,
+        tableName: String
+    ): Boolean {
+        connectOrgDb(organizationId).connection.use { conn ->
+            conn.createStatement().use { stmt ->
+                stmt.executeQuery(checkIfTableExistsQuery(schemaName, tableName)).use { rs ->
+                    return rs.next() && rs.getBoolean(1)
+                }
+            }
+        }
+    }
+
     fun transportEdgesTableToOrg(organizationId: UUID) {
+        val edgesTableExists = checkIfTableExists(
+            organizationId,
+            ORG_FOREIGN_TABLES_SCHEMA,
+            MAT_EDGES_TABLE_NAME
+        )
+        if (edgesTableExists) {
+            return
+        }
+
         transportTableToOrg(
                 organizationId,
                 PUBLIC_SCHEMA,
