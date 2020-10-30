@@ -366,7 +366,7 @@ fun createEntitySetViewInSchemaFromSchema(
     }.joinToString()
 
     return """
-            CREATE VIEW $destinationSchema.${ApiHelpers.dbQuote(entitySetName)} AS 
+            CREATE OR REPLACE VIEW $destinationSchema.${ApiHelpers.dbQuote(entitySetName)} AS 
                 SELECT ${ID_VALUE.name} as ${ApiHelpers.dbQuote(EdmConstants.ID_FQN.toString())}, 
                     $colsSql FROM $sourceSchema.${tableName(entityTypeId)}
                 WHERE ${ENTITY_SET_ID.name} = '$entitySetId'
@@ -380,7 +380,7 @@ fun createEdgeSetViewInSchema(
         sourceSchema: String
 ): String {
     return """
-        CREATE VIEW $destinationSchema.${ApiHelpers.dbQuote(edgeViewName(entitySetName))} AS
+        CREATE OR REPLACE VIEW $destinationSchema.${ApiHelpers.dbQuote(edgeViewName(entitySetName))} AS
             SELECT * FROM $sourceSchema.${MAT_EDGES_TABLE_NAME}
             WHERE ${SRC_ENTITY_SET_ID.name} = '$entitySetId'
             OR ${DST_ENTITY_SET_ID.name} = '$entitySetId'
