@@ -4,7 +4,7 @@ import com.hazelcast.core.Offloadable
 import com.openlattice.rhizome.KotlinDelegatedUUIDSet
 import com.openlattice.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
 import com.openlattice.transporter.types.TransporterColumnSet
-import java.util.*
+import java.util.UUID
 
 /**
  * @author Drew Bailey &lt;drew@openlattice.com&gt;

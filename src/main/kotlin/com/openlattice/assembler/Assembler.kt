@@ -29,18 +29,17 @@ import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.hazelcast.query.QueryConstants
+import com.openlattice.assembler.PostgresRoles.Companion.buildExternalPrincipalId
 import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationUserId
 import com.openlattice.assembler.events.MaterializePermissionChangeEvent
 import com.openlattice.assembler.events.MaterializedEntitySetDataChangeEvent
 import com.openlattice.assembler.events.MaterializedEntitySetEdmChangeEvent
 import com.openlattice.assembler.processors.*
-import com.openlattice.authorization.AclKey
-import com.openlattice.authorization.AuthorizationManager
-import com.openlattice.authorization.DbCredentialService
-import com.openlattice.authorization.EdmAuthorizationHelper
+import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.controllers.exceptions.ResourceNotFoundException
 import com.openlattice.datastore.util.Util
+import com.openlattice.directory.MaterializedViewAccount
 import com.openlattice.edm.events.EntitySetDeletedEvent
 import com.openlattice.edm.events.EntitySetNameUpdatedEvent
 import com.openlattice.edm.events.EntitySetOrganizationUpdatedEvent
@@ -329,11 +328,11 @@ class Assembler(
         return OrganizationIntegrationAccount(account.username, account.credential)
     }
 
-    fun rollOrganizationIntegrationAccount(organizationId: UUID): OrganizationIntegrationAccount {
-        val organizationUserId = buildOrganizationUserId(organizationId)
-        val credential = dbCredentialService.rollUserCredential(organizationUserId)
-        acm.updateCredentialInDatabase(organizationId, organizationUserId, credential)
-        return OrganizationIntegrationAccount(organizationUserId, credential)
+    fun rollIntegrationAccount(id: UUID, principalType: PrincipalType): MaterializedViewAccount {
+        val externalDatabaseId = buildExternalPrincipalId(id, principalType)
+        val credential = dbCredentialService.rollUserCredential(externalDatabaseId)
+        acm.updateCredentialInDatabase(externalDatabaseId, credential)
+        return MaterializedViewAccount(externalDatabaseId, credential)
     }
 
     /**
