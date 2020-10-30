@@ -74,26 +74,31 @@ class FixDuplicateIdAssignmentJob(
             ResultSetAdapters.id(rs) to mapper.readValue<List<EntityKey>>(rs.getString(DUPLICATES_FIELD))
         }.toMap()
 
-        entityKeysAndIds
-                .asSequence()
-                .forEach { (id, entityKeys) ->
-                    val entitySetAppearances = entityKeys.groupingBy { it.entitySetId }.eachCount()
+        entityKeysAndIds.forEach { (id, entityKeys) ->
+            val entitySetAppearances = entityKeys.groupingBy { it.entitySetId }.eachCount()
+            val onlyOnce = entitySetAppearances.filterValues { it == 1 }
+            val multiple = entitySetAppearances.filterValues { it > 1 }
 
-                    if (entitySetAppearances.values.all { it == 1 }) {
-                        /**
-                         * Each entity set appears only once. We will assign new ids to the entity keys and
-                         */
-                        assignNewIdsAndMoveData(id, entityKeys.subList(1, entityKeys.size))
+            val canBeRepaired = entityKeys.filter { onlyOnce.containsKey(it.entitySetId) }
+            val collisions = entityKeys.filter { multiple.containsKey(it.entitySetId) }
 
-                    } else {
-                        /**
-                         * We have two entity keys in the same entity set assigned to the same id. This is
-                         * extra special bad and we do not know how to handle without manual intervention
-                         */
-                        logger.error("Woe is us, we will have to manually address.")
-                        recordCollision(id, entityKeys)
-                    }
-                }
+            /**
+             * Each entity set appears only once. We will assign new ids to the entity keys and update ids, data, edges
+             */
+            if (canBeRepaired.isNotEmpty()) {
+                assignNewIdsAndMoveData(id, canBeRepaired.subList(1, entityKeys.size))
+
+            }
+
+            /**
+             * We have two entity keys in the same entity set assigned to the same id. This is
+             * extra special bad and we do not know how to handle without manual intervention
+             */
+            if (collisions.isNotEmpty()) {
+                logger.error("Woe is us, we will have to manually address.")
+                recordCollision(id, entityKeys)
+            }
+        }
 
         state.idsProceessed += entityKeysAndIds.values.sumBy { it.size }
         state.id = ids.max() ?: throw IllegalStateException("Entity key ids cannot be empty.")
@@ -121,7 +126,7 @@ class FixDuplicateIdAssignmentJob(
                 update(psDst, newId, originalId)
                 update(psEdge, newId, originalId)
             }
-            listOf(psSyncs,psIds, psData, psEdges, psDst, psEdge).forEach { it.executeBatch() }
+            listOf(psSyncs, psIds, psData, psEdges, psDst, psEdge).forEach { it.executeBatch() }
 
             connection.commit()
         }
@@ -158,8 +163,8 @@ class FixDuplicateIdAssignmentJob(
 
     private fun recordCollision(id: UUID, entityKeys: List<EntityKey>) {
         hds.connection.use { connection ->
-            connection.prepareStatement(INSERT_COLLISION).use {ps ->
-                ps.setObject(1, id )
+            connection.prepareStatement(INSERT_COLLISION).use { ps ->
+                ps.setObject(1, id)
                 entityKeys.forEach {
                     ps.setObject(2, it.entitySetId)
                     ps.setObject(3, it.entityId)
