@@ -256,10 +256,10 @@ class AssemblerConnectionManager(
         }
     }
 
-    fun updateCredentialInDatabase(organizationId: UUID, unquotedUserId: String, credential: String) {
+    fun updateCredentialInDatabase(unquotedUserId: String, credential: String) {
         val updateSql = updateUserCredentialSql(quote(unquotedUserId), credential)
 
-        extDbManager.connectToOrg(organizationId).connection.use { connection ->
+        atlas.connection.use { connection ->
             connection.createStatement().use { stmt ->
                 stmt.execute(updateSql)
             }

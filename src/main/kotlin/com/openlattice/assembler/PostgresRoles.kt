@@ -1,5 +1,6 @@
 package com.openlattice.assembler
 
+import com.openlattice.authorization.PrincipalType
 import com.openlattice.organization.roles.Role
 import java.util.*
 import java.util.regex.Pattern
@@ -24,6 +25,11 @@ class PostgresRoles private constructor() {
         @JvmStatic
         fun buildPostgresRoleName(role: Role): String {
             return "$INTERNAL_PREFIX|role|${role.id}"
+        }
+
+        @JvmStatic
+        fun buildExternalPrincipalId(id: UUID, principalType: PrincipalType): String {
+            return "$INTERNAL_PREFIX|${principalType.toString().toLowerCase()}|$id"
         }
 
         @JvmStatic
