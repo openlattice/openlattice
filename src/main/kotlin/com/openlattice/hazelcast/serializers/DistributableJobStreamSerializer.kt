@@ -29,6 +29,7 @@ import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.hazelcast.serializers.decorators.IdGenerationAware
 import com.openlattice.hazelcast.serializers.decorators.MetastoreAware
 import com.openlattice.ids.HazelcastIdGenerationService
+import com.openlattice.ids.IdGenerationServiceDependent
 import com.zaxxer.hikari.HikariDataSource
 import org.springframework.stereotype.Component
 import javax.inject.Inject
@@ -38,11 +39,10 @@ import javax.inject.Inject
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 @Component
-class DistributableJobStreamSerializer : AbstractDistributableJobStreamSerializer() {
+class DistributableJobStreamSerializer : IdGenerationServiceDependent<DistributableJobStreamSerializer>, AbstractDistributableJobStreamSerializer(){
     @Inject
     private lateinit var hds: HikariDataSource
 
-    @Inject
     private lateinit var idService: HazelcastIdGenerationService
 
     override fun getTypeId(): Int = StreamSerializerTypeIds.DISTRIBUTABLE_JOB.ordinal
@@ -60,5 +60,10 @@ class DistributableJobStreamSerializer : AbstractDistributableJobStreamSerialize
     @VisibleForTesting
     internal fun setHikariDataSource(hds: HikariDataSource) {
         this.hds = hds
+    }
+
+    override fun init(idService: HazelcastIdGenerationService): DistributableJobStreamSerializer {
+        this.idService = idService
+        return this
     }
 }
