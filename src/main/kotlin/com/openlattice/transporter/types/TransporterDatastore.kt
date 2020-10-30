@@ -175,7 +175,7 @@ class TransporterDatastore(
                         logger.info("schema already imported, not re-importing")
                     } else {
                         stmt.executeUpdate(
-                                importTablesFromForeignSchema(
+                                importTablesFromForeignSchemaQuery(
                                         PUBLIC_SCHEMA,
                                         setOf(
                                                 PostgresTable.IDS.name,
@@ -338,7 +338,7 @@ class TransporterDatastore(
         connectOrgDb(organizationId).connection.use { conn ->
             conn.createStatement().use { stmt ->
                 stmt.executeUpdate(
-                        importTablesFromForeignSchema(
+                        importTablesFromForeignSchemaQuery(
                                 fromSchemaName,
                                 setOf(fromTableName),
                                 toSchemaName,
