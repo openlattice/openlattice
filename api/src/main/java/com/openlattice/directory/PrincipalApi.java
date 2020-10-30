@@ -25,13 +25,14 @@ import com.openlattice.authorization.SecurablePrincipal;
 import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.directory.pojo.DirectedAclKeys;
 import com.openlattice.organization.roles.Role;
-import java.util.Map;
-import java.util.Set;
 import retrofit2.http.Body;
 import retrofit2.http.DELETE;
 import retrofit2.http.GET;
 import retrofit2.http.POST;
 import retrofit2.http.Path;
+
+import java.util.Map;
+import java.util.Set;
 
 public interface PrincipalApi {
     /*
@@ -50,14 +51,15 @@ public interface PrincipalApi {
     /*
      * Fixed paths
      */
-    String CURRENT  = "/current";
-    String DB       = "/db";
-    String EMAIL    = "/email";
-    String ROLES    = "/roles";
-    String SEARCH   = "/search";
-    String SYNC     = "/sync";
-    String UPDATE   = "/update";
-    String USERS    = "/users";
+    String CURRENT      = "/current";
+    String CREDENTIAL   = "/credential";
+    String DB           = "/db";
+    String EMAIL        = "/email";
+    String ROLES        = "/roles";
+    String SEARCH       = "/search";
+    String SYNC         = "/sync";
+    String UPDATE       = "/update";
+    String USERS        = "/users";
     String SEARCH_EMAIL = SEARCH + EMAIL;
 
     /*
@@ -85,6 +87,9 @@ public interface PrincipalApi {
     @GET( BASE + DB )
     MaterializedViewAccount getMaterializedViewAccount();
 
+    @POST( BASE + DB + CREDENTIAL )
+    MaterializedViewAccount regenerateCredential();
+
     @GET( BASE + USERS + SEARCH + SEARCH_QUERY_PATH )
     Map<String, Auth0UserBasic> searchAllUsers( @Path( SEARCH_QUERY ) String searchQuery );
 
@@ -107,5 +112,5 @@ public interface PrincipalApi {
     Void removePrincipalFromPrincipal( @Body DirectedAclKeys directedAclKeys );
 
     @DELETE( BASE + USERS + USER_ID_PATH )
-    Void deleteUserAccount( @Path(USER_ID ) String userId );
+    Void deleteUserAccount( @Path( USER_ID ) String userId );
 }
