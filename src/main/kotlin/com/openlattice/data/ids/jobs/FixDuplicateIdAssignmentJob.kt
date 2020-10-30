@@ -147,7 +147,7 @@ class FixDuplicateIdAssignmentJob(
 
     private fun bind(ps: PreparedStatement, entitySetId: UUID, entityKeyId: UUID) {
         ps.setObject(1, entitySetId)
-        ps.setObject(1, entityKeyId)
+        ps.setObject(2, entityKeyId)
     }
 
     private fun updateIdAssignment(ps: PreparedStatement, entityKey: EntityKey, newId: UUID) {
@@ -161,7 +161,8 @@ class FixDuplicateIdAssignmentJob(
             connection.prepareStatement(INSERT_COLLISION).use {ps ->
                 ps.setObject(1, id )
                 entityKeys.forEach {
-                    ps.setObject(2, it)
+                    ps.setObject(2, it.entitySetId)
+                    ps.setObject(3, it.entityId)
                     ps.addBatch()
                 }
                 ps.executeBatch()
@@ -214,7 +215,7 @@ private val SELECT_NEXT_DUPLICATES = """
 SELECT  ${ID.name}, 
         jsonb_agg(jsonb_build_object(
             '${SerializationConstants.ENTITY_SET_ID}', ${ENTITY_SET_ID.name},
-            '${ENTITY_SET_ID.name}${SerializationConstants.ENTITY_SET_ID}${ENTITY_SET_ID.name}',${ENTITY_ID.name})
+            '${ENTITY_SET_ID.name}${SerializationConstants.ENTITY_SET_ID}',${ENTITY_ID.name})
         ) as $DUPLICATES_FIELD 
 FROM ${SYNC_IDS.name} where ${ID.name} = ANY(?) 
 GROUP BY ${ID.name}
@@ -275,7 +276,7 @@ WITH for_migration as (DELETE FROM ${E.name} WHERE ${SRC_ENTITY_SET_ID.name} = ?
  * 2. (old) dst_entity_key_id - uuid
  */
 private val UPDATE_E_DST = """
-UPDATE ${E.name} SET $DST_ENTITY_KEY_ID = ? WHERE $DST_ENTITY_KEY_ID = ? 
+UPDATE ${E.name} SET ${DST_ENTITY_KEY_ID.name} = ? WHERE ${DST_ENTITY_KEY_ID.name} = ? 
 """.trimIndent()
 
 /**
@@ -283,7 +284,7 @@ UPDATE ${E.name} SET $DST_ENTITY_KEY_ID = ? WHERE $DST_ENTITY_KEY_ID = ?
  * 2. (old) edge_entity_key_id - uuid
  */
 private val UPDATE_E_EDGE = """
-UPDATE ${E.name} SET $EDGE_ENTITY_KEY_ID = ? WHERE $EDGE_ENTITY_KEY_ID = ?    
+UPDATE ${E.name} SET ${EDGE_ENTITY_KEY_ID.name} = ? WHERE ${EDGE_ENTITY_KEY_ID.name} = ?    
 """.trimIndent()
 
 /**
