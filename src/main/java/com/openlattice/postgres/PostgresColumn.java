@@ -313,7 +313,6 @@ public final class PostgresColumn {
             TIMESTAMPTZ )
             .withDefault( "'-infinity'" )
             .notNull();
-    public static final String                   LAST_WRITE_FIELD                  = "last_write";
     public static final String                   LAST_SYNC_FIELD                   = "last_sync";
     public static final PostgresColumnDefinition LAST_SYNC                         = new PostgresColumnDefinition(
             LAST_SYNC_FIELD,
@@ -326,6 +325,7 @@ public final class PostgresColumn {
             BIGINT )
             .withDefault( -1 )
             .notNull();
+    public static final String                   LAST_WRITE_FIELD                  = "last_write";
     public static final String                   LINKED_ENTITY_SETS_FIELD          = "linked_entity_sets";
     public static final PostgresColumnDefinition LINKED_ENTITY_SETS                =
             new PostgresColumnDefinition( LINKED_ENTITY_SETS_FIELD, UUID_ARRAY );
