@@ -36,8 +36,8 @@ public final class SerializationConstants {
     public static final String APP_ID                           = "appId";
     public static final String APP_TYPE_ID                      = "appTypeId";
     public static final String APP_TYPE_IDS_FIELD               = "appTypeIds";
-    public static final String ASSOCIATIONS                     = "associations";
     public static final String ASSOCIATE_ONLY                   = "associateOnly";
+    public static final String ASSOCIATIONS                     = "associations";
     public static final String ASSOCIATIONS_ENTITY_KEY_MAPPINGS = "associationsEntityKeyMappings";
     public static final String ASSOCIATION_AGGREGATIONS         = "associationAggregations";
     public static final String ASSOCIATION_CONSTRAINT           = "associationConstraint";
@@ -119,10 +119,10 @@ public final class SerializationConstants {
     public static final String ENTITY_SETS_ENTITY_KEY_MAPPINGS  = "entitySetsEntityKeyMappings";
     public static final String ENTITY_SETS_FIELD                = "entitySets";
     public static final String ENTITY_SET_AGGREGATIONS          = "entitySetAggregations";
+    public static final String ENTITY_SET_COLLECTION_ID         = "entitySetCollectionId";
     public static final String ENTITY_SET_FIELD                 = "entitySet";
     public static final String ENTITY_SET_ID                    = "entitySetId";
     public static final String ENTITY_SET_IDS                   = "entitySetIds";
-    public static final String ENTITY_SET_COLLECTION_ID         = "entitySetCollectionId";
     public static final String ENTITY_SET_NAME                  = "entitySetName";
     public static final String ENTITY_TYPE                      = "entityType";
     public static final String ENTITY_TYPES                     = "entityTypes";
@@ -186,6 +186,7 @@ public final class SerializationConstants {
     public static final String MEMBERS_FIELD                    = "members";
     public static final String MESSAGE                          = "message";
     public static final String MESSAGE_ENTITY_SET               = "messageEntitySet";
+    public static final String METADATA_ENTITY_SETS             = "metadataEntitySets";
     public static final String MIN                              = "min";
     public static final String MISSING                          = "missing";
     public static final String MULTI_VALUED                     = "multiValued";
