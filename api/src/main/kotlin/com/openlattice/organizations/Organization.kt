@@ -30,7 +30,7 @@ data class Organization @JvmOverloads constructor(
         val apps: MutableSet<UUID> = mutableSetOf(),
         val connections: MutableSet<String> = mutableSetOf(),
         val grants: MutableMap<UUID, MutableMap<GrantType, Grant>> = mutableMapOf(),
-        val organizationMetadataEntitySets: OrganizationMetadataEntitySets = OrganizationMetadataEntitySets()
+        val organizationMetadataEntitySetIds: OrganizationMetadataEntitySetIds = OrganizationMetadataEntitySetIds()
 ) {
 
     val id: UUID
@@ -68,8 +68,8 @@ data class Organization @JvmOverloads constructor(
                     SerializationConstants.GRANTS
             ) grants: MutableMap<UUID, MutableMap<GrantType, Grant>> = mutableMapOf(),
             @JsonProperty(
-                    SerializationConstants.METADATA_ENTITY_SETS
-            ) organizationMetadataEntitySets: OrganizationMetadataEntitySets = OrganizationMetadataEntitySets()
+                    SerializationConstants.METADATA_ENTITY_SETS_IDS
+            ) organizationMetadataEntitySetIds: OrganizationMetadataEntitySetIds = OrganizationMetadataEntitySetIds()
     ) : this(
             OrganizationPrincipal(id, principal, title, description),
             emailDomains,
@@ -80,7 +80,7 @@ data class Organization @JvmOverloads constructor(
             apps,
             connections,
             grants,
-            organizationMetadataEntitySets
+            organizationMetadataEntitySetIds
     )
 
 

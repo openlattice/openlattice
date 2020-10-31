@@ -186,7 +186,7 @@ public final class SerializationConstants {
     public static final String MEMBERS_FIELD                    = "members";
     public static final String MESSAGE                          = "message";
     public static final String MESSAGE_ENTITY_SET               = "messageEntitySet";
-    public static final String METADATA_ENTITY_SETS             = "metadataEntitySets";
+    public static final String METADATA_ENTITY_SETS_IDS         = "metadataEntitySetIds";
     public static final String MIN                              = "min";
     public static final String MISSING                          = "missing";
     public static final String MULTI_VALUED                     = "multiValued";

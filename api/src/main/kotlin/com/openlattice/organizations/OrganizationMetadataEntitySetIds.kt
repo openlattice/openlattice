@@ -27,7 +27,7 @@ import java.util.*
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-data class OrganizationMetadataEntitySets(
+data class OrganizationMetadataEntitySetIds(
         val organization: UUID = UUID(0, 0),
         val datasets: UUID = UUID(0, 0),
         val columns: UUID = UUID(0, 0)
