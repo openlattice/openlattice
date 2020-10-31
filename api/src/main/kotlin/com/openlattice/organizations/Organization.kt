@@ -20,7 +20,7 @@ import java.util.*
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 
-data class Organization(
+data class Organization @JvmOverloads constructor(
         var securablePrincipal: OrganizationPrincipal,
         val emailDomains: MutableSet<String>,
         val members: MutableSet<Principal>,
