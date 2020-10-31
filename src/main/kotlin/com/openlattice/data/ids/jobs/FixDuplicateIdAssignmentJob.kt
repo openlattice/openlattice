@@ -10,10 +10,10 @@ import com.openlattice.client.serialization.SerializationConstants
 import com.openlattice.data.EntityKey
 import com.openlattice.graph.partioning.REPARTITION_DATA_COLUMNS
 import com.openlattice.graph.partioning.REPARTITION_EDGES_COLUMNS
-import com.openlattice.graph.partioning.REPARTITION_IDS_COLUMNS
 import com.openlattice.hazelcast.serializers.decorators.IdGenerationAware
 import com.openlattice.hazelcast.serializers.decorators.MetastoreAware
 import com.openlattice.ids.HazelcastIdGenerationService
+import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.*
@@ -21,7 +21,6 @@ import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
-import java.lang.IllegalStateException
 import java.sql.PreparedStatement
 import java.util.*
 
@@ -86,8 +85,7 @@ class FixDuplicateIdAssignmentJob(
              * Each entity set appears only once. We will assign new ids to the entity keys and update ids, data, edges
              */
             if (canBeRepaired.isNotEmpty()) {
-                assignNewIdsAndMoveData(id, canBeRepaired.subList(1, entityKeys.size))
-
+                markAsNeedingIndexing(assignNewIdsAndMoveData(id, canBeRepaired.subList(1, entityKeys.size)))
             }
 
             /**
@@ -100,36 +98,48 @@ class FixDuplicateIdAssignmentJob(
             }
         }
 
+        markAsNeedingIndexing(ids)
+
         state.idsProceessed += entityKeysAndIds.values.sumBy { it.size }
         state.id = ids.max() ?: throw IllegalStateException("Entity key ids cannot be empty.")
         hasWorkRemaining = (ids.size == BATCH_SIZE)
     }
 
-    private fun assignNewIdsAndMoveData(originalId: UUID, entityKeys: List<EntityKey>) {
-        val newIds = idService.getNextIds(entityKeys.size).iterator()
+    private fun markAsNeedingIndexing(ids: Collection<UUID>) {
+        hds.connection.use { connection ->
+            connection.prepareStatement(MARK_FOR_INDEXING).use { ps ->
+                ps.setArray(1, PostgresArrays.createUuidArray(connection, ids))
+                ps.executeUpdate()
+            }
+        }
+    }
+
+    private fun assignNewIdsAndMoveData(originalId: UUID, entityKeys: List<EntityKey>): Set<UUID> {
+        val newIds = idService.getNextIds(entityKeys.size)
+        val newIdsIter = newIds.iterator()
         hds.connection.use { connection ->
             connection.autoCommit = false
 
             val psSyncs = connection.prepareStatement(UPDATE_ID_ASSIGNMENT)
-            val psIds = connection.prepareStatement(MIGRATE_IDS)
             val psData = connection.prepareStatement(MIGRATE_DATA)
             val psEdges = connection.prepareStatement(MIGRATE_EDGES)
             val psDst = connection.prepareStatement(UPDATE_E_DST)
             val psEdge = connection.prepareStatement(UPDATE_E_EDGE)
 
-            entityKeys.forEach { entityKey ->
-                val newId = newIds.next()
+            entityKeys.forEachIndexed { index, entityKey ->
+                val newId = newIdsIter.next()
                 updateIdAssignment(psSyncs, entityKey, newId)
-                migrate(psIds, entityKey.entitySetId, originalId)
                 migrate(psData, entityKey.entitySetId, originalId)
                 migrate(psEdges, entityKey.entitySetId, originalId)
                 update(psDst, newId, originalId)
                 update(psEdge, newId, originalId)
             }
-            listOf(psSyncs, psIds, psData, psEdges, psDst, psEdge).forEach { it.executeBatch() }
+            listOf(psSyncs, psData, psEdges, psDst, psEdge).forEach { it.executeBatch() }
 
             connection.commit()
+            connection.autoCommit = true
         }
+        return newIds
     }
 
     private fun migrate(
@@ -238,19 +248,6 @@ SELECT DISTINCT ${ID.name} FROM ${SYNC_IDS.name} WHERE ${ID.name} > ? LIMIT $BAT
 """.trimIndent()
 
 /**
- * 1. entity set id - uuid
- * 2. id - uuid
- */
-private val MIGRATE_IDS = """
-WITH for_migration as (DELETE FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ID.name} = ? RETURNING *)
-    INSERT INTO ${IDS.name} 
-        SELECT $REPARTITION_IDS_COLUMNS 
-        FROM for_migration 
-        INNER JOIN (select ${ID.name} as ${ENTITY_SET_ID.name}, ${PARTITIONS.name} FROM ${ENTITY_SETS.name} ) as es 
-        USING(${ENTITY_SET_ID.name})  
-""".trimIndent()
-
-/**
  * 1. entity set
  * 2. id - uuid
  */
@@ -302,6 +299,20 @@ private val UPDATE_ID_ASSIGNMENT = """
 UPDATE ${SYNC_IDS.name} SET ${ID.name} = ? WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} = ? 
 """.trimIndent()
 
+/**
+ * Record the collisions we couldn't fix.
+ * 1. id - uuid
+ * 2. entity set id - uuid
+ * 3. entity id - string
+ */
 private val INSERT_COLLISION = """
 INSERT INTO ${COLLISIONS.name} (${ID_VALUE.name}, ${ENTITY_SET_ID.name}, ${ENTITY_ID.name}) VALUES (?,?,?) ON CONFLICT DO NOTHING
+""".trimIndent()
+
+/***
+ * Mark entities for re-indexing.
+ * 1. ids - uuid array
+ */
+private val MARK_FOR_INDEXING = """
+UPDATE ${IDS.name} SET ${LAST_WRITE.name} = now() WHERE ${ID.name} = ANY(?)
 """.trimIndent()
