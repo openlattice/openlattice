@@ -225,6 +225,13 @@ class AdminController : AdminApi, AuthorizingComponent {
     }
 
     @Timed
+    @PatchMapping(value = [JOBS], produces = [MediaType.APPLICATION_JSON_VALUE])
+    override fun createJobs(jobs: List<DistributableJob<*>>): List<UUID> {
+        ensureAdminAccess()
+        return jobs.map { jobService.submitJob(it as AbstractDistributedJob<*, *>) }
+    }
+
+    @Timed
     @PatchMapping(
             value = [JOBS + ID_PATH],
             produces = [MediaType.APPLICATION_JSON_VALUE],
@@ -241,6 +248,7 @@ class AdminController : AdminApi, AuthorizingComponent {
         if (update.reload) jobService.reload(jobs, true)
 
         return jobService.getJobs(jobs)
+
     }
 
     override fun getAuthorizationManager(): AuthorizationManager {
