@@ -20,19 +20,17 @@ import java.util.*
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 
-data class Organization(
+data class Organization @JvmOverloads constructor(
         var securablePrincipal: OrganizationPrincipal,
-        @JsonProperty(SerializationConstants.EMAIL_DOMAINS) val emailDomains: MutableSet<String>,
-        @JsonProperty(SerializationConstants.MEMBERS_FIELD) val members: MutableSet<Principal>,
-        @JsonProperty(SerializationConstants.ROLES) val roles: MutableSet<Role>,
-        @JsonProperty(SerializationConstants.SMS_ENTITY_SET_INFO)
+        val emailDomains: MutableSet<String>,
+        val members: MutableSet<Principal>,
+        val roles: MutableSet<Role>,
         val smsEntitySetInfo: MutableSet<SmsEntitySetInformation>,
-        @JsonProperty(SerializationConstants.PARTITIONS) val partitions: MutableList<Int> = mutableListOf(),
-        @JsonProperty(SerializationConstants.APPS) val apps: MutableSet<UUID> = mutableSetOf(),
-        @JsonProperty(SerializationConstants.CONNECTIONS) val connections: MutableSet<String> = mutableSetOf(),
-        @JsonProperty(
-                SerializationConstants.GRANTS
-        ) val grants: MutableMap<UUID, MutableMap<GrantType, Grant>> = mutableMapOf()
+        val partitions: MutableList<Int> = mutableListOf(),
+        val apps: MutableSet<UUID> = mutableSetOf(),
+        val connections: MutableSet<String> = mutableSetOf(),
+        val grants: MutableMap<UUID, MutableMap<GrantType, Grant>> = mutableMapOf(),
+        val organizationMetadataEntitySetIds: OrganizationMetadataEntitySetIds = OrganizationMetadataEntitySetIds()
 ) {
 
     val id: UUID
@@ -68,7 +66,10 @@ data class Organization(
             @JsonProperty(SerializationConstants.CONNECTIONS) connections: MutableSet<String> = mutableSetOf(),
             @JsonProperty(
                     SerializationConstants.GRANTS
-            ) grants: MutableMap<UUID, MutableMap<GrantType, Grant>> = mutableMapOf()
+            ) grants: MutableMap<UUID, MutableMap<GrantType, Grant>> = mutableMapOf(),
+            @JsonProperty(
+                    SerializationConstants.METADATA_ENTITY_SETS_IDS
+            ) organizationMetadataEntitySetIds: OrganizationMetadataEntitySetIds = OrganizationMetadataEntitySetIds()
     ) : this(
             OrganizationPrincipal(id, principal, title, description),
             emailDomains,
@@ -78,7 +79,8 @@ data class Organization(
             partitions.orElse(mutableListOf()),
             apps,
             connections,
-            grants
+            grants,
+            organizationMetadataEntitySetIds
     )
 
 

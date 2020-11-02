@@ -57,6 +57,7 @@ import com.openlattice.organizations.Grant;
 import com.openlattice.organizations.GrantType;
 import com.openlattice.organizations.Organization;
 import com.openlattice.organizations.OrganizationDatabase;
+import com.openlattice.organizations.OrganizationMetadataEntitySetIds;
 import com.openlattice.postgres.IndexType;
 import com.openlattice.postgres.PostgresAuthenticationRecord;
 import com.openlattice.postgres.PostgresConnectionType;
@@ -435,7 +436,9 @@ public final class TestDataFactory {
                 Optional.of( Lists.newArrayList( 1, 2, 3 ) ),
                 Sets.newHashSet( randomAlphanumeric( 5 ), randomAlphanumeric( 5 ) ),
                 Maps.newHashMap( ImmutableMap
-                        .of( UUID.randomUUID(), ImmutableMap.of( grant.getGrantType(), grant() ) ) )
+                        .of( UUID.randomUUID(), ImmutableMap.of( grant.getGrantType(), grant() ) )
+                ),
+                new OrganizationMetadataEntitySetIds()
         );
     }
 
