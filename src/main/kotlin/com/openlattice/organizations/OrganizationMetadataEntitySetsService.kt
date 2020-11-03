@@ -275,7 +275,7 @@ class OrganizationMetadataEntitySetsService(private val edmService: EdmManager) 
 
         dataGraphManager.mergeEntities(
                 organizationMetadataEntitySetIds.columns,
-                mapOf(id to datasetColumnEntity),
+                mapOf(id to columnEntity),
                 columnAuthorizedPropertTypes
         )
 
