@@ -49,7 +49,7 @@ public interface OrganizationsApi {
     String ID_PATH           = "/{" + ID + "}";
     String INTEGRATION       = "/integration";
     String MEMBERS           = "/members";
-    String METADATA_ENTITY_SETS = "/metadata-entity-sets";
+    String METADATA_ENTITY_SETS_IDS = "/metadata-entity-sets";
     String PRINCIPALS        = "/principals";
     String PRINCIPAL_ID      = "pid";
     String PRINCIPAL_ID_PATH = "/{" + PRINCIPAL_ID + "}";
@@ -298,7 +298,7 @@ public interface OrganizationsApi {
     @PUT( BASE + ID_PATH + CONNECTIONS )
     Void setConnections( @Path( ID ) UUID organizationId, @Body Set<String> connections );
 
-    @PUT( BASE + ID_PATH + METADATA_ENTITY_SETS )
+    @PUT( BASE + ID_PATH + METADATA_ENTITY_SETS_IDS )
     Void setMetadataEntitySetIds(
             @Path( ID ) UUID organizationId,
             @Body OrganizationMetadataEntitySetIds entitySetIds );
