@@ -11,11 +11,12 @@ import com.openlattice.hazelcast.serializers.StreamSerializers.Companion.seriali
 import com.openlattice.organizations.Grant
 import com.openlattice.organizations.GrantType
 import com.openlattice.organizations.Organization
+import com.openlattice.organizations.OrganizationMetadataEntitySetIds
 import org.springframework.stereotype.Component
 import java.util.*
 
 @Component
-class OrganizationStreamSerializer: SelfRegisteringStreamSerializer<Organization> {
+class OrganizationStreamSerializer : SelfRegisteringStreamSerializer<Organization> {
 
     companion object {
         @JvmStatic
@@ -39,6 +40,9 @@ class OrganizationStreamSerializer: SelfRegisteringStreamSerializer<Organization
                             { key: UUID -> UUIDStreamSerializerUtils.serialize(out, key) },
                             { subKey: GrantType -> GrantTypeStreamSerializer.serialize(out, subKey) },
                             { `val`: Grant -> GrantStreamSerializer.serialize(out, `val`) })
+            UUIDStreamSerializerUtils.serialize(out, obj.organizationMetadataEntitySetIds.organization)
+            UUIDStreamSerializerUtils.serialize(out, obj.organizationMetadataEntitySetIds.datasets)
+            UUIDStreamSerializerUtils.serialize(out, obj.organizationMetadataEntitySetIds.columns)
         }
 
         @JvmStatic
@@ -59,11 +63,27 @@ class OrganizationStreamSerializer: SelfRegisteringStreamSerializer<Organization
             val connections = SetStreamSerializers.fastStringSetDeserialize(input)
 
             val grants = deserializeMapMap(input,
-                    mutableMapOf(),
-                    { UUIDStreamSerializerUtils.deserialize(input) },
-                    { GrantTypeStreamSerializer.deserialize(input) },
-                    { GrantStreamSerializer.deserialize(input) })
-            return Organization(op, email, members, roles, sms, partitions, apps, connections, grants)
+                                           mutableMapOf(),
+                                           { UUIDStreamSerializerUtils.deserialize(input) },
+                                           { GrantTypeStreamSerializer.deserialize(input) },
+                                           { GrantStreamSerializer.deserialize(input) })
+            val organizationMetadataEntitySetIds = OrganizationMetadataEntitySetIds(
+                    UUIDStreamSerializerUtils.deserialize(input),
+                    UUIDStreamSerializerUtils.deserialize(input),
+                    UUIDStreamSerializerUtils.deserialize(input)
+            )
+            return Organization(
+                    op,
+                    email,
+                    members,
+                    roles,
+                    sms,
+                    partitions,
+                    apps,
+                    connections,
+                    grants,
+                    organizationMetadataEntitySetIds
+            )
         }
     }
 
