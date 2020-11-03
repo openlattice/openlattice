@@ -69,8 +69,11 @@ class HazelcastOrganizationService(
         private val securePrincipalsManager: SecurePrincipalsManager,
         private val phoneNumbers: PhoneNumberService,
         private val partitionManager: PartitionManager,
-        private val assembler: Assembler
+        private val assembler: Assembler,
+        private val organizationMetadataEntitySetsService: OrganizationMetadataEntitySetsService
 ) {
+    init { organizationMetadataEntitySetsService.organizationService = this }
+
     protected val organizations = HazelcastMap.ORGANIZATIONS.getMap(hazelcastInstance)
     protected val users = HazelcastMap.USERS.getMap(hazelcastInstance)
     protected val organizationDatabases = HazelcastMap.ORGANIZATION_DATABASES.getMap(hazelcastInstance)
@@ -141,6 +144,7 @@ class HazelcastOrganizationService(
 
         initializeOrganizationPrincipals(principal, organization)
         initializeOrganization(organization)
+        organizationMetadataEntitySetsService.initializeOrganizationMetadataEntitySets(organization.id)
 
         // set up organization database
         val orgDatabase = assembler.createOrganizationAndReturnOid(organization.id)

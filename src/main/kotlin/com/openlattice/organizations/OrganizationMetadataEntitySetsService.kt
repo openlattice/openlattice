@@ -31,7 +31,9 @@ import com.openlattice.edm.type.PropertyType
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.postgres.DataTables.quote
 import org.apache.olingo.commons.api.edm.FullQualifiedName
+import org.springframework.stereotype.Service
 import java.util.*
+import javax.inject.Inject
 
 private val ORGANIZATION_METADATA_ET = FullQualifiedName("ol.organization_metadata")
 private val DATASETS_ET = FullQualifiedName("ol.dataset")
@@ -51,13 +53,16 @@ private const val CONTACT = "contact.Email"
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class OrganizationMetadataEntitySetsService(
-        private val edmService: EdmManager,
-        private val entitySetsManager: EntitySetManager,
-        private val dataGraphManager: DataGraphManager,
-        private val organizationService: HazelcastOrganizationService
-) {
+@Service
+class OrganizationMetadataEntitySetsService(private val edmService: EdmManager) {
     private val mapper = ObjectMappers.newJsonMapper()
+
+
+    lateinit var dataGraphManager: DataGraphManager
+    lateinit var entitySetsManager: EntitySetManager
+    lateinit var organizationService: HazelcastOrganizationService
+
+
     private lateinit var organizationMetadataEntityTypeId: UUID
     private lateinit var datasetEntityTypeId: UUID
     private lateinit var columnsEntityTypeId: UUID

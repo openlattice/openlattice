@@ -88,7 +88,7 @@ class EntitySetService(
         private val organizationMetadataEntitySetsService: OrganizationMetadataEntitySetsService,
         auditingConfiguration: AuditingConfiguration
 ) : EntitySetManager {
-
+    init { organizationMetadataEntitySetsService.entitySetsManager = this }
     private val aresManager = AuditRecordEntitySetsManager(
             AuditingTypes(edm, auditingConfiguration),
             this,
