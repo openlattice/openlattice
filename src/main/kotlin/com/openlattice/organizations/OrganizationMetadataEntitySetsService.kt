@@ -22,6 +22,7 @@
 package com.openlattice.organizations
 
 import com.dataloom.mappers.ObjectMappers
+import com.openlattice.authorization.securable.AbstractSecurableObject
 import com.openlattice.data.DataGraphManager
 import com.openlattice.data.EntityKey
 import com.openlattice.datastore.services.EdmManager
@@ -44,6 +45,7 @@ private const val ID = "ol.id"
 private const val COL_INFO = "ol.columninfo"
 private const val DATASET_NAME = "ol.dataset_name"
 private const val ORG_ID = "ol.organization_id"
+private const val STANDARDIZED = "ol.standardized"
 private const val TYPE = "ol.type"
 private const val COL_NAME = "ol.column_name"
 private const val CONTACT = "contact.Email"
@@ -160,17 +162,16 @@ class OrganizationMetadataEntitySetsService(private val edmService: EdmManager) 
         val datasetEntity = mutableMapOf<UUID, Set<Any>>(
                 propertyTypes.getValue(ID).id to setOf(entitySet.id.toString()),
                 propertyTypes.getValue(DATASET_NAME).id to setOf(entitySet.name),
-                propertyTypes.getValue(CONTACT).id to entitySet.contacts
+                propertyTypes.getValue(CONTACT).id to entitySet.contacts,
+                propertyTypes.getValue(STANDARDIZED).id to setOf(true)
         )
 
-        val id = dataGraphManager.getEntityKeyIds(
-                setOf(EntityKey(organizationMetadataEntitySetIds.datasets, entitySet.id.toString()))
-        ).first()
+        val datasetEntityKeyId = getDatasetEntityKeyId(organizationMetadataEntitySetIds, entitySet.id)
 
 
-        dataGraphManager.mergeEntities(
+        dataGraphManager.partialReplaceEntities(
                 organizationMetadataEntitySetIds.datasets,
-                mapOf(id to datasetEntity),
+                mapOf(datasetEntityKeyId to datasetEntity),
                 datasetsAuthorizedPropertTypes
         )
     }
@@ -189,16 +190,15 @@ class OrganizationMetadataEntitySetsService(private val edmService: EdmManager) 
         val datasetEntity = mutableMapOf<UUID, Set<Any>>(
                 propertyTypes.getValue(PGOID).id to setOf(oid),
                 propertyTypes.getValue(ID).id to setOf(id.toString()),
-                propertyTypes.getValue(DATASET_NAME).id to setOf(name)
+                propertyTypes.getValue(DATASET_NAME).id to setOf(name),
+                propertyTypes.getValue(STANDARDIZED).id to setOf(false)
         )
 
-        val id = dataGraphManager.getEntityKeyIds(
-                setOf(EntityKey(organizationMetadataEntitySetIds.datasets, oid.toString()))
-        ).first()
+        val datasetEntityKeyId = getDatasetEntityKeyId(organizationMetadataEntitySetIds, oid)
 
-        dataGraphManager.mergeEntities(
+        dataGraphManager.partialReplaceEntities(
                 organizationMetadataEntitySetIds.datasets,
-                mapOf(id to datasetEntity),
+                mapOf(datasetEntityKeyId to datasetEntity),
                 datasetsAuthorizedPropertTypes
         )
     }
@@ -222,24 +222,19 @@ class OrganizationMetadataEntitySetsService(private val edmService: EdmManager) 
                 propertyTypes.getValue(COL_INFO).id to setOf(mapper.writeValueAsString(propertyType))
         )
 
-        val columnId = dataGraphManager.getEntityKeyIds(
-                setOf(EntityKey(organizationMetadataEntitySetIds.columns, "${entitySet.id}.${propertyType.id}"))
-        ).first()
-
-        val datasetId = dataGraphManager.getEntityKeyIds(
-                setOf(EntityKey(organizationMetadataEntitySetIds.datasets, entitySet.id.toString()))
-        ).first()
+        val columnEntityKeyId = getColumnEntityKeyId(organizationMetadataEntitySetIds, entitySet.id, propertyType)
+        val datasetEntityKeyId = getDatasetEntityKeyId(organizationMetadataEntitySetIds, entitySet.id)
 
 
-        dataGraphManager.mergeEntities(
+        dataGraphManager.partialReplaceEntities(
                 organizationMetadataEntitySetIds.columns,
-                mapOf(columnId to columnEntity),
+                mapOf(columnEntityKeyId to columnEntity),
                 columnAuthorizedPropertTypes
         )
 
         dataGraphManager.mergeEntities(
                 organizationMetadataEntitySetIds.datasets,
-                mapOf(datasetId to datasetColumnEntity),
+                mapOf(datasetEntityKeyId to datasetColumnEntity),
                 datasetsAuthorizedPropertTypes
         )
     }
@@ -264,26 +259,40 @@ class OrganizationMetadataEntitySetsService(private val edmService: EdmManager) 
                 propertyTypes.getValue(COL_INFO).id to setOf(mapper.writeValueAsString(column))
         )
 
-        val columnId = dataGraphManager.getEntityKeyIds(
-                setOf(EntityKey(organizationMetadataEntitySetIds.columns, "${column.tableId}.${column.id}"))
-        ).first()
+        val columnEntityKeyId = getColumnEntityKeyId(organizationMetadataEntitySetIds, column.tableId, column)
+        val datasetEntityKeyId = getDatasetEntityKeyId(organizationMetadataEntitySetIds, table.id)
 
-
-        val id = dataGraphManager.getEntityKeyIds(
-                setOf(EntityKey(organizationMetadataEntitySetIds.datasets, table.id.toString())) //TODO: Consider using OID
-        ).first()
-
-        dataGraphManager.mergeEntities(
+        dataGraphManager.partialReplaceEntities(
                 organizationMetadataEntitySetIds.columns,
-                mapOf(id to columnEntity),
+                mapOf(columnEntityKeyId to columnEntity),
                 columnAuthorizedPropertTypes
         )
 
         dataGraphManager.mergeEntities(
                 organizationMetadataEntitySetIds.datasets,
-                mapOf(columnId to datasetColumnEntity),
+                mapOf(datasetEntityKeyId to datasetColumnEntity),
                 datasetsAuthorizedPropertTypes
         )
+    }
+
+    private fun getDatasetEntityKeyId(
+            organizationMetadataEntitySetIds: OrganizationMetadataEntitySetIds,
+            datasetId: Any
+    ): UUID {
+        return dataGraphManager.getEntityKeyIds(
+                setOf(EntityKey(organizationMetadataEntitySetIds.datasets, datasetId.toString()))
+        ).first()
+    }
+
+    private fun getColumnEntityKeyId(
+            organizationMetadataEntitySetIds: OrganizationMetadataEntitySetIds,
+            datasetId: UUID,
+            column: AbstractSecurableObject
+
+    ): UUID {
+        return dataGraphManager.getEntityKeyIds(
+                setOf(EntityKey(organizationMetadataEntitySetIds.columns, "${datasetId}.${column.id}"))
+        ).first()
     }
 
     private fun buildOrganizationMetadataEntitySet(organizationId: UUID): EntitySet = EntitySet(
