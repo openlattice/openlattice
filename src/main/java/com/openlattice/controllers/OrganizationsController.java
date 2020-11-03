@@ -680,7 +680,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
                 .forEach( ( t, c ) -> {
                     organizationMetadataEntitySetsService.addDataset( organizationId, t.getSecond() );
                     c.forEach( col -> organizationMetadataEntitySetsService
-                            .addDatasetColumn( organizationId, col.getValue() ) );
+                            .addDatasetColumn( organizationId, t.getSecond(), col.getValue() ) );
                 } );
 
         entitySetManager
