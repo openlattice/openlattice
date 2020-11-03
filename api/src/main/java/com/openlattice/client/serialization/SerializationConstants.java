@@ -203,6 +203,7 @@ public final class SerializationConstants {
     public static final String NEIGHBOR_PROPERTY_TYPES          = "neighborPropertyTypes";
     public static final String NEIGHBOR_TYPE_ID                 = "neighborTypeId";
     public static final String NUM_HITS                         = "numHits";
+    public static final String OID                              = "oid";
     public static final String OPERATION_ID                     = "operationId";
     public static final String ORDINAL_POSITION                 = "ordinalPosition";
     public static final String ORGANIZATION                     = "organization";

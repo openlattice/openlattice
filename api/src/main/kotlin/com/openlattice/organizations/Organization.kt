@@ -30,7 +30,7 @@ data class Organization @JvmOverloads constructor(
         val apps: MutableSet<UUID> = mutableSetOf(),
         val connections: MutableSet<String> = mutableSetOf(),
         val grants: MutableMap<UUID, MutableMap<GrantType, Grant>> = mutableMapOf(),
-        val organizationMetadataEntitySetIds: OrganizationMetadataEntitySetIds = OrganizationMetadataEntitySetIds()
+        var organizationMetadataEntitySetIds: OrganizationMetadataEntitySetIds = OrganizationMetadataEntitySetIds()
 ) {
 
     val id: UUID
