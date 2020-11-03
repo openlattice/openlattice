@@ -34,7 +34,6 @@ import com.openlattice.postgres.DataTables.quote
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.springframework.stereotype.Service
 import java.util.*
-import javax.inject.Inject
 
 private val ORGANIZATION_METADATA_ET = FullQualifiedName("ol.organization_metadata")
 private val DATASETS_ET = FullQualifiedName("ol.dataset")
@@ -48,6 +47,7 @@ private const val ORG_ID = "ol.organization_id"
 private const val TYPE = "ol.type"
 private const val COL_NAME = "ol.column_name"
 private const val CONTACT = "contact.Email"
+private const val DESCRIPTION = "ol.description"
 
 
 /**
@@ -215,7 +215,8 @@ class OrganizationMetadataEntitySetsService(private val edmService: EdmManager) 
                 propertyTypes.getValue(DATASET_NAME).id to setOf(entitySet.name),
                 propertyTypes.getValue(COL_NAME).id to setOf(propertyType.type.fullQualifiedNameAsString),
                 propertyTypes.getValue(ORG_ID).id to setOf(organizationId.toString()),
-                propertyTypes.getValue(TYPE).id to setOf(propertyType.datatype)
+                propertyTypes.getValue(TYPE).id to setOf(propertyType.datatype),
+                propertyTypes.getValue(DESCRIPTION).id to setOf(propertyType.description)
         )
         val datasetColumnEntity = mutableMapOf<UUID, Set<Any>>(
                 propertyTypes.getValue(COL_INFO).id to setOf(mapper.writeValueAsString(propertyType))
@@ -243,13 +244,23 @@ class OrganizationMetadataEntitySetsService(private val edmService: EdmManager) 
         )
     }
 
-    fun addDatasetColumn(organizationId: UUID, column: OrganizationExternalDatabaseColumn) {
+    fun addDatasetColumn(organizationId: UUID, table: OrganizationExternalDatabaseTable, column: OrganizationExternalDatabaseColumn) {
         initializeFields()
         if (!isFullyInitialized()) {
             return
         }
         val organizationMetadataEntitySetIds = organizationService.getOrganizationMetadataEntitySetIds(organizationId)
+
         val columnEntity = mutableMapOf<UUID, Set<Any>>(
+                propertyTypes.getValue(ID).id to setOf(column.id.toString()),
+                propertyTypes.getValue(DATASET_NAME).id to setOf(table.name),
+                propertyTypes.getValue(COL_NAME).id to setOf(column.name),
+                propertyTypes.getValue(ORG_ID).id to setOf(organizationId.toString()),
+                propertyTypes.getValue(TYPE).id to setOf(column.dataType),
+                propertyTypes.getValue(DESCRIPTION).id to setOf(column.description)
+        )
+
+        val datasetColumnEntity = mutableMapOf<UUID, Set<Any>>(
                 propertyTypes.getValue(COL_INFO).id to setOf(mapper.writeValueAsString(column))
         )
 
@@ -259,18 +270,18 @@ class OrganizationMetadataEntitySetsService(private val edmService: EdmManager) 
 
 
         val id = dataGraphManager.getEntityKeyIds(
-                setOf(EntityKey(column.tableId, column.name))
+                setOf(EntityKey(organizationMetadataEntitySetIds.datasets, table.id.toString())) //TODO: Consider using OID
         ).first()
 
         dataGraphManager.mergeEntities(
                 organizationMetadataEntitySetIds.columns,
-                mapOf(columnId to columnEntity),
+                mapOf(id to columnEntity),
                 columnAuthorizedPropertTypes
         )
 
         dataGraphManager.mergeEntities(
                 organizationMetadataEntitySetIds.datasets,
-                mapOf(id to columnEntity),
+                mapOf(columnId to datasetColumnEntity),
                 datasetsAuthorizedPropertTypes
         )
     }
