@@ -304,7 +304,7 @@ public interface OrganizationsApi {
             @Path( ID ) UUID organizationId,
             @Body OrganizationMetadataEntitySetIds entitySetIds );
 
-    @PATCH( BASE + ID_PATH + METADATA )
+    @POST( BASE + ID_PATH + METADATA )
     Void importMetadata( @Path( ID ) UUID organizationId);
 
     @HTTP( path = BASE + ID_PATH + CONNECTIONS, method = "DELETE", hasBody = true )
