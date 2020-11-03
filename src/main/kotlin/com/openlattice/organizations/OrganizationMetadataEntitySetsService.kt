@@ -94,8 +94,16 @@ class OrganizationMetadataEntitySetsService(
         }
     }
 
+    fun isFullyInitialized(): Boolean = this::organizationMetadataEntityTypeId.isInitialized &&
+            this::datasetEntityTypeId.isInitialized && this::columnsEntityTypeId.isInitialized &&
+            this::omAuthorizedPropertyTypes.isInitialized && this::datasetsAuthorizedPropertTypes.isInitialized &&
+            this::columnAuthorizedPropertTypes.isInitialized && this::propertyTypes.isInitialized
+
     fun initializeOrganizationMetadataEntitySets(organizationId: UUID) {
         initializeFields()
+        if (!isFullyInitialized()) {
+            return
+        }
         val organizationMetadataEntitySetIds = organizationService.getOrganizationMetadataEntitySetIds(organizationId)
         val organizationPrincipal = organizationService.getOrganizationPrincipal(organizationId)!!
         var updated = false
@@ -137,6 +145,10 @@ class OrganizationMetadataEntitySetsService(
     }
 
     fun addDataset(entitySet: EntitySet) {
+        initializeFields()
+        if (!isFullyInitialized()) {
+            return
+        }
         val organizationId = entitySet.organizationId
         val organizationMetadataEntitySetIds = organizationService.getOrganizationMetadataEntitySetIds(organizationId)
         val datasetEntity = mutableMapOf<UUID, Set<Any>>(
@@ -158,6 +170,10 @@ class OrganizationMetadataEntitySetsService(
     }
 
     fun addDataset(organizationId: UUID, oid: Int, id: UUID, name: String) {
+        initializeFields()
+        if (!isFullyInitialized()) {
+            return
+        }
         val organizationMetadataEntitySetIds = organizationService.getOrganizationMetadataEntitySetIds(organizationId)
 
         val datasetEntity = mutableMapOf<UUID, Set<Any>>(
@@ -178,6 +194,10 @@ class OrganizationMetadataEntitySetsService(
     }
 
     fun addDatasetColumn(entitySet: EntitySet, propertyType: PropertyType) {
+        initializeFields()
+        if (!isFullyInitialized()) {
+            return
+        }
         val organizationId = entitySet.organizationId
         val organizationMetadataEntitySetIds = organizationService.getOrganizationMetadataEntitySetIds(organizationId)
         val columnEntity = mutableMapOf<UUID, Set<Any>>(
@@ -214,6 +234,10 @@ class OrganizationMetadataEntitySetsService(
     }
 
     fun addDatasetColumn(organizationId: UUID, column: OrganizationExternalDatabaseColumn) {
+        initializeFields()
+        if (!isFullyInitialized()) {
+            return
+        }
         val organizationMetadataEntitySetIds = organizationService.getOrganizationMetadataEntitySetIds(organizationId)
         val columnEntity = mutableMapOf<UUID, Set<Any>>(
                 propertyTypes.getValue(COL_INFO).id to setOf(mapper.writeValueAsString(column))
