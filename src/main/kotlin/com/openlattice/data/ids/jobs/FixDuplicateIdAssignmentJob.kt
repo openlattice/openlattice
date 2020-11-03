@@ -230,7 +230,7 @@ private val SELECT_NEXT_DUPLICATES = """
 SELECT  ${ID.name}, 
         jsonb_agg(jsonb_build_object(
             '${SerializationConstants.ENTITY_SET_ID}', ${ENTITY_SET_ID.name},
-            '${ENTITY_SET_ID.name}${SerializationConstants.ENTITY_SET_ID}',${ENTITY_ID.name})
+            '${SerializationConstants.ENTITY_ID}',${ENTITY_ID.name})
         ) as $DUPLICATES_FIELD 
 FROM ${SYNC_IDS.name} where ${ID.name} = ANY(?) 
 GROUP BY ${ID.name}
@@ -244,7 +244,7 @@ HAVING count(${ENTITY_ID.name}) > 1
  * 1. id - uuid
  */
 private val SELECT_NEXT_IDS = """
-SELECT DISTINCT ${ID.name} FROM ${SYNC_IDS.name} WHERE ${ID.name} > ? LIMIT $BATCH_SIZE)
+SELECT DISTINCT ${ID.name} FROM ${SYNC_IDS.name} WHERE ${ID.name} > ? LIMIT $BATCH_SIZE
 """.trimIndent()
 
 /**
