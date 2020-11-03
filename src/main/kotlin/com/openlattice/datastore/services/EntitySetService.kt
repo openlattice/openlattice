@@ -66,6 +66,7 @@ import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.processors.AddEntitySetsToLinkingEntitySetProcessor
 import com.openlattice.hazelcast.processors.RemoveDataExpirationPolicyProcessor
 import com.openlattice.hazelcast.processors.RemoveEntitySetsFromLinkingEntitySetProcessor
+import com.openlattice.organizations.OrganizationMetadataEntitySetsService
 import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.mapstores.EntitySetMapstore
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
@@ -84,9 +85,10 @@ class EntitySetService(
         private val partitionManager: PartitionManager,
         private val edm: EdmManager,
         private val hds: HikariDataSource,
+        private val organizationMetadataEntitySetsService: OrganizationMetadataEntitySetsService,
         auditingConfiguration: AuditingConfiguration
 ) : EntitySetManager {
-
+    init { organizationMetadataEntitySetsService.entitySetsManager = this }
     private val aresManager = AuditRecordEntitySetsManager(
             AuditingTypes(edm, auditingConfiguration),
             this,
@@ -129,6 +131,7 @@ class EntitySetService(
 
         try {
             setupDefaultEntitySetPropertyMetadata(entitySetId, entitySet.entityTypeId)
+            setupOrganizationMetadata(entitySet)
 
             val aclKey = AclKey(entitySetId)
 
@@ -164,6 +167,14 @@ class EntitySetService(
         return entitySetId
     }
 
+    private fun setupOrganizationMetadata(entitySet: EntitySet) {
+        organizationMetadataEntitySetsService.addDataset(entitySet)
+        val propertyTypes = edm.getPropertyTypesOfEntityType(entitySet.entityTypeId)
+        propertyTypes.forEach { (_, propertyType) ->
+            organizationMetadataEntitySetsService.addDatasetColumn(entitySet, propertyType)
+        }
+    }
+
     private fun reserveEntitySetIfNotExists(entitySet: EntitySet): UUID {
         aclKeyReservations.reserveIdAndValidateType(entitySet)
 
@@ -174,6 +185,7 @@ class EntitySetService(
     private fun setupDefaultEntitySetPropertyMetadata(entitySetId: UUID, entityTypeId: UUID) {
         val et = edm.getEntityType(entityTypeId)
         val propertyTags = et.propertyTags
+
         entitySetPropertyMetadata.putAll(edm.getPropertyTypes(et.properties).associate { property ->
             val key = EntitySetPropertyKey(entitySetId, property.id)
             val metadata = EntitySetPropertyMetadata(
@@ -322,10 +334,12 @@ class EntitySetService(
     }
 
     override fun filterEntitySetsForOrganization(organizationId: UUID, entitySetIds: Collection<UUID>): Set<UUID> {
-        return entitySets.keySet(Predicates.and(
-                Predicates.equal<UUID, EntitySet>(EntitySetMapstore.ORGANIZATION_INDEX, organizationId),
-                Predicates.`in`<UUID, EntitySet>(EntitySetMapstore.ID_INDEX, *entitySetIds.toTypedArray())
-        ))
+        return entitySets.keySet(
+                Predicates.and(
+                        Predicates.equal<UUID, EntitySet>(EntitySetMapstore.ORGANIZATION_INDEX, organizationId),
+                        Predicates.`in`<UUID, EntitySet>(EntitySetMapstore.ID_INDEX, *entitySetIds.toTypedArray())
+                )
+        )
     }
 
     override fun getEntityTypeByEntitySetId(entitySetId: UUID): EntityType {
@@ -394,7 +408,13 @@ class EntitySetService(
         val entitySetsToAuthorizedStatus = authorizations.authorize(accessChecks, principals)
                 .map { it.key.first() to it.value.values.all { bool -> bool } }.toMap()
 
-        return entitySetIdToNormalEntitySetIds.filterValues { it.all { id -> entitySetsToAuthorizedStatus.getValue(id) } }.keys
+        return entitySetIdToNormalEntitySetIds.filterValues {
+            it.all { id ->
+                entitySetsToAuthorizedStatus.getValue(
+                        id
+                )
+            }
+        }.keys
     }
 
     @Timed
@@ -405,7 +425,9 @@ class EntitySetService(
         check(missingEntitySetIds.isEmpty()) { "Missing the following entity set ids: $missingEntitySetIds" }
 
         val entityTypesAsMap = edm.getEntityTypesAsMap(entityTypesOfEntitySets.values.toSet())
-        val propertyTypesAsMap = edm.getPropertyTypesAsMap(entityTypesAsMap.values.map { it.properties }.flatten().toSet())
+        val propertyTypesAsMap = edm.getPropertyTypesAsMap(
+                entityTypesAsMap.values.map { it.properties }.flatten().toSet()
+        )
 
         return entitySetIds.associateWith {
             entityTypesAsMap.getValue(entityTypesOfEntitySets.getValue(it))
@@ -584,7 +606,11 @@ class EntitySetService(
     }
 
     override fun getLinkedEntitySetIds(entitySetId: UUID): Set<UUID> {
-        return entitySets.executeOnKey(entitySetId) { DelegatedUUIDSet.wrap(it.value?.linkedEntitySets ?: mutableSetOf()) }
+        return entitySets.executeOnKey(entitySetId) {
+            DelegatedUUIDSet.wrap(
+                    it.value?.linkedEntitySets ?: mutableSetOf()
+            )
+        }
     }
 
     override fun removeDataExpirationPolicy(entitySetId: UUID) {

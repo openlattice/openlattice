@@ -28,14 +28,7 @@ import com.openlattice.organizations.mapstores.TABLE_ID_INDEX
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.*
 import com.openlattice.postgres.DataTables.quote
-import com.openlattice.postgres.ResultSetAdapters.columnName
-import com.openlattice.postgres.ResultSetAdapters.constraintType
-import com.openlattice.postgres.ResultSetAdapters.name
-import com.openlattice.postgres.ResultSetAdapters.ordinalPosition
-import com.openlattice.postgres.ResultSetAdapters.postgresAuthenticationRecord
-import com.openlattice.postgres.ResultSetAdapters.privilegeType
-import com.openlattice.postgres.ResultSetAdapters.sqlDataType
-import com.openlattice.postgres.ResultSetAdapters.user
+import com.openlattice.postgres.ResultSetAdapters.*
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.StatementHolderSupplier
@@ -255,14 +248,17 @@ class ExternalDatabaseManagementService(
         return organizationExternalDatabaseColumns.getValue(columnId)
     }
 
-    fun getColumnNamesByTableName(dbName: String): Map<String, Set<String>> {
-        val columnNamesByTableName = mutableMapOf<String, MutableSet<String>>()
+    fun getColumnNamesByTableName(dbName: String): Map<String, TableSchemaInfo> {
+        val columnNamesByTableName = mutableMapOf<String, TableSchemaInfo>()
         val sql = getCurrentTableAndColumnNamesSql()
         BasePostgresIterable(
                 StatementHolderSupplier(externalDbManager.connect(dbName), sql, FETCH_SIZE)
-        ) { rs -> name(rs) to columnName(rs) }
+        ) { rs -> TableInfo(oid(rs), name(rs) , columnName(rs))  }
                 .forEach {
-                    columnNamesByTableName.getOrPut(it.first) { mutableSetOf() }.add(it.second)
+                    columnNamesByTableName
+                            .getOrPut(it.tableName) {
+                                TableSchemaInfo(it.oid, mutableSetOf())
+                            }.columnNames.add(it.columnName)
                 }
         return columnNamesByTableName
     }
@@ -712,11 +708,12 @@ class ExternalDatabaseManagementService(
         return "SELECT pg_reload_conf()"
     }
 
-    private val selectExpression = "SELECT information_schema.tables.table_name AS name, information_schema.columns.column_name "
+    private val selectExpression = "SELECT oid, information_schema.tables.table_name AS name, information_schema.columns.column_name "
 
     private val fromExpression = "FROM information_schema.tables "
 
-    private val leftJoinColumnsExpression = "LEFT JOIN information_schema.columns ON information_schema.tables.table_name = information_schema.columns.table_name "
+    private val leftJoinColumnsExpression0 = "LEFT JOIN pg_class ON relname = information_schema.tables.table_name "
+    private val leftJoinColumnsExpression = "LEFT JOIN information_schema.columns ON information_schema.tables.table_name = information_schema.columns.table_name $leftJoinColumnsExpression0"
 
     private fun getInsertRecordSql(table: PostgresTableDefinition, columns: String, pkey: String, record: PostgresAuthenticationRecord): String {
         return "INSERT INTO ${table.name} $columns VALUES(${record.buildPostgresRecord()}) " +
@@ -752,3 +749,14 @@ class ExternalDatabaseManagementService(
     }
 
 }
+
+data class TableSchemaInfo(
+        val oid: Int,
+        val columnNames: MutableSet<String>
+)
+
+data class TableInfo(
+        val oid : Int,
+        val tableName: String,
+        val columnName: String
+)

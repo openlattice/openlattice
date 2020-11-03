@@ -30,6 +30,7 @@ import com.openlattice.edm.properties.PostgresTypeManager
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager
 import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService
 import com.openlattice.mapstores.TestDataFactory
+import com.openlattice.organizations.OrganizationMetadataEntitySetsService
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.junit.Assert
 import org.junit.Test
@@ -41,7 +42,6 @@ class EdmAuthorizationHelperTest : HzAuthzTest() {
 
     init {
         val auditingConfig = testServer.context.getBean(AuditingConfiguration::class.java)
-
         val edmManager = EdmService(
                 hazelcastInstance,
                 HazelcastAclKeyReservationService(hazelcastInstance),
@@ -57,6 +57,7 @@ class EdmAuthorizationHelperTest : HzAuthzTest() {
                 PartitionManager(hazelcastInstance, hds),
                 edmManager,
                 hds,
+                Mockito.mock(OrganizationMetadataEntitySetsService::class.java),
                 auditingConfig
         )
 

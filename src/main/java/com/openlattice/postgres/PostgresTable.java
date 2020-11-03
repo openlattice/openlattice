@@ -429,6 +429,7 @@ public final class PostgresTable {
                     .addColumns(
                             ID,
                             NAME,
+                            OID,
                             TITLE,
                             DESCRIPTION,
                             ORGANIZATION_ID );

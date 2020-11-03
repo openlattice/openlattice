@@ -94,6 +94,7 @@ import com.openlattice.subscriptions.SubscriptionContactType;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.jetbrains.annotations.NotNull;
+import org.postgresql.core.Oid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -464,6 +465,10 @@ public final class ResultSetAdapters {
 
     public static String namespace( ResultSet rs ) throws SQLException {
         return rs.getString( NAMESPACE.getName() );
+    }
+
+    public static int oid( ResultSet rs ) throws SQLException {
+        return rs.getInt("oid");
     }
 
     public static String name( ResultSet rs ) throws SQLException {
@@ -1077,8 +1082,9 @@ public final class ResultSetAdapters {
         String title = title( rs );
         Optional<String> description = Optional.ofNullable( description( ( rs ) ) );
         UUID organizationId = organizationId( rs );
+        int oid = oid(rs);
 
-        return new OrganizationExternalDatabaseTable( id, name, title, description, organizationId );
+        return new OrganizationExternalDatabaseTable( id, name, title, description, organizationId,oid );
     }
 
     public static OrganizationExternalDatabaseColumn organizationExternalDatabaseColumn( ResultSet rs )

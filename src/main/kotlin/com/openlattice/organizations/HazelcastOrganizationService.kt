@@ -4,6 +4,7 @@ import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Preconditions
 import com.google.common.collect.Iterables
 import com.google.common.eventbus.EventBus
+import com.google.maps.errors.NotFoundException
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
@@ -11,6 +12,7 @@ import com.openlattice.assembler.Assembler
 import com.openlattice.assembler.PostgresDatabases
 import com.openlattice.authorization.*
 import com.openlattice.authorization.mapstores.PrincipalMapstore
+import com.openlattice.controllers.exceptions.ResourceNotFoundException
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.processors.GetMembersOfOrganizationEntryProcessor
@@ -67,8 +69,11 @@ class HazelcastOrganizationService(
         private val securePrincipalsManager: SecurePrincipalsManager,
         private val phoneNumbers: PhoneNumberService,
         private val partitionManager: PartitionManager,
-        private val assembler: Assembler
+        private val assembler: Assembler,
+        private val organizationMetadataEntitySetsService: OrganizationMetadataEntitySetsService
 ) {
+    init { organizationMetadataEntitySetsService.organizationService = this }
+
     protected val organizations = HazelcastMap.ORGANIZATIONS.getMap(hazelcastInstance)
     protected val users = HazelcastMap.USERS.getMap(hazelcastInstance)
     protected val organizationDatabases = HazelcastMap.ORGANIZATION_DATABASES.getMap(hazelcastInstance)
@@ -139,9 +144,10 @@ class HazelcastOrganizationService(
 
         initializeOrganizationPrincipals(principal, organization)
         initializeOrganization(organization)
+        organizationMetadataEntitySetsService.initializeOrganizationMetadataEntitySets(organization.id)
 
         // set up organization database
-        val orgDatabase = assembler.createOrganizationAndReturnOid( organization.id )
+        val orgDatabase = assembler.createOrganizationAndReturnOid(organization.id)
         organizationDatabases.set(organization.id, orgDatabase)
 
         if (membersToAdd.isNotEmpty()) {
@@ -282,7 +288,7 @@ class HazelcastOrganizationService(
 
     @Timed
     fun getMembers(organizationId: UUID): Set<Principal> {
-        return organizations.executeOnKey( organizationId, GetMembersOfOrganizationEntryProcessor() ) ?: setOf()
+        return organizations.executeOnKey(organizationId, GetMembersOfOrganizationEntryProcessor()) ?: setOf()
     }
 
     @Timed
@@ -565,8 +571,10 @@ class HazelcastOrganizationService(
             assembler.renameOrganizationDatabase(currentDatabaseName, newDatabaseName)
             executeDatabaseNameUpdate(organizationId, newDatabaseName)
         } catch (e: Exception) {
-            throw IllegalStateException("An error occurred while trying to rename org $organizationId database " +
-                    "name to $newDatabaseName", e)
+            throw IllegalStateException(
+                    "An error occurred while trying to rename org $organizationId database " +
+                            "name to $newDatabaseName", e
+            )
         }
     }
 
@@ -609,6 +617,24 @@ class HazelcastOrganizationService(
         }
 
         logger.info("Removed {} from organizations: {}", organizationIds)
+    }
+
+    fun getOrganizationMetadataEntitySetIds(organizationId: UUID): OrganizationMetadataEntitySetIds {
+        return organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
+            Result(it.organizationMetadataEntitySetIds, false)
+        }) as OrganizationMetadataEntitySetIds? ?: throw ResourceNotFoundException(
+                "Unable able to resolve organization $organizationId"
+        )
+    }
+
+    fun setOrganizationMetadataEntitySetIds(
+            organizationId: UUID,
+            organizationMetadataEntitySetIds: OrganizationMetadataEntitySetIds
+    ) {
+        organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
+            it.organizationMetadataEntitySetIds = organizationMetadataEntitySetIds
+            Result(null, true)
+        })
     }
 
     companion object {
