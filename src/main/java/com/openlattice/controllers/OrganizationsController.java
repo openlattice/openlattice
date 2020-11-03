@@ -660,7 +660,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     @PutMapping( value = ID_PATH + METADATA_ENTITY_SET_IDS, consumes = MediaType.APPLICATION_JSON_VALUE )
     public Void setMetadataEntitySetIds(
             @PathVariable( ID ) UUID organizationId,
-            OrganizationMetadataEntitySetIds entitySetIds ) {
+            @RequestBody OrganizationMetadataEntitySetIds entitySetIds ) {
         ensureOwner( organizationId );
         organizations.setOrganizationMetadataEntitySetIds( organizationId, entitySetIds );
         return null;
