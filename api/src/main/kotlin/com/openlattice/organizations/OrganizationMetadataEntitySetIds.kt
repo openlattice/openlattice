@@ -23,12 +23,13 @@ package com.openlattice.organizations
 
 import java.util.*
 
+val UNINITIALIZED_METADATA_ENTITY_SET_ID = UUID(0,0)
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 data class OrganizationMetadataEntitySetIds(
-        val organization: UUID = UUID(0, 0),
-        val datasets: UUID = UUID(0, 0),
-        val columns: UUID = UUID(0, 0)
+        val organization: UUID = UNINITIALIZED_METADATA_ENTITY_SET_ID,
+        val datasets: UUID = UNINITIALIZED_METADATA_ENTITY_SET_ID,
+        val columns: UUID = UNINITIALIZED_METADATA_ENTITY_SET_ID
 )
