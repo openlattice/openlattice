@@ -215,7 +215,7 @@ class OrganizationMetadataEntitySetsService(private val edmService: EdmManager) 
                 propertyTypes.getValue(DATASET_NAME).id to setOf(entitySet.name),
                 propertyTypes.getValue(COL_NAME).id to setOf(propertyType.type.fullQualifiedNameAsString),
                 propertyTypes.getValue(ORG_ID).id to setOf(organizationId.toString()),
-                propertyTypes.getValue(TYPE).id to setOf(propertyType.datatype),
+                propertyTypes.getValue(TYPE).id to setOf(propertyType.datatype.toString()),
                 propertyTypes.getValue(DESCRIPTION).id to setOf(propertyType.description)
         )
         val datasetColumnEntity = mutableMapOf<UUID, Set<Any>>(
@@ -256,7 +256,7 @@ class OrganizationMetadataEntitySetsService(private val edmService: EdmManager) 
                 propertyTypes.getValue(DATASET_NAME).id to setOf(table.name),
                 propertyTypes.getValue(COL_NAME).id to setOf(column.name),
                 propertyTypes.getValue(ORG_ID).id to setOf(organizationId.toString()),
-                propertyTypes.getValue(TYPE).id to setOf(column.dataType),
+                propertyTypes.getValue(TYPE).id to setOf(column.dataType.toString()),
                 propertyTypes.getValue(DESCRIPTION).id to setOf(column.description)
         )
 
