@@ -30,6 +30,8 @@ import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.authorization.util.AuthorizationUtilsKt;
 import com.openlattice.controllers.exceptions.ForbiddenException;
+import com.openlattice.datastore.services.EdmManager;
+import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.EntitySetManager;
 import com.openlattice.organization.OrganizationEntitySetFlag;
 import com.openlattice.organization.OrganizationIntegrationAccount;
@@ -40,6 +42,8 @@ import com.openlattice.organizations.ExternalDatabaseManagementService;
 import com.openlattice.organizations.Grant;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.Organization;
+import com.openlattice.organizations.OrganizationMetadataEntitySetIds;
+import com.openlattice.organizations.OrganizationMetadataEntitySetsService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
@@ -81,6 +85,15 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
 
     @Inject
     private AppService appService;
+
+    @Inject
+    private OrganizationMetadataEntitySetsService organizationMetadataEntitySetsService;
+
+    @Inject
+    private ExternalDatabaseManagementService externalDatabaseManagementService;
+
+    @Inject
+    private EdmManager edmService;
 
     @Timed
     @Override
@@ -154,7 +167,9 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     @Override
     @GetMapping( value = ID_PATH + SET_ID_PATH + TRANSPORT, produces = MediaType.APPLICATION_JSON_VALUE )
     @ResponseStatus( HttpStatus.OK )
-    public Void transportEntitySet( @PathVariable( ID ) UUID organizationId, @PathVariable( SET_ID ) UUID entitySetId ) {
+    public Void transportEntitySet(
+            @PathVariable( ID ) UUID organizationId,
+            @PathVariable( SET_ID ) UUID entitySetId ) {
         organizations.ensureOrganizationExists( organizationId );
         ensureRead( organizationId );
         ensureTransportAccess( new AclKey( entitySetId ) );
@@ -165,7 +180,9 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     @Override
     @GetMapping( value = ID_PATH + SET_ID_PATH + DESTROY, produces = MediaType.APPLICATION_JSON_VALUE )
     @ResponseStatus( HttpStatus.OK )
-    public Void destroyTransportedEntitySet( @PathVariable( ID ) UUID organizationId, @PathVariable( SET_ID ) UUID entitySetId ) {
+    public Void destroyTransportedEntitySet(
+            @PathVariable( ID ) UUID organizationId,
+            @PathVariable( SET_ID ) UUID entitySetId ) {
         organizations.ensureOrganizationExists( organizationId );
         ensureRead( organizationId );
         ensureTransportAccess( new AclKey( entitySetId ) );
@@ -440,7 +457,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             value = ID_PATH + PRINCIPALS + MEMBERS )
     public Iterable<OrganizationMember> getMembers( @PathVariable( ID ) UUID organizationId ) {
         ensureRead( organizationId );
-        Set<Principal>                 members             = organizations.getMembers( organizationId );
+        Set<Principal> members = organizations.getMembers( organizationId );
         Collection<SecurablePrincipal> securablePrincipals = principalService.getSecurablePrincipals( members );
         return securablePrincipals
                 .stream()
@@ -494,7 +511,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Set<Role> getRoles( @PathVariable( ID ) UUID organizationId ) {
         ensureRead( organizationId );
-        Set<Role>   roles                 = organizations.getRoles( organizationId );
+        Set<Role> roles = organizations.getRoles( organizationId );
         Set<AclKey> authorizedRoleAclKeys = getAuthorizedRoleAclKeys( roles );
         return Sets.filter( roles, role -> role != null && authorizedRoleAclKeys.contains( role.getAclKey() ) );
     }
@@ -638,6 +655,49 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         return null;
     }
 
+    @Override
+    @Timed
+    @PutMapping( value = ID_PATH + METADATA_ENTITY_SET_IDS, consumes = MediaType.APPLICATION_JSON_VALUE )
+    public Void setMetadataEntitySetIds(
+            @PathVariable( ID ) UUID organizationId,
+            OrganizationMetadataEntitySetIds entitySetIds ) {
+        ensureOwner( organizationId );
+        organizations.setOrganizationMetadataEntitySetIds( organizationId, entitySetIds );
+        return null;
+    }
+
+    @Override
+    @Timed
+    @PostMapping( value = ID_PATH + METADATA, consumes = MediaType.APPLICATION_JSON_VALUE )
+    public Void importMetadata( @PathVariable( ID ) UUID organizationId ) {
+        ensureAdminAccess();
+        ensureOwner( organizationId );
+        organizationMetadataEntitySetsService.initializeOrganizationMetadataEntitySets( organizationId );
+
+        var tables = externalDatabaseManagementService
+                .getExternalDatabaseTablesWithColumns( organizationId );
+        tables
+                .forEach( ( t, c ) -> {
+                    organizationMetadataEntitySetsService.addDataset( organizationId, t.getSecond() );
+                    c.forEach( col -> organizationMetadataEntitySetsService
+                            .addDatasetColumn( organizationId, col.getValue() ) );
+                } );
+
+        entitySetManager
+                .getEntitySetsForOrganization( organizationId )
+                .forEach( e -> {
+                    var entitySet = Objects.requireNonNull( entitySetManager.getEntitySet( e ) );
+                    var propertyTypes = edmService.getPropertyTypesOfEntityType( entitySet.getEntityTypeId() );
+
+                    organizationMetadataEntitySetsService.addDataset( entitySet );
+                    propertyTypes
+                            .values()
+                            .forEach( v -> organizationMetadataEntitySetsService.addDatasetColumn( entitySet, v ) );
+                } );
+
+        return null;
+    }
+
     @Timed
     @DeleteMapping( value = ID_PATH + CONNECTIONS, consumes = MediaType.APPLICATION_JSON_VALUE )
     @Override
@@ -663,7 +723,8 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     }
 
     @Override
-    @PatchMapping( value = ID_PATH + DATABASE, consumes = { MediaType.TEXT_PLAIN_VALUE, MediaType.APPLICATION_FORM_URLENCODED_VALUE } )
+    @PatchMapping( value = ID_PATH + DATABASE, consumes = { MediaType.TEXT_PLAIN_VALUE,
+            MediaType.APPLICATION_FORM_URLENCODED_VALUE } )
     public Void renameOrganizationDatabase(
             @PathVariable( ID ) UUID organizationId,
             @RequestBody String newDatabaseName ) {

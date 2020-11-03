@@ -83,6 +83,7 @@ import com.openlattice.notifications.sms.PhoneNumberService;
 import com.openlattice.organizations.ExternalDatabaseManagementService;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.OrganizationExternalDatabaseConfiguration;
+import com.openlattice.organizations.OrganizationMetadataEntitySetsService;
 import com.openlattice.organizations.pods.OrganizationExternalDatabaseConfigurationPod;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
@@ -268,6 +269,7 @@ public class DatastoreServicesPod {
                 partitionManager(),
                 dataModelService(),
                 hikariDataSource,
+                organizationMetadataEntitySetsService(),
                 auditingConfiguration
         );
     }
@@ -345,7 +347,8 @@ public class DatastoreServicesPod {
                 principalService(),
                 phoneNumberService(),
                 partitionManager(),
-                assembler() );
+                assembler(),
+                organizationMetadataEntitySetsService() );
     }
 
     @Bean
@@ -403,6 +406,11 @@ public class DatastoreServicesPod {
     @Bean
     public DataGraphManager dataGraphService() {
         return new DataGraphService( graphApi(), idService(), entityDatastore(), jobService() );
+    }
+
+    @Bean
+    public OrganizationMetadataEntitySetsService organizationMetadataEntitySetsService() {
+        return new OrganizationMetadataEntitySetsService( dataModelService() );
     }
 
     @Bean
@@ -633,5 +641,6 @@ public class DatastoreServicesPod {
     @PostConstruct
     void initPrincipals() {
         Principals.init( principalService(), hazelcastInstance );
+        organizationMetadataEntitySetsService().dataGraphManager = dataGraphService();
     }
 }
