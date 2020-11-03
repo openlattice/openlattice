@@ -29,6 +29,7 @@ import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
+import com.openlattice.organization.OrganizationExternalDatabaseTable
 import com.openlattice.postgres.DataTables.quote
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.springframework.stereotype.Service
@@ -172,6 +173,10 @@ class OrganizationMetadataEntitySetsService(private val edmService: EdmManager) 
                 mapOf(id to datasetEntity),
                 datasetsAuthorizedPropertTypes
         )
+    }
+
+    fun addDataset(organizationId: UUID, table: OrganizationExternalDatabaseTable) {
+        addDataset(organizationId, table.oid, table.id, table.name)
     }
 
     fun addDataset(organizationId: UUID, oid: Int, id: UUID, name: String) {
