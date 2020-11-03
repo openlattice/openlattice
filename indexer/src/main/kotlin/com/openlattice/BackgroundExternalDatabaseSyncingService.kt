@@ -121,7 +121,7 @@ class BackgroundExternalDatabaseSyncingService(
         val currentTableIds = mutableSetOf<UUID>()
         val currentColumnIds = mutableSetOf<UUID>()
         val currentColumnNamesByTableName = edms.getColumnNamesByTableName(dbName)
-        currentColumnNamesByTableName.forEach { (tableName,schemaInfo) ->
+        currentColumnNamesByTableName.forEach { (tableName, schemaInfo) ->
             //check if we had a record of this table name previously
             val tableFQN = FullQualifiedName(orgId.toString(), tableName)
             val tableId = aclKeys[tableFQN.fullQualifiedNameAsString]
@@ -266,7 +266,11 @@ class BackgroundExternalDatabaseSyncingService(
                 Optional.of(column.name)
         )
 
-        organizationMetadataEntitySetsService.addDatasetColumn(orgId, column)
+        organizationMetadataEntitySetsService.addDatasetColumn(
+                orgId,
+                edms.getOrganizationExternalDatabaseTable(column.tableId),
+                column
+        )
 
         val events = createAuditableEvents(acls, AuditEventType.ADD_PERMISSION)
         auditingManager.recordEvents(events)
