@@ -34,6 +34,8 @@ import com.openlattice.auditing.AuditingConfiguration;
 import com.openlattice.auditing.pods.AuditingConfigurationPod;
 import com.openlattice.authorization.*;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
+import com.openlattice.data.DataGraphManager;
+import com.openlattice.data.DataGraphService;
 import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EdmService;
@@ -53,6 +55,7 @@ import com.openlattice.linking.matching.SocratesMatcher;
 import com.openlattice.linking.util.PersonProperties;
 import com.openlattice.notifications.sms.PhoneNumberService;
 import com.openlattice.organizations.HazelcastOrganizationService;
+import com.openlattice.organizations.OrganizationMetadataEntitySetsService;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
@@ -191,7 +194,8 @@ public class LinkerServicesPod {
                 principalService(),
                 phoneNumberService(),
                 partitionManager(),
-                assembler() );
+                assembler(),
+                organizationMetadataEntitySetsService() );
     }
 
     @Bean
@@ -243,6 +247,7 @@ public class LinkerServicesPod {
                 partitionManager(),
                 dataModelService(),
                 hikariDataSource,
+                organizationMetadataEntitySetsService(),
                 auditingConfiguration
         );
     }
@@ -268,13 +273,18 @@ public class LinkerServicesPod {
         return new SocratesMatcher( model, fqnToIdMap, postgresLinkingFeedbackQueryService() );
     }
 
-    @PostConstruct
-    void initPrincipals() {
-        Principals.init( principalService(), hazelcastInstance );
+    @Bean
+    public OrganizationMetadataEntitySetsService organizationMetadataEntitySetsService() {
+        return new OrganizationMetadataEntitySetsService( dataModelService() );
     }
 
     @Bean
     public PostgresLinkingFeedbackService postgresLinkingFeedbackQueryService() {
         return new PostgresLinkingFeedbackService( hikariDataSource, hazelcastInstance );
+    }
+
+    @PostConstruct
+    void initPrincipals() {
+        Principals.init( principalService(), hazelcastInstance );
     }
 }
