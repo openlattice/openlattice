@@ -136,7 +136,8 @@ class OrganizationMetadataEntitySetsService(
         }
     }
 
-    fun addDataset(organizationId: UUID, entitySet: EntitySet) {
+    fun addDataset(entitySet: EntitySet) {
+        val organizationId = entitySet.organizationId
         val organizationMetadataEntitySetIds = organizationService.getOrganizationMetadataEntitySetIds(organizationId)
         val datasetEntity = mutableMapOf<UUID, Set<Any>>(
                 propertyTypes.getValue(ID).id to setOf(entitySet.id),
@@ -176,7 +177,8 @@ class OrganizationMetadataEntitySetsService(
         )
     }
 
-    fun addDatasetColumn(organizationId: UUID, entitySet: EntitySet, propertyType: PropertyType) {
+    fun addDatasetColumn(entitySet: EntitySet, propertyType: PropertyType) {
+        val organizationId = entitySet.organizationId
         val organizationMetadataEntitySetIds = organizationService.getOrganizationMetadataEntitySetIds(organizationId)
         val columnEntity = mutableMapOf<UUID, Set<Any>>(
                 propertyTypes.getValue(ID).id to setOf(propertyType.id),
