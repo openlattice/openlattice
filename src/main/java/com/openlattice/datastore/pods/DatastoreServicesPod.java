@@ -347,7 +347,8 @@ public class DatastoreServicesPod {
                 principalService(),
                 phoneNumberService(),
                 partitionManager(),
-                assembler() );
+                assembler(),
+                organizationMetadataEntitySetsService() );
     }
 
     @Bean
@@ -406,12 +407,10 @@ public class DatastoreServicesPod {
     public DataGraphManager dataGraphService() {
         return new DataGraphService( graphApi(), idService(), entityDatastore(), jobService() );
     }
+
     @Bean
     public OrganizationMetadataEntitySetsService organizationMetadataEntitySetsService() {
-        return new OrganizationMetadataEntitySetsService( dataModelService(),
-                entitySetManager(),
-                dataGraphService(),
-                organizationsManager() );
+        return new OrganizationMetadataEntitySetsService( dataModelService() );
     }
 
     @Bean
@@ -642,5 +641,6 @@ public class DatastoreServicesPod {
     @PostConstruct
     void initPrincipals() {
         Principals.init( principalService(), hazelcastInstance );
+        organizationMetadataEntitySetsService().dataGraphManager = dataGraphService();
     }
 }

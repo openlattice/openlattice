@@ -40,6 +40,7 @@ import com.openlattice.organizations.ExternalDatabaseManagementService;
 import com.openlattice.organizations.Grant;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.Organization;
+import com.openlattice.organizations.OrganizationMetadataEntitySetIds;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
@@ -635,6 +636,15 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     public Void setConnections( @PathVariable( ID ) UUID organizationId, @RequestBody Set<String> connections ) {
         ensureAdminAccess();
         organizations.setConnections( organizationId, connections );
+        return null;
+    }
+
+    @Override
+    @Timed
+    @PutMapping( value = ID_PATH + METADATA_ENTITY_SET_IDS, consumes = MediaType.APPLICATION_JSON_VALUE )
+    public Void setMetadataEntitySetIds( UUID organizationId, OrganizationMetadataEntitySetIds entitySetIds ) {
+        ensureOwner( organizationId );
+        organizations.setOrganizationMetadataEntitySetIds( organizationId,entitySetIds );
         return null;
     }
 
