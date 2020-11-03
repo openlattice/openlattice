@@ -668,7 +668,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
 
     @Override
     @Timed
-    @PatchMapping( value = ID_PATH + METADATA, consumes = MediaType.APPLICATION_JSON_VALUE )
+    @PostMapping( value = ID_PATH + METADATA, consumes = MediaType.APPLICATION_JSON_VALUE )
     public Void importMetadata( @PathVariable( ID ) UUID organizationId ) {
         ensureAdminAccess();
         ensureOwner( organizationId );
