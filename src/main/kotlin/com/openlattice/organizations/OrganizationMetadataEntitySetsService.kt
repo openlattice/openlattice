@@ -203,7 +203,7 @@ class OrganizationMetadataEntitySetsService(private val edmService: EdmManager) 
         )
     }
 
-    fun addDatasetColumn(entitySet: EntitySet, propertyTypesInEntitySet: Collection<PropertyType>) {
+    fun addDatasetColumns(entitySet: EntitySet, propertyTypesInEntitySet: Collection<PropertyType>) {
         initializeFields()
         if (!isFullyInitialized()) {
             return
@@ -232,14 +232,14 @@ class OrganizationMetadataEntitySetsService(private val edmService: EdmManager) 
         val datasetColumnEntities = mutableMapOf<UUID, Set<Any>>(
                 propertyTypes.getValue(COL_INFO).id to setOf(mapper.writeValueAsString(propertyTypeEntities.values))
         )
-        dataGraphManager.mergeEntities(
+        dataGraphManager.partialReplaceEntities(
                 organizationMetadataEntitySetIds.datasets,
                 mapOf(datasetEntityKeyId to datasetColumnEntities),
                 datasetsAuthorizedPropertTypes
         )
     }
 
-    fun addDatasetColumn(organizationId: UUID, table: OrganizationExternalDatabaseTable, columns: Collection<OrganizationExternalDatabaseColumn>) {
+    fun addDatasetColumns(organizationId: UUID, table: OrganizationExternalDatabaseTable, columns: Collection<OrganizationExternalDatabaseColumn>) {
         initializeFields()
         if (!isFullyInitialized()) {
             return
@@ -262,7 +262,7 @@ class OrganizationMetadataEntitySetsService(private val edmService: EdmManager) 
                 columnEntities,
                 columnAuthorizedPropertTypes
         )
-        
+
         val datasetEntityKeyId = getDatasetEntityKeyId(organizationMetadataEntitySetIds, table.id)
         val datasetColumnEntity = mutableMapOf<UUID, Set<Any>>(
                 propertyTypes.getValue(COL_INFO).id to setOf(mapper.writeValueAsString(columnEntities))

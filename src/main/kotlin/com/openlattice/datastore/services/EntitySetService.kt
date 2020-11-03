@@ -27,7 +27,6 @@ import com.google.common.collect.Sets
 import com.google.common.eventbus.EventBus
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.map.IMap
-import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.hazelcast.query.QueryConstants
 import com.openlattice.assembler.events.MaterializedEntitySetEdmChangeEvent
@@ -174,7 +173,7 @@ class EntitySetService(
         organizationMetadataEntitySetsService.addDataset(entitySet)
         val propertyTypes = edm.getPropertyTypesOfEntityType(entitySet.entityTypeId)
 
-        organizationMetadataEntitySetsService.addDatasetColumn(entitySet, propertyTypes.values)
+        organizationMetadataEntitySetsService.addDatasetColumns(entitySet, propertyTypes.values)
 
     }
 
