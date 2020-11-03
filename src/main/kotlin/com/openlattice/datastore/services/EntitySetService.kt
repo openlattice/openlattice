@@ -88,7 +88,10 @@ class EntitySetService(
         private val organizationMetadataEntitySetsService: OrganizationMetadataEntitySetsService,
         auditingConfiguration: AuditingConfiguration
 ) : EntitySetManager {
-    init { organizationMetadataEntitySetsService.entitySetsManager = this }
+    init {
+        organizationMetadataEntitySetsService.entitySetsManager = this
+    }
+
     private val aresManager = AuditRecordEntitySetsManager(
             AuditingTypes(edm, auditingConfiguration),
             this,
@@ -170,9 +173,9 @@ class EntitySetService(
     private fun setupOrganizationMetadata(entitySet: EntitySet) {
         organizationMetadataEntitySetsService.addDataset(entitySet)
         val propertyTypes = edm.getPropertyTypesOfEntityType(entitySet.entityTypeId)
-        propertyTypes.forEach { (_, propertyType) ->
-            organizationMetadataEntitySetsService.addDatasetColumn(entitySet, propertyType)
-        }
+
+        organizationMetadataEntitySetsService.addDatasetColumn(entitySet, propertyTypes.values)
+
     }
 
     private fun reserveEntitySetIfNotExists(entitySet: EntitySet): UUID {
