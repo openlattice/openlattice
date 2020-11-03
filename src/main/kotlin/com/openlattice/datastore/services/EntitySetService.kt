@@ -27,7 +27,6 @@ import com.google.common.collect.Sets
 import com.google.common.eventbus.EventBus
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.map.IMap
-import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.hazelcast.query.QueryConstants
 import com.openlattice.assembler.events.MaterializedEntitySetEdmChangeEvent
@@ -88,7 +87,10 @@ class EntitySetService(
         private val organizationMetadataEntitySetsService: OrganizationMetadataEntitySetsService,
         auditingConfiguration: AuditingConfiguration
 ) : EntitySetManager {
-    init { organizationMetadataEntitySetsService.entitySetsManager = this }
+    init {
+        organizationMetadataEntitySetsService.entitySetsManager = this
+    }
+
     private val aresManager = AuditRecordEntitySetsManager(
             AuditingTypes(edm, auditingConfiguration),
             this,
@@ -170,9 +172,9 @@ class EntitySetService(
     private fun setupOrganizationMetadata(entitySet: EntitySet) {
         organizationMetadataEntitySetsService.addDataset(entitySet)
         val propertyTypes = edm.getPropertyTypesOfEntityType(entitySet.entityTypeId)
-        propertyTypes.forEach { (_, propertyType) ->
-            organizationMetadataEntitySetsService.addDatasetColumn(entitySet, propertyType)
-        }
+
+        organizationMetadataEntitySetsService.addDatasetColumns(entitySet, propertyTypes.values)
+
     }
 
     private fun reserveEntitySetIfNotExists(entitySet: EntitySet): UUID {
