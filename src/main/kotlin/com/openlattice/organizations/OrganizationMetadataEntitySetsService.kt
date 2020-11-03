@@ -211,8 +211,8 @@ class OrganizationMetadataEntitySetsService(private val edmService: EdmManager) 
         val organizationId = entitySet.organizationId
         val organizationMetadataEntitySetIds = organizationService.getOrganizationMetadataEntitySetIds(organizationId)
 
-        val propertyTypeEntities = propertyTypesInEntitySet.map {propertyType ->
-            val columnEntity = mutableMapOf<UUID, Set<Any>>(
+        val propertyTypeEntities = propertyTypesInEntitySet.associate {propertyType ->
+            getColumnEntityKeyId(organizationMetadataEntitySetIds, entitySet.id, propertyType) to mutableMapOf<UUID, Set<Any>>(
                     propertyTypes.getValue(ID).id to setOf(propertyType.id.toString()),
                     propertyTypes.getValue(DATASET_NAME).id to setOf(entitySet.name),
                     propertyTypes.getValue(COL_NAME).id to setOf(propertyType.type.fullQualifiedNameAsString),
@@ -220,19 +220,17 @@ class OrganizationMetadataEntitySetsService(private val edmService: EdmManager) 
                     propertyTypes.getValue(TYPE).id to setOf(propertyType.datatype.toString()),
                     propertyTypes.getValue(DESCRIPTION).id to setOf(propertyType.description)
             )
+        }.toMap()
 
-            val columnEntityKeyId = getColumnEntityKeyId(organizationMetadataEntitySetIds, entitySet.id, propertyType)
-            dataGraphManager.partialReplaceEntities(
-                    organizationMetadataEntitySetIds.columns,
-                    mapOf(columnEntityKeyId to columnEntity),
-                    columnAuthorizedPropertTypes
-            )
-            columnEntity
-        }
+        dataGraphManager.partialReplaceEntities(
+                organizationMetadataEntitySetIds.columns,
+                propertyTypeEntities,
+                columnAuthorizedPropertTypes
+        )
 
         val datasetEntityKeyId = getDatasetEntityKeyId(organizationMetadataEntitySetIds, entitySet.id)
         val datasetColumnEntities = mutableMapOf<UUID, Set<Any>>(
-                propertyTypes.getValue(COL_INFO).id to setOf(mapper.writeValueAsString(propertyTypeEntities))
+                propertyTypes.getValue(COL_INFO).id to setOf(mapper.writeValueAsString(propertyTypeEntities.values))
         )
         dataGraphManager.mergeEntities(
                 organizationMetadataEntitySetIds.datasets,
@@ -248,8 +246,8 @@ class OrganizationMetadataEntitySetsService(private val edmService: EdmManager) 
         }
         val organizationMetadataEntitySetIds = organizationService.getOrganizationMetadataEntitySetIds(organizationId)
 
-        val columnEntities = columns.map { column ->
-            val columnEntity = mutableMapOf<UUID, Set<Any>>(
+        val columnEntities = columns.associate { column ->
+            getColumnEntityKeyId(organizationMetadataEntitySetIds, column.tableId, column) to  mutableMapOf<UUID, Set<Any>>(
                     propertyTypes.getValue(ID).id to setOf(column.id.toString()),
                     propertyTypes.getValue(DATASET_NAME).id to setOf(table.name),
                     propertyTypes.getValue(COL_NAME).id to setOf(column.name),
@@ -257,19 +255,14 @@ class OrganizationMetadataEntitySetsService(private val edmService: EdmManager) 
                     propertyTypes.getValue(TYPE).id to setOf(column.dataType.toString()),
                     propertyTypes.getValue(DESCRIPTION).id to setOf(column.description)
             )
-
-
-
-            val columnEntityKeyId = getColumnEntityKeyId(organizationMetadataEntitySetIds, column.tableId, column)
-
-            dataGraphManager.partialReplaceEntities(
-                    organizationMetadataEntitySetIds.columns,
-                    mapOf(columnEntityKeyId to columnEntity),
-                    columnAuthorizedPropertTypes
-            )
-            columnEntity
         }
 
+        dataGraphManager.partialReplaceEntities(
+                organizationMetadataEntitySetIds.columns,
+                columnEntities,
+                columnAuthorizedPropertTypes
+        )
+        
         val datasetEntityKeyId = getDatasetEntityKeyId(organizationMetadataEntitySetIds, table.id)
         val datasetColumnEntity = mutableMapOf<UUID, Set<Any>>(
                 propertyTypes.getValue(COL_INFO).id to setOf(mapper.writeValueAsString(columnEntities))
