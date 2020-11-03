@@ -238,11 +238,18 @@ class BackgroundExternalDatabaseSyncingService(
             currentColumnIds: MutableSet<UUID>
     ): Int {
         var totalSynced = 0
-        edms.getColumnMetadata(tableName, tableId, orgId, columnName)
-                .forEach { column ->
-                    createSecurableColumnObject(orgOwnerIds, orgId, tableName, currentColumnIds, column)
-                    totalSynced++
-                }
+        val columns = edms.getColumnMetadata(tableName, tableId, orgId, columnName).toList()
+
+        organizationMetadataEntitySetsService.addDatasetColumns(
+                orgId,
+                edms.getOrganizationExternalDatabaseTable(columns.first().tableId),
+                columns
+        )
+
+        columns.forEach { column ->
+            createSecurableColumnObject(orgOwnerIds, orgId, tableName, currentColumnIds, column)
+            totalSynced++
+        }
         return totalSynced
     }
 
@@ -266,11 +273,6 @@ class BackgroundExternalDatabaseSyncingService(
                 Optional.of(column.name)
         )
 
-        organizationMetadataEntitySetsService.addDatasetColumn(
-                orgId,
-                edms.getOrganizationExternalDatabaseTable(column.tableId),
-                column
-        )
 
         val events = createAuditableEvents(acls, AuditEventType.ADD_PERMISSION)
         auditingManager.recordEvents(events)
