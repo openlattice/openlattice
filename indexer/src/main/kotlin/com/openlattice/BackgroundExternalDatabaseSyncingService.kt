@@ -240,7 +240,7 @@ class BackgroundExternalDatabaseSyncingService(
         var totalSynced = 0
         val columns = edms.getColumnMetadata(tableName, tableId, orgId, columnName).toList()
 
-        organizationMetadataEntitySetsService.addDatasetColumn(
+        organizationMetadataEntitySetsService.addDatasetColumns(
                 orgId,
                 edms.getOrganizationExternalDatabaseTable(columns.first().tableId),
                 columns
