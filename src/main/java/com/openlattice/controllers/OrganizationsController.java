@@ -31,7 +31,6 @@ import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.authorization.util.AuthorizationUtilsKt;
 import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.datastore.services.EdmManager;
-import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.EntitySetManager;
 import com.openlattice.organization.OrganizationEntitySetFlag;
 import com.openlattice.organization.OrganizationIntegrationAccount;
@@ -45,6 +44,7 @@ import com.openlattice.organizations.Organization;
 import com.openlattice.organizations.OrganizationMetadataEntitySetIds;
 import com.openlattice.organizations.OrganizationMetadataEntitySetsService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
+import java.util.Map.Entry;
 import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.http.HttpStatus;
@@ -679,8 +679,11 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         tables
                 .forEach( ( t, c ) -> {
                     organizationMetadataEntitySetsService.addDataset( organizationId, t.getSecond() );
-                    c.forEach( col -> organizationMetadataEntitySetsService
-                            .addDatasetColumn( organizationId, t.getSecond(), col.getValue() ) );
+                    organizationMetadataEntitySetsService
+                            .addDatasetColumns(
+                                    organizationId,
+                                    t.getSecond(),
+                                    c.stream().map( Entry::getValue ).collect( Collectors.toList()) );
                 } );
 
         entitySetManager
@@ -690,9 +693,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
                     var propertyTypes = edmService.getPropertyTypesOfEntityType( entitySet.getEntityTypeId() );
 
                     organizationMetadataEntitySetsService.addDataset( entitySet );
-                    propertyTypes
-                            .values()
-                            .forEach( v -> organizationMetadataEntitySetsService.addDatasetColumn( entitySet, v ) );
+                    organizationMetadataEntitySetsService.addDatasetColumns( entitySet, propertyTypes.values() );
                 } );
 
         return null;
