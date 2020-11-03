@@ -791,12 +791,13 @@ public final class TestDataFactory {
     }
 
     public static OrganizationExternalDatabaseTable organizationExternalDatabaseTable() {
-        return new OrganizationExternalDatabaseTable(
+        return ,new OrganizationExternalDatabaseTable(
                 UUID.randomUUID(),
                 randomAlphanumeric( 5 ),
                 randomAlphanumeric( 5 ),
                 Optional.of( randomAlphanumeric( 5 ) ),
-                UUID.randomUUID()
+                UUID.randomUUID(),
+                r.nextInt()
         );
     }
 
