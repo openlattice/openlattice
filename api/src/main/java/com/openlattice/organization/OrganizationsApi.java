@@ -49,6 +49,7 @@ public interface OrganizationsApi {
     String ID_PATH           = "/{" + ID + "}";
     String INTEGRATION       = "/integration";
     String MEMBERS           = "/members";
+    String METADATA = "/metadata";
     String METADATA_ENTITY_SET_IDS = "/metadata-entity-set-ids";
     String PRINCIPALS        = "/principals";
     String PRINCIPAL_ID      = "pid";
@@ -302,6 +303,9 @@ public interface OrganizationsApi {
     Void setMetadataEntitySetIds(
             @Path( ID ) UUID organizationId,
             @Body OrganizationMetadataEntitySetIds entitySetIds );
+
+    @POST( BASE + ID_PATH + METADATA )
+    Void importMetadata( @Path( ID ) UUID organizationId);
 
     @HTTP( path = BASE + ID_PATH + CONNECTIONS, method = "DELETE", hasBody = true )
     Void removeConnections( @Path( ID ) UUID organizationId, @Body Set<String> connections );

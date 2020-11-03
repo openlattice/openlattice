@@ -41,4 +41,25 @@ constructor(
     override fun getCategory(): SecurableObjectType {
         return SecurableObjectType.OrganizationExternalDatabaseTable
     }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is OrganizationExternalDatabaseTable) return false
+        if (!super.equals(other)) return false
+
+        if (name != other.name) return false
+        if (organizationId != other.organizationId) return false
+        if (oid != other.oid) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = super.hashCode()
+        result = 31 * result + name.hashCode()
+        result = 31 * result + organizationId.hashCode()
+        result = 31 * result + oid
+        return result
+    }
+
 }
