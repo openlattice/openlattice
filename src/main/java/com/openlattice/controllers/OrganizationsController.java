@@ -45,6 +45,7 @@ import com.openlattice.organizations.Organization;
 import com.openlattice.organizations.OrganizationMetadataEntitySetIds;
 import com.openlattice.organizations.OrganizationMetadataEntitySetsService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
+import java.util.Map.Entry;
 import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.http.HttpStatus;
@@ -679,8 +680,11 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         tables
                 .forEach( ( t, c ) -> {
                     organizationMetadataEntitySetsService.addDataset( organizationId, t.getSecond() );
-                    c.forEach( col -> organizationMetadataEntitySetsService
-                            .addDatasetColumn( organizationId, t.getSecond(), col.getValue() ) );
+                    organizationMetadataEntitySetsService
+                            .addDatasetColumn(
+                                    organizationId,
+                                    t.getSecond(),
+                                    c.stream().map( Entry::getValue ).collect( Collectors.toList()) );
                 } );
 
         entitySetManager
@@ -690,9 +694,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
                     var propertyTypes = edmService.getPropertyTypesOfEntityType( entitySet.getEntityTypeId() );
 
                     organizationMetadataEntitySetsService.addDataset( entitySet );
-                    propertyTypes
-                            .values()
-                            .forEach( v -> organizationMetadataEntitySetsService.addDatasetColumn( entitySet, v ) );
+                    organizationMetadataEntitySetsService.addDatasetColumn( entitySet, propertyTypes.values() );
                 } );
 
         return null;
