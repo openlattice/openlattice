@@ -22,6 +22,7 @@ import com.auth0.json.mgmt.users.User;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.Grant;
 import com.openlattice.organizations.Organization;
+import com.openlattice.organizations.OrganizationMetadataEntitySetIds;
 import retrofit2.http.*;
 
 import javax.annotation.Nonnull;
@@ -38,6 +39,7 @@ public interface OrganizationsApi {
     String CONTROLLER        = "/organizations";
     String DATABASE          = "/database";
     String DESCRIPTION       = "/description";
+    String DESTROY           = "/destroy";
     String EMAIL_DOMAIN      = "email-domain";
     String EMAIL_DOMAINS     = "/email-domains";
     String EMAIL_DOMAIN_PATH = "/{" + EMAIL_DOMAIN + ":.+}";
@@ -47,6 +49,7 @@ public interface OrganizationsApi {
     String ID_PATH           = "/{" + ID + "}";
     String INTEGRATION       = "/integration";
     String MEMBERS           = "/members";
+    String METADATA_ENTITY_SETS = "/metadata-entity-sets";
     String PRINCIPALS        = "/principals";
     String PRINCIPAL_ID      = "pid";
     String PRINCIPAL_ID_PATH = "/{" + PRINCIPAL_ID + "}";
@@ -56,20 +59,17 @@ public interface OrganizationsApi {
     String ROLES             = "/roles";
     String ROLE_ID           = "roleId";
     String ROLE_ID_PATH      = "/{" + ROLE_ID + "}";
-
     String SERVICE           = "/datastore";
     String BASE              = SERVICE + CONTROLLER;
     String SET_ID            = "setId";
     String SET_ID_PATH       = "/{" + SET_ID + "}";
     String SYNCHRONIZE       = "/synchronize";
     String TITLE             = "/title";
+    String TRANSPORT         = "/transport";
     String TYPE              = "type";
     String TYPE_PATH         = "/{" + TYPE + "}";
     String USER_ID           = "userId";
     String USER_ID_PATH      = "/{" + USER_ID + ":.*}";
-
-    String TRANSPORT         = "/transport";
-    String DESTROY           = "/destroy";
 
     // @formatter:on
 
@@ -92,13 +92,13 @@ public interface OrganizationsApi {
      * Marks an entity set for transporter
      */
     @GET( BASE + ID_PATH + SET_ID_PATH + TRANSPORT )
-    Void transportEntitySet( @Path(ID) UUID organizationId, @Path(SET_ID) UUID entitySetId);
+    Void transportEntitySet( @Path( ID ) UUID organizationId, @Path( SET_ID ) UUID entitySetId );
 
     /**
      * Destroys an transported entity set
      */
     @GET( BASE + ID_PATH + SET_ID_PATH + DESTROY )
-    Void destroyTransportedEntitySet(@Path(ID) UUID organizationId, @Path(SET_ID) UUID entitySetId);
+    Void destroyTransportedEntitySet( @Path( ID ) UUID organizationId, @Path( SET_ID ) UUID entitySetId );
 
     /**
      * Rolls the organization integration account credentials.
@@ -123,7 +123,7 @@ public interface OrganizationsApi {
      * Retrieves the entity sets belong to an organization matching a specified filter.
      *
      * @param organizationId The id of the organization for which to retrieve entity sets
-     * @param flagFilter     The set of flags for which to retrieve information.
+     * @param flagFilter The set of flags for which to retrieve information.
      * @return All the organization entity sets along with flags indicating whether they are internal, external, and/or
      * materialized.
      */
@@ -136,7 +136,7 @@ public interface OrganizationsApi {
      * Materializes entity sets into the organization database.
      *
      * @param refreshRatesOfEntitySets The refresh rate in minutes of each entity set to assemble into materialized
-     *                                 views mapped by their ids.
+     * views mapped by their ids.
      */
     @POST( BASE + ID_PATH + ENTITY_SETS + ASSEMBLE )
     Map<UUID, Set<OrganizationEntitySetFlag>> assembleEntitySets(
@@ -147,7 +147,7 @@ public interface OrganizationsApi {
      * Synchronizes EDM changes to the requested materialized entity set in the organization.
      *
      * @param organizationId The id of the organization in which to synchronize the materialized entity set.
-     * @param entitySetId    The id of the entity set to synchronize.
+     * @param entitySetId The id of the entity set to synchronize.
      */
     @POST( BASE + ID_PATH + SET_ID_PATH + SYNCHRONIZE )
     Void synchronizeEdmChanges( @Path( ID ) UUID organizationId, @Path( SET_ID ) UUID entitySetId );
@@ -156,7 +156,7 @@ public interface OrganizationsApi {
      * Refreshes the requested materialized entity set with data changes in the organization.
      *
      * @param organizationId The id of the organization in which to refresh the materialized entity sets data.
-     * @param entitySetId    The id of the entity set to refresh.
+     * @param entitySetId The id of the entity set to refresh.
      */
     @POST( BASE + ID_PATH + SET_ID_PATH + REFRESH )
     Void refreshDataChanges( @Path( ID ) UUID organizationId, @Path( SET_ID ) UUID entitySetId );
@@ -165,9 +165,9 @@ public interface OrganizationsApi {
      * Changes the refresh rate of a materialized entity set in the requested organization.
      *
      * @param organizationId The id of the organization in which to change the refresh rate of the materialized entity
-     *                       set.
-     * @param entitySetId    The id of the entity set, whose refresh rate to change.
-     * @param refreshRate    The new refresh rate in minutes.
+     * set.
+     * @param entitySetId The id of the entity set, whose refresh rate to change.
+     * @param refreshRate The new refresh rate in minutes.
      */
     @PUT( BASE + ID_PATH + SET_ID_PATH + REFRESH_RATE )
     Void updateRefreshRate(
@@ -179,8 +179,8 @@ public interface OrganizationsApi {
      * Disables automatic refresh of a materialized entity set in the requested organization.
      *
      * @param organizationId The id of the organization in which to disable automatic refresh of the materialized entity
-     *                       set.
-     * @param entitySetId    The id of the entity set, which not to refresh automatically.
+     * set.
+     * @param entitySetId The id of the entity set, which not to refresh automatically.
      */
     @DELETE( BASE + ID_PATH + SET_ID_PATH + REFRESH_RATE )
     Void deleteRefreshRate( @Path( ID ) UUID organizationId, @Path( SET_ID ) UUID entitySetId );
@@ -201,7 +201,7 @@ public interface OrganizationsApi {
      * Add multiple e-mail domains to the auto-approval list.
      *
      * @param organizationId The id of the organization to modify.
-     * @param emailDomains   The e-mail domain to add to the auto-approval list.
+     * @param emailDomains The e-mail domain to add to the auto-approval list.
      */
     @POST( BASE + ID_PATH + EMAIL_DOMAINS )
     Void addEmailDomains( @Path( ID ) UUID organizationId, @Body Set<String> emailDomains );
@@ -217,7 +217,7 @@ public interface OrganizationsApi {
      * organization.
      *
      * @param organizationId The id of the organization to modify.
-     * @param emailDomain    The e-mail domain to add to the auto-approval list.
+     * @param emailDomain The e-mail domain to add to the auto-approval list.
      */
     @PUT( BASE + ID_PATH + EMAIL_DOMAINS + EMAIL_DOMAIN_PATH )
     Void addEmailDomain( @Path( ID ) UUID organizationId, @Path( EMAIL_DOMAIN ) String emailDomain );
@@ -227,7 +227,7 @@ public interface OrganizationsApi {
      * organization.
      *
      * @param organizationId The id of the organization to modify.
-     * @param emailDomain    The e-mail domain to add to the auto-approval list.
+     * @param emailDomain The e-mail domain to add to the auto-approval list.
      */
     @DELETE( BASE + ID_PATH + EMAIL_DOMAINS + EMAIL_DOMAIN_PATH )
     Void removeEmailDomain( @Path( ID ) UUID organizationId, @Path( EMAIL_DOMAIN ) String emailDomain );
@@ -266,8 +266,8 @@ public interface OrganizationsApi {
      * if multiple settings are required.
      *
      * @param organizationId The organziation id for which to update the grant.
-     * @param roleId         The role for which to update the grant.
-     * @param grant          The grant to update.
+     * @param roleId The role for which to update the grant.
+     * @param grant The grant to update.
      * @return Nothing.
      */
     @PUT( BASE + ID_PATH + PRINCIPALS + ROLES + ROLE_ID_PATH + GRANT )
@@ -298,21 +298,22 @@ public interface OrganizationsApi {
     @PUT( BASE + ID_PATH + CONNECTIONS )
     Void setConnections( @Path( ID ) UUID organizationId, @Body Set<String> connections );
 
+    @PUT( BASE + ID_PATH + METADATA_ENTITY_SETS )
+    Void setMetadataEntitySetIds(
+            @Path( ID ) UUID organizationId,
+            @Body OrganizationMetadataEntitySetIds entitySetIds );
+
     @HTTP( path = BASE + ID_PATH + CONNECTIONS, method = "DELETE", hasBody = true )
     Void removeConnections( @Path( ID ) UUID organizationId, @Body Set<String> connections );
 
     /**
      * Moves the specified table from the staging schema to the openlattice schema in the organization's external database
-     *
-     * @param organizationId
-     * @param tableName
-     * @return
      */
     @POST( BASE + PROMOTE + ID_PATH )
     Void promoteStagingTable( @Path( ID ) UUID organizationId, @Body String tableName );
 
     @GET( BASE + ID_PATH + DATABASE )
-    String getOrganizationDatabaseName( @Path(ID) UUID organizationId );
+    String getOrganizationDatabaseName( @Path( ID ) UUID organizationId );
 
     @PATCH( BASE + ID_PATH + DATABASE )
     Void renameOrganizationDatabase( @Path( ID ) UUID organizationId, @Body String newDatabaseName );
