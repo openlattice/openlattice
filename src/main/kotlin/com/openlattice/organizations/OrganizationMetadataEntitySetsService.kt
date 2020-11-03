@@ -162,7 +162,7 @@ class OrganizationMetadataEntitySetsService(private val edmService: EdmManager) 
                 propertyTypes.getValue(ID).id to setOf(entitySet.id.toString()),
                 propertyTypes.getValue(DATASET_NAME).id to setOf(entitySet.name),
                 propertyTypes.getValue(CONTACT).id to entitySet.contacts,
-                propertyTypes.getValue(STANDARDIZED).id to setOf("true")
+                propertyTypes.getValue(STANDARDIZED).id to setOf(true)
         )
 
         val datasetEntityKeyId = dataGraphManager.getEntityKeyIds(
@@ -192,7 +192,7 @@ class OrganizationMetadataEntitySetsService(private val edmService: EdmManager) 
                 propertyTypes.getValue(PGOID).id to setOf(oid),
                 propertyTypes.getValue(ID).id to setOf(id.toString()),
                 propertyTypes.getValue(DATASET_NAME).id to setOf(name),
-                propertyTypes.getValue(STANDARDIZED).id to setOf("false")
+                propertyTypes.getValue(STANDARDIZED).id to setOf(false)
         )
 
         val datasetEntityKeyId = dataGraphManager.getEntityKeyIds(
