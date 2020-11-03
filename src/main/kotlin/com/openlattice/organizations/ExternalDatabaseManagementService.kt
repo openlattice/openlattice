@@ -712,11 +712,12 @@ class ExternalDatabaseManagementService(
         return "SELECT pg_reload_conf()"
     }
 
-    private val selectExpression = "SELECT information_schema.tables.table_name AS name, information_schema.columns.column_name "
+    private val selectExpression = "SELECT oid, information_schema.tables.table_name AS name, information_schema.columns.column_name "
 
     private val fromExpression = "FROM information_schema.tables "
 
-    private val leftJoinColumnsExpression = "LEFT JOIN information_schema.columns ON information_schema.tables.table_name = information_schema.columns.table_name "
+    private val leftJoinColumnsExpression0 = "LEFT JOIN pg_class ON relname = information_schema.tables.table_name "
+    private val leftJoinColumnsExpression = "LEFT JOIN information_schema.columns ON information_schema.tables.table_name = information_schema.columns.table_name $leftJoinColumnsExpression0"
 
     private fun getInsertRecordSql(table: PostgresTableDefinition, columns: String, pkey: String, record: PostgresAuthenticationRecord): String {
         return "INSERT INTO ${table.name} $columns VALUES(${record.buildPostgresRecord()}) " +
