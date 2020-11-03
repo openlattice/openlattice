@@ -21,6 +21,7 @@ import com.openlattice.indexing.configuration.IndexerConfiguration
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.organization.OrganizationExternalDatabaseTable
 import com.openlattice.organizations.ExternalDatabaseManagementService
+import com.openlattice.organizations.OrganizationMetadataEntitySetsService
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
@@ -39,7 +40,8 @@ class BackgroundExternalDatabaseSyncingService(
         private val edms: ExternalDatabaseManagementService,
         private val auditingManager: AuditingManager,
         private val ares: AuditRecordEntitySetsManager,
-        private val indexerConfiguration: IndexerConfiguration
+        private val indexerConfiguration: IndexerConfiguration,
+        private val organizationMetadataEntitySetsService: OrganizationMetadataEntitySetsService
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(BackgroundExternalDatabaseSyncingService::class.java)
@@ -119,7 +121,7 @@ class BackgroundExternalDatabaseSyncingService(
         val currentTableIds = mutableSetOf<UUID>()
         val currentColumnIds = mutableSetOf<UUID>()
         val currentColumnNamesByTableName = edms.getColumnNamesByTableName(dbName)
-        currentColumnNamesByTableName.forEach { (tableName, columnNames) ->
+        currentColumnNamesByTableName.forEach { (tableName,schemaInfo) ->
             //check if we had a record of this table name previously
             val tableFQN = FullQualifiedName(orgId.toString(), tableName)
             val tableId = aclKeys[tableFQN.fullQualifiedNameAsString]
@@ -130,7 +132,8 @@ class BackgroundExternalDatabaseSyncingService(
                         tableName,
                         tableName,
                         Optional.empty(),
-                        orgId
+                        orgId,
+                        schemaInfo.oid
                 )
                 val newTableId = createSecurableTableObject(orgOwnerIds, orgId, currentTableIds, newTable)
                 totalSynced++
@@ -147,7 +150,7 @@ class BackgroundExternalDatabaseSyncingService(
             } else {
                 currentTableIds.add(tableId)
                 //check if columns existed previously
-                columnNames.forEach {
+                schemaInfo.columnNames.forEach {
                     val columnFQN = FullQualifiedName(tableId.toString(), it)
                     val columnId = aclKeys[columnFQN.fullQualifiedNameAsString]
                     if (columnId == null) {
@@ -216,6 +219,8 @@ class BackgroundExternalDatabaseSyncingService(
                 Optional.empty()
         )
 
+        organizationMetadataEntitySetsService.addDataset(orgId, table.oid, table.id, table.name)
+
         //create audit entity set and audit permissions
         ares.createAuditEntitySetForExternalDBTable(table)
         val events = createAuditableEvents(acls, AuditEventType.ADD_PERMISSION)
@@ -260,6 +265,9 @@ class BackgroundExternalDatabaseSyncingService(
                 Optional.of(newColumnId),
                 Optional.of(column.name)
         )
+
+        organizationMetadataEntitySetsService.addDatasetColumn(orgId, column)
+
         val events = createAuditableEvents(acls, AuditEventType.ADD_PERMISSION)
         auditingManager.recordEvents(events)
     }

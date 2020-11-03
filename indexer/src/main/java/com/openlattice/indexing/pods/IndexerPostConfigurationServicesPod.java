@@ -41,6 +41,7 @@ import com.openlattice.indexing.configuration.IndexerConfiguration;
 import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
 import com.openlattice.organizations.ExternalDatabaseManagementService;
+import com.openlattice.organizations.OrganizationMetadataEntitySetsService;
 import com.zaxxer.hikari.HikariDataSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -91,6 +92,9 @@ public class IndexerPostConfigurationServicesPod {
 
     @Inject
     private PostgresLinkingFeedbackService postgresLinkingFeedbackService;
+
+    @Inject
+    private OrganizationMetadataEntitySetsService organizationMetadataEntitySetsService;
 
     @Bean
     public PartitionManager partitionManager() {
@@ -152,7 +156,8 @@ public class IndexerPostConfigurationServicesPod {
                 edms,
                 auditingManager,
                 ares,
-                indexerConfiguration);
+                indexerConfiguration,
+                organizationMetadataEntitySetsService );
     }
 
     @Bean
