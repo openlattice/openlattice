@@ -31,7 +31,6 @@ import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.authorization.util.AuthorizationUtilsKt;
 import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.datastore.services.EdmManager;
-import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.EntitySetManager;
 import com.openlattice.organization.OrganizationEntitySetFlag;
 import com.openlattice.organization.OrganizationIntegrationAccount;
@@ -681,7 +680,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
                 .forEach( ( t, c ) -> {
                     organizationMetadataEntitySetsService.addDataset( organizationId, t.getSecond() );
                     organizationMetadataEntitySetsService
-                            .addDatasetColumn(
+                            .addDatasetColumns(
                                     organizationId,
                                     t.getSecond(),
                                     c.stream().map( Entry::getValue ).collect( Collectors.toList()) );
@@ -694,7 +693,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
                     var propertyTypes = edmService.getPropertyTypesOfEntityType( entitySet.getEntityTypeId() );
 
                     organizationMetadataEntitySetsService.addDataset( entitySet );
-                    organizationMetadataEntitySetsService.addDatasetColumn( entitySet, propertyTypes.values() );
+                    organizationMetadataEntitySetsService.addDatasetColumns( entitySet, propertyTypes.values() );
                 } );
 
         return null;
