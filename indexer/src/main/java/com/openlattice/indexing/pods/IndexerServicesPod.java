@@ -379,7 +379,6 @@ public class IndexerServicesPod {
     public PostgresLinkingFeedbackService postgresLinkingFeedbackService() {
         return new PostgresLinkingFeedbackService( hikariDataSource, hazelcastInstance );
     }
-
     @Bean
     public OrganizationMetadataEntitySetsService organizationMetadataEntitySetsService() {
         return new OrganizationMetadataEntitySetsService( dataModelService() );
@@ -388,6 +387,5 @@ public class IndexerServicesPod {
     @PostConstruct
     void initPrincipals() {
         Principals.init( principalService(), hazelcastInstance );
-        organizationMetadataEntitySetsService().dataGraphManager = dataGraphService();
     }
 }
