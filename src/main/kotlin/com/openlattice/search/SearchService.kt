@@ -759,15 +759,16 @@ class SearchService(
 
         val edgeDetails = entities[associationEDK.entityKeyId]
         val neighborDetails = entities[neighborEDK.entityKeyId]
+        val neighborEntitySet = entitySetsById[neighborEDK.entitySetId]
 
-        if (edgeDetails == null || neighborDetails == null) {
+        if (edgeDetails == null || neighborDetails == null || neighborEntitySet == null) {
             return null
         }
 
         return NeighborEntityDetails(
                 entitySetsById[associationEDK.entitySetId],
                 edgeDetails,
-                entitySetsById[neighborEDK.entitySetId],
+                neighborEntitySet,
                 neighborEDK.entityKeyId,
                 neighborDetails,
                 vertexIsSrc
