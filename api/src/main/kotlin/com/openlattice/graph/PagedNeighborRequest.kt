@@ -19,7 +19,7 @@ private const val MAX_PAGE_SIZE = 10_000
 data class PagedNeighborRequest @JvmOverloads constructor(
         val filter: EntityNeighborsFilter,
         val bookmark: DataEdgeKey? = null,
-        val pageSize: Int = MAX_PAGE_SIZE
+        val pageSize: Int = 0
 ) {
     init {
         Preconditions.checkState(
