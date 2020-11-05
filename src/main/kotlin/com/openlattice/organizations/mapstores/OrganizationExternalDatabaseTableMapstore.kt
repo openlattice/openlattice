@@ -25,12 +25,14 @@ open class OrganizationExternalDatabaseTableMapstore(
 
         //create
         ps.setString(index++, value.name)
+        ps.setInt(index++, value.oid)
         ps.setString(index++, value.title)
         ps.setString(index++, value.description)
         ps.setObject(index++, value.organizationId)
 
         //update
         ps.setString(index++, value.name)
+        ps.setInt(index++, value.oid)
         ps.setString(index++, value.title)
         ps.setString(index++, value.description)
         ps.setObject(index++, value.organizationId)

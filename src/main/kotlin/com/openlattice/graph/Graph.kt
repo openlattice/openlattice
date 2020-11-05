@@ -1187,8 +1187,6 @@ internal fun getFilteredNeighborhoodSql(
         vertexAsDstSql += " AND ( $associationEntitySetIdsSql )"
     }
 
-    val limitClause = if (limit > 0) "LIMIT $limit" else ""
-
     val bookmarkClause = if (bookmark != null) {
         """
             AND ( ${PAGED_NEIGHBOR_SEARCH_ORDER_COLS.joinToString()} ) > (
@@ -1204,6 +1202,9 @@ internal fun getFilteredNeighborhoodSql(
         ""
     }
 
+    val pagingClause = if (limit > 0) "ORDER BY ${PAGED_NEIGHBOR_SEARCH_ORDER_COLS.joinToString()} LIMIT $limit" else ""
+
+
     return """
       SELECT *
       FROM ${E.name}
@@ -1211,8 +1212,7 @@ internal fun getFilteredNeighborhoodSql(
         ( ( $vertexAsDstSql ) OR ( $vertexAsSrcSql ) ) 
         AND ${VERSION.name} > 0
         $bookmarkClause
-      ORDER BY ${PAGED_NEIGHBOR_SEARCH_ORDER_COLS.joinToString()}
-      $limitClause
+      $pagingClause
    """.trimIndent()
 }
 

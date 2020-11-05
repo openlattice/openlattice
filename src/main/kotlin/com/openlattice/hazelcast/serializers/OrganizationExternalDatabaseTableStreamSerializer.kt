@@ -19,6 +19,7 @@ class OrganizationExternalDatabaseTableStreamSerializer : SelfRegisteringStreamS
             output.writeUTF(obj.title)
             output.writeUTF(obj.description)
             UUIDStreamSerializerUtils.serialize(output, obj.organizationId)
+            output.writeInt(obj.oid)
         }
 
         fun deserialize(input: ObjectDataInput): OrganizationExternalDatabaseTable {
@@ -27,7 +28,8 @@ class OrganizationExternalDatabaseTableStreamSerializer : SelfRegisteringStreamS
             val title = input.readUTF()
             val description = input.readUTF()
             val orgId = UUIDStreamSerializerUtils.deserialize(input)
-            return OrganizationExternalDatabaseTable(id, name, title, Optional.of(description), orgId)
+            val oid = input.readInt();
+            return OrganizationExternalDatabaseTable(id, name, title, Optional.of(description), orgId, oid)
         }
     }
 
