@@ -250,7 +250,7 @@ class RepartitioningJob(
 private val REPARTITION_SELECTOR = getPartitioningSelector(ID)
 private val REPARTITION_SELECTOR_E = getPartitioningSelector(SRC_ENTITY_KEY_ID)
 
-private fun buildRepartitionColumns(ptd: PostgresTableDefinition): String {
+fun buildRepartitionColumns(ptd: PostgresTableDefinition): String {
     val selector = when (ptd) {
         E -> REPARTITION_SELECTOR_E
         else -> REPARTITION_SELECTOR
@@ -309,9 +309,9 @@ private fun latestSql(
 ): String = "${column.name} = CASE WHEN EXCLUDED.${comparison.name} > ${table.name}.${comparison.name} THEN EXCLUDED.${whenExcludedGreater.name} ELSE ${table.name}.${otherwise.name} END"
 
 
-private val REPARTITION_DATA_COLUMNS = buildRepartitionColumns(DATA)
-private val REPARTITION_IDS_COLUMNS = buildRepartitionColumns(IDS)
-private val REPARTITION_EDGES_COLUMNS = buildRepartitionColumns(E)
+val REPARTITION_DATA_COLUMNS = buildRepartitionColumns(DATA)
+val REPARTITION_IDS_COLUMNS = buildRepartitionColumns(IDS)
+val REPARTITION_EDGES_COLUMNS = buildRepartitionColumns(E)
 
 /**
  * Query for repartition a partition of data.
