@@ -1,9 +1,3 @@
-plugins {
-    id 'application'
-}
-
 ext.projectName = 'sharedGradle'
-
-mainClassName = 'none'
 
 apply from: "./openlattice.gradle"
