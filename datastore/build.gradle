@@ -43,7 +43,7 @@ distTar {
     archiveName "datastore.tgz"
 }
 
-apply from: "https://raw.githubusercontent.com/openlattice/gradles/master/openlattice.gradle"
+apply from: "../gradles/openlattice.gradle"
 
 mainClassName = "com.openlattice.datastore.Datastore"
 
@@ -140,25 +140,22 @@ dependencies {
 
     if (project.hasProperty('developmentMode') && project.developmentMode) {
         logger.quiet(project.name + " using project dependencies.")
-        compile project(":rhizome")
         compile project(":conductor-client")
         compile project(":scrunchie")
         compile project(":api")
         testCompile project(":conductor")
         testCompile(project(path: ":api", configuration: "tests"))
-        testCompile(project(path: ":rhizome", configuration: "tests"))
-        testCompile(project(path: ":rhizome-client", configuration: "tests"))
     } else {
         logger.quiet(project.name + " using jar dependencies.")
-        compile "com.openlattice:rhizome:${rhizome_version}"
         compile "com.openlattice:conductor-client:${conductor_client_version}"
         compile "com.openlattice:scrunchie:${scrunchie_version}"
         compile "com.openlattice:api:${api_version}"
         testCompile "com.openlattice:conductor:${conductor_version}"
         testCompile "com.openlattice:api:${api_version}:tests"
-        testCompile "com.openlattice:rhizome:${rhizome_version}:tests"
-        testCompile "com.openlattice:rhizome-client:${rhizome_client_version}:tests"
     }
+    compile "com.openlattice:rhizome:${rhizome_version}"
+    testCompile "com.openlattice:rhizome:${rhizome_version}:tests"
+    testCompile "com.openlattice:rhizome-client:${rhizome_client_version}:tests"
 
     compile group: "com.twilio.sdk", name: "twilio", version: "${twilio_version}"
 

@@ -45,7 +45,7 @@ ext.scmUrl = 'scm:git:https://github.com/openlattice/conductor.git'
 ext.connectionUrl = 'scm:git:https://github.com/openlattice/conductor.git'
 ext.developerConnectionUrl = 'scm:git:https://github.com/openlattice/conductor.git'
 
-apply from: "https://raw.githubusercontent.com/openlattice/gradles/master/openlattice.gradle"
+apply from: "../gradles/openlattice.gradle"
 apply plugin: 'kotlin'
 
 def CONDUCTOR_XMS = "$System.env.CONDUCTOR_XMS"
@@ -145,17 +145,16 @@ dependencies {
     compile "org.ow2.asm:asm:${asm_version}"
     if (project.hasProperty('developmentMode') && project.developmentMode) {
         logger.quiet(project.name + " using project dependencies.")
-        compile project(":rhizome")
         compile project(":conductor-client")
         compile project(":scrunchie")
         compile project(":courier")
     } else {
         logger.quiet(project.name + " using jar dependencies.")
-        compile "com.openlattice:rhizome:${rhizome_version}"
         compile "com.openlattice:conductor-client:${conductor_client_version}"
         compile "com.openlattice:scrunchie:${scrunchie_version}"
         compile "com.openlattice:courier:${courier_version}"
     }
+    compile "com.openlattice:rhizome:${rhizome_version}"
     /*
      * TESTING
      */

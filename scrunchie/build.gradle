@@ -61,26 +61,18 @@ dependencies {
 
     if (project.hasProperty("developmentMode") && project.developmentMode) {
         logger.quiet(project.name + " using project dependencies.")
-
         compile(project(":api"))
-
         compile(project(":conductor-client"))
-
-        testCompile(project(path: ":rhizome", configuration: "tests"))
         testCompile(project(":datastore"))
-        testCompile(project(path: ":rhizome-client", configuration: "tests"))
-
     } else {
         logger.quiet(project.name + " using jar dependencies.")
-
         compile("com.openlattice:api:${api_version}")
-
         compile("com.openlattice:conductor-client:${conductor_client_version}")
-
-        testCompile("com.openlattice:rhizome:${rhizome_version}:tests")
-        testCompile "com.openlattice:rhizome-client:${rhizome_client_version}:tests"
+        testCompile "com.openlattice:datastore:${datastore_version}"
     }
-    
+    testCompile("com.openlattice:rhizome:${rhizome_version}:tests")
+    testCompile "com.openlattice:rhizome-client:${rhizome_client_version}:tests"
+
     /*
      * ELASTICSEARCH
      */

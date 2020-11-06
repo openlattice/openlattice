@@ -36,7 +36,7 @@ ext.scmUrl = 'scm:git:https://github.com/openlattice/api.git'
 ext.connectionUrl = 'scm:git:https://github.com/openlattice/api.git'
 ext.developerConnectionUrl = 'scm:git:https://github.com/openlattice/api.git'
 
-apply from: "https://raw.githubusercontent.com/openlattice/gradles/master/openlattice.gradle"
+apply from: "../gradles/openlattice.gradle"
 apply plugin: 'org.openapi.generator'
 
 sourceCompatibility = JavaVersion.VERSION_11
@@ -215,16 +215,13 @@ dependencies {
     compile "com.auth0:auth0:${project.auth0_version}"
 
     if (project.hasProperty('developmentMode') && project.developmentMode) {
-        logger.quiet(project.name + " using project dependencies.")
-        compile(project(path: ":rhizome-client"))
-        testCompile(project(path: ":rhizome-client", configuration: "tests"))
-        testCompile(project(path: ":rhizome", configuration: "tests"))
+      logger.quiet(project.name + " using project dependencies.")
     } else {
-        logger.quiet(project.name + " using jar dependencies.")
-        compile "com.openlattice:rhizome-client:${rhizome_client_version}"
-        testCompile "com.openlattice:rhizome:${rhizome_version}:tests"
-        testCompile "com.openlattice:rhizome-client:${rhizome_client_version}:tests"
+      logger.quiet(project.name + " using jar dependencies.")
     }
+    compile "com.openlattice:rhizome-client:${rhizome_client_version}"
+    testCompile "com.openlattice:rhizome:${rhizome_version}:tests"
+    testCompile "com.openlattice:rhizome-client:${rhizome_client_version}:tests"
 
     /*
      * TESTING

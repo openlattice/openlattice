@@ -43,7 +43,7 @@ ext.scmUrl = 'scm:git:https://github.com/openlattice/conductor-client.git'
 ext.connectionUrl = 'scm:git:https://github.com/openlattice/conductor-client.git'
 ext.developerConnectionUrl = 'scm:git:https://github.com/openlattice/conductor-client.git'
 
-apply from: "https://raw.githubusercontent.com/openlattice/gradles/master/openlattice.gradle"
+apply from: "../gradles/openlattice.gradle"
 
 sourceCompatibility=JavaVersion.VERSION_11
 targetCompatibility=JavaVersion.VERSION_11
@@ -124,7 +124,7 @@ dependencies {
      * SL4J
      */
     compile group: "org.slf4j", name: "slf4j-api", version:"${slf4j_version}"
-  
+
     /*
      * @Inject and @Nullable support
      */
@@ -152,23 +152,22 @@ dependencies {
     if( project.hasProperty('developmentMode') && project.developmentMode ) {
         logger.quiet(project.name + " using project dependencies.")
         compile project(":api")
-        compile project(":rhizome")
         compile project(":scribe")
+        
         testCompile( project(path: ":api", configuration: "tests"))
-        testCompile( project(path: ":rhizome", configuration: "tests"))
-        testCompile( project(path: ":rhizome-client", configuration: "tests"))
         testCompile( project(path: ":scribe", configuration: "tests"))
     } else {
         logger.quiet(project.name + " using jar dependencies.")
         compile "com.openlattice:api:${api_version}"
-        compile "com.openlattice:rhizome:${rhizome_version}"
         compile "com.openlattice:scribe:${scribe_version}"
 
         testCompile "com.openlattice:api:${api_version}:tests"
-        testCompile "com.openlattice:rhizome:${rhizome_version}:tests"
-        testCompile "com.openlattice:rhizome-client:${rhizome_client_version}:tests"
         testCompile "com.openlattice:scribe:${scribe_version}:tests"
     }
+
+    compile "com.openlattice:rhizome:${rhizome_version}"
+    testCompile "com.openlattice:rhizome:${rhizome_version}:tests"
+    testCompile "com.openlattice:rhizome-client:${rhizome_client_version}:tests"
     testImplementation "junit:junit:${junit_version}"
     /*
      * TESTING

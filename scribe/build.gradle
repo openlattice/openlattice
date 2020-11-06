@@ -38,7 +38,7 @@ ext.scmUrl = 'scm:git:https://github.com/openlattice/scribe.git'
 ext.connectionUrl = 'scm:git:https://github.com/openlattice/scribe.git'
 ext.developerConnectionUrl = 'scm:git:https://github.com/openlattice/scribe.git'
 
-apply from: "https://raw.githubusercontent.com/openlattice/gradles/master/openlattice.gradle"
+apply from: "../gradles/openlattice.gradle"
 apply plugin: 'kotlin'
 
 sourceCompatibility=JavaVersion.VERSION_11
@@ -73,17 +73,14 @@ dependencies {
     compile "org.objenesis:objenesis:${objenesis_version}"
 
     if( project.hasProperty('developmentMode') && project.developmentMode ) {
-        logger.quiet(project.name + " using project dependencies.")
-        compile project(":rhizome")
-        testCompile( project(path: ":rhizome", configuration: "tests"))
-        testCompile( project(path: ":rhizome-client", configuration: "tests"))
+      logger.quiet(project.name + " using project dependencies.")
     } else {
-        logger.quiet(project.name + " using jar dependencies.")
-        compile "com.openlattice:rhizome:${rhizome_version}"
-        testCompile "com.openlattice:rhizome:${rhizome_version}:tests"
-        testCompile "com.openlattice:rhizome-client:${rhizome_client_version}:tests"
+      logger.quiet(project.name + " using jar dependencies.")
     }
 
+    compile "com.openlattice:rhizome:${rhizome_version}"
+    testCompile "com.openlattice:rhizome:${rhizome_version}:tests"
+    testCompile "com.openlattice:rhizome-client:${rhizome_client_version}:tests"
     /*
      * TESTING
      */

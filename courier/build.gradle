@@ -38,7 +38,7 @@ ext.scmUrl = 'scm:git:https://github.com/openlattice/courier.git'
 ext.connectionUrl = 'scm:git:https://github.com/openlattice/courier.git'
 ext.developerConnectionUrl = 'scm:git:https://github.com/openlattice/courier.git'
 
-apply from: "https://raw.githubusercontent.com/openlattice/gradles/master/openlattice.gradle"
+apply from: "../gradles/openlattice.gradle"
 
 sourceCompatibility=JavaVersion.VERSION_11
 targetCompatibility=JavaVersion.VERSION_11
@@ -79,18 +79,14 @@ dependencies {
 
     if( project.hasProperty('developmentMode') && project.developmentMode ) {
         logger.quiet(project.name + " using project dependencies.")
-        compile project(":rhizome")
         compile project(":scribe" )
-        testCompile( project(path: ":rhizome", configuration: "tests"))
-        testCompile( project(path: ":rhizome-client", configuration: "tests"))
     } else {
         logger.quiet(project.name + " using jar dependencies.")
         compile "com.openlattice:scribe:${scribe_version}"
-        compile "com.openlattice:rhizome:${rhizome_version}"
-
-        testCompile "com.openlattice:rhizome:${rhizome_version}:tests"
-        testCompile "com.openlattice:rhizome-client:${rhizome_client_version}:tests"
     }
+    compile "com.openlattice:rhizome:${rhizome_version}"
+    testCompile "com.openlattice:rhizome:${rhizome_version}:tests"
+    testCompile "com.openlattice:rhizome-client:${rhizome_client_version}:tests"
 
     /*
      * TESTING
