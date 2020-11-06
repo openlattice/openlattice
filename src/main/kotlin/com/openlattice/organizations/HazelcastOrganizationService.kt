@@ -4,7 +4,6 @@ import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Preconditions
 import com.google.common.collect.Iterables
 import com.google.common.eventbus.EventBus
-import com.google.maps.errors.NotFoundException
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
@@ -20,11 +19,7 @@ import com.openlattice.notifications.sms.PhoneNumberService
 import com.openlattice.notifications.sms.SmsEntitySetInformation
 import com.openlattice.organization.OrganizationPrincipal
 import com.openlattice.organization.roles.Role
-import com.openlattice.organizations.events.MembersAddedToOrganizationEvent
-import com.openlattice.organizations.events.MembersRemovedFromOrganizationEvent
-import com.openlattice.organizations.events.OrganizationCreatedEvent
-import com.openlattice.organizations.events.OrganizationDeletedEvent
-import com.openlattice.organizations.events.OrganizationUpdatedEvent
+import com.openlattice.organizations.events.*
 import com.openlattice.organizations.mapstores.CONNECTIONS_INDEX
 import com.openlattice.organizations.mapstores.MEMBERS_INDEX
 import com.openlattice.organizations.processors.OrganizationEntryProcessor
@@ -100,7 +95,7 @@ class HazelcastOrganizationService(
         return organizations.values
     }
 
-    private fun initializeOrganizationPrincipals(principal: Principal, organization: Organization) {
+    private fun initializeOrganizationPrincipal(principal: Principal, organization: Organization) {
         require(
                 securePrincipalsManager.createSecurablePrincipalIfNotExists(
                         principal,
@@ -109,7 +104,9 @@ class HazelcastOrganizationService(
         ) {
             "Unable to create securable principal for organization. This means the organization probably already exists."
         }
+    }
 
+    private fun initializeOrganizationAdminRole(principal: Principal, organization: Organization) {
         //Create the admin role for the organization and give it ownership of organization.
         val adminRole = createOrganizationAdminRole(organization.securablePrincipal)
         createRoleIfNotExists(principal, adminRole)
@@ -142,13 +139,15 @@ class HazelcastOrganizationService(
             else -> throw IllegalStateException("Only users and roles can create organizations.")
         }//Fall through by design
 
-        initializeOrganizationPrincipals(principal, organization)
+        initializeOrganizationPrincipal(principal, organization)
         initializeOrganization(organization)
         organizationMetadataEntitySetsService.initializeOrganizationMetadataEntitySets(organization.id)
 
         // set up organization database
         val orgDatabase = assembler.createOrganizationAndReturnOid(organization.id)
         organizationDatabases.set(organization.id, orgDatabase)
+
+        initializeOrganizationAdminRole(principal, organization)
 
         if (membersToAdd.isNotEmpty()) {
             addMembers(organization.getAclKey().first(), membersToAdd, mapOf())

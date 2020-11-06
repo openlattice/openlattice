@@ -41,10 +41,7 @@ import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.E
 import com.openlattice.postgres.PostgresTable.PRINCIPALS
-import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
-import com.openlattice.postgres.streams.BasePostgresIterable
-import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.openlattice.principals.RoleCreatedEvent
 import com.openlattice.principals.UserCreatedEvent
 import com.openlattice.transporter.types.TransporterDatastore.Companion.ORG_FOREIGN_TABLES_SCHEMA
@@ -543,30 +540,24 @@ class AssemblerConnectionManager(
         }
     }
 
-    fun getAllRoles(): BasePostgresIterable<Role> {
-        return BasePostgresIterable(PreparedStatementHolderSupplier(hds, PRINCIPALS_SQL) { ps ->
-            ps.setString(1, PrincipalType.ROLE.name)
-        }) {
-            securePrincipalsManager.getSecurablePrincipal(ResultSetAdapters.aclKey(it)) as Role
-        }
+    fun getAllRoles(): Set<Role> {
+        return securePrincipalsManager.allRoles
     }
 
-    fun getAllUsers(): BasePostgresIterable<SecurablePrincipal> {
-        return BasePostgresIterable(PreparedStatementHolderSupplier(hds, PRINCIPALS_SQL) { ps ->
-            ps.setString(1, PrincipalType.USER.name)
-        }) {
-            securePrincipalsManager.getSecurablePrincipal(ResultSetAdapters.aclKey(it))
-        }
+    fun getAllUsers(): Set<SecurablePrincipal> {
+        return securePrincipalsManager.allUsers
     }
 
     private fun configureRolesInDatabase(dataSource: HikariDataSource) {
         val roles = getAllRoles()
-        if (roles.iterator().hasNext()) {
-            val roleIds = roles.map { quote(buildPostgresRoleName(it)) }
-            val roleIdsSql = roleIds.joinToString(",")
+
+        if (roles.isNotEmpty()) {
+            val roleIds = roles.map { buildPostgresRoleName(it) }
+            val roleIdsSql = roleIds.joinToString { quote(it) }
 
             dataSource.connection.use { connection ->
                 connection.createStatement().use { statement ->
+
                     logger.info("Revoking $PUBLIC_SCHEMA schema right from roles: {}", roleIds)
                     //Don't allow users to access public schema which will contain foreign data wrapper tables.
                     statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM $roleIdsSql")

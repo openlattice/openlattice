@@ -83,7 +83,7 @@ class AuditRecordEntitySetsManager(
     private var edmAuditEntitySetId: UUID? = null
 
     fun createAuditEntitySetForEntitySet(auditedEntitySet: EntitySet) {
-        if (auditedEntitySet.flags.contains(EntitySetFlag.AUDIT)) {
+        if (auditedEntitySet.isAudit) {
             return
         }
 
@@ -137,7 +137,8 @@ class AuditRecordEntitySetsManager(
         val firstUserPrincipal: Principal
 
         try {
-            firstUserPrincipal = ownerPrincipals.first { it.type == PrincipalType.USER }
+            firstUserPrincipal = ownerPrincipals.firstOrNull { it.type == PrincipalType.USER }
+                    ?: ownerPrincipals.first { it.type == PrincipalType.ORGANIZATION }
         } catch (e: NoSuchElementException) {
             logger.error("Unable to create audit entity set for securable object {} because it has no owner", aclKey)
             return
