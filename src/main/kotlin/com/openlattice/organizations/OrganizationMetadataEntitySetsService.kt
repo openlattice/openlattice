@@ -154,8 +154,8 @@ class OrganizationMetadataEntitySetsService(private val edmService: EdmManager) 
                     )
             )
 
-            createdEntitySets.forEach {
-                entitySetsManager.setupOrganizationMetadata(entitySetsManager.getEntitySet(it)!!)
+            entitySetsManager.getEntitySetsAsMap(createdEntitySets).values.forEach {
+                entitySetsManager.setupOrganizationMetadataAndAuditEntitySets(it)
             }
         }
     }

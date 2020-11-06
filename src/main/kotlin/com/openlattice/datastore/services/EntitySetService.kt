@@ -139,10 +139,6 @@ class EntitySetService(
         try {
             setupDefaultEntitySetPropertyMetadata(entitySetId, entitySet.entityTypeId)
 
-            if (!entitySet.isMetadataEntitySet) {
-                setupOrganizationMetadata(entitySet)
-            }
-
             val aclKey = AclKey(entitySetId)
 
             authorizations.setSecurableObjectType(aclKey, SecurableObjectType.EntitySet)
@@ -163,7 +159,9 @@ class EntitySetService(
                     PropertyTypeInEntitySet
             )
 
-            aresManager.createAuditEntitySetForEntitySet(entitySet)
+            if (!entitySet.isMetadataEntitySet) {
+                setupOrganizationMetadataAndAuditEntitySets(entitySet)
+            }
 
             val ownablePropertyTypes = propertyTypes.getAll(entityType.properties).values.toList()
             eventBus.post(EntitySetCreatedEvent(entitySet, ownablePropertyTypes))
@@ -177,11 +175,13 @@ class EntitySetService(
         return entitySetId
     }
 
-    override fun setupOrganizationMetadata(entitySet: EntitySet) {
+    override fun setupOrganizationMetadataAndAuditEntitySets(entitySet: EntitySet) {
         organizationMetadataEntitySetsService.addDataset(entitySet)
         val propertyTypes = edm.getPropertyTypesOfEntityType(entitySet.entityTypeId)
 
         organizationMetadataEntitySetsService.addDatasetColumns(entitySet, propertyTypes.values)
+
+        aresManager.createAuditEntitySetForEntitySet(entitySet)
 
     }
 

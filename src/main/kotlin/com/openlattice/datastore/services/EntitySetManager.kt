@@ -106,6 +106,6 @@ interface EntitySetManager {
 
     fun exists(entitySetId: UUID): Boolean
 
-    fun setupOrganizationMetadata(entitySet: EntitySet)
+    fun setupOrganizationMetadataAndAuditEntitySets(entitySet: EntitySet)
 
 }
