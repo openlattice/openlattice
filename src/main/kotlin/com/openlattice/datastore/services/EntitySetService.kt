@@ -110,7 +110,7 @@ class EntitySetService(
 
     override fun createEntitySet(principal: Principal, entitySet: EntitySet): UUID {
         ensureValidEntitySet(entitySet)
-        if (entitySet.flags.contains(EntitySetFlag.METADATA)) {
+        if (entitySet.isMetadataEntitySet) {
             Principals.ensureOrganization(principal)
         } else {
             Principals.ensureUser(principal)
@@ -132,7 +132,10 @@ class EntitySetService(
 
         try {
             setupDefaultEntitySetPropertyMetadata(entitySetId, entitySet.entityTypeId)
-            setupOrganizationMetadata(entitySet)
+
+            if (!entitySet.isMetadataEntitySet) {
+                setupOrganizationMetadata(entitySet)
+            }
 
             val aclKey = AclKey(entitySetId)
 
