@@ -28,6 +28,7 @@ import com.openlattice.data.EntityKey
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EntitySet
+import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.organization.OrganizationExternalDatabaseTable
@@ -301,7 +302,8 @@ class OrganizationMetadataEntitySetsService(private val edmService: EdmManager) 
             name = buildOrganizationMetadataEntitySetName(organizationId),
             _title = "Organization Metadata for $organizationId",
             _description = "Organization Metadata for $organizationId",
-            contacts = mutableSetOf()
+            contacts = mutableSetOf(),
+            flags = EnumSet.of(EntitySetFlag.METADATA)
     )
 
     private fun buildDatasetsEntitySet(organizationId: UUID): EntitySet = EntitySet(
@@ -310,7 +312,8 @@ class OrganizationMetadataEntitySetsService(private val edmService: EdmManager) 
             name = buildDatasetsEntitySetName(organizationId),
             _title = "Datasets for $organizationId",
             _description = "Datasets for $organizationId",
-            contacts = mutableSetOf()
+            contacts = mutableSetOf(),
+            flags = EnumSet.of(EntitySetFlag.METADATA)
     )
 
     private fun buildColumnEntitySet(organizationId: UUID): EntitySet = EntitySet(
@@ -319,7 +322,8 @@ class OrganizationMetadataEntitySetsService(private val edmService: EdmManager) 
             name = buildColumnEntitySetName(organizationId),
             _title = "Datasets for $organizationId",
             _description = "Datasets for $organizationId",
-            contacts = mutableSetOf()
+            contacts = mutableSetOf(),
+            flags = EnumSet.of(EntitySetFlag.METADATA)
     )
 
     private fun buildOrganizationMetadataEntitySetName(organizationId: UUID): String = quote(
