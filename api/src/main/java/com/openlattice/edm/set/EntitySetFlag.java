@@ -6,5 +6,6 @@ public enum EntitySetFlag {
     EXTERNAL,
     LINKING,
     TRANSPORTED,
-    UNVERSIONED
+    UNVERSIONED,
+    METADATA
 }
