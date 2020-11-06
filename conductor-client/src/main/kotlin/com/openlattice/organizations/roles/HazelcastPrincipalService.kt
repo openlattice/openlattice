@@ -68,6 +68,10 @@ class HazelcastPrincipalService(
             return Predicates.`in`(PrincipalMapstore.PRINCIPAL_INDEX, *principals.toTypedArray())
         }
 
+        private fun hasPrincipalType(principalType: PrincipalType): Predicate<AclKey, SecurablePrincipal> {
+            return Predicates.equal<AclKey, SecurablePrincipal>(PrincipalMapstore.PRINCIPAL_TYPE_INDEX, principalType)
+        }
+
         private fun hasSecurablePrincipal(principalAclKey: AclKey): Predicate<AclKey, AclKeySet> {
             return Predicates.equal("this.index[any]", principalAclKey.index)
         }
@@ -75,6 +79,7 @@ class HazelcastPrincipalService(
         private fun hasAnySecurablePrincipal(aclKeys: Set<AclKey>): Predicate<AclKey, AclKeySet> {
             return Predicates.`in`("this.index[any]", *aclKeys.map { it.index }.toTypedArray())
         }
+
     }
 
     override fun createSecurablePrincipalIfNotExists(owner: Principal, principal: SecurablePrincipal): Boolean {
@@ -152,7 +157,7 @@ class HazelcastPrincipalService(
 
     override fun getAllRolesInOrganization(organizationId: UUID): Collection<SecurablePrincipal> {
         val rolesInOrganization = Predicates.and<AclKey, SecurablePrincipal>(
-                Predicates.equal<AclKey, SecurablePrincipal>(PrincipalMapstore.PRINCIPAL_TYPE_INDEX, PrincipalType.ROLE),
+                hasPrincipalType(PrincipalType.ROLE),
                 Predicates.equal<AclKey, SecurablePrincipal>(PrincipalMapstore.ACL_KEY_ROOT_INDEX, organizationId)
         )
         return principals.values(rolesInOrganization)
@@ -338,5 +343,13 @@ class HazelcastPrincipalService(
 
     override fun getCurrentUserId(): UUID {
         return getPrincipal(Principals.getCurrentUser().id).id
+    }
+
+    override fun getAllRoles(): Set<Role> {
+        return principals.values(hasPrincipalType(PrincipalType.ROLE)).map { it as Role }.toSet()
+    }
+
+    override fun getAllUsers(): Set<SecurablePrincipal> {
+        return principals.values(hasPrincipalType(PrincipalType.USER)).toSet()
     }
 }

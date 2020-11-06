@@ -22,27 +22,26 @@
 
 package com.openlattice.authorization;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
-
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSortedSet;
-import com.google.common.collect.Sets;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.map.IMap;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.organizations.SortedPrincipalSet;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
-import java.util.LinkedHashSet;
-import java.util.NavigableSet;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-import javax.annotation.Nonnull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+
+import javax.annotation.Nonnull;
+import java.util.NavigableSet;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 
 public final class Principals {
     private static final Logger                           logger      = LoggerFactory
@@ -65,11 +64,17 @@ public final class Principals {
     }
 
     public static void ensureOrganization( Principal principal ) {
-        checkArgument( principal.getType().equals( PrincipalType.ORGANIZATION ) );
+        checkArgument( principal.getType().equals( PrincipalType.ORGANIZATION ),
+                "Only organization principal type allowed." );
     }
 
     public static void ensureUser( Principal principal ) {
         checkState( principal.getType().equals( PrincipalType.USER ), "Only user principal type allowed." );
+    }
+
+    public static void ensureUserOrOrganization( Principal principal ) {
+        checkState( principal.getType().equals( PrincipalType.USER ) || principal.getType()
+                .equals( PrincipalType.ORGANIZATION ), "Only user and organization principal types allowed." );
     }
 
     /**

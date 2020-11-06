@@ -105,4 +105,7 @@ interface EntitySetManager {
     fun getPropertyTypesOfEntitySets(entitySetIds: Set<UUID>): Map<UUID, Map<UUID, PropertyType>>
 
     fun exists(entitySetId: UUID): Boolean
+
+    fun setupOrganizationMetadataAndAuditEntitySets(entitySet: EntitySet)
+
 }

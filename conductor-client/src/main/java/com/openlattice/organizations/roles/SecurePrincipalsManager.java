@@ -119,4 +119,8 @@ public interface SecurePrincipalsManager {
 
     void ensurePrincipalsExist( Set<AclKey> aclKeys );
 
+    Set<Role> getAllRoles();
+
+    Set<SecurablePrincipal> getAllUsers();
+
 }

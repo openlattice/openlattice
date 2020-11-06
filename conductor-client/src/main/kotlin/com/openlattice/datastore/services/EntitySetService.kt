@@ -34,12 +34,7 @@ import com.openlattice.assembler.processors.EntitySetContainsFlagEntryProcessor
 import com.openlattice.auditing.AuditRecordEntitySetsManager
 import com.openlattice.auditing.AuditingConfiguration
 import com.openlattice.auditing.AuditingTypes
-import com.openlattice.authorization.AclKey
-import com.openlattice.authorization.AuthorizationManager
-import com.openlattice.authorization.HazelcastAclKeyReservationService
-import com.openlattice.authorization.Permission
-import com.openlattice.authorization.Principal
-import com.openlattice.authorization.Principals
+import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.authorization.securable.SecurableObjectType.PropertyTypeInEntitySet
 import com.openlattice.controllers.exceptions.ResourceNotFoundException
@@ -115,7 +110,17 @@ class EntitySetService(
 
     override fun createEntitySet(principal: Principal, entitySet: EntitySet): UUID {
         ensureValidEntitySet(entitySet)
-        Principals.ensureUser(principal)
+        when {
+            entitySet.isMetadataEntitySet -> {
+                Principals.ensureOrganization(principal)
+            }
+            entitySet.isAudit -> {
+                Principals.ensureUserOrOrganization(principal)
+            }
+            else -> {
+                Principals.ensureUser(principal)
+            }
+        }
 
         if (entitySet.partitions.isEmpty()) {
             partitionManager.allocateEntitySetPartitions(entitySet)
@@ -133,7 +138,6 @@ class EntitySetService(
 
         try {
             setupDefaultEntitySetPropertyMetadata(entitySetId, entitySet.entityTypeId)
-            setupOrganizationMetadata(entitySet)
 
             val aclKey = AclKey(entitySetId)
 
@@ -155,7 +159,9 @@ class EntitySetService(
                     PropertyTypeInEntitySet
             )
 
-            aresManager.createAuditEntitySetForEntitySet(entitySet)
+            if (!entitySet.isMetadataEntitySet) {
+                setupOrganizationMetadataAndAuditEntitySets(entitySet)
+            }
 
             val ownablePropertyTypes = propertyTypes.getAll(entityType.properties).values.toList()
             eventBus.post(EntitySetCreatedEvent(entitySet, ownablePropertyTypes))
@@ -169,11 +175,13 @@ class EntitySetService(
         return entitySetId
     }
 
-    private fun setupOrganizationMetadata(entitySet: EntitySet) {
+    override fun setupOrganizationMetadataAndAuditEntitySets(entitySet: EntitySet) {
         organizationMetadataEntitySetsService.addDataset(entitySet)
         val propertyTypes = edm.getPropertyTypesOfEntityType(entitySet.entityTypeId)
 
         organizationMetadataEntitySetsService.addDatasetColumns(entitySet, propertyTypes.values)
+
+        aresManager.createAuditEntitySetForEntitySet(entitySet)
 
     }
 

@@ -28,6 +28,7 @@ import com.openlattice.data.EntityKey
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EntitySet
+import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.organization.OrganizationExternalDatabaseTable
@@ -114,33 +115,36 @@ class OrganizationMetadataEntitySetsService(private val edmService: EdmManager) 
         }
         val organizationMetadataEntitySetIds = organizationService.getOrganizationMetadataEntitySetIds(organizationId)
         val organizationPrincipal = organizationService.getOrganizationPrincipal(organizationId)!!
-        var updated = false
+        var createdEntitySets = mutableSetOf<UUID>()
 
         val organizationMetadataEntitySetId = if (organizationMetadataEntitySetIds.organization == UNINITIALIZED_METADATA_ENTITY_SET_ID) {
-            updated = true
             val organizationMetadataEntitySet = buildOrganizationMetadataEntitySet(organizationId)
-            entitySetsManager.createEntitySet(organizationPrincipal.principal, organizationMetadataEntitySet)
+            val id = entitySetsManager.createEntitySet(organizationPrincipal.principal, organizationMetadataEntitySet)
+            createdEntitySets.add(id)
+            id
         } else {
             organizationMetadataEntitySetIds.organization
         }
 
         val datasetsEntitySetId = if (organizationMetadataEntitySetIds.datasets == UNINITIALIZED_METADATA_ENTITY_SET_ID) {
-            updated = true
             val datasetsEntitySet = buildDatasetsEntitySet(organizationId)
-            entitySetsManager.createEntitySet(organizationPrincipal.principal, datasetsEntitySet)
+            val id = entitySetsManager.createEntitySet(organizationPrincipal.principal, datasetsEntitySet)
+            createdEntitySets.add(id)
+            id
         } else {
             organizationMetadataEntitySetIds.datasets
         }
 
         val columnsEntitySetId = if (organizationMetadataEntitySetIds.columns == UNINITIALIZED_METADATA_ENTITY_SET_ID) {
-            updated = true
             val columnsEntitySet = buildColumnEntitySet(organizationId)
-            entitySetsManager.createEntitySet(organizationPrincipal.principal, columnsEntitySet)
+            val id = entitySetsManager.createEntitySet(organizationPrincipal.principal, columnsEntitySet)
+            createdEntitySets.add(id)
+            id
         } else {
             organizationMetadataEntitySetIds.columns
         }
 
-        if (updated) {
+        if (createdEntitySets.isNotEmpty()) {
             organizationService.setOrganizationMetadataEntitySetIds(
                     organizationId,
                     OrganizationMetadataEntitySetIds(
@@ -149,6 +153,10 @@ class OrganizationMetadataEntitySetsService(private val edmService: EdmManager) 
                             columnsEntitySetId
                     )
             )
+
+            entitySetsManager.getEntitySetsAsMap(createdEntitySets).values.forEach {
+                entitySetsManager.setupOrganizationMetadataAndAuditEntitySets(it)
+            }
         }
     }
 
@@ -301,7 +309,8 @@ class OrganizationMetadataEntitySetsService(private val edmService: EdmManager) 
             name = buildOrganizationMetadataEntitySetName(organizationId),
             _title = "Organization Metadata for $organizationId",
             _description = "Organization Metadata for $organizationId",
-            contacts = mutableSetOf()
+            contacts = mutableSetOf(),
+            flags = EnumSet.of(EntitySetFlag.METADATA)
     )
 
     private fun buildDatasetsEntitySet(organizationId: UUID): EntitySet = EntitySet(
@@ -310,7 +319,8 @@ class OrganizationMetadataEntitySetsService(private val edmService: EdmManager) 
             name = buildDatasetsEntitySetName(organizationId),
             _title = "Datasets for $organizationId",
             _description = "Datasets for $organizationId",
-            contacts = mutableSetOf()
+            contacts = mutableSetOf(),
+            flags = EnumSet.of(EntitySetFlag.METADATA)
     )
 
     private fun buildColumnEntitySet(organizationId: UUID): EntitySet = EntitySet(
@@ -319,7 +329,8 @@ class OrganizationMetadataEntitySetsService(private val edmService: EdmManager) 
             name = buildColumnEntitySetName(organizationId),
             _title = "Datasets for $organizationId",
             _description = "Datasets for $organizationId",
-            contacts = mutableSetOf()
+            contacts = mutableSetOf(),
+            flags = EnumSet.of(EntitySetFlag.METADATA)
     )
 
     private fun buildOrganizationMetadataEntitySetName(organizationId: UUID): String = quote(
