@@ -53,10 +53,14 @@ data class EntitySet
         require(this.linkedEntitySets.isEmpty() || isLinking) {
             "You cannot specify linked entity sets unless this is a linking entity set."
         }
-        require( (storageType==StorageType.STANDARD) || !isLinking ) {
+        require((storageType == StorageType.STANDARD) || !isLinking) {
             "Linking entity sets only support the standard storage type."
         }
     }
+
+    val isAudit: Boolean
+        @JsonIgnore
+        get() = flags.contains(EntitySetFlag.AUDIT)
 
     val isExternal: Boolean
         @JsonIgnore
