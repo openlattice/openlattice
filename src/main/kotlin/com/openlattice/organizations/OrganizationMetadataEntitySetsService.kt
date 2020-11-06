@@ -115,33 +115,36 @@ class OrganizationMetadataEntitySetsService(private val edmService: EdmManager) 
         }
         val organizationMetadataEntitySetIds = organizationService.getOrganizationMetadataEntitySetIds(organizationId)
         val organizationPrincipal = organizationService.getOrganizationPrincipal(organizationId)!!
-        var updated = false
+        var createdEntitySets = mutableSetOf<UUID>()
 
         val organizationMetadataEntitySetId = if (organizationMetadataEntitySetIds.organization == UNINITIALIZED_METADATA_ENTITY_SET_ID) {
-            updated = true
             val organizationMetadataEntitySet = buildOrganizationMetadataEntitySet(organizationId)
-            entitySetsManager.createEntitySet(organizationPrincipal.principal, organizationMetadataEntitySet)
+            val id = entitySetsManager.createEntitySet(organizationPrincipal.principal, organizationMetadataEntitySet)
+            createdEntitySets.add(id)
+            id
         } else {
             organizationMetadataEntitySetIds.organization
         }
 
         val datasetsEntitySetId = if (organizationMetadataEntitySetIds.datasets == UNINITIALIZED_METADATA_ENTITY_SET_ID) {
-            updated = true
             val datasetsEntitySet = buildDatasetsEntitySet(organizationId)
-            entitySetsManager.createEntitySet(organizationPrincipal.principal, datasetsEntitySet)
+            val id = entitySetsManager.createEntitySet(organizationPrincipal.principal, datasetsEntitySet)
+            createdEntitySets.add(id)
+            id
         } else {
             organizationMetadataEntitySetIds.datasets
         }
 
         val columnsEntitySetId = if (organizationMetadataEntitySetIds.columns == UNINITIALIZED_METADATA_ENTITY_SET_ID) {
-            updated = true
             val columnsEntitySet = buildColumnEntitySet(organizationId)
-            entitySetsManager.createEntitySet(organizationPrincipal.principal, columnsEntitySet)
+            val id = entitySetsManager.createEntitySet(organizationPrincipal.principal, columnsEntitySet)
+            createdEntitySets.add(id)
+            id
         } else {
             organizationMetadataEntitySetIds.columns
         }
 
-        if (updated) {
+        if (createdEntitySets.isNotEmpty()) {
             organizationService.setOrganizationMetadataEntitySetIds(
                     organizationId,
                     OrganizationMetadataEntitySetIds(
@@ -150,6 +153,10 @@ class OrganizationMetadataEntitySetsService(private val edmService: EdmManager) 
                             columnsEntitySetId
                     )
             )
+
+            createdEntitySets.forEach {
+                entitySetsManager.setupOrganizationMetadata(entitySetsManager.getEntitySet(it)!!)
+            }
         }
     }
 

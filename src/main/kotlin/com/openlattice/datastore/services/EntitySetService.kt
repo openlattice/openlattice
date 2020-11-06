@@ -110,10 +110,16 @@ class EntitySetService(
 
     override fun createEntitySet(principal: Principal, entitySet: EntitySet): UUID {
         ensureValidEntitySet(entitySet)
-        if (entitySet.isMetadataEntitySet) {
-            Principals.ensureOrganization(principal)
-        } else {
-            Principals.ensureUser(principal)
+        when {
+            entitySet.isMetadataEntitySet -> {
+                Principals.ensureOrganization(principal)
+            }
+            entitySet.isAudit -> {
+                Principals.ensureUserOrOrganization(principal)
+            }
+            else -> {
+                Principals.ensureUser(principal)
+            }
         }
 
         if (entitySet.partitions.isEmpty()) {
@@ -171,7 +177,7 @@ class EntitySetService(
         return entitySetId
     }
 
-    private fun setupOrganizationMetadata(entitySet: EntitySet) {
+    override fun setupOrganizationMetadata(entitySet: EntitySet) {
         organizationMetadataEntitySetsService.addDataset(entitySet)
         val propertyTypes = edm.getPropertyTypesOfEntityType(entitySet.entityTypeId)
 

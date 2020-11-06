@@ -83,7 +83,7 @@ class AuditRecordEntitySetsManager(
     private var edmAuditEntitySetId: UUID? = null
 
     fun createAuditEntitySetForEntitySet(auditedEntitySet: EntitySet) {
-        if (auditedEntitySet.flags.contains(EntitySetFlag.AUDIT)) {
+        if (auditedEntitySet.isAudit) {
             return
         }
 
