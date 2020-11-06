@@ -66,6 +66,10 @@ data class EntitySet
         @JsonIgnore
         get() = flags.contains(EntitySetFlag.LINKING)
 
+    val isMetadataEntitySet: Boolean
+        @JsonIgnore
+        get() = flags.contains(EntitySetFlag.METADATA)
+
     var partitionsVersion: Int = 0
 
     @JsonIgnore
