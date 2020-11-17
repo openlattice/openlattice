@@ -81,6 +81,10 @@ class CodexService(
         private val logger = LoggerFactory.getLogger(CodexService::class.java)
         private val encoder: Base64.Encoder = Base64.getEncoder()
         private val NULL_BYTE = 0x00.toByte()
+
+        /* This retry logic exists as a workaround for a Twilio bug causing a delay in the availability of media */
+        private val MAX_MEDIA_RETRIES = 20
+        private val RETRY_MILLIS = 5_000L // 5 seconds
     }
 
     init {
@@ -506,25 +510,43 @@ class CodexService(
             isOutgoing: Boolean
     ): Map<UUID, Set<Any>> {
 
-        val numMedia = message.numMedia.toInt()
-        val media = Sets.newLinkedHashSetWithExpectedSize<Map<String, String>>(numMedia)
-
-        if (numMedia > 0) {
-            Media.reader(message.sid).read().forEach {
-                media.add(mapOf(
-                        "content-type" to it.contentType,
-                        "data" to retrieveMediaAsBaseSixtyFour(it.uri.toString()).get()))
-            }
-        }
-
         return mapOf(
                 getPropertyTypeId(CodexConstants.PropertyType.ID) to setOf(message.sid),
                 getPropertyTypeId(CodexConstants.PropertyType.DATE_TIME) to setOf(dateTime),
                 getPropertyTypeId(CodexConstants.PropertyType.PHONE_NUMBER) to setOf(phoneNumber),
                 getPropertyTypeId(CodexConstants.PropertyType.TEXT) to setOf(filterNullBytes(message.body)),
                 getPropertyTypeId(CodexConstants.PropertyType.IS_OUTGOING) to setOf(isOutgoing),
-                getPropertyTypeId(CodexConstants.PropertyType.IMAGE_DATA) to media
+                getPropertyTypeId(CodexConstants.PropertyType.IMAGE_DATA) to getMessageMedia(message)
         )
+    }
+
+    private fun getMessageMedia(message: Message): Set<Map<String, String>> {
+        val numMedia = message.numMedia.toInt()
+
+        if (numMedia == 0) {
+            return setOf()
+        }
+
+        val media = Sets.newLinkedHashSetWithExpectedSize<Map<String, String>>(numMedia)
+
+        /* This retry logic exists as a workaround for a Twilio bug causing a delay in the availability of media */
+
+        (0 until MAX_MEDIA_RETRIES).forEach {
+            Media.reader(message.sid).read().forEach {
+                media.add(mapOf(
+                        "content-type" to it.contentType,
+                        "data" to retrieveMediaAsBaseSixtyFour(it.uri.toString()).get()))
+            }
+
+            if (media.isNotEmpty()) {
+                return media
+            }
+
+            Thread.sleep(RETRY_MILLIS)
+        }
+
+        logger.error("Unable to load message media from Twilio after {} retries for message {}.", MAX_MEDIA_RETRIES, message.sid)
+        return setOf()
     }
 
     private fun getAssociationEntity(dateTime: OffsetDateTime): Map<UUID, Set<Any>> {
