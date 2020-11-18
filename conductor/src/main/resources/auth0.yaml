@@ -1,0 +1,9 @@
+domain: "openlattice.auth0.com"
+issuer: "https://openlattice.auth0.com/"
+clientId: "KTzgyxs6KBcJHB872eSMe2cpTHzhxS99"
+clientSecret: "tjAwhBit0deVUor3lcd7YRlHRc_4FJwv_fcLp_ozO2-D2Lh38066IUoGPL4zx1vP"
+securedRoute: "NOT_USED"
+authorityStrategy: "ROLES"
+signingAlgorithm: "HS256"
+base64EncodedSecret: false
+token: "lol"

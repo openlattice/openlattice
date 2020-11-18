@@ -1,0 +1,8 @@
+# Atlas
+server:
+  jdbcUrl: "jdbc:postgresql://localhost:5432"
+  username: "oltest"
+  password: "test"
+  maximumPoolSize: 5
+  connectionTimeout: 60000
+ssl: false
