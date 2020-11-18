@@ -108,13 +108,13 @@ public class PostgresTypeManager {
                 PreparedStatement ps = connection.prepareStatement( getPropertyTypesInNamespace ) ) {
             List<PropertyType> result = Lists.newArrayList();
             ps.setString( 1, namespace );
-            ResultSet rs = ps.executeQuery();
-            while ( rs.next() ) {
-                result.add( ResultSetAdapters.propertyType( rs ) );
+            try ( ResultSet rs = ps.executeQuery(); ) {
+                while( rs.next() ) {
+                    result.add( ResultSetAdapters.propertyType( rs ) );
+                }
+                connection.close();
+                return result;
             }
-
-            connection.close();
-            return result;
         } catch ( SQLException e ) {
             logger.debug( "Unable to get property types in namespace.", e );
             return ImmutableList.of();
@@ -125,13 +125,13 @@ public class PostgresTypeManager {
         try ( Connection connection = hds.getConnection();
                 PreparedStatement ps = connection.prepareStatement( getPropertyTypes ) ) {
             List<PropertyType> result = Lists.newArrayList();
-            ResultSet rs = ps.executeQuery();
-            while ( rs.next() ) {
-                result.add( ResultSetAdapters.propertyType( rs ) );
+            try ( ResultSet rs = ps.executeQuery(); ) {
+                while( rs.next() ) {
+                    result.add( ResultSetAdapters.propertyType( rs ) );
+                }
+                connection.close();
+                return result;
             }
-
-            connection.close();
-            return result;
         } catch ( SQLException e ) {
             logger.debug( "Unable to load all property types", e );
             return ImmutableList.of();
@@ -142,13 +142,14 @@ public class PostgresTypeManager {
         try ( Connection connection = hds.getConnection();
                 PreparedStatement ps = connection.prepareStatement( query ) ) {
             List<EntityType> result = Lists.newArrayList();
-            ResultSet rs = ps.executeQuery();
-            while ( rs.next() ) {
-                result.add( ResultSetAdapters.entityType( rs ) );
-            }
+            try ( ResultSet rs = ps.executeQuery(); ) {
+                while( rs.next() ) {
+                    result.add( ResultSetAdapters.entityType( rs ) );
+                }
 
-            connection.close();
-            return result;
+                connection.close();
+                return result;
+            }
         } catch ( SQLException e ) {
             logger.debug( "Unable to load entity types for query: {}", query, e );
             return ImmutableList.of();
@@ -159,13 +160,14 @@ public class PostgresTypeManager {
         try ( Connection connection = hds.getConnection();
                 PreparedStatement ps = connection.prepareStatement( query ) ) {
             List<UUID> result = Lists.newArrayList();
-            ResultSet rs = ps.executeQuery();
-            while ( rs.next() ) {
-                result.add( ResultSetAdapters.id( rs ) );
-            }
+            try ( ResultSet rs = ps.executeQuery(); ) {
+                while( rs.next() ) {
+                    result.add( ResultSetAdapters.id( rs ) );
+                }
 
-            connection.close();
-            return result;
+                connection.close();
+                return result;
+            }
         } catch ( SQLException e ) {
             logger.debug( "Unable to load ids for query: {}", query, e );
             return ImmutableList.of();
@@ -192,13 +194,14 @@ public class PostgresTypeManager {
             ps.setObject( 1, entityTypeId );
             ps.setObject( 2, entityTypeId );
 
-            ResultSet rs = ps.executeQuery();
-            while ( rs.next() ) {
-                associationTypeIds.add( ResultSetAdapters.id( rs ) );
-            }
+            try ( ResultSet rs = ps.executeQuery(); ) {
+                while( rs.next() ) {
+                    associationTypeIds.add( ResultSetAdapters.id( rs ) );
+                }
 
-            connection.close();
-            return associationTypeIds.stream();
+                connection.close();
+                return associationTypeIds.stream();
+            }
         } catch ( SQLException e ) {
             logger.debug( "Unable to load src and dst association types for entity type id", e );
             return Stream.empty();
@@ -224,12 +227,13 @@ public class PostgresTypeManager {
                 PreparedStatement ps = connection.prepareStatement( entityTypesContainPropertyType ) ) {
             List<EntityType> result = Lists.newArrayList();
             ps.setObject( 1, propertyId );
-            ResultSet rs = ps.executeQuery();
-            while ( rs.next() ) {
-                result.add( ResultSetAdapters.entityType( rs ) );
+            try ( ResultSet rs = ps.executeQuery(); ) {
+                while( rs.next() ) {
+                    result.add( ResultSetAdapters.entityType( rs ) );
+                }
+                connection.close();
+                return result;
             }
-            connection.close();
-            return result;
         } catch ( SQLException e ) {
             logger.debug( "Unable to load entity types containing property type: {}", propertyId.toString(), e );
             return ImmutableList.of();
@@ -242,13 +246,14 @@ public class PostgresTypeManager {
             List<UUID> result = Lists.newArrayList();
             ps.setObject( 1, entityTypeId );
 
-            ResultSet rs = ps.executeQuery();
-            while ( rs.next() ) {
-                result.add( ResultSetAdapters.id( rs ) );
-            }
+            try ( ResultSet rs = ps.executeQuery(); ) {
+                while( rs.next() ) {
+                    result.add( ResultSetAdapters.id( rs ) );
+                }
 
-            connection.close();
-            return result;
+                connection.close();
+                return result;
+            }
         } catch ( SQLException e ) {
             logger.debug( "Unable to load base entity types for type: {}", entityTypeId.toString(), e );
             return ImmutableList.of();

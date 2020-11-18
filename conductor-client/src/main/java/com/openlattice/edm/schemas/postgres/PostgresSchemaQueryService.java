@@ -76,12 +76,12 @@ public class PostgresSchemaQueryService implements SchemaQueryService {
                 PreparedStatement ps = connection.prepareStatement( query ) ) {
             Set<UUID> result = Sets.newHashSet();
             ps.setString( 1, schemaName.toString() );
-            ResultSet rs = ps.executeQuery();
-            while ( rs.next() ) {
-                result.add( ResultSetAdapters.id( rs ) );
+            try ( ResultSet rs = ps.executeQuery(); ) {
+                while( rs.next() ) {
+                    result.add( ResultSetAdapters.id( rs ) );
+                }
+                return result;
             }
-            connection.close();
-            return result;
         } catch ( SQLException e ) {
             logger.debug( "Unable to load EDM elements of schema {}.", schemaName, e );
             return ImmutableSet.of();
@@ -100,12 +100,12 @@ public class PostgresSchemaQueryService implements SchemaQueryService {
         try ( Connection connection = hds.getConnection();
                 PreparedStatement ps = connection.prepareStatement( getNamespaces ) ) {
             List<String> result = Lists.newArrayList();
-            ResultSet rs = ps.executeQuery();
-            while ( rs.next() ) {
-                result.add( ResultSetAdapters.namespace( rs ) );
+            try ( ResultSet rs = ps.executeQuery(); ) {
+                while ( rs.next() ) {
+                    result.add( ResultSetAdapters.namespace( rs ) );
+                }
+                return result;
             }
-            connection.close();
-            return result;
         } catch ( SQLException e ) {
             logger.debug( "Unable to get all namespaces.", e );
             return ImmutableList.of();
