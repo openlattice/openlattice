@@ -244,6 +244,23 @@ class ExternalDatabaseManagementService(
         return organizationExternalDatabaseTables.getValue(tableId)
     }
 
+    fun getExternalDatabaseTableSchema(organizationId: UUID, tableId: UUID): String? {
+
+        val table = getOrganizationExternalDatabaseTable(tableId)
+        val sql = getExternalDatabaseTableSchemaSql(table.name)
+        val schemas = BasePostgresIterable(
+                StatementHolderSupplier(externalDbManager.connectToOrg(organizationId), sql)
+        ) { rs ->
+            rs.getString(PostgresColumn.PG_SCHEMA_NAME)
+        }.toList()
+
+        if (schemas.size != 1) {
+            return null
+        }
+
+        return schemas.firstOrNull()
+    }
+
     fun getOrganizationExternalDatabaseColumn(columnId: UUID): OrganizationExternalDatabaseColumn {
         return organizationExternalDatabaseColumns.getValue(columnId)
     }
@@ -661,7 +678,7 @@ class ExternalDatabaseManagementService(
     }
 
     /**
-     * Moves a table from the [OPENLATTICE_SCHEMA] schema to the [STAGING_SCHEMA] schema
+     * Moves a table from the [STAGING_SCHEMA] schema to the [OPENLATTICE_SCHEMA] schema
      */
     fun promoteStagingTable(organizationId: UUID, tableName: String) {
         externalDbManager.connectToOrg(organizationId).use { hds ->
@@ -729,6 +746,11 @@ class ExternalDatabaseManagementService(
 
     private fun getSelectRecordsSql(tableName: String): String {
         return "SELECT * FROM $tableName"
+    }
+
+    private fun getExternalDatabaseTableSchemaSql(tableName: String): String {
+        return "SELECT ${PostgresColumn.PG_SCHEMA_NAME} FROM pg_catalog.pg_tables " +
+                "WHERE ${PostgresColumn.PG_TABLE_NAME} = '${tableName}'"
     }
 
     /*PREDICATES*/

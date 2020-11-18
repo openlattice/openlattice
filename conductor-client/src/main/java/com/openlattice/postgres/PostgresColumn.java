@@ -400,6 +400,8 @@ public final class PostgresColumn {
     public static final String                   PERMISSIONS_FIELD                 = "permissions";
     public static final PostgresColumnDefinition PERMISSIONS                       =
             new PostgresColumnDefinition( PERMISSIONS_FIELD, TEXT_ARRAY );
+    public static final String                   PG_SCHEMA_NAME                    = "schemaname";
+    public static final String                   PG_TABLE_NAME                     = "tablename";
     public static final String                   PHONE_NUMBER_FIELD                = "phone_number";
     public static final PostgresColumnDefinition PHONE_NUMBER                      =
             new PostgresColumnDefinition( PHONE_NUMBER_FIELD, TEXT ).notNull();
