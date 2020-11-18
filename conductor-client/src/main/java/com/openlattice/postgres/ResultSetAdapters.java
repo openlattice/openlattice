@@ -94,7 +94,6 @@ import com.openlattice.subscriptions.SubscriptionContactType;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.jetbrains.annotations.NotNull;
-import org.postgresql.core.Oid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -194,7 +193,7 @@ import static com.openlattice.postgres.PostgresColumn.PERMISSIONS_FIELD;
 import static com.openlattice.postgres.PostgresColumn.PHONE_NUMBER_FIELD;
 import static com.openlattice.postgres.PostgresColumn.PII;
 import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_ID_FIELD;
-import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_OF_ACL_KEY;
+import static com.openlattice.postgres.PostgresColumn.CHILD_ACL_KEY;
 import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_TYPE_FIELD;
 import static com.openlattice.postgres.PostgresColumn.PRIVILEGE_TYPE;
 import static com.openlattice.postgres.PostgresColumn.PROPERTIES;
@@ -385,10 +384,10 @@ public final class ResultSetAdapters {
         return new Range( base, msb, lsb );
     }
 
-    public static AclKey principalOfAclKey( ResultSet rs ) throws SQLException {
+    public static AclKey childAclKey( ResultSet rs ) throws SQLException {
         final UUID[] arr;
         try {
-            arr = PostgresArrays.getUuidArray( rs, PRINCIPAL_OF_ACL_KEY.getName() );
+            arr = PostgresArrays.getUuidArray( rs, CHILD_ACL_KEY.getName() );
         } catch ( ClassCastException e ) {
             logger.error( "Unable to read principal of acl key of acl key: {}", aclKey( rs ) );
             throw new IllegalStateException( "Unable to read principal of acl key", e );

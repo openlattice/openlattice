@@ -1,9 +1,20 @@
+clientId: "kHRUw59T1ikOV67P2BXrYLRtzADRZ0Os"
+clientSecret: "CdRL-5DvH38khdKcy6F50KiFmysG2O_0z0baTfHiOATG8CLB2BgVcc-bZ4fBKlhb"
+configurations:
+  - issuer: "https://openlattice.auth0.com/"
+    audience: "KTzgyxs6KBcJHB872eSMe2cpTHzhxS99"
+    secret: "ignored"
+    base64EncodedSecret: false
+    signingAlgorithm: "RS256"
+  - issuer: "https://openlattice.auth0.com/"
+    audience: "KTzgyxs6KBcJHB872eSMe2cpTHzhxS99"
+    secret: "6F0vsVGmGavEKbmCcvcxSc4PsUBLusCbtOqimqboonwjkfNFo1pUj8ZVz4N1mXFL"
+    base64EncodedSecret: false
+    signingAlgorithm: "HS256"
+  - issuer: "https://openlattice.auth0.com/"
+    audience: "https://tests.openlattice.com"
+    secret: "MK4CrccqOqI6WVkOiSJX6n2h3MLgGri0"
+    base64EncodedSecret: false
+    signingAlgorithm: "HS256"
 domain: "openlattice.auth0.com"
-issuer: "https://openlattice.auth0.com/"
-clientId: "KTzgyxs6KBcJHB872eSMe2cpTHzhxS99"
-clientSecret: "tjAwhBit0deVUor3lcd7YRlHRc_4FJwv_fcLp_ozO2-D2Lh38066IUoGPL4zx1vP"
-securedRoute: "NOT_USED"
-authorityStrategy: "ROLES"
-signingAlgorithm: "HS256"
-base64EncodedSecret: false
-token: "lol"
+managementApiUrl: "https://openlattice.auth0.com/api/v2/"

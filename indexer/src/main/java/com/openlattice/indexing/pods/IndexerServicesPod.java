@@ -74,6 +74,7 @@ import com.openlattice.organizations.pods.OrganizationExternalDatabaseConfigurat
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
+import com.openlattice.postgres.external.ExternalDatabasePermissionsManager;
 import com.openlattice.scrunchie.search.ConductorElasticsearchImpl;
 import com.openlattice.transporter.types.TransporterDatastore;
 import com.zaxxer.hikari.HikariDataSource;
@@ -127,7 +128,19 @@ public class IndexerServicesPod {
     private ExternalDatabaseConnectionManager externalDbConnMan;
 
     @Inject
+    private ExternalDatabasePermissionsManager extDbPermManager;
+
+    @Inject
     private TransporterDatastore transporterDatastore;
+
+    @Inject
+    public SecurePrincipalsManager principalService;
+
+    @Inject
+    public HazelcastAclKeyReservationService aclKeyReservationService;
+
+    @Inject
+    public AuthorizationManager authorizationManager;
 
     @Bean
     public ConductorElasticsearchApi elasticsearchApi() {
@@ -145,30 +158,12 @@ public class IndexerServicesPod {
     }
 
     @Bean
-    public HazelcastAclKeyReservationService aclKeyReservationService() {
-        return new HazelcastAclKeyReservationService( hazelcastInstance );
-    }
-
-    @Bean
-    public SecurePrincipalsManager principalService() {
-        return new HazelcastPrincipalService( hazelcastInstance,
-                aclKeyReservationService(),
-                authorizationManager(),
-                eventBus );
-    }
-
-    @Bean
-    public AuthorizationManager authorizationManager() {
-        return new HazelcastAuthorizationService( hazelcastInstance, eventBus );
-    }
-
-    @Bean
     public Assembler assembler() {
         return new Assembler(
                 dbcs(),
                 hikariDataSource,
-                authorizationManager(),
-                principalService(),
+                authorizationManager,
+                principalService,
                 metricRegistry,
                 hazelcastInstance,
                 eventBus
@@ -180,10 +175,10 @@ public class IndexerServicesPod {
         return new AssemblerConnectionManager(
                 assemblerConfiguration,
                 externalDbConnMan,
-                hikariDataSource,
-                principalService(),
+                principalService,
                 organizationsManager(),
                 dbcs(),
+                extDbPermManager,
                 eventBus,
                 metricRegistry
         );
@@ -203,9 +198,9 @@ public class IndexerServicesPod {
     public HazelcastOrganizationService organizationsManager() {
         return new HazelcastOrganizationService(
                 hazelcastInstance,
-                aclKeyReservationService(),
-                authorizationManager(),
-                principalService(),
+                aclKeyReservationService,
+                authorizationManager,
+                principalService,
                 phoneNumberService(),
                 partitionManager(),
                 assembler(),
@@ -214,7 +209,7 @@ public class IndexerServicesPod {
 
     @Bean
     public EdmAuthorizationHelper edmAuthorizationHelper() {
-        return new EdmAuthorizationHelper( dataModelService(), authorizationManager(), entitySetManager() );
+        return new EdmAuthorizationHelper( dataModelService(), authorizationManager, entitySetManager() );
     }
 
     @Bean
@@ -241,8 +236,8 @@ public class IndexerServicesPod {
     public EdmManager dataModelService() {
         return new EdmService(
                 hazelcastInstance,
-                aclKeyReservationService(),
-                authorizationManager(),
+                aclKeyReservationService,
+                authorizationManager,
                 entityTypeManager(),
                 schemaManager()
         );
@@ -253,8 +248,8 @@ public class IndexerServicesPod {
         return new EntitySetService(
                 hazelcastInstance,
                 eventBus,
-                aclKeyReservationService(),
-                authorizationManager(),
+                aclKeyReservationService,
+                authorizationManager,
                 partitionManager(),
                 dataModelService(),
                 hikariDataSource,
@@ -335,9 +330,9 @@ public class IndexerServicesPod {
         return new ExternalDatabaseManagementService(
                 hazelcastInstance,
                 externalDbConnMan,
-                principalService(),
-                aclKeyReservationService(),
-                authorizationManager(),
+                principalService,
+                aclKeyReservationService,
+                authorizationManager,
                 organizationExternalDatabaseConfiguration,
                 transporterDatastore,
                 dbcs(),
@@ -363,7 +358,7 @@ public class IndexerServicesPod {
                 dataModelService(),
                 entitySetManager(),
                 dataGraphService(),
-                authorizationManager(),
+                authorizationManager,
                 auditRecordEntitySetsManager(),
                 entityDatastore(),
                 graphApi()
@@ -386,6 +381,6 @@ public class IndexerServicesPod {
 
     @PostConstruct
     void initPrincipals() {
-        Principals.init( principalService(), hazelcastInstance );
+        Principals.init( principalService, hazelcastInstance );
     }
 }

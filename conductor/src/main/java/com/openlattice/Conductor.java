@@ -37,6 +37,7 @@ import com.openlattice.pods.ConductorServicesPod;
 import com.openlattice.postgres.PostgresPod;
 import com.openlattice.postgres.PostgresTablesPod;
 import com.openlattice.postgres.pods.ExternalDatabaseConnectionManagerPod;
+import com.openlattice.principals.PermissionsManagerPod;
 import com.openlattice.tasks.pods.TaskSchedulerPod;
 import com.openlattice.transporter.TransporterConfigurationPod;
 import com.openlattice.transporter.pods.TransporterPod;
@@ -57,6 +58,7 @@ public class Conductor extends RhizomeApplicationServer {
             JdbcPod.class,
             MailServicePod.class,
             MapstoresPod.class,
+            PermissionsManagerPod.class,
             PlasmaCoupling.class,
             PostgresPod.class,
             PostgresTablesPod.class,

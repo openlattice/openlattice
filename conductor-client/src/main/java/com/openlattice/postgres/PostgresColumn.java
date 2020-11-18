@@ -411,8 +411,9 @@ public final class PostgresColumn {
     public static final String                   PRINCIPAL_ID_FIELD                = "principal_id";
     public static final PostgresColumnDefinition PRINCIPAL_ID                      =
             new PostgresColumnDefinition( PRINCIPAL_ID_FIELD, TEXT );
-    public static final PostgresColumnDefinition PRINCIPAL_OF_ACL_KEY              =
-            new PostgresColumnDefinition( "principal_of_acl_key", UUID_ARRAY );
+    public static final String                   CHILD_ACL_KEY_FIELD               = "principal_of_acl_key";
+    public static final PostgresColumnDefinition CHILD_ACL_KEY                     =
+            new PostgresColumnDefinition( CHILD_ACL_KEY_FIELD, UUID_ARRAY );
     public static final String                   PRINCIPAL_TYPE_FIELD              = "principal_type";
     public static final PostgresColumnDefinition PRINCIPAL_TYPE                    =
             new PostgresColumnDefinition( PRINCIPAL_TYPE_FIELD, TEXT );

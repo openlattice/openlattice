@@ -40,6 +40,7 @@ import com.openlattice.linking.pods.PlasmaCoupling;
 import com.openlattice.postgres.PostgresPod;
 import com.openlattice.postgres.PostgresTablesPod;
 import com.openlattice.postgres.pods.ExternalDatabaseConnectionManagerPod;
+import com.openlattice.principals.PermissionsManagerPod;
 import com.openlattice.tasks.pods.TaskSchedulerPod;
 
 /**
@@ -57,6 +58,7 @@ public class Linker extends BaseRhizomeServer {
             LinkerServicesPod.class,
             MapstoresPod.class,
             HazelcastQueuePod.class,
+            PermissionsManagerPod.class,
             PlasmaCoupling.class,
             PostgresPod.class,
             PostgresTablesPod.class,

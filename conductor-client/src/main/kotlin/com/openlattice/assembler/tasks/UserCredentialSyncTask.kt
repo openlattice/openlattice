@@ -38,9 +38,7 @@ private val logger = LoggerFactory.getLogger(UserCredentialSyncTask::class.java)
  */
 class UserCredentialSyncTask : HazelcastInitializationTask<AssemblerDependencies> {
     override fun initialize(dependencies: AssemblerDependencies) {
-        dependencies
-                .assemblerConnectionManager
-                .getAllUsers()
+        dependencies.principalManager.allUsers
                 .forEach { user ->
                     dependencies.target.connection.use { conn ->
                         conn.createStatement().use { stmt ->

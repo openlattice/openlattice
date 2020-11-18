@@ -52,13 +52,7 @@ class AssemblyAnalyzationController : AssemblyAnalyzationApi, AuthorizingCompone
     private lateinit var authorizationManager: AuthorizationManager
 
     @Inject
-    private lateinit var assemblerConnectionManager: AssemblerConnectionManager
-
-    @Inject
     private lateinit var assemblerQueryService: AssemblerQueryService
-
-    @Inject
-    private lateinit var dbCredService: DbCredentialService
 
     @Inject
     private lateinit var edmService: EdmManager

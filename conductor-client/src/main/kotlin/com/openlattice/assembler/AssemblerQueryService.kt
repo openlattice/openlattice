@@ -25,6 +25,7 @@ import com.openlattice.datastore.services.EdmManager
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.PostgresTable
+import com.openlattice.postgres.external.Schemas
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.StatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
@@ -191,7 +192,7 @@ class AssemblerQueryService(
     private fun simpleAggregationJoinSql(srcEntitySetName: String, edgeEntitySetName: String, dstEntitySetName: String,
                                  cols: String, groupingColAliases: String, aggregateCols: String, calculationCols: String,
                                  filtersSql: String): String {
-        return "SELECT $cols, $aggregateCols $calculationCols FROM ${AssemblerConnectionManager.OPENLATTICE_SCHEMA}.${PostgresTable.E.name} " +
+        return "SELECT $cols, $aggregateCols $calculationCols FROM ${Schemas.OPENLATTICE_SCHEMA}.${PostgresTable.E.name} " +
                 "INNER JOIN ${AssemblerConnectionManager.entitySetNameTableName(srcEntitySetName)} AS $SRC_TABLE_ALIAS USING( ${PostgresColumn.ID.name} ) " +
                 "INNER JOIN ${AssemblerConnectionManager.entitySetNameTableName(edgeEntitySetName)} AS $EDGE_TABLE_ALIAS ON( $EDGE_TABLE_ALIAS.${PostgresColumn.ID.name} = ${PostgresColumn.EDGE_COMP_2.name} ) " +
                 "INNER JOIN ${AssemblerConnectionManager.entitySetNameTableName(dstEntitySetName)} AS $DST_TABLE_ALIAS ON( $DST_TABLE_ALIAS.${PostgresColumn.ID.name} = ${PostgresColumn.EDGE_COMP_1.name} ) " +

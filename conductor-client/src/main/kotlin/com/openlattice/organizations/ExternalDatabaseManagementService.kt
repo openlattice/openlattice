@@ -5,8 +5,6 @@ import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.hazelcast.query.QueryConstants
-import com.openlattice.assembler.AssemblerConnectionManager.Companion.OPENLATTICE_SCHEMA
-import com.openlattice.assembler.AssemblerConnectionManager.Companion.STAGING_SCHEMA
 import com.openlattice.assembler.PostgresRoles.Companion.getSecurablePrincipalIdFromUserName
 import com.openlattice.assembler.PostgresRoles.Companion.isPostgresUserName
 import com.openlattice.assembler.dropAllConnectionsToDatabaseSql
@@ -30,6 +28,7 @@ import com.openlattice.postgres.*
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.ResultSetAdapters.*
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
+import com.openlattice.postgres.external.Schemas
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.StatementHolderSupplier
 import com.openlattice.transporter.processors.DestroyTransportedEntitySetEntryProcessor
@@ -676,7 +675,7 @@ class ExternalDatabaseManagementService(
     /*INTERNAL SQL QUERIES*/
     private fun getCurrentTableAndColumnNamesSql(): String {
         return selectExpression + fromExpression + leftJoinColumnsExpression +
-                "WHERE information_schema.tables.table_schema=ANY('{$OPENLATTICE_SCHEMA,$STAGING_SCHEMA}') " +
+                "WHERE information_schema.tables.table_schema=ANY('{${Schemas.OPENLATTICE_SCHEMA},${Schemas.STAGING_SCHEMA}') " +
                 "AND table_type='BASE TABLE'"
     }
 
@@ -745,7 +744,7 @@ class ExternalDatabaseManagementService(
     }
 
     private fun publishStagingTableSql(tableName: String): String {
-        return "ALTER TABLE ${quote(tableName)} SET SCHEMA $OPENLATTICE_SCHEMA"
+        return "ALTER TABLE ${quote(tableName)} SET SCHEMA ${Schemas.OPENLATTICE_SCHEMA}"
     }
 
 }

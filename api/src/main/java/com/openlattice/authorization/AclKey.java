@@ -31,6 +31,8 @@ import java.util.stream.Collectors;
 /**
  * Immutable list of uuids for use in Hazelcast
  *
+ * Currently maxed out at 3 elements
+ *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class AclKey extends DelegatedUUIDList implements Comparable<AclKey> {

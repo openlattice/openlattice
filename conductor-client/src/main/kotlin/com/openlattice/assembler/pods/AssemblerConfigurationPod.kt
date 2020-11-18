@@ -27,9 +27,7 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import javax.inject.Inject
 
-
 /**
- *
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */

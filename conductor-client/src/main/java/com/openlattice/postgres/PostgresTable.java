@@ -113,7 +113,7 @@ import static com.openlattice.postgres.PostgresColumn.PARTITION_INDEX;
 import static com.openlattice.postgres.PostgresColumn.PHONE_NUMBER;
 import static com.openlattice.postgres.PostgresColumn.PII;
 import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_ID;
-import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_OF_ACL_KEY;
+import static com.openlattice.postgres.PostgresColumn.CHILD_ACL_KEY;
 import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_TYPE;
 import static com.openlattice.postgres.PostgresColumn.PROPERTIES;
 import static com.openlattice.postgres.PostgresColumn.PROPERTY_TAGS;
@@ -458,16 +458,15 @@ public final class PostgresTable {
                     .addColumns( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID, NULLABLE_TITLE, DESCRIPTION )
                     .primaryKey( ACL_KEY )
                     .setUnique( PRINCIPAL_TYPE, PRINCIPAL_ID );
-    public static final PostgresTableDefinition PRINCIPAL_TREES     = new PostgresTableDefinition(
-            "principal_trees" )
-            .addColumns( ACL_KEY, PRINCIPAL_OF_ACL_KEY )
-            .primaryKey( ACL_KEY, PRINCIPAL_OF_ACL_KEY );
-    public static final PostgresTableDefinition PROPAGATION_GRAPH   = new PostgresTableDefinition(
-            "propagation_graph" )
-            .addColumns( SRC_ENTITY_SET_ID, SRC_PROPERTY_TYPE_ID, DST_ENTITY_SET_ID, DST_PROPERTY_TYPE_ID )
-            .primaryKey( SRC_ENTITY_SET_ID, SRC_PROPERTY_TYPE_ID, DST_ENTITY_SET_ID, DST_PROPERTY_TYPE_ID );
+    public static final PostgresTableDefinition PRINCIPAL_TREES     =
+            new PostgresTableDefinition("principal_trees" )
+                    .addColumns( ACL_KEY, CHILD_ACL_KEY )
+                    .primaryKey( ACL_KEY, CHILD_ACL_KEY );
+    public static final PostgresTableDefinition PROPAGATION_GRAPH   =
+            new PostgresTableDefinition("propagation_graph" )
+                    .addColumns( SRC_ENTITY_SET_ID, SRC_PROPERTY_TYPE_ID, DST_ENTITY_SET_ID, DST_PROPERTY_TYPE_ID )
+                    .primaryKey( SRC_ENTITY_SET_ID, SRC_PROPERTY_TYPE_ID, DST_ENTITY_SET_ID, DST_PROPERTY_TYPE_ID );
     public static final PostgresTableDefinition PROPERTY_TYPES      =
-
             new PostgresTableDefinition( "property_types" )
                     .addColumns( ID,
                             NAMESPACE,

@@ -33,15 +33,10 @@ import java.util.concurrent.TimeUnit
  */
 class UsersAndRolesInitializationTask : HazelcastInitializationTask<AssemblerDependencies> {
     override fun initialize(dependencies: AssemblerDependencies) {
-        dependencies
-                .assemblerConnectionManager
-                .getAllRoles()
-                .map(dependencies.assemblerConnectionManager::createRole)
-        dependencies
-                .assemblerConnectionManager
-                .getAllUsers()
-                .map(dependencies.assemblerConnectionManager::createUnprivilegedUser)
-
+        dependencies.principalManager.allRoles
+                .map(dependencies.externalDatabasePermissionsManager::createRole)
+        dependencies.principalManager.allUsers
+                .map(dependencies.externalDatabasePermissionsManager::createUnprivilegedUser)
     }
 
     override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {

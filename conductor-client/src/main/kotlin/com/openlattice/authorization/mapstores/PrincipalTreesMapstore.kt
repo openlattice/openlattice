@@ -33,7 +33,7 @@ import com.openlattice.authorization.AclKeySet
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.postgres.PostgresColumn.ACL_KEY
-import com.openlattice.postgres.PostgresColumn.PRINCIPAL_OF_ACL_KEY
+import com.openlattice.postgres.PostgresColumn.CHILD_ACL_KEY
 import com.openlattice.postgres.PostgresTable.PRINCIPAL_TREES
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.BasePostgresIterable
@@ -63,7 +63,7 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
                     val filterPrincipal = if (entry.value.isEmpty()) {
                         ""
                     } else {
-                        " AND ${PRINCIPAL_OF_ACL_KEY.name} NOT IN (" + entry.value.joinToString(",") { key ->
+                        " AND ${CHILD_ACL_KEY.name} NOT IN (" + entry.value.joinToString(",") { key ->
                             toPostgres(key)
                         } + ")"
                     }
@@ -109,7 +109,7 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
                 "IN (" + keys.joinToString(",") { toPostgres(it) } + ")"
 
         val data = BasePostgresIterable(StatementHolderSupplier(hds, sql)) {
-            ResultSetAdapters.aclKey(it) to ResultSetAdapters.principalOfAclKey(it)
+            ResultSetAdapters.aclKey(it) to ResultSetAdapters.childAclKey(it)
         }
 
         val map = mutableMapOf<AclKey, AclKeySet>()

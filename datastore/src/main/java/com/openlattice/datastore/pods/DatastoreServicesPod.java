@@ -89,6 +89,7 @@ import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.PostgresTableManager;
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
+import com.openlattice.postgres.external.ExternalDatabasePermissionsManager;
 import com.openlattice.requests.HazelcastRequestsManager;
 import com.openlattice.requests.RequestQueryService;
 import com.openlattice.search.PersistentSearchService;
@@ -178,7 +179,19 @@ public class DatastoreServicesPod {
     private ExternalDatabaseConnectionManager externalDbConnMan;
 
     @Inject
+    private ExternalDatabasePermissionsManager extDbPermManager;
+
+    @Inject
     private TransporterDatastore transporterDatastore;
+
+    @Inject
+    public SecurePrincipalsManager principalService;
+
+    @Inject
+    public HazelcastAclKeyReservationService aclKeyReservationService;
+
+    @Inject
+    public AuthorizationManager authorizationManager;
 
     @Bean
     public PostgresUserApi pgUserApi() {
@@ -200,7 +213,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public Auth0SyncService auth0SyncService() {
-        return new Auth0SyncService( hazelcastInstance, principalService(), organizationsManager() );
+        return new Auth0SyncService( hazelcastInstance, principalService, organizationsManager() );
     }
 
     @Bean
@@ -214,11 +227,6 @@ public class DatastoreServicesPod {
                 hikariDataSource,
                 defaultObjectMapper()
         );
-    }
-
-    @Bean
-    public AuthorizationManager authorizationManager() {
-        return new HazelcastAuthorizationService( hazelcastInstance, eventBus );
     }
 
     @Bean
@@ -252,8 +260,8 @@ public class DatastoreServicesPod {
     public EdmManager dataModelService() {
         return new EdmService(
                 hazelcastInstance,
-                aclKeyReservationService(),
-                authorizationManager(),
+                aclKeyReservationService,
+                authorizationManager,
                 entityTypeManager(),
                 schemaManager()
         );
@@ -264,8 +272,8 @@ public class DatastoreServicesPod {
         return new EntitySetService(
                 hazelcastInstance,
                 eventBus,
-                aclKeyReservationService(),
-                authorizationManager(),
+                aclKeyReservationService,
+                authorizationManager,
                 partitionManager(),
                 dataModelService(),
                 hikariDataSource,
@@ -277,11 +285,6 @@ public class DatastoreServicesPod {
     @Bean
     public AuditRecordEntitySetsManager auditRecordEntitySetsManager() {
         return entitySetManager().getAuditRecordEntitySetsManager();
-    }
-
-    @Bean
-    public HazelcastAclKeyReservationService aclKeyReservationService() {
-        return new HazelcastAclKeyReservationService( hazelcastInstance );
     }
 
     @Bean
@@ -307,8 +310,8 @@ public class DatastoreServicesPod {
         return new Assembler(
                 dcs(),
                 hikariDataSource,
-                authorizationManager(),
-                principalService(),
+                authorizationManager,
+                principalService,
                 metricRegistry,
                 hazelcastInstance,
                 eventBus
@@ -326,14 +329,6 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    public SecurePrincipalsManager principalService() {
-        return new HazelcastPrincipalService( hazelcastInstance,
-                aclKeyReservationService(),
-                authorizationManager(),
-                eventBus );
-    }
-
-    @Bean
     public PhoneNumberService phoneNumberService() {
         return new PhoneNumberService( hazelcastInstance );
     }
@@ -342,9 +337,9 @@ public class DatastoreServicesPod {
     public HazelcastOrganizationService organizationsManager() {
         return new HazelcastOrganizationService(
                 hazelcastInstance,
-                aclKeyReservationService(),
-                authorizationManager(),
-                principalService(),
+                aclKeyReservationService,
+                authorizationManager,
+                principalService,
                 phoneNumberService(),
                 partitionManager(),
                 assembler(),
@@ -353,7 +348,12 @@ public class DatastoreServicesPod {
 
     @Bean
     public AssemblerDependencies assemblerDependencies() {
-        return new AssemblerDependencies( hikariDataSource, dcs(), externalDbConnMan, assemblerConnectionManager() );
+        return new AssemblerDependencies(
+                dcs(),
+                externalDbConnMan,
+                extDbPermManager,
+                principalService
+        );
     }
 
     @Bean
@@ -371,7 +371,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public EdmAuthorizationHelper edmAuthorizationHelper() {
-        return new EdmAuthorizationHelper( dataModelService(), authorizationManager(), entitySetManager() );
+        return new EdmAuthorizationHelper( dataModelService(), authorizationManager, entitySetManager() );
     }
 
     @Bean
@@ -430,9 +430,9 @@ public class DatastoreServicesPod {
                         hazelcastInstance,
                         dataModelService(),
                         organizationsManager(),
-                        authorizationManager(),
-                        principalService(),
-                        aclKeyReservationService(),
+                        authorizationManager,
+                        principalService,
+                        aclKeyReservationService,
                         collectionsManager(),
                         entitySetManager()
                 ), "Checkpoint app service"
@@ -459,7 +459,7 @@ public class DatastoreServicesPod {
         return new SearchService(
                 eventBus,
                 metricRegistry,
-                authorizationManager(),
+                authorizationManager,
                 conductorElasticsearchApi(),
                 dataModelService(),
                 entitySetManager(),
@@ -502,17 +502,17 @@ public class DatastoreServicesPod {
         return new AssemblerConnectionManager(
                 assemblerConfiguration,
                 externalDbConnMan,
-                hikariDataSource,
-                principalService(),
+                principalService,
                 organizationsManager(),
                 dcs(),
+                extDbPermManager,
                 eventBus,
                 metricRegistry );
     }
 
     @Bean
     public PersistentSearchService persistentSearchService() {
-        return new PersistentSearchService( hikariDataSource, principalService() );
+        return new PersistentSearchService( hikariDataSource, principalService );
     }
 
     @Bean AwsDataSinkService awsDataSinkService() {
@@ -573,9 +573,9 @@ public class DatastoreServicesPod {
                 hazelcastInstance,
                 dataModelService(),
                 entitySetManager(),
-                aclKeyReservationService(),
+                aclKeyReservationService,
                 schemaManager(),
-                authorizationManager(),
+                authorizationManager,
                 eventBus
         );
     }
@@ -586,7 +586,7 @@ public class DatastoreServicesPod {
                 dataModelService(),
                 entitySetManager(),
                 dataGraphService(),
-                authorizationManager(),
+                authorizationManager,
                 auditRecordEntitySetsManager(),
                 entityDatastore(),
                 graphApi()
@@ -598,9 +598,9 @@ public class DatastoreServicesPod {
         return new ExternalDatabaseManagementService(
                 hazelcastInstance,
                 externalDbConnMan,
-                principalService(),
-                aclKeyReservationService(),
-                authorizationManager(),
+                principalService,
+                aclKeyReservationService,
+                authorizationManager,
                 organizationExternalDatabaseConfiguration,
                 transporterDatastore,
                 dcs(),
@@ -610,13 +610,13 @@ public class DatastoreServicesPod {
     @Bean
     public CodexService codexService() {
         return new CodexService(
-                aclKeyReservationService(),
+                aclKeyReservationService,
                 twilioConfiguration,
                 hazelcastInstance,
                 dataModelService(),
                 dataGraphService(),
                 idService(),
-                principalService(),
+                principalService,
                 organizationsManager(),
                 collectionsManager(),
                 executor,
@@ -633,14 +633,14 @@ public class DatastoreServicesPod {
     @Bean
     public AnalysisService analysisService() {
         return new AnalysisService( dataGraphService(),
-                authorizationManager(),
+                authorizationManager,
                 dataModelService(),
                 entitySetManager() );
     }
 
     @PostConstruct
     void initPrincipals() {
-        Principals.init( principalService(), hazelcastInstance );
+        Principals.init( principalService, hazelcastInstance );
         organizationMetadataEntitySetsService().dataGraphManager = dataGraphService();
     }
 }

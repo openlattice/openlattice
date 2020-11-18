@@ -22,7 +22,9 @@
 package com.openlattice.assembler
 
 import com.openlattice.authorization.DbCredentialService
+import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
+import com.openlattice.postgres.external.ExternalDatabasePermissionsManager
 import com.openlattice.tasks.HazelcastTaskDependencies
 import com.zaxxer.hikari.HikariDataSource
 
@@ -30,11 +32,11 @@ import com.zaxxer.hikari.HikariDataSource
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-data class AssemblerDependencies(
-        val hds: HikariDataSource,
+class AssemblerDependencies(
         val dbCredentialService: DbCredentialService,
-        val externalDatabaseConnectionManager: ExternalDatabaseConnectionManager,
-        val assemblerConnectionManager: AssemblerConnectionManager
+        externalDatabaseConnectionManager: ExternalDatabaseConnectionManager,
+        val externalDatabasePermissionsManager: ExternalDatabasePermissionsManager,
+        val principalManager: SecurePrincipalsManager
 ) : HazelcastTaskDependencies {
     val target: HikariDataSource = externalDatabaseConnectionManager.connect("postgres")
 }

@@ -193,7 +193,6 @@ class Assembler(
             )
             deleteEntitySetAssemblies(entitySetAssembliesToDelete)
         }
-
     }
 
     @Subscribe
