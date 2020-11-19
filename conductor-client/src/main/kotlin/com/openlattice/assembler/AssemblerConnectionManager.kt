@@ -312,6 +312,10 @@ class AssemblerConnectionManager(
         //We connect to default db in order to do initial db setup
 
         atlas.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                stmt.execute(dropAllConnectionsToDatabaseSql(dbName))
+            }
+
             connection.createStatement().use { statement ->
                 statement.execute(dropDb)
                 statement.execute(dropDbUser)

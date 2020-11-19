@@ -33,18 +33,20 @@ import com.openlattice.conductor.rpc.SearchConfiguration;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
+import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.organizations.Organization;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.stream.Collectors;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.junit.BeforeClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 @SuppressFBWarnings( "MS_PKGPROTECT" )
 public class BaseElasticsearchTest {
@@ -196,14 +198,7 @@ public class BaseElasticsearchTest {
         owner = new Principal( PrincipalType.USER, "support@openlattice.com" );
         openlatticeUser = new Principal( PrincipalType.ROLE, "openlatticeUser" );
 
-        organization = new Organization(
-                Optional.of( organizationId ),
-                new Principal( PrincipalType.ORGANIZATION, UUID.randomUUID().toString() ),
-                "Loom Employees",
-                Optional.of( "people that work at loom" ),
-                Sets.newHashSet(),
-                Sets.newHashSet(),
-                Sets.newHashSet() );
+        organization = TestDataFactory.organization();
 
     }
 }

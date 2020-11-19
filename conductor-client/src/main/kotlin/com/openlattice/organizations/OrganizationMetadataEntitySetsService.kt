@@ -32,6 +32,7 @@ import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.organization.OrganizationExternalDatabaseTable
+import com.openlattice.organization.roles.Role
 import com.openlattice.postgres.DataTables.quote
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.springframework.stereotype.Service
@@ -108,18 +109,21 @@ class OrganizationMetadataEntitySetsService(private val edmService: EdmManager) 
             this::omAuthorizedPropertyTypes.isInitialized && this::datasetsAuthorizedPropertTypes.isInitialized &&
             this::columnAuthorizedPropertTypes.isInitialized && this::propertyTypes.isInitialized
 
-    fun initializeOrganizationMetadataEntitySets(organizationId: UUID) {
+    fun initializeOrganizationMetadataEntitySets(adminRole: Role) {
         initializeFields()
         if (!isFullyInitialized()) {
             return
         }
+
+        val organizationId = adminRole.organizationId
+
         val organizationMetadataEntitySetIds = organizationService.getOrganizationMetadataEntitySetIds(organizationId)
         val organizationPrincipal = organizationService.getOrganizationPrincipal(organizationId)!!
         var createdEntitySets = mutableSetOf<UUID>()
 
         val organizationMetadataEntitySetId = if (organizationMetadataEntitySetIds.organization == UNINITIALIZED_METADATA_ENTITY_SET_ID) {
             val organizationMetadataEntitySet = buildOrganizationMetadataEntitySet(organizationId)
-            val id = entitySetsManager.createEntitySet(organizationPrincipal.principal, organizationMetadataEntitySet)
+            val id = entitySetsManager.createEntitySet(adminRole.principal, organizationMetadataEntitySet)
             createdEntitySets.add(id)
             id
         } else {
@@ -128,7 +132,7 @@ class OrganizationMetadataEntitySetsService(private val edmService: EdmManager) 
 
         val datasetsEntitySetId = if (organizationMetadataEntitySetIds.datasets == UNINITIALIZED_METADATA_ENTITY_SET_ID) {
             val datasetsEntitySet = buildDatasetsEntitySet(organizationId)
-            val id = entitySetsManager.createEntitySet(organizationPrincipal.principal, datasetsEntitySet)
+            val id = entitySetsManager.createEntitySet(adminRole.principal, datasetsEntitySet)
             createdEntitySets.add(id)
             id
         } else {
@@ -137,7 +141,7 @@ class OrganizationMetadataEntitySetsService(private val edmService: EdmManager) 
 
         val columnsEntitySetId = if (organizationMetadataEntitySetIds.columns == UNINITIALIZED_METADATA_ENTITY_SET_ID) {
             val columnsEntitySet = buildColumnEntitySet(organizationId)
-            val id = entitySetsManager.createEntitySet(organizationPrincipal.principal, columnsEntitySet)
+            val id = entitySetsManager.createEntitySet(adminRole.principal, columnsEntitySet)
             createdEntitySets.add(id)
             id
         } else {

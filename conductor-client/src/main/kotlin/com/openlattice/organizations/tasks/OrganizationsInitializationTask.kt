@@ -30,6 +30,7 @@ import com.openlattice.authorization.initializers.AuthorizationInitializationTas
 import com.openlattice.authorization.initializers.AuthorizationInitializationTask.Companion.GLOBAL_USER_ROLE
 import com.openlattice.edm.tasks.EdmSyncInitializerTask
 import com.openlattice.organization.OrganizationConstants.Companion.GLOBAL_ORG_PRINCIPAL
+import com.openlattice.organization.OrganizationPrincipal
 import com.openlattice.organizations.Grant
 import com.openlattice.organizations.GrantType
 import com.openlattice.organizations.Organization
@@ -60,9 +61,9 @@ class OrganizationsInitializationTask : HazelcastInitializationTask<Organization
             val org = organizationService.getOrganization(orgPrincipal.id)!!
             mergeGrants(org)
             dependencies.configuration.connection.ifPresent { org.connections.addAll(it) }
-            org.grants.forEach {
-                (roleId, grantMap) -> grantMap.values.forEach {
-                    grant -> organizationService.updateRoleGrant(orgPrincipal.id, roleId, grant)
+            org.grants.forEach { (roleId, grantMap) ->
+                grantMap.values.forEach { grant ->
+                    organizationService.updateRoleGrant(orgPrincipal.id, roleId, grant)
                 }
             }
             logger.info(
@@ -132,16 +133,17 @@ class OrganizationsInitializationTask : HazelcastInitializationTask<Organization
             val id = GLOBAL_ORGANIZATION_ID.id
             val title = "Global Organization"
             return Organization(
-                    Optional.of(id),
-                    GLOBAL_ORG_PRINCIPAL,
-                    title,
-                    Optional.empty(),
-                    mutableSetOf(),
-                    mutableSetOf(),
-                    mutableSetOf(),
-                    mutableSetOf(),
-                    Optional.of(mutableSetOf()),
-                    Optional.of(partitions.toMutableList())
+                    securablePrincipal = OrganizationPrincipal(
+                            Optional.of(id),
+                            GLOBAL_ORG_PRINCIPAL,
+                            title,
+                            Optional.empty()
+                    ),
+                    emailDomains = mutableSetOf(),
+                    members = mutableSetOf(),
+                    roles = mutableSetOf(),
+                    smsEntitySetInfo = mutableSetOf(),
+                    partitions = partitions.toMutableList()
             )
         }
 

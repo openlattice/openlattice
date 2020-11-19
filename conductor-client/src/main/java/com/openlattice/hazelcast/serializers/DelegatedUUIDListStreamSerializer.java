@@ -37,7 +37,7 @@ import java.util.UUID;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 @Component
-public class AclKeyStreamSerializer extends ListStreamSerializers.DelegatedUUIDListStreamSerializer
+public class DelegatedUUIDListStreamSerializer extends ListStreamSerializers.DelegatedUUIDListStreamSerializer
         implements TestableSelfRegisteringStreamSerializer<DelegatedUUIDList> {
     @Override
     public Class<? extends DelegatedUUIDList> getClazz() {

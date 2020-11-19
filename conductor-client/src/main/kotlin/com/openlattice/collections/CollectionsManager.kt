@@ -226,12 +226,10 @@ class CollectionsManager(
                 entityTypeCollectionIdPredicate(
                         entityTypeCollectionId
                 )
-        ).associate { it.id to it }
+        ).associateBy { it.id }
 
         val entitySetCollectionOwners = authorizations.getOwnersForSecurableObjects(entitySetCollectionsToUpdate.keys.map {
-            AclKey(
-                    it
-            )
+            AclKey(it)
         }.toSet())
         val entitySetsCreated = entitySetCollectionsToUpdate.values.associate {
             it.id to generateEntitySet(
