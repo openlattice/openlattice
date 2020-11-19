@@ -20,6 +20,9 @@
 
 package com.openlattice.postgres.mapstores;
 
+import com.hazelcast.config.IndexConfig;
+import com.hazelcast.config.IndexType;
+import com.hazelcast.config.MapConfig;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.mapstores.TestDataFactory;
@@ -34,6 +37,7 @@ import java.util.UUID;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 public class PropertyTypeMapstore extends AbstractBasePostgresMapstore<UUID, PropertyType> {
+    public static final String       NAMESPACE_INDEX = "type.namespace";
 
     public PropertyTypeMapstore( HikariDataSource hds ) {
         super( HazelcastMap.PROPERTY_TYPES, PostgresTable.PROPERTY_TYPES, hds );
@@ -89,6 +93,11 @@ public class PropertyTypeMapstore extends AbstractBasePostgresMapstore<UUID, Pro
 
     @Override protected UUID mapToKey( java.sql.ResultSet rs ) throws SQLException {
         return ResultSetAdapters.id( rs );
+    }
+
+    @Override public MapConfig getMapConfig() {
+        return super.getMapConfig()
+                .addIndexConfig( new IndexConfig( IndexType.HASH, NAMESPACE_INDEX ) );
     }
 
     @Override

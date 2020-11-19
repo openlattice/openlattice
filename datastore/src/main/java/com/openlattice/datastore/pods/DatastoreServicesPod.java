@@ -240,7 +240,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public PostgresTypeManager entityTypeManager() {
-        return new PostgresTypeManager( hikariDataSource );
+        return new PostgresTypeManager( hikariDataSource , hazelcastInstance );
     }
 
     @Bean
