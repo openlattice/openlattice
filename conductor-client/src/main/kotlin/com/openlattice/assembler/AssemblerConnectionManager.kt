@@ -190,7 +190,8 @@ class AssemblerConnectionManager(
         dataSource.connection.createStatement().use { statement ->
             //Allow usage and create on schema openlattice to organization user
             statement.execute(grantOrgUserPrivilegesOnSchemaSql(OPENLATTICE_SCHEMA, dbOrgUser))
-            statement.execute(grantOrgUserPrivilegesOnSchemaSql(STAGING_SCHEMA, dbOrgUser))
+            statement.execute(setDefaultPrivilegesOnSchemaSql(STAGING_SCHEMA, dbOrgUser))
+            statement.execute(setAdminUserDefaultPrivilegesSql(STAGING_SCHEMA, dbOrgUser))
             statement.execute(setSearchPathSql(dbOrgUser, true, OPENLATTICE_SCHEMA, STAGING_SCHEMA))
         }
     }
@@ -745,6 +746,14 @@ private val PRINCIPALS_SQL = "SELECT ${ACL_KEY.name} FROM ${PRINCIPALS.name} WHE
 
 internal fun grantOrgUserPrivilegesOnSchemaSql(schemaName: String, orgUserId: String): String {
     return "GRANT USAGE, CREATE ON SCHEMA $schemaName TO $orgUserId"
+}
+
+private fun setDefaultPrivilegesOnSchemaSql(schemaName: String, usersSql: String): String {
+    return "GRANT ALL PRIVILEGES ON SCHEMA $schemaName TO $usersSql"
+}
+
+private fun setAdminUserDefaultPrivilegesSql(schemaName: String, usersSql: String): String {
+    return "ALTER DEFAULT PRIVILEGES IN SCHEMA $schemaName GRANT ALL PRIVILEGES ON TABLES TO $usersSql"
 }
 
 private fun setSearchPathSql(granteeId: String, isUser: Boolean, vararg schemas: String): String {
