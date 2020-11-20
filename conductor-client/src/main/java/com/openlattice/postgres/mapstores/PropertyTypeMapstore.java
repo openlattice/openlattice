@@ -37,7 +37,8 @@ import java.util.UUID;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 public class PropertyTypeMapstore extends AbstractBasePostgresMapstore<UUID, PropertyType> {
-    public static final String       NAMESPACE_INDEX = "type.namespace";
+    public static final String       NAMESPACE_INDEX    = "type.namespace";
+    public static final String       SCHEMAS_INDEX      = "schemas[any]";
 
     public PropertyTypeMapstore( HikariDataSource hds ) {
         super( HazelcastMap.PROPERTY_TYPES, PostgresTable.PROPERTY_TYPES, hds );
@@ -97,6 +98,7 @@ public class PropertyTypeMapstore extends AbstractBasePostgresMapstore<UUID, Pro
 
     @Override public MapConfig getMapConfig() {
         return super.getMapConfig()
+                .addIndexConfig( new IndexConfig( IndexType.HASH, SCHEMAS_INDEX ) )
                 .addIndexConfig( new IndexConfig( IndexType.HASH, NAMESPACE_INDEX ) );
     }
 

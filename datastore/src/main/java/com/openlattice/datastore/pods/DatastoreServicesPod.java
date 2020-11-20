@@ -69,7 +69,6 @@ import com.openlattice.edm.PostgresEdmManager;
 import com.openlattice.edm.properties.PostgresTypeManager;
 import com.openlattice.edm.schemas.SchemaQueryService;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
-import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService;
 import com.openlattice.graph.Graph;
 import com.openlattice.graph.GraphQueryService;
 import com.openlattice.graph.PostgresGraphQueryService;
@@ -228,7 +227,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public SchemaQueryService schemaQueryService() {
-        return new PostgresSchemaQueryService( hikariDataSource );
+        return entityTypeManager();
     }
 
     @Bean
