@@ -190,7 +190,8 @@ class AssemblerConnectionManager(
         dataSource.connection.createStatement().use { statement ->
             //Allow usage and create on schema openlattice to organization user
             statement.execute(grantOrgUserPrivilegesOnSchemaSql(OPENLATTICE_SCHEMA, dbOrgUser))
-            statement.execute(grantOrgUserPrivilegesOnSchemaSql(STAGING_SCHEMA, dbOrgUser))
+            statement.execute(setDefaultPrivilegesOnSchemaSql(STAGING_SCHEMA, dbOrgUser))
+            statement.execute(setAdminUserDefaultPrivilegesSql(STAGING_SCHEMA, dbOrgUser))
             statement.execute(setSearchPathSql(dbOrgUser, true, OPENLATTICE_SCHEMA, STAGING_SCHEMA))
         }
     }
@@ -312,6 +313,10 @@ class AssemblerConnectionManager(
         //We connect to default db in order to do initial db setup
 
         atlas.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                stmt.execute(dropAllConnectionsToDatabaseSql(dbName))
+            }
+
             connection.createStatement().use { statement ->
                 statement.execute(dropDb)
                 statement.execute(dropDbUser)
@@ -743,6 +748,14 @@ internal fun grantOrgUserPrivilegesOnSchemaSql(schemaName: String, orgUserId: St
     return "GRANT USAGE, CREATE ON SCHEMA $schemaName TO $orgUserId"
 }
 
+private fun setDefaultPrivilegesOnSchemaSql(schemaName: String, usersSql: String): String {
+    return "GRANT ALL PRIVILEGES ON SCHEMA $schemaName TO $usersSql"
+}
+
+private fun setAdminUserDefaultPrivilegesSql(schemaName: String, usersSql: String): String {
+    return "ALTER DEFAULT PRIVILEGES IN SCHEMA $schemaName GRANT ALL PRIVILEGES ON TABLES TO $usersSql"
+}
+
 private fun setSearchPathSql(granteeId: String, isUser: Boolean, vararg schemas: String): String {
     val schemasSql = schemas.joinToString()
     val granteeType = if (isUser) "USER" else "ROLE"
@@ -770,7 +783,7 @@ internal fun createRoleIfNotExistsSql(dbRole: String): String {
             "      FROM   pg_catalog.pg_roles\n" +
             "      WHERE  rolname = '$dbRole') THEN\n" +
             "\n" +
-            "      CREATE ROLE ${ApiHelpers.dbQuote(dbRole)} NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN;\n" +
+            "      CREATE ROLE ${ApiHelpers.dbQuote(dbRole)} NOSUPERUSER NOCREATEDB NOCREATEROLE INHERIT NOLOGIN;\n" +
             "   END IF;\n" +
             "END\n" +
             "\$do\$;"

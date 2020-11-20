@@ -17,7 +17,6 @@ import com.openlattice.edm.processors.GetEntityTypeFromEntitySetEntryProcessor
 import com.openlattice.edm.processors.GetFqnFromPropertyTypeEntryProcessor
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.hazelcast.processors.GetMembersOfOrganizationEntryProcessor
 import com.openlattice.hazelcast.processors.organizations.UpdateOrganizationExternalDatabaseColumnEntryProcessor
 import com.openlattice.hazelcast.processors.organizations.UpdateOrganizationExternalDatabaseTableEntryProcessor
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
@@ -140,15 +139,10 @@ class ExternalDatabaseManagementService(
     }
 
     fun transportEntitySet(organizationId: UUID, entitySetId: UUID) {
-        val userToPrincipalsCompletion = organizations.submitToKey(
-                organizationId,
-                GetMembersOfOrganizationEntryProcessor()
-        ).thenApplyAsync { members ->
-            securePrincipalsManager.bulkGetUnderlyingPrincipals(
-                    securePrincipalsManager.getSecurablePrincipals(members).toSet()
-            ).mapKeys {
-                dbCredentialService.getDbUsername(it.key)
-            }
+        val memberPrincipals = securePrincipalsManager.getOrganizationMembers(setOf(organizationId)).getValue(organizationId)
+
+        val userToPrincipals = securePrincipalsManager.bulkGetUnderlyingPrincipals(memberPrincipals).mapKeys {
+            dbCredentialService.getDbUsername(it.key)
         }
 
         val entityTypeId = entitySets.submitToKey(
@@ -173,7 +167,7 @@ class ExternalDatabaseManagementService(
             propertyTypes.submitToKeys(transporterPtIds, GetFqnFromPropertyTypeEntryProcessor())
         }
 
-        val userToPermissionsCompletion = userToPrincipalsCompletion.thenCombine(accessCheckCompletion) { userToPrincipals, accessChecks ->
+        val userToPermissionsCompletion = accessCheckCompletion.thenApply { accessChecks ->
             userToPrincipals.mapValues { (_, principals) ->
                 authorizationManager.accessChecksForPrincipals(accessChecks, principals).filter {
                     it.permissions[Permission.READ]!!
@@ -253,7 +247,7 @@ class ExternalDatabaseManagementService(
         val sql = getCurrentTableAndColumnNamesSql()
         BasePostgresIterable(
                 StatementHolderSupplier(externalDbManager.connect(dbName), sql, FETCH_SIZE)
-        ) { rs -> TableInfo(oid(rs), name(rs) , columnName(rs))  }
+        ) { rs -> TableInfo(oid(rs), name(rs), columnName(rs)) }
                 .forEach {
                     columnNamesByTableName
                             .getOrPut(it.tableName) {
@@ -756,7 +750,7 @@ data class TableSchemaInfo(
 )
 
 data class TableInfo(
-        val oid : Int,
+        val oid: Int,
         val tableName: String,
         val columnName: String
 )
