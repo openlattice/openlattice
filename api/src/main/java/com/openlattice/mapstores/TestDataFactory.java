@@ -52,6 +52,7 @@ import com.openlattice.edm.type.PropertyType;
 import com.openlattice.notifications.sms.SmsEntitySetInformation;
 import com.openlattice.organization.OrganizationExternalDatabaseColumn;
 import com.openlattice.organization.OrganizationExternalDatabaseTable;
+import com.openlattice.organization.OrganizationPrincipal;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.Grant;
 import com.openlattice.organizations.GrantType;
@@ -133,7 +134,7 @@ public final class TestDataFactory {
 
     public static Set<Object> randomElements( PropertyType pt ) {
         final var count = 1 + r.nextInt( 5 );
-        final var elements = new HashSet<Object>( count );
+        final var elements = new HashSet<>( count );
         for ( int i = 0; i < count; ++i ) {
             elements.add( randomElement( pt ) );
         }
@@ -422,18 +423,17 @@ public final class TestDataFactory {
 
     public static Organization organization() {
         final var grant = grant();
+        final var orgPrincipal = securableOrganizationPrincipal();
 
         return new Organization(
-                Optional.of( UUID.randomUUID() ),
-                organizationPrincipal(),
-                randomAlphanumeric( 5 ),
-                Optional.of( randomAlphanumeric( 5 ) ),
+                orgPrincipal,
+                new AclKey( orgPrincipal.getId(), UUID.randomUUID() ),
                 Sets.newHashSet( randomAlphanumeric( 5 ), randomAlphanumeric( 5 ) ),
                 Sets.newHashSet( userPrincipal() ),
                 Sets.newHashSet( role() ),
+                Sets.newHashSet( smsEntitySetInformation() ),
+                Lists.newArrayList( 1, 2, 3 ),
                 Sets.newHashSet( UUID.randomUUID() ),
-                Optional.empty(),
-                Optional.of( Lists.newArrayList( 1, 2, 3 ) ),
                 Sets.newHashSet( randomAlphanumeric( 5 ), randomAlphanumeric( 5 ) ),
                 Maps.newHashMap( ImmutableMap
                         .of( UUID.randomUUID(), ImmutableMap.of( grant.getGrantType(), grant() ) )
@@ -462,6 +462,16 @@ public final class TestDataFactory {
     public static Principal organizationPrincipal() {
         return new Principal( PrincipalType.ORGANIZATION, randomAlphanumeric( 10 ) );
     }
+
+    public static OrganizationPrincipal securableOrganizationPrincipal() {
+        return new OrganizationPrincipal(
+                Optional.of( UUID.randomUUID() ),
+                organizationPrincipal(),
+                randomAlphanumeric( 5 ),
+                Optional.of( randomAlphanumeric( 10 ) )
+        );
+    }
+
 
     public static Role role() {
         return new Role(
