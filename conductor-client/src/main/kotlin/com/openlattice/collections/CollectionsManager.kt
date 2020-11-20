@@ -12,8 +12,8 @@ import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.collections.aggregators.EntitySetCollectionConfigAggregator
 import com.openlattice.collections.mapstores.ENTITY_SET_COLLECTION_ID_INDEX
-import com.openlattice.collections.mapstores.ENTITY_TYPE_COLLECTION_ID_INDEX
-import com.openlattice.collections.mapstores.ID_INDEX
+import com.openlattice.collections.mapstores.EntitySetCollectionMapstore.Companion.ENTITY_TYPE_COLLECTION_ID_INDEX
+import com.openlattice.collections.mapstores.EntitySetCollectionMapstore.Companion.ID_INDEX
 import com.openlattice.collections.processors.AddPairToEntityTypeCollectionTemplateProcessor
 import com.openlattice.collections.processors.RemoveKeyFromEntityTypeCollectionTemplateProcessor
 import com.openlattice.collections.processors.UpdateEntitySetCollectionMetadataProcessor

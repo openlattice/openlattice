@@ -7,10 +7,12 @@ import com.google.common.eventbus.EventBus
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
+import com.openlattice.IdConstants
 import com.openlattice.assembler.Assembler
 import com.openlattice.assembler.PostgresDatabases
 import com.openlattice.authorization.*
 import com.openlattice.authorization.mapstores.PrincipalMapstore
+import com.openlattice.collections.mapstores.EntitySetCollectionMapstore
 import com.openlattice.controllers.exceptions.ResourceNotFoundException
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.hazelcast.HazelcastMap
@@ -26,6 +28,8 @@ import com.openlattice.organizations.processors.OrganizationEntryProcessor.Resul
 import com.openlattice.organizations.processors.OrganizationReadEntryProcessor
 import com.openlattice.organizations.processors.UpdateOrganizationSmsEntitySetInformationEntryProcessor
 import com.openlattice.organizations.roles.SecurePrincipalsManager
+import com.openlattice.postgres.mapstores.AppConfigMapstore
+import com.openlattice.postgres.mapstores.EntitySetMapstore
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
 import com.openlattice.users.getAppMetadata
 import com.openlattice.users.processors.aggregators.UsersWithConnectionsAggregator
@@ -73,6 +77,9 @@ class HazelcastOrganizationService(
     protected val organizations = HazelcastMap.ORGANIZATIONS.getMap(hazelcastInstance)
     protected val users = HazelcastMap.USERS.getMap(hazelcastInstance)
     protected val organizationDatabases = HazelcastMap.ORGANIZATION_DATABASES.getMap(hazelcastInstance)
+    protected val entitySetMapstore = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
+    protected val entitySetCollectionsMapstore = HazelcastMap.ENTITY_SET_COLLECTIONS.getMap(hazelcastInstance)
+    protected val appConfigsMapstore = HazelcastMap.APP_CONFIGS.getMap(hazelcastInstance)
 
     @Inject
     private lateinit var eventBus: EventBus
@@ -248,6 +255,30 @@ class HazelcastOrganizationService(
         organizationDatabases.delete(organizationId)
         reservations.release(organizationId)
         eventBus.post(OrganizationDeletedEvent(organizationId))
+
+        appConfigsMapstore.removeAll(Predicates.equal(AppConfigMapstore.ORGANIZATION_ID, organizationId))
+        changeEntitySetsAndCollectionsOrganizationId(organizationId, IdConstants.GLOBAL_ORGANIZATION_ID.id)
+    }
+
+    fun changeEntitySetsAndCollectionsOrganizationId(oldOrgId: UUID, newOrgId: UUID) {
+        val entitySetIds = entitySetMapstore.keySet(Predicates.equal(EntitySetMapstore.ORGANIZATION_INDEX, oldOrgId))
+        val entitySetCollectionIds = entitySetCollectionsMapstore.keySet(Predicates.equal(EntitySetCollectionMapstore.ORGANIZATION_ID_INDEX, oldOrgId))
+
+        if (entitySetIds.isNotEmpty()) {
+            entitySetMapstore.executeOnKeys(entitySetIds) {
+                val entitySet = it.value
+                it.value.organizationId = newOrgId
+                it.setValue(entitySet)
+            }
+        }
+
+        if (entitySetCollectionIds.isNotEmpty()) {
+            entitySetCollectionsMapstore.executeOnKeys(entitySetCollectionIds) {
+                val entitySetCollection = it.value
+                entitySetCollection.organizationId = newOrgId
+                it.setValue(entitySetCollection)
+            }
+        }
     }
 
     @Timed
