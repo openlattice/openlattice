@@ -313,6 +313,10 @@ class AssemblerConnectionManager(
         //We connect to default db in order to do initial db setup
 
         atlas.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                stmt.execute(dropAllConnectionsToDatabaseSql(dbName))
+            }
+
             connection.createStatement().use { statement ->
                 statement.execute(dropDb)
                 statement.execute(dropDbUser)
@@ -779,7 +783,7 @@ internal fun createRoleIfNotExistsSql(dbRole: String): String {
             "      FROM   pg_catalog.pg_roles\n" +
             "      WHERE  rolname = '$dbRole') THEN\n" +
             "\n" +
-            "      CREATE ROLE ${ApiHelpers.dbQuote(dbRole)} NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN;\n" +
+            "      CREATE ROLE ${ApiHelpers.dbQuote(dbRole)} NOSUPERUSER NOCREATEDB NOCREATEROLE INHERIT NOLOGIN;\n" +
             "   END IF;\n" +
             "END\n" +
             "\$do\$;"

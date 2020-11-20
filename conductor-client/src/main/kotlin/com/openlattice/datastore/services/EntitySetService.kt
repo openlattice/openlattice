@@ -112,10 +112,10 @@ class EntitySetService(
         ensureValidEntitySet(entitySet)
         when {
             entitySet.isMetadataEntitySet -> {
-                Principals.ensureOrganization(principal)
+                Principals.ensureRole(principal)
             }
             entitySet.isAudit -> {
-                Principals.ensureUserOrOrganization(principal)
+                Principals.ensureUserOrRole(principal)
             }
             else -> {
                 Principals.ensureUser(principal)

@@ -31,6 +31,7 @@ import com.openlattice.organization.roles.Role;
 import javax.annotation.Nonnull;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -71,6 +72,15 @@ public interface SecurePrincipalsManager {
 
     void addPrincipalToPrincipal( AclKey source, AclKey target );
 
+    /**
+     * Grants an AclKey to a set of AclKeys, and returns any that were updated.
+     *
+     * @param source  The child AclKey to grant
+     * @param targets The parent AclKeys that will be granted [source]
+     * @return all AclKeys that were updated. Any target AclKey that already had [source] as a child will not be included.
+     */
+    Set<AclKey> addPrincipalToPrincipals( AclKey source, Set<AclKey> targets );
+
     void removePrincipalFromPrincipal( AclKey source, AclKey target );
 
     void removePrincipalsFromPrincipals( Set<AclKey> sources, Set<AclKey> target );
@@ -79,10 +89,14 @@ public interface SecurePrincipalsManager {
 
     Collection<SecurablePrincipal> getParentPrincipalsOfPrincipal( AclKey aclKey );
 
+    Map<AclKey, Collection<SecurablePrincipal>> getParentPrincipalsOfPrincipals( Set<AclKey> aclKeys );
+
+    Map<UUID, Set<SecurablePrincipal>> getOrganizationMembers( Set<UUID> organizationIds );
+
     boolean principalHasChildPrincipal( AclKey parent, AclKey child );
 
     // Methods about users
-    Collection<Principal> getAllUsersWithPrincipal( AclKey principal );
+    List<SecurablePrincipal> getAllUsersWithPrincipal( AclKey principal );
 
     Collection<User> getAllUserProfilesWithPrincipal( AclKey principal );
 
@@ -102,13 +116,14 @@ public interface SecurePrincipalsManager {
 
     Collection<SecurablePrincipal> getAllPrincipals( SecurablePrincipal sp );
 
-    Map<SecurablePrincipal, Set<Principal>> bulkGetUnderlyingPrincipals(Set<SecurablePrincipal> sps);
+    Map<SecurablePrincipal, Set<Principal>> bulkGetUnderlyingPrincipals( Set<SecurablePrincipal> sps );
 
     Collection<Principal> getAllUnderlyingPrincipals( SecurablePrincipal sp );
 
     /**
      * Returns all Principals, which have all the specified permissions on the securable object
-     * @param key The securable object
+     *
+     * @param key         The securable object
      * @param permissions Set of permission to check for
      */
     Set<Principal> getAuthorizedPrincipalsOnSecurableObject( AclKey key, EnumSet<Permission> permissions );

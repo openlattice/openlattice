@@ -224,7 +224,7 @@ public class IndexerServicesPod {
 
     @Bean
     public SchemaQueryService schemaQueryService() {
-        return new PostgresSchemaQueryService( hikariDataSource );
+        return entityTypeManager();
     }
 
     @Bean
@@ -234,7 +234,7 @@ public class IndexerServicesPod {
 
     @Bean
     public PostgresTypeManager entityTypeManager() {
-        return new PostgresTypeManager( hikariDataSource );
+        return new PostgresTypeManager( hikariDataSource , hazelcastInstance );
     }
 
     @Bean
