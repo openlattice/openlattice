@@ -90,12 +90,13 @@ public class RequestQueryService {
             ps.setString( 1, principal.getType().name() );
             ps.setString( 2, principal.getId() );
 
-            ResultSet rs = ps.executeQuery();
-            while ( rs.next() ) {
-                result.add( new AceKey( ResultSetAdapters.aclKey( rs ), principal ) );
+            try ( ResultSet rs = ps.executeQuery(); ) {
+                while( rs.next() ) {
+                    result.add( new AceKey( ResultSetAdapters.aclKey( rs ), principal ) );
+                }
+                connection.close();
+                return StreamUtil.stream( result );
             }
-            connection.close();
-            return StreamUtil.stream( result );
         } catch ( SQLException e ) {
             logger.debug( "Unable to get request keys.", e );
             return Stream.empty();
@@ -110,12 +111,13 @@ public class RequestQueryService {
             ps.setString( 2, principal.getId() );
             ps.setString( 3, requestStatus.name() );
 
-            ResultSet rs = ps.executeQuery();
-            while ( rs.next() ) {
-                result.add( new AceKey( ResultSetAdapters.aclKey( rs ), principal ) );
+            try ( ResultSet rs = ps.executeQuery(); ) {
+                while( rs.next() ) {
+                    result.add( new AceKey( ResultSetAdapters.aclKey( rs ), principal ) );
+                }
+                connection.close();
+                return StreamUtil.stream( result );
             }
-            connection.close();
-            return StreamUtil.stream( result );
         } catch ( SQLException e ) {
             logger.debug( "Unable to get request keys.", e );
             return Stream.empty();
@@ -128,12 +130,13 @@ public class RequestQueryService {
             List<AceKey> result = Lists.newArrayList();
             ps.setArray( 1, PostgresArrays.createUuidArray( connection, aclKey.stream() ) );
 
-            ResultSet rs = ps.executeQuery();
-            while ( rs.next() ) {
-                result.add( ResultSetAdapters.aceKey( rs ) );
+            try ( ResultSet rs = ps.executeQuery(); ) {
+                while( rs.next() ) {
+                    result.add( ResultSetAdapters.aceKey( rs ) );
+                }
+                connection.close();
+                return StreamUtil.stream( result );
             }
-            connection.close();
-            return StreamUtil.stream( result );
         } catch ( SQLException e ) {
             logger.debug( "Unable to get request keys.", e );
             return Stream.empty();
@@ -147,12 +150,13 @@ public class RequestQueryService {
             ps.setArray( 1, PostgresArrays.createUuidArray( connection, aclKey.stream() ) );
             ps.setString( 2, requestStatus.name() );
 
-            ResultSet rs = ps.executeQuery();
-            while ( rs.next() ) {
-                result.add( ResultSetAdapters.aceKey( rs ) );
+            try ( ResultSet rs = ps.executeQuery(); ) {
+                while( rs.next() ) {
+                    result.add( ResultSetAdapters.aceKey( rs ) );
+                }
+                connection.close();
+                return StreamUtil.stream( result );
             }
-            connection.close();
-            return StreamUtil.stream( result );
         } catch ( SQLException e ) {
             logger.debug( "Unable to get request keys.", e );
             return Stream.empty();
