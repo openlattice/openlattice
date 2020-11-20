@@ -48,7 +48,7 @@ class PostgresTypeManager(
         private val getEnumTypeIds = "SELECT ${PostgresColumn.ID.name} FROM ${PostgresTable.ENUM_TYPES.name}"
     }
 
-    fun getPropertyTypesInNamespace(namespace: String?): Iterable<PropertyType> {
+    fun getPropertyTypesInNamespace(namespace: String): Iterable<PropertyType> {
         return propertyTypes.values(Predicates.equal(PropertyTypeMapstore.NAMESPACE_INDEX, namespace))
     }
 
@@ -71,7 +71,7 @@ class PostgresTypeManager(
                 }
             }
         } catch (e: SQLException) {
-            logger.debug("Unable to load ids for query: {}", query, e)
+            logger.error("Unable to load ids for query: {}", query, e)
             return ImmutableList.of()
         }
     }
@@ -81,14 +81,14 @@ class PostgresTypeManager(
     }
 
     fun getEntityTypesStrict(): Iterable<EntityType> {
-        return entityTypes.values(Predicates.equal<UUID, EntityType>(EntityTypeMapstore.CATEGORY_INDEX, SecurableObjectType.EntityType.name))
+        return entityTypes.values(Predicates.equal<UUID, EntityType>(EntityTypeMapstore.CATEGORY_INDEX, SecurableObjectType.EntityType))
     }
 
     fun getAssociationEntityTypes(): Iterable<EntityType> {
-        return entityTypes.values(Predicates.equal<UUID, EntityType>(EntityTypeMapstore.CATEGORY_INDEX, SecurableObjectType.AssociationType.name))
+        return entityTypes.values(Predicates.equal<UUID, EntityType>(EntityTypeMapstore.CATEGORY_INDEX, SecurableObjectType.AssociationType))
     }
 
-    fun getAssociationIdsForEntityType(entityTypeId: UUID?): Stream<UUID> {
+    fun getAssociationIdsForEntityType(entityTypeId: UUID): Stream<UUID> {
         return associationTypes.keySet(Predicates.or(
                 Predicates.equal<UUID, AssociationType>(AssociationTypeMapstore.SRC_INDEX, entityTypeId),
                 Predicates.equal<UUID, AssociationType>(AssociationTypeMapstore.DST_INDEX, entityTypeId)
@@ -99,7 +99,7 @@ class PostgresTypeManager(
         return associationTypes.keys
     }
 
-    fun getEnumTypeIds(): Stream<UUID>? {
+    fun getEnumTypeIds(): Stream<UUID> {
         return StreamUtil.stream(getIdsForQuery(getEnumTypeIds))
     }
 
