@@ -22,6 +22,7 @@ package com.openlattice.controllers;
 
 import com.auth0.json.mgmt.users.User;
 import com.codahale.metrics.annotation.Timed;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.openlattice.apps.services.AppService;
@@ -35,6 +36,7 @@ import com.openlattice.datastore.services.EntitySetManager;
 import com.openlattice.organization.OrganizationEntitySetFlag;
 import com.openlattice.organization.OrganizationIntegrationAccount;
 import com.openlattice.organization.OrganizationMember;
+import com.openlattice.organization.OrganizationPrincipal;
 import com.openlattice.organization.OrganizationsApi;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.ExternalDatabaseManagementService;
@@ -44,7 +46,6 @@ import com.openlattice.organizations.Organization;
 import com.openlattice.organizations.OrganizationMetadataEntitySetIds;
 import com.openlattice.organizations.OrganizationMetadataEntitySetsService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
-import java.util.Map.Entry;
 import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.http.HttpStatus;
@@ -53,6 +54,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.inject.Inject;
 import java.util.*;
+import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -109,12 +111,26 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
                 getAccessibleObjects( SecurableObjectType.Organization, EnumSet.of( Permission.READ ) )
                         .parallel()
                         .filter( Objects::nonNull )
-                        .map( AuthorizationUtilsKt::getLastAclKeySafely )
+                        .map( AuthorizationUtilsKt::getLastAclKeySafely ),
+                true
         );
 
         return StreamSupport.stream( orgs.spliterator(), false ).peek( org ->
                 org.getRoles().removeIf( role -> !authorizedRoles.contains( role.getAclKey() ) )
         ).collect( Collectors.toList() );
+    }
+
+    @Timed
+    @Override
+    @GetMapping(
+            value = { METADATA },
+            produces = MediaType.APPLICATION_JSON_VALUE )
+    public Iterable<OrganizationPrincipal> getMetadataOfOrganizations() {
+
+        Set<UUID> authorizedOrganizationIds = getAccessibleObjects( SecurableObjectType.Organization,
+                EnumSet.of( Permission.READ ) ).map( ak -> ak.get( 0 ) ).collect( Collectors.toSet() );
+
+        return organizations.getOrganizationPrincipals( authorizedOrganizationIds );
     }
 
     @Timed
@@ -454,6 +470,20 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     @Timed
     @Override
     @GetMapping(
+            value = PRINCIPALS + MEMBERS + COUNT,
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public Map<UUID, Integer> getMemberCountForOrganizations( Set<UUID> organizationIds ) {
+        EnumSet<Permission> readPermissions = EnumSet.of( Permission.READ );
+        accessCheck( organizationIds.stream().collect( Collectors.toMap( AclKey::new, id -> readPermissions ) ) );
+
+        return organizations.getMemberCountsForOrganizations( organizationIds );
+    }
+
+    @Timed
+    @Override
+    @GetMapping(
             value = ID_PATH + PRINCIPALS + MEMBERS )
     public Iterable<OrganizationMember> getMembers( @PathVariable( ID ) UUID organizationId ) {
         ensureRead( organizationId );
@@ -590,6 +620,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     public Void deleteRole( @PathVariable( ID ) UUID organizationId, @PathVariable( ROLE_ID ) UUID roleId ) {
         ensureRoleAdminAccess( organizationId, roleId );
         ensureObjectCanBeDeleted( roleId );
+        ensureRoleIsNotAdminRole( organizationId, roleId );
         ensureRoleNotUsedByApp( organizationId, roleId );
         principalService.deletePrincipal( new AclKey( organizationId, roleId ) );
         return null;
@@ -672,7 +703,9 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     public Void importMetadata( @PathVariable( ID ) UUID organizationId ) {
         ensureAdminAccess();
         ensureOwner( organizationId );
-        organizationMetadataEntitySetsService.initializeOrganizationMetadataEntitySets( organizationId );
+        AclKey adminRoleAclKey = organizations.getAdminRoleAclKey( organizationId );
+        organizationMetadataEntitySetsService.initializeOrganizationMetadataEntitySets( principalService
+                .getRole( adminRoleAclKey.get( 0 ), adminRoleAclKey.get( 1 ) ) );
 
         var tables = externalDatabaseManagementService
                 .getExternalDatabaseTablesWithColumns( organizationId );
@@ -683,7 +716,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
                             .addDatasetColumns(
                                     organizationId,
                                     t.getSecond(),
-                                    c.stream().map( Entry::getValue ).collect( Collectors.toList()) );
+                                    c.stream().map( Entry::getValue ).collect( Collectors.toList() ) );
                 } );
 
         entitySetManager
@@ -767,6 +800,13 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             } );
         } );
 
+    }
+
+    private void ensureRoleIsNotAdminRole( UUID organizationId, UUID roleId ) {
+        AclKey adminRoleAclKey = organizations.getAdminRoleAclKey( organizationId );
+        Preconditions.checkArgument( !roleId.equals( adminRoleAclKey.get( 1 ) ),
+                "Role " + adminRoleAclKey.toString()
+                        + " cannot be deleted because it is the organization's admin role." );
     }
 
 }
