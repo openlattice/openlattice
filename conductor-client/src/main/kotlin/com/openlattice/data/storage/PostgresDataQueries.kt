@@ -4,12 +4,14 @@ package com.openlattice.data.storage
 import com.openlattice.IdConstants
 import com.openlattice.analysis.SqlBindInfo
 import com.openlattice.analysis.requests.Filter
+import com.openlattice.data.FilteredDataPageDefinition
 import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.edm.PostgresEdmTypeConverter
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.*
 import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresDataTables.Companion.btreeIndexedValueColumn
 import com.openlattice.postgres.PostgresDataTables.Companion.dataTableValueColumns
 import com.openlattice.postgres.PostgresDataTables.Companion.getColumnDefinition
 import com.openlattice.postgres.PostgresDataTables.Companion.getSourceDataColumnName
@@ -27,6 +29,7 @@ internal class PostgresDataQueries
 
 const val VALUE = "value"
 const val PROPERTIES = "properties"
+private const val PAGED_IDS_CTE_NAME = "page_of_ids_to_select"
 
 val dataTableColumnsSql = PostgresDataTables.dataTableColumns.joinToString(",") { it.name }
 
@@ -72,7 +75,8 @@ fun buildPreparableFiltersSql(
         linking: Boolean,
         idsPresent: Boolean,
         partitionsPresent: Boolean,
-        detailed: Boolean = false
+        detailed: Boolean = false,
+        filteredDataPageDefinition: FilteredDataPageDefinition? = null
 ): Pair<String, Set<SqlBinder>> {
     val filtersClauses = buildPreparableFiltersClause(startIndex, propertyTypes, propertyTypeFilters)
     val filtersClause = if (filtersClauses.first.isNotEmpty()) " AND ${filtersClauses.first} " else ""
@@ -84,19 +88,63 @@ fun buildPreparableFiltersSql(
 
     val linkingClause = if (linking) " AND ${ORIGIN_ID.name} != '${IdConstants.EMPTY_ORIGIN_ID.id}' " else ""
 
+    val (prefix, filterIdsOnCTEClause, suffix) = filteredDataPagePrefixAndSuffix(filteredDataPageDefinition, propertyTypes)
+
     val innerSql = selectEntitiesGroupedByIdAndPropertyTypeId(
             metadataOptions,
             idsPresent = idsPresent,
             partitionsPresent = partitionsPresent,
             detailed = detailed,
             linking = linking
-    ) + linkingClause + filtersClause + innerGroupBy
+    ) + linkingClause + filtersClause + filterIdsOnCTEClause + innerGroupBy
 
-    val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name}$metadataOptionColumnsSql," +
-            "jsonb_object_agg(${PROPERTY_TYPE_ID.name},$PROPERTIES) as $PROPERTIES " +
-            "FROM ($innerSql) entities $outerGroupBy"
+    val sql = """
+        $prefix
+        SELECT
+          ${ENTITY_SET_ID.name},
+          ${ID_VALUE.name},
+          ${PARTITION.name}
+          $metadataOptionColumnsSql,
+          jsonb_object_agg(${PROPERTY_TYPE_ID.name}, $PROPERTIES) as $PROPERTIES
+        FROM ($innerSql) entities
+        $outerGroupBy
+        $suffix
+    """.trimIndent()
 
     return sql to filtersClauses.second
+}
+
+internal fun filteredDataPagePrefixAndSuffix(
+        filteredDataPageDefinition: FilteredDataPageDefinition?,
+        propertyTypes: Map<UUID, PropertyType>
+): Triple<String, String, String> {
+    if (filteredDataPageDefinition == null) {
+        return Triple("", "", "")
+    }
+
+    val valueColumn = getSourceDataColumnName(propertyTypes.getValue(filteredDataPageDefinition.propertyTypeId))
+
+    val nextPageSql = filteredDataPageDefinition.bookmarkId?.let { "AND ${ID.name} > $it" } ?: ""
+
+    val prefix = """
+        WITH $PAGED_IDS_CTE_NAME AS (
+          SELECT DISTINCT ${ID.name}
+          FROM ${DATA.name}
+          WHERE
+           ${ENTITY_SET_ID.name} = ANY(?) AND ${PARTITION.name} = ANY(?)
+            AND ${PROPERTY_TYPE_ID.name} = ${filteredDataPageDefinition.propertyTypeId}
+            AND ${filteredDataPageDefinition.filter.asSql(valueColumn)}
+            $nextPageSql
+          LIMIT ${filteredDataPageDefinition.pageSize}
+          ORDER BY ${ID.name}
+        )
+    """.trimIndent()
+
+    val filterClause = " AND ${ID.name} IN (SELECT ${ID.name} FROM $PAGED_IDS_CTE_NAME)"
+
+    val suffix = " ORDER BY ${ID.name}"
+
+    return Triple(prefix, filterClause, suffix)
 }
 
 internal fun selectEntitiesGroupedByIdAndPropertyTypeId(
@@ -111,8 +159,17 @@ internal fun selectEntitiesGroupedByIdAndPropertyTypeId(
     val metadataOptionsSql = metadataOptions.joinToString("") { mapMetaDataToSelector(it) }
     val columnsSql = if (detailed) detailedValueColumnsSql else valuesColumnsSql
     val idColumn = if (linking) ORIGIN_ID.name else ID_VALUE.name
-    return "SELECT ${ENTITY_SET_ID.name},$idColumn as ${ID_VALUE.name},${PARTITION.name},${PROPERTY_TYPE_ID.name}$metadataOptionsSql,$columnsSql " +
-            "FROM ${DATA.name} ${optionalWhereClauses(idsPresent, partitionsPresent, entitySetsPresent, linking)}"
+    return """
+        SELECT
+          ${ENTITY_SET_ID.name},
+          $idColumn as ${ID_VALUE.name},
+          ${PARTITION.name},
+          ${PROPERTY_TYPE_ID.name}
+          $metadataOptionsSql,
+          $columnsSql
+        FROM ${DATA.name}
+        ${optionalWhereClauses(idsPresent, partitionsPresent, entitySetsPresent, linking)}
+    """.trimIndent()
 }
 
 /**
