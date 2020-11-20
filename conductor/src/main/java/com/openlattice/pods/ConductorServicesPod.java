@@ -73,7 +73,6 @@ import com.openlattice.directory.UserDirectoryService;
 import com.openlattice.edm.properties.PostgresTypeManager;
 import com.openlattice.edm.schemas.SchemaQueryService;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
-import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService;
 import com.openlattice.graph.Graph;
 import com.openlattice.graph.GraphQueryService;
 import com.openlattice.graph.PostgresGraphQueryService;
@@ -387,7 +386,7 @@ public class ConductorServicesPod {
 
     @Bean
     public SchemaQueryService schemaQueryService() {
-        return new PostgresSchemaQueryService( hikariDataSource );
+        return entityTypeManager();
     }
 
     @Bean
@@ -397,7 +396,7 @@ public class ConductorServicesPod {
 
     @Bean
     public PostgresTypeManager entityTypeManager() {
-        return new PostgresTypeManager( hikariDataSource );
+        return new PostgresTypeManager( hikariDataSource, hazelcastInstance );
     }
 
     @Bean

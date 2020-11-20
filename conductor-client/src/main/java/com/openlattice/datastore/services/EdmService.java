@@ -193,10 +193,8 @@ public class EdmService implements EdmManager {
 
     @Override
     public void deletePropertyType( UUID propertyTypeId ) {
-        Stream<EntityType> entityTypes = entityTypeManager
-                .getEntityTypesContainingPropertyTypesAsStream( ImmutableSet
-                        .of( propertyTypeId ) );
-        if ( entityTypes.allMatch( et -> Iterables.isEmpty( getEntitySetIdsOfType( et.getId() ) ) ) ) {
+        Collection<EntityType> entityTypes = getEntityTypesContainPropertyType(propertyTypeId);
+        if ( entityTypes.stream().allMatch( et -> Iterables.isEmpty( getEntitySetIdsOfType( et.getId() ) ) ) ) {
             forceDeletePropertyType( propertyTypeId );
         } else {
             throw new IllegalArgumentException(
@@ -693,8 +691,8 @@ public class EdmService implements EdmManager {
         }
         propertyTypes.executeOnKey( propertyTypeId, new UpdatePropertyTypeMetadataProcessor( update ) );
         // get all entity sets containing the property type, and re-index them.
-        entityTypeManager
-                .getEntityTypesContainingPropertyTypesAsStream( ImmutableSet.of( propertyTypeId ) ).forEach( et -> {
+
+        getEntityTypesContainPropertyType(propertyTypeId ).stream().forEach( et -> {
             List<PropertyType> properties = Lists
                     .newArrayList( propertyTypes.getAll( et.getProperties() ).values() );
             getEntitySetIdsOfType( et.getId() ).forEach( entitySetId -> {
