@@ -30,12 +30,12 @@ import com.openlattice.rhizome.hazelcast.DelegatedUUIDList;
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class AclKeyStreamSerializerTest extends
-        AbstractStreamSerializerTest<AclKeyStreamSerializer, DelegatedUUIDList> {
+public class DelegatedUUIDListStreamSerializerTest extends
+        AbstractStreamSerializerTest<DelegatedUUIDListStreamSerializer, DelegatedUUIDList> {
 
     @Override
-    protected AclKeyStreamSerializer createSerializer() {
-        return new AclKeyStreamSerializer();
+    protected DelegatedUUIDListStreamSerializer createSerializer() {
+        return new DelegatedUUIDListStreamSerializer();
     }
 
     @Override

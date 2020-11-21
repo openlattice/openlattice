@@ -60,12 +60,7 @@ import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.DataGraphService;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
-import com.openlattice.data.storage.ByteBlobDataManager;
-import com.openlattice.data.storage.EntityDatastore;
-import com.openlattice.data.storage.IndexingMetadataManager;
-import com.openlattice.data.storage.PostgresEntityDataQueryService;
-import com.openlattice.data.storage.PostgresEntityDatastore;
-import com.openlattice.data.storage.PostgresEntitySetSizesTaskDependency;
+import com.openlattice.data.storage.*;
 import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
@@ -78,7 +73,6 @@ import com.openlattice.directory.UserDirectoryService;
 import com.openlattice.edm.properties.PostgresTypeManager;
 import com.openlattice.edm.schemas.SchemaQueryService;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
-import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService;
 import com.openlattice.graph.Graph;
 import com.openlattice.graph.GraphQueryService;
 import com.openlattice.graph.PostgresGraphQueryService;
@@ -100,8 +94,6 @@ import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.OrganizationMetadataEntitySetsService;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
-import com.openlattice.organizations.tasks.OrganizationMembersCleanupDependencies;
-import com.openlattice.organizations.tasks.OrganizationMembersCleanupInitializationTask;
 import com.openlattice.organizations.tasks.OrganizationsInitializationDependencies;
 import com.openlattice.organizations.tasks.OrganizationsInitializationTask;
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
@@ -254,18 +246,6 @@ public class ConductorServicesPod {
     }
 
     @Bean
-    public OrganizationMembersCleanupDependencies organizationMembersCleanupDependencies() {
-        return new OrganizationMembersCleanupDependencies( principalService(),
-                organizationsManager(),
-                securableObjectTypes() );
-    }
-
-    @Bean
-    public OrganizationMembersCleanupInitializationTask organizationMembersCleanupInitializationTask() {
-        return new OrganizationMembersCleanupInitializationTask();
-    }
-
-    @Bean
     public AuthorizationInitializationDependencies authorizationBootstrapDependencies() {
         return new AuthorizationInitializationDependencies( principalService() );
     }
@@ -316,7 +296,9 @@ public class ConductorServicesPod {
                 principalService(),
                 entitySetManager(),
                 authorizationManager(),
-                partitionManager() );
+                partitionManager(),
+                organizationsManager()
+        );
     }
 
     @Bean
@@ -404,7 +386,7 @@ public class ConductorServicesPod {
 
     @Bean
     public SchemaQueryService schemaQueryService() {
-        return new PostgresSchemaQueryService( hikariDataSource );
+        return entityTypeManager();
     }
 
     @Bean
@@ -414,7 +396,7 @@ public class ConductorServicesPod {
 
     @Bean
     public PostgresTypeManager entityTypeManager() {
-        return new PostgresTypeManager( hikariDataSource );
+        return new PostgresTypeManager( hikariDataSource, hazelcastInstance );
     }
 
     @Bean
@@ -528,6 +510,11 @@ public class ConductorServicesPod {
     @Bean
     public PostgresEntitySetSizesTaskDependency postgresEntitySetSizesTaskDependency() {
         return new PostgresEntitySetSizesTaskDependency( hikariDataSource );
+    }
+
+    @Bean
+    public PostgresEntitySetSizesInitializationTask postgresEntitySetSizesInitializationTask() {
+        return new PostgresEntitySetSizesInitializationTask();
     }
 
     @Bean

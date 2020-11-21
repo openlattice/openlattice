@@ -63,18 +63,18 @@ public final class Principals {
         }
     }
 
-    public static void ensureOrganization( Principal principal ) {
-        checkArgument( principal.getType().equals( PrincipalType.ORGANIZATION ),
-                "Only organization principal type allowed." );
+    public static void ensureRole( Principal principal ) {
+        checkArgument( principal.getType().equals( PrincipalType.ROLE ),
+                "Only role principal type allowed." );
     }
 
     public static void ensureUser( Principal principal ) {
         checkState( principal.getType().equals( PrincipalType.USER ), "Only user principal type allowed." );
     }
 
-    public static void ensureUserOrOrganization( Principal principal ) {
+    public static void ensureUserOrRole( Principal principal ) {
         checkState( principal.getType().equals( PrincipalType.USER ) || principal.getType()
-                .equals( PrincipalType.ORGANIZATION ), "Only user and organization principal types allowed." );
+                .equals( PrincipalType.ROLE ), "Only user and role principal types allowed." );
     }
 
     /**

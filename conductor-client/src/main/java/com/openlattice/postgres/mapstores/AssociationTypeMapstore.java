@@ -1,5 +1,8 @@
 package com.openlattice.postgres.mapstores;
 
+import com.hazelcast.config.IndexConfig;
+import com.hazelcast.config.IndexType;
+import com.hazelcast.config.MapConfig;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.google.common.collect.Sets;
@@ -18,6 +21,9 @@ import java.util.UUID;
 import static com.openlattice.postgres.PostgresTable.ASSOCIATION_TYPES;
 
 public class AssociationTypeMapstore extends AbstractBasePostgresMapstore<UUID, AssociationType> {
+
+    public static final String SRC_INDEX = "src[any]";
+    public static final String DST_INDEX = "dst[any]";
 
     public AssociationTypeMapstore( HikariDataSource hds ) {
         super( HazelcastMap.ASSOCIATION_TYPES, ASSOCIATION_TYPES, hds );
@@ -51,6 +57,12 @@ public class AssociationTypeMapstore extends AbstractBasePostgresMapstore<UUID, 
 
     @Override protected UUID mapToKey( ResultSet rs ) throws SQLException {
         return ResultSetAdapters.id( rs );
+    }
+
+    @Override public MapConfig getMapConfig() {
+        return super.getMapConfig()
+                .addIndexConfig( new IndexConfig( IndexType.HASH, SRC_INDEX) )
+                .addIndexConfig( new IndexConfig( IndexType.HASH, DST_INDEX) );
     }
 
     @Override public UUID generateTestKey() {
