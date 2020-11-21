@@ -245,7 +245,7 @@ class ExternalDatabaseManagementService(
         val schemas = BasePostgresIterable(
                 StatementHolderSupplier(externalDbManager.connectToOrg(organizationId), sql)
         ) { rs ->
-            rs.getString(PostgresColumn.PG_SCHEMA_NAME)
+            rs.getString(PostgresColumnsInternal.SCHEMA_NAME)
         }.toList()
 
         if (schemas.size != 1) {
