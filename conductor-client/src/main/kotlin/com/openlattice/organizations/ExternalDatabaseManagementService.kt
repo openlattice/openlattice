@@ -743,8 +743,8 @@ class ExternalDatabaseManagementService(
     }
 
     private fun getExternalDatabaseTableSchemaSql(tableName: String): String {
-        return "SELECT ${PostgresColumn.PG_SCHEMA_NAME} FROM pg_catalog.pg_tables " +
-                "WHERE ${PostgresColumn.PG_TABLE_NAME} = '${tableName}'"
+        return "SELECT ${PostgresColumnsInternal.SCHEMA_NAME} FROM pg_catalog.pg_tables " +
+                "WHERE ${PostgresColumnsInternal.TABLE_NAME} = '${tableName}'"
     }
 
     /*PREDICATES*/
