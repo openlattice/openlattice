@@ -1,12 +1,12 @@
 package com.openlattice.principals
 
+import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.AclKeySet
-import com.openlattice.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
 
 class AddPrincipalToPrincipalEntryProcessor(
         val newAclKey: AclKey
-) : AbstractReadOnlyRhizomeEntryProcessor<AclKey, AclKeySet?, AclKey?>() {
+) : AbstractRhizomeEntryProcessor<AclKey, AclKeySet?, AclKey?>() {
 
     override fun process(entry: MutableMap.MutableEntry<AclKey, AclKeySet?>): AclKey? {
         val currentChildPrincipals: AclKeySet = entry.value ?: AclKeySet()
