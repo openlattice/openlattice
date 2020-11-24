@@ -222,8 +222,21 @@ class HazelcastPrincipalService(
 
     override fun getParentPrincipalsOfPrincipals(aclKeys: Set<AclKey>): Map<AclKey, Collection<SecurablePrincipal>> {
         val parentLayers = principalTrees.entrySet(hasAnySecurablePrincipal(aclKeys))
-        val principals = principals.getAll(parentLayers.flatMap { it.value }.toSet())
-        return parentLayers.associate { it.key to it.value.mapNotNull { ak -> principals[ak] } }
+        val principals = principals.getAll(parentLayers.map { it.key }.toSet())
+        val childrenToParents = mutableMapOf<AclKey, MutableSet<SecurablePrincipal>>()
+        parentLayers.forEach { (parent, children) ->
+            val sp = principals[parent] ?: return@forEach
+
+            children.filter { aclKeys.contains(it) }.forEach { childAclKey ->
+                if (!childrenToParents.containsKey(childAclKey)) {
+                    childrenToParents[childAclKey] = mutableSetOf()
+                }
+
+                childrenToParents.getValue(childAclKey).add(sp)
+            }
+        }
+
+        return childrenToParents
     }
 
     override fun getOrganizationMembers(organizationIds: MutableSet<UUID>): Map<UUID, Set<SecurablePrincipal>> {
