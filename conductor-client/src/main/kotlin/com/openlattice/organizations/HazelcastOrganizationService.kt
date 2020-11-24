@@ -365,6 +365,11 @@ class HazelcastOrganizationService(
     }
 
     @Timed
+    fun getRoleCountsForOrganizations(organizationIds: Set<UUID>): Map<UUID, Int> {
+        return securePrincipalsManager.getAllRolesInOrganizations(organizationIds).mapValues { it.value.size }
+    }
+
+    @Timed
     @JvmOverloads
     fun addMembers(
             organizationId: UUID,
