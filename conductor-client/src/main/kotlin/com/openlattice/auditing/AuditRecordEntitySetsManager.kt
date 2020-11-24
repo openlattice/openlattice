@@ -138,7 +138,7 @@ class AuditRecordEntitySetsManager(
 
         try {
             firstUserPrincipal = ownerPrincipals.firstOrNull { it.type == PrincipalType.USER }
-                    ?: ownerPrincipals.first { it.type == PrincipalType.ORGANIZATION }
+                    ?: ownerPrincipals.first { it.type == PrincipalType.ROLE }
         } catch (e: NoSuchElementException) {
             logger.error("Unable to create audit entity set for securable object {} because it has no owner", aclKey)
             return
