@@ -27,6 +27,7 @@ public class EntityTypeMapstore extends AbstractBasePostgresMapstore<UUID, Entit
     public static final String       PROPERTIES_INDEX             = "properties[any]";
     public static final String       CATEGORY_INDEX               = "category";
     public static final String       BASE_TYPE_INDEX              = "baseType";
+    public static final String       SCHEMAS_INDEX                = "schemas[any].fullQualifiedNameAsString";
 
     private final       ObjectMapper mapper;
 
@@ -107,7 +108,8 @@ public class EntityTypeMapstore extends AbstractBasePostgresMapstore<UUID, Entit
                 .addIndexConfig( new IndexConfig( IndexType.HASH, FULLQUALIFIED_NAME_PREDICATE) )
                 .addIndexConfig( new IndexConfig( IndexType.HASH, PROPERTIES_INDEX ) )
                 .addIndexConfig( new IndexConfig( IndexType.HASH, BASE_TYPE_INDEX ) )
-                .addIndexConfig( new IndexConfig( IndexType.HASH, CATEGORY_INDEX ) );
+                .addIndexConfig( new IndexConfig( IndexType.HASH, CATEGORY_INDEX ) )
+                .addIndexConfig( new IndexConfig( IndexType.HASH, SCHEMAS_INDEX ) );
     }
 
     @Override public UUID generateTestKey() {
