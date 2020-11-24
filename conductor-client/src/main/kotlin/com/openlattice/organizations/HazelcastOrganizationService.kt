@@ -236,7 +236,7 @@ class HazelcastOrganizationService(
                             it.emailDomains,
                             membersByOrg[it.id] ?: mutableSetOf(),
                             //TODO: If you're an organization you can view its roles.
-                            it.roles,
+                            getRoles(it.id).toMutableSet(),
                             it.smsEntitySetInfo,
                             it.partitions,
                             it.apps
