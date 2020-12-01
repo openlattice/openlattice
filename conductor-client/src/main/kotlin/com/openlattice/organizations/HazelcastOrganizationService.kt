@@ -239,7 +239,10 @@ class HazelcastOrganizationService(
                             getRoles(it.id).toMutableSet(),
                             it.smsEntitySetInfo,
                             it.partitions,
-                            it.apps
+                            it.apps,
+                            it.connections,
+                            it.grants,
+                            it.organizationMetadataEntitySetIds
                     )
                 }
     }
