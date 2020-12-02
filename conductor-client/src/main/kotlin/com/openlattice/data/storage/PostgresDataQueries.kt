@@ -163,26 +163,26 @@ internal fun filteredDataPagePrefixAndSuffix(
         sqlBinders.add(SqlBinder(SqlBindInfo(index++, entityKeyIds), ::doBind))
     }
 
-    val nextPageSql = filteredDataPageDefinition.bookmarkId?.let {
-        sqlBinders.add(SqlBinder(SqlBindInfo(index++, it), ::doBind))
-        "AND ${ID.name} > ?"
-    } ?: ""
+    if (filteredDataPageDefinition.bookmarkId != null) {
+        selectFilters.add("${ID.name} > ?")
+        sqlBinders.add(SqlBinder(SqlBindInfo(index++, filteredDataPageDefinition.bookmarkId!!), ::doBind))
+    }
 
     val (filterSql, binders, nextIndex) = buildPreparableFiltersClause(
             index,
             propertyTypes,
             mapOf(filteredDataPageDefinition.propertyTypeId to setOf(filteredDataPageDefinition.filter))
     )
-    sqlBinders.addAll(binders)
+    if (filterSql.isNotBlank()) {
+        selectFilters.add(filterSql)
+        sqlBinders.addAll(binders)
+    }
 
     val prefix = """
         WITH $PAGED_IDS_CTE_NAME AS (
           SELECT DISTINCT ${ID.name}
           FROM ${DATA.name}
-          WHERE
-            ${selectFilters.joinToString(" AND ")}
-            AND $filterSql
-            $nextPageSql
+          WHERE ${selectFilters.joinToString(" AND ")}
           ORDER BY ${ID.name}
           LIMIT ${filteredDataPageDefinition.pageSize}
         )
