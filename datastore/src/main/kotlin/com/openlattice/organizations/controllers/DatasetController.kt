@@ -139,6 +139,16 @@ class DatasetController : DatasetApi, AuthorizingComponent {
     }
 
     @Timed
+    @GetMapping(path = [ID_PATH + TABLE_ID_PATH + SCHEMA_PATH])
+    override fun getExternalDatabaseTableSchema(
+            @PathVariable(ID) organizationId: UUID,
+            @PathVariable(TABLE_ID) tableId: UUID
+    ): String? {
+        ensureReadAccess(AclKey(tableId))
+        return edms.getExternalDatabaseTableSchema(organizationId, tableId)
+    }
+
+    @Timed
     @GetMapping(path = [ID_PATH + TABLE_NAME_PATH + COLUMN_NAME_PATH + EXTERNAL_DATABASE_COLUMN])
     override fun getExternalDatabaseColumn(
             @PathVariable(ID) organizationId: UUID,

@@ -29,6 +29,7 @@ import com.openlattice.postgres.ResultSetAdapters.*
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
 import com.openlattice.postgres.external.Schemas
 import com.openlattice.postgres.streams.BasePostgresIterable
+import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.openlattice.postgres.streams.StatementHolderSupplier
 import com.openlattice.transporter.processors.DestroyTransportedEntitySetEntryProcessor
 import com.openlattice.transporter.processors.GetPropertyTypesFromTransporterColumnSetEntryProcessor
@@ -233,6 +234,26 @@ class ExternalDatabaseManagementService(
 
     fun getOrganizationExternalDatabaseTable(tableId: UUID): OrganizationExternalDatabaseTable {
         return organizationExternalDatabaseTables.getValue(tableId)
+    }
+
+    fun getExternalDatabaseTableSchema(organizationId: UUID, tableId: UUID): String? {
+
+        val table = getOrganizationExternalDatabaseTable(tableId)
+        val sql = getExternalDatabaseTableSchemaSql()
+
+        val schemas = BasePostgresIterable(
+                PreparedStatementHolderSupplier(externalDbManager.connectToOrg(organizationId), sql) {
+                    it.setString(1, table.name)
+                }
+        ) {
+            it.getString(PostgresColumnsInternal.SCHEMA_NAME)
+        }.toList()
+
+        if (schemas.size != 1) {
+            return null
+        }
+
+        return schemas.firstOrNull()
     }
 
     fun getOrganizationExternalDatabaseColumn(columnId: UUID): OrganizationExternalDatabaseColumn {
@@ -650,7 +671,7 @@ class ExternalDatabaseManagementService(
     }
 
     /**
-     * Moves a table from the [OPENLATTICE_SCHEMA] schema to the [STAGING_SCHEMA] schema
+     * Moves a table from the [STAGING_SCHEMA] schema to the [OPENLATTICE_SCHEMA] schema
      */
     fun promoteStagingTable(organizationId: UUID, tableName: String) {
         externalDbManager.connectToOrg(organizationId).use { hds ->
@@ -718,6 +739,11 @@ class ExternalDatabaseManagementService(
 
     private fun getSelectRecordsSql(tableName: String): String {
         return "SELECT * FROM $tableName"
+    }
+
+    private fun getExternalDatabaseTableSchemaSql(): String {
+        return "SELECT ${PostgresColumnsInternal.SCHEMA_NAME} FROM pg_catalog.pg_tables " +
+                "WHERE ${PostgresColumnsInternal.TABLE_NAME} = ?"
     }
 
     /*PREDICATES*/

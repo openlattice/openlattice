@@ -33,7 +33,12 @@ import com.openlattice.assembler.Assembler;
 import com.openlattice.assembler.AssemblerConfiguration;
 import com.openlattice.assembler.AssemblerConnectionManager;
 import com.openlattice.assembler.pods.AssemblerConfigurationPod;
-import com.openlattice.auditing.*;
+import com.openlattice.auditing.AuditRecordEntitySetsManager;
+import com.openlattice.auditing.AuditingConfiguration;
+import com.openlattice.auditing.AuditingManager;
+import com.openlattice.auditing.AuditingProfiles;
+import com.openlattice.auditing.LocalAuditingService;
+import com.openlattice.auditing.S3AuditingService;
 import com.openlattice.auditing.pods.AuditingConfigurationPod;
 import com.openlattice.authorization.*;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
@@ -56,7 +61,6 @@ import com.openlattice.datastore.services.EntitySetService;
 import com.openlattice.edm.properties.PostgresTypeManager;
 import com.openlattice.edm.schemas.SchemaQueryService;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
-import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService;
 import com.openlattice.graph.Graph;
 import com.openlattice.graph.core.GraphService;
 import com.openlattice.ids.HazelcastIdGenerationService;
@@ -229,7 +233,7 @@ public class IndexerServicesPod {
 
     @Bean
     public PostgresTypeManager entityTypeManager() {
-        return new PostgresTypeManager( hikariDataSource , hazelcastInstance );
+        return new PostgresTypeManager( hikariDataSource, hazelcastInstance );
     }
 
     @Bean
@@ -374,6 +378,7 @@ public class IndexerServicesPod {
     public PostgresLinkingFeedbackService postgresLinkingFeedbackService() {
         return new PostgresLinkingFeedbackService( hikariDataSource, hazelcastInstance );
     }
+
     @Bean
     public OrganizationMetadataEntitySetsService organizationMetadataEntitySetsService() {
         return new OrganizationMetadataEntitySetsService( dataModelService() );

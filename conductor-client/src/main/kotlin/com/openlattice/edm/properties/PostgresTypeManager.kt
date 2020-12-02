@@ -124,7 +124,7 @@ class PostgresTypeManager(
     }
 
     override fun getAllEntityTypesInSchema(schemaName: FullQualifiedName): Set<UUID> {
-        return entityTypes.keySet( Predicates.equal<UUID, EntityType>(EntityTypeMapstore.PROPERTIES_INDEX, schemaName.fullQualifiedNameAsString))
+        return entityTypes.keySet( Predicates.equal<UUID, EntityType>(EntityTypeMapstore.SCHEMAS_INDEX, schemaName.fullQualifiedNameAsString))
     }
 
     override fun getNamespaces(): Iterable<String> {

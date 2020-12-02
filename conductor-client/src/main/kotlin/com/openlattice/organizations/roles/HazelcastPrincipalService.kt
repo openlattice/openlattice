@@ -35,6 +35,7 @@ import com.openlattice.organization.roles.Role
 import com.openlattice.organizations.processors.NestedPrincipalRemover
 import com.openlattice.organizations.roles.processors.PrincipalDescriptionUpdater
 import com.openlattice.organizations.roles.processors.PrincipalTitleUpdater
+import com.openlattice.principals.AddPrincipalToPrincipalEntryProcessor
 import com.openlattice.principals.PrincipalExistsEntryProcessor
 import com.openlattice.principals.RoleCreatedEvent
 import com.openlattice.principals.UserCreatedEvent
@@ -181,17 +182,11 @@ class HazelcastPrincipalService(
     override fun addPrincipalToPrincipals(source: AclKey, targets: Set<AclKey>): Set<AclKey> {
         ensurePrincipalsExist(targets + setOf(source))
 
-        return principalTrees.executeOnKeys(targets) {
-            val currentChildPrincipals: AclKeySet = it.value ?: AclKeySet()
-
-            if (currentChildPrincipals.contains(source)) {
-                null
-            } else {
-                currentChildPrincipals.add(source)
-                it.setValue(currentChildPrincipals)
-                it.key
-            }
-        }.values.filterNotNull().toSet()
+        return principalTrees
+                .executeOnKeys(targets, AddPrincipalToPrincipalEntryProcessor(source))
+                .values
+                .filterNotNull()
+                .toSet()
     }
 
     override fun removePrincipalFromPrincipal(source: AclKey, target: AclKey) {
@@ -226,8 +221,21 @@ class HazelcastPrincipalService(
 
     override fun getParentPrincipalsOfPrincipals(aclKeys: Set<AclKey>): Map<AclKey, Collection<SecurablePrincipal>> {
         val parentLayers = principalTrees.entrySet(hasAnySecurablePrincipal(aclKeys))
-        val principals = principals.getAll(parentLayers.flatMap { it.value }.toSet())
-        return parentLayers.associate { it.key to it.value.mapNotNull { ak -> principals[ak] } }
+        val principals = principals.getAll(parentLayers.map { it.key }.toSet())
+        val childrenToParents = mutableMapOf<AclKey, MutableSet<SecurablePrincipal>>()
+        parentLayers.forEach { (parent, children) ->
+            val sp = principals[parent] ?: return@forEach
+
+            children.filter { aclKeys.contains(it) }.forEach { childAclKey ->
+                if (!childrenToParents.containsKey(childAclKey)) {
+                    childrenToParents[childAclKey] = mutableSetOf()
+                }
+
+                childrenToParents.getValue(childAclKey).add(sp)
+            }
+        }
+
+        return childrenToParents
     }
 
     override fun getOrganizationMembers(organizationIds: MutableSet<UUID>): Map<UUID, Set<SecurablePrincipal>> {
