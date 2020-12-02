@@ -216,13 +216,6 @@ class PostgresEntityDataQueryService(
                 entitySetPartitions
             }
         }.toSet()
-        var startIndex = 2
-        if (ids.isNotEmpty()) {
-            startIndex++
-        }
-        if (partitions.isNotEmpty()) {
-            startIndex++
-        }
 
         val (sql, binders) = buildPreparableFiltersSql(
                 propertyTypes,
