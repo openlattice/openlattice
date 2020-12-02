@@ -80,7 +80,7 @@ fun buildPreparableFiltersSql(
     var index = 1
     val binders = mutableSetOf<SqlBinder>()
 
-    val (sqlTriple, filterBinders, nextIndex) = filteredDataPagePrefixAndSuffix(
+    val (sqlClauses, filterBinders, nextIndex) = filteredDataPagePrefixAndSuffix(
             index,
             filteredDataPageDefinition,
             propertyTypes,
@@ -90,7 +90,7 @@ fun buildPreparableFiltersSql(
     )
     binders.addAll(filterBinders)
     index = nextIndex
-    val (prefix, filterIdsOnCTEClause, suffix) = sqlTriple
+    val (prefix, filterIdsOnCTEClause, suffix) = sqlClauses
 
     binders.add(SqlBinder(SqlBindInfo(index++, entitySetIds), ::doBind))
     if (entityKeyIds.isNotEmpty()) {
@@ -143,11 +143,11 @@ internal fun filteredDataPagePrefixAndSuffix(
         entitySetIds: Set<UUID>,
         partitions: Set<Int>,
         entityKeyIds: Set<UUID>
-): Triple<Triple<String, String, String>, Set<SqlBinder>, Int> {
+): Triple<List<String>, Set<SqlBinder>, Int> {
     var index = startIndex
 
     if (filteredDataPageDefinition == null) {
-        return Triple(Triple("", "", ""), setOf(), index)
+        return Triple(listOf("", "", ""), setOf(), index)
     }
 
     val selectFilters = mutableSetOf("${ENTITY_SET_ID.name} = ANY(?)")
@@ -192,7 +192,8 @@ internal fun filteredDataPagePrefixAndSuffix(
 
     val suffix = " ORDER BY ${ID.name}"
 
-    return Triple(Triple(prefix, filterClause, suffix), sqlBinders, nextIndex)
+    val sqlClauses = listOf(prefix, filterClause, suffix)
+    return Triple(sqlClauses, sqlBinders, nextIndex)
 }
 
 internal fun selectEntitiesGroupedByIdAndPropertyTypeId(
