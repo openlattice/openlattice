@@ -265,31 +265,17 @@ private fun buildPreparableFiltersClause(
     val bindList = propertyTypeFilters.entries
             .filter { (_, filters) -> filters.isNotEmpty() }
             .flatMap { (propertyTypeId, filters) ->
-                val nCol = PostgresDataTables
-                        .nonIndexedValueColumn(
-                                PostgresEdmTypeConverter.map(propertyTypes.getValue(propertyTypeId).datatype)
-                        )
-                val bCol = PostgresDataTables
-                        .btreeIndexedValueColumn(
-                                PostgresEdmTypeConverter.map(propertyTypes.getValue(propertyTypeId).datatype)
-                        )
+                val colName = getSourceDataColumnName(propertyTypes.getValue(propertyTypeId))
 
                 //Generate sql preparable sql fragments
                 var currentIndex = startIndex
-                val nFilterFragments = filters.map { filter ->
-                    val bindDetails = buildBindDetails(currentIndex, propertyTypeId, filter, nCol.name)
+                val filterFragments = filters.map { filter ->
+                    val bindDetails = buildBindDetails(currentIndex, propertyTypeId, filter, colName)
                     currentIndex = bindDetails.nextIndex
                     bindDetails
                 }
 
-                val bFilterFragments = filters
-                        .map { filter ->
-                            val bindDetails = buildBindDetails(currentIndex, propertyTypeId, filter, bCol.name)
-                            currentIndex = bindDetails.nextIndex
-                            bindDetails
-                        }
-
-                nFilterFragments + bFilterFragments
+                filterFragments
             }
 
     val sql = bindList.joinToString(" AND ") { "(${it.sql})" }
