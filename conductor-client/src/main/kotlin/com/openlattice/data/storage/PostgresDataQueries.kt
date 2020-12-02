@@ -11,7 +11,6 @@ import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.*
 import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresColumn.*
-import com.openlattice.postgres.PostgresDataTables.Companion.btreeIndexedValueColumn
 import com.openlattice.postgres.PostgresDataTables.Companion.dataTableValueColumns
 import com.openlattice.postgres.PostgresDataTables.Companion.getColumnDefinition
 import com.openlattice.postgres.PostgresDataTables.Companion.getSourceDataColumnName
@@ -68,20 +67,43 @@ val primaryKeyColumnNamesAsString = PostgresDataTables.buildDataTableDefinition(
  *
  */
 fun buildPreparableFiltersSql(
-        startIndex: Int,
         propertyTypes: Map<UUID, PropertyType>,
         propertyTypeFilters: Map<UUID, Set<Filter>>,
         metadataOptions: Set<MetadataOption>,
         linking: Boolean,
-        idsPresent: Boolean,
-        partitionsPresent: Boolean,
         entitySetIds: Set<UUID>,
         partitions: Set<Int>,
+        entityKeyIds: Set<UUID>,
         detailed: Boolean = false,
         filteredDataPageDefinition: FilteredDataPageDefinition? = null
 ): Pair<String, Set<SqlBinder>> {
-    val filtersClauses = buildPreparableFiltersClause(startIndex, propertyTypes, propertyTypeFilters)
-    val filtersClause = if (filtersClauses.first.isNotEmpty()) " AND ${filtersClauses.first} " else ""
+    var index = 1
+    val binders = mutableSetOf<SqlBinder>()
+
+    val (sqlTriple, filterBinders, nextIndex) = filteredDataPagePrefixAndSuffix(
+            index,
+            filteredDataPageDefinition,
+            propertyTypes,
+            entitySetIds,
+            partitions,
+            entityKeyIds
+    )
+    binders.addAll(filterBinders)
+    index = nextIndex
+    val (prefix, filterIdsOnCTEClause, suffix) = sqlTriple
+
+    binders.add(SqlBinder(SqlBindInfo(index++, entitySetIds), ::doBind))
+    if (entityKeyIds.isNotEmpty()) {
+        binders.add(SqlBinder(SqlBindInfo(index++, entityKeyIds), ::doBind))
+    }
+    if (partitions.isNotEmpty()) {
+        binders.add(SqlBinder(SqlBindInfo(index++, partitions), ::doBind))
+    }
+
+    val (filterClauseSql, filterClauseBinders) = buildPreparableFiltersClause(index, propertyTypes, propertyTypeFilters)
+    val filtersClause = if (filterClauseSql.isNotEmpty()) " AND $filterClauseSql " else ""
+    binders.addAll(filterClauseBinders)
+
     val metadataOptionColumns = metadataOptions.associateWith(::mapOuterMetaDataToColumnSql)
     val metadataOptionColumnsSql = metadataOptionColumns.values.joinToString("")
 
@@ -90,19 +112,10 @@ fun buildPreparableFiltersSql(
 
     val linkingClause = if (linking) " AND ${ORIGIN_ID.name} != '${IdConstants.EMPTY_ORIGIN_ID.id}' " else ""
 
-    val (sqlTriple, filterBinders) = filteredDataPagePrefixAndSuffix(
-            startIndex,
-            filteredDataPageDefinition,
-            propertyTypes,
-            entitySetIds,
-            partitions
-    )
-    val (prefix, filterIdsOnCTEClause, suffix) = sqlTriple
-
     val innerSql = selectEntitiesGroupedByIdAndPropertyTypeId(
             metadataOptions,
-            idsPresent = idsPresent,
-            partitionsPresent = partitionsPresent,
+            idsPresent = entityKeyIds.isNotEmpty(),
+            partitionsPresent = partitions.isNotEmpty(),
             detailed = detailed,
             linking = linking
     ) + linkingClause + filtersClause + filterIdsOnCTEClause + innerGroupBy
@@ -120,7 +133,7 @@ fun buildPreparableFiltersSql(
         $suffix
     """.trimIndent()
 
-    return sql to filtersClauses.second + filterBinders
+    return sql to binders
 }
 
 internal fun filteredDataPagePrefixAndSuffix(
@@ -128,40 +141,50 @@ internal fun filteredDataPagePrefixAndSuffix(
         filteredDataPageDefinition: FilteredDataPageDefinition?,
         propertyTypes: Map<UUID, PropertyType>,
         entitySetIds: Set<UUID>,
-        partitions: Set<Int>
-): Pair<Triple<String, String, String>, Set<SqlBinder>> {
-    if (filteredDataPageDefinition == null) {
-        return Triple("", "", "") to setOf()
-    }
-
+        partitions: Set<Int>,
+        entityKeyIds: Set<UUID>
+): Triple<Triple<String, String, String>, Set<SqlBinder>, Int> {
     var index = startIndex
 
-    val sqlBinders = mutableSetOf<SqlBinder>(
-            SqlBinder(SqlBindInfo(index++, entitySetIds), ::doBind),
-            SqlBinder(SqlBindInfo(index++, partitions), ::doBind)
-    )
+    if (filteredDataPageDefinition == null) {
+        return Triple(Triple("", "", ""), setOf(), index)
+    }
+
+    val selectFilters = mutableSetOf("${ENTITY_SET_ID.name} = ANY(?)")
+
+    val sqlBinders = mutableSetOf(SqlBinder(SqlBindInfo(index++, entitySetIds), ::doBind))
+
+    if (partitions.isNotEmpty()) {
+        selectFilters.add("${PARTITION.name} = ANY(?)")
+        sqlBinders.add(SqlBinder(SqlBindInfo(index++, partitions), ::doBind))
+    }
+    if (entityKeyIds.isNotEmpty()) {
+        selectFilters.add("${ID.name} = ANY(?)")
+        sqlBinders.add(SqlBinder(SqlBindInfo(index++, entityKeyIds), ::doBind))
+    }
 
     val nextPageSql = filteredDataPageDefinition.bookmarkId?.let {
         sqlBinders.add(SqlBinder(SqlBindInfo(index++, it), ::doBind))
         "AND ${ID.name} > ?"
     } ?: ""
 
-    val (filterSql, binders) = buildPreparableFiltersClause(
+    val (filterSql, binders, nextIndex) = buildPreparableFiltersClause(
             index,
             propertyTypes,
             mapOf(filteredDataPageDefinition.propertyTypeId to setOf(filteredDataPageDefinition.filter))
     )
+    sqlBinders.addAll(binders)
 
     val prefix = """
         WITH $PAGED_IDS_CTE_NAME AS (
           SELECT DISTINCT ${ID.name}
           FROM ${DATA.name}
           WHERE
-            ${ENTITY_SET_ID.name} = ANY(?) AND ${PARTITION.name} = ANY(?)
+            ${selectFilters.joinToString(" AND ")}
             AND $filterSql
             $nextPageSql
-          LIMIT ${filteredDataPageDefinition.pageSize}
           ORDER BY ${ID.name}
+          LIMIT ${filteredDataPageDefinition.pageSize}
         )
     """.trimIndent()
 
@@ -169,40 +192,7 @@ internal fun filteredDataPagePrefixAndSuffix(
 
     val suffix = " ORDER BY ${ID.name}"
 
-    return Triple(prefix, filterClause, suffix) to sqlBinders + binders
-}
-
-internal fun filteredDataPagePrefixAndSuffix(
-        filteredDataPageDefinition: FilteredDataPageDefinition?,
-        propertyTypes: Map<UUID, PropertyType>
-): Triple<String, String, String> {
-    if (filteredDataPageDefinition == null) {
-        return Triple("", "", "")
-    }
-
-    val valueColumn = getSourceDataColumnName(propertyTypes.getValue(filteredDataPageDefinition.propertyTypeId))
-
-    val nextPageSql = filteredDataPageDefinition.bookmarkId?.let { "AND ${ID.name} > $it" } ?: ""
-
-    val prefix = """
-        WITH $PAGED_IDS_CTE_NAME AS (
-          SELECT DISTINCT ${ID.name}
-          FROM ${DATA.name}
-          WHERE
-           ${ENTITY_SET_ID.name} = ANY(?) AND ${PARTITION.name} = ANY(?)
-            AND ${PROPERTY_TYPE_ID.name} = ${filteredDataPageDefinition.propertyTypeId}
-            AND ${filteredDataPageDefinition.filter.asSql(valueColumn)}
-            $nextPageSql
-          LIMIT ${filteredDataPageDefinition.pageSize}
-          ORDER BY ${ID.name}
-        )
-    """.trimIndent()
-
-    val filterClause = " AND ${ID.name} IN (SELECT ${ID.name} FROM $PAGED_IDS_CTE_NAME)"
-
-    val suffix = " ORDER BY ${ID.name}"
-
-    return Triple(prefix, filterClause, suffix)
+    return Triple(Triple(prefix, filterClause, suffix), sqlBinders, nextIndex)
 }
 
 internal fun selectEntitiesGroupedByIdAndPropertyTypeId(
@@ -271,9 +261,9 @@ private fun buildPreparableFiltersClause(
         startIndex: Int,
         propertyTypes: Map<UUID, PropertyType>,
         propertyTypeFilters: Map<UUID, Set<Filter>>
-): Pair<String, Set<SqlBinder>> {
+): Triple<String, Set<SqlBinder>, Int> {
     val bindList = propertyTypeFilters.entries
-            .filter { (_, filters) -> filters.isEmpty() }
+            .filter { (_, filters) -> filters.isNotEmpty() }
             .flatMap { (propertyTypeId, filters) ->
                 val nCol = PostgresDataTables
                         .nonIndexedValueColumn(
@@ -304,7 +294,8 @@ private fun buildPreparableFiltersClause(
 
     val sql = bindList.joinToString(" AND ") { "(${it.sql})" }
     val bindInfo = bindList.flatMap { it.bindInfo }.toSet()
-    return sql to bindInfo
+    val nextIndex = bindList.map { it.nextIndex }.max() ?: startIndex
+    return Triple(sql, bindInfo, nextIndex)
 }
 
 private fun buildBindDetails(
@@ -315,7 +306,7 @@ private fun buildBindDetails(
 ): BindDetails {
     val bindInfo = linkedSetOf<SqlBinder>()
     bindInfo.add(SqlBinder(SqlBindInfo(startIndex, propertyTypeId), ::doBind))
-    bindInfo.addAll(filter.bindInfo(startIndex).map { SqlBinder(it, ::doBind) })
+    bindInfo.addAll(filter.bindInfo(startIndex + 1).map { SqlBinder(it, ::doBind) })
     return BindDetails(startIndex + bindInfo.size, bindInfo, "${PROPERTY_TYPE_ID.name} = ? AND " + filter.asSql(col))
 }
 
@@ -773,15 +764,21 @@ internal val deleteEntityKeys =
  * 2. property type ids (array)
  *
  */
-internal val selectEntitySetTextProperties = "SELECT COALESCE(${getSourceDataColumnName(
-        PostgresDatatype.TEXT, IndexType.NONE
-)},${getSourceDataColumnName(PostgresDatatype.TEXT, IndexType.BTREE)}) AS ${getMergedDataColumnName(
-        PostgresDatatype.TEXT
-)} " +
+internal val selectEntitySetTextProperties = "SELECT COALESCE(${
+    getSourceDataColumnName(
+            PostgresDatatype.TEXT, IndexType.NONE
+    )
+},${getSourceDataColumnName(PostgresDatatype.TEXT, IndexType.BTREE)}) AS ${
+    getMergedDataColumnName(
+            PostgresDatatype.TEXT
+    )
+} " +
         "FROM ${DATA.name} " +
-        "WHERE (${getSourceDataColumnName(
-                PostgresDatatype.TEXT, IndexType.NONE
-        )} IS NOT NULL OR ${getSourceDataColumnName(PostgresDatatype.TEXT, IndexType.BTREE)} IS NOT NULL) AND " +
+        "WHERE (${
+            getSourceDataColumnName(
+                    PostgresDatatype.TEXT, IndexType.NONE
+            )
+        } IS NOT NULL OR ${getSourceDataColumnName(PostgresDatatype.TEXT, IndexType.BTREE)} IS NOT NULL) AND " +
         "${ENTITY_SET_ID.name} = ANY(?) AND ${PROPERTY_TYPE_ID.name} = ANY(?) "
 
 
