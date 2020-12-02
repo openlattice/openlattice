@@ -4,23 +4,37 @@ import com.google.common.eventbus.EventBus
 import com.google.common.eventbus.Subscribe
 import com.openlattice.ApiHelpers
 import com.openlattice.assembler.PostgresRoles
+import com.openlattice.authorization.Ace
+import com.openlattice.authorization.AceKey
+import com.openlattice.authorization.Acl
+import com.openlattice.authorization.AclKey
+import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.DbCredentialService
+import com.openlattice.authorization.Permission
 import com.openlattice.authorization.SecurablePrincipal
+import com.openlattice.authorization.processors.PermissionMerger
+import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organization.roles.Role
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.DataTables
+import com.openlattice.postgres.PostgresPrivileges
 import com.openlattice.principals.RoleCreatedEvent
 import com.openlattice.principals.UserCreatedEvent
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
+import java.time.OffsetDateTime
+import java.util.EnumSet
+import java.util.Optional
+import java.util.UUID
 
 /**
  * @author Drew Bailey (drewbaileym@gmail.com)
  */
 class ExternalDatabasePermissionsManager(
-        private val extDbManager: ExternalDatabaseConnectionManager,
+        extDbManager: ExternalDatabaseConnectionManager,
         private val dbCredentialService: DbCredentialService,
         private val securePrincipalsManager: SecurePrincipalsManager,
+        private val permissionsManager: AuthorizationManager,
         eventBus: EventBus
 ) {
     private val atlas: HikariDataSource = extDbManager.connect("postgres")

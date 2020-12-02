@@ -77,7 +77,6 @@ class HazelcastPrincipalService(
         private fun hasAnySecurablePrincipal(aclKeys: Set<AclKey>): Predicate<AclKey, AclKeySet> {
             return Predicates.`in`("this.index[any]", *aclKeys.map { it.index }.toTypedArray())
         }
-
     }
 
     override fun createSecurablePrincipalIfNotExists(owner: Principal, principal: SecurablePrincipal): Boolean {

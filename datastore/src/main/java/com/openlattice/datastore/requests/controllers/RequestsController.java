@@ -53,6 +53,7 @@ import java.util.stream.Stream;
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
+@Deprecated
 @RestController
 @RequestMapping( RequestsApi.CONTROLLER )
 public class RequestsController implements RequestsApi, AuthorizingComponent {

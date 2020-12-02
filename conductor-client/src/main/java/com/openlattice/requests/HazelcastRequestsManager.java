@@ -44,10 +44,8 @@ import org.slf4j.LoggerFactory;
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
+@Deprecated
 public class HazelcastRequestsManager {
-
-    private static final Logger logger = LoggerFactory
-            .getLogger( HazelcastRequestsManager.class );
 
     private final RequestQueryService               rqs;
     private final IMap<AceKey, Status>              requests;
@@ -55,12 +53,10 @@ public class HazelcastRequestsManager {
     private final IMap<AclKey, SecurableObjectType> objectTypes;
 
     public HazelcastRequestsManager( HazelcastInstance hazelcastInstance, RequestQueryService rqs ) {
-
         this.requests = HazelcastMap.REQUESTS.getMap( hazelcastInstance );
         this.aces = HazelcastMap.PERMISSIONS.getMap( hazelcastInstance );
         this.objectTypes = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap( hazelcastInstance );
         this.rqs = checkNotNull( rqs );
-
     }
 
     public void submitAll( Map<AceKey, Status> statusMap ) {

@@ -65,7 +65,6 @@ class ExternalDatabaseManagementService(
     private val organizationExternalDatabaseColumns = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_COLUMN.getMap(hazelcastInstance)
     private val organizationExternalDatabaseTables = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE.getMap(hazelcastInstance)
     private val securableObjectTypes = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap(hazelcastInstance)
-    private val aces = HazelcastMap.PERMISSIONS.getMap(hazelcastInstance)
     private val logger = LoggerFactory.getLogger(ExternalDatabaseManagementService::class.java)
     private val primaryKeyConstraint = "PRIMARY KEY"
     private val FETCH_SIZE = 100_000
@@ -76,7 +75,6 @@ class ExternalDatabaseManagementService(
     private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
     private val entityTypes = HazelcastMap.ENTITY_TYPES.getMap(hazelcastInstance)
     private val propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap(hazelcastInstance)
-    private val organizations = HazelcastMap.ORGANIZATIONS.getMap(hazelcastInstance)
     private val transporterState = HazelcastMap.TRANSPORTER_DB_COLUMNS.getMap(hazelcastInstance)
 
     /*CREATE*/
@@ -496,7 +494,6 @@ class ExternalDatabaseManagementService(
             val sql = privilegesFields.first
             objectType = privilegesFields.second
 
-
             BasePostgresIterable(
                     StatementHolderSupplier(externalDbManager.connectToOrg(orgId), sql)
             ) { rs ->
@@ -516,7 +513,6 @@ class ExternalDatabaseManagementService(
 
         return privilegesByUser.map { (securablePrincipalId, privileges) ->
             val principal = securePrincipalsManager.getSecurablePrincipalById(securablePrincipalId).principal
-            val aceKey = AceKey(aclKey, principal)
             val permissions = EnumSet.noneOf(Permission::class.java)
 
             if (privileges == ownerPrivileges) {
@@ -528,7 +524,7 @@ class ExternalDatabaseManagementService(
                 if (privileges.contains(PostgresPrivileges.INSERT) || privileges.contains(PostgresPrivileges.UPDATE))
                     permissions.add(Permission.WRITE)
             }
-            aces.executeOnKey(aceKey, PermissionMerger(permissions, objectType, OffsetDateTime.MAX))
+            authorizationManager.addPermission(aclKey, principal, permissions, objectType, OffsetDateTime.MAX)
             return@map Acl(aclKeyUUIDs, setOf(Ace(principal, permissions, Optional.empty())))
         }
     }

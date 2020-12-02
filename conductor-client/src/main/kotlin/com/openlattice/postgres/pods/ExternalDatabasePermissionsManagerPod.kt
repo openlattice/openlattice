@@ -1,6 +1,7 @@
 package com.openlattice.postgres.pods
 
 import com.google.common.eventbus.EventBus
+import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.DbCredentialService
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
@@ -26,11 +27,14 @@ class ExternalDatabasePermissionsManagerPod {
     private lateinit var securePrincipalsManager: SecurePrincipalsManager
 
     @Inject
+    private lateinit var permissionsManager: AuthorizationManager
+
+    @Inject
     private lateinit var eventBus: EventBus
 
     @Bean
     fun externalDatabasePermissionsManager(): ExternalDatabasePermissionsManager{
         LoggerFactory.getLogger(ExternalDatabaseConnectionManagerPod::class.java).info("Constructing ExternalDatabaseConnectionManager")
-        return ExternalDatabasePermissionsManager(extDbManager, dbCredentialService, securePrincipalsManager, eventBus)
+        return ExternalDatabasePermissionsManager(extDbManager, dbCredentialService, securePrincipalsManager, permissionsManager, eventBus)
     }
 }

@@ -97,7 +97,6 @@ class HazelcastAuthorizationService(
 
     /** Set Securable Object Type **/
 
-
     override fun setSecurableObjectTypes(aclKeys: Set<AclKey>, objectType: SecurableObjectType) {
         securableObjectTypes.putAll(aclKeys.associateWith { objectType })
         aces.executeOnEntries(SecurableObjectTypeUpdater(objectType), hasAnyAclKeys(aclKeys))
@@ -114,10 +113,25 @@ class HazelcastAuthorizationService(
         addPermission(key, principal, permissions, OffsetDateTime.MAX)
     }
 
-    override fun addPermission(key: AclKey, principal: Principal, permissions: Set<Permission>, expirationDate: OffsetDateTime) {
+    override fun addPermission(
+            key: AclKey,
+            principal: Principal,
+            permissions: Set<Permission>,
+            expirationDate: OffsetDateTime
+    ) {
         //TODO: We should do something better than reading the securable object type.
         val securableObjectType = getDefaultObjectType(securableObjectTypes, key)
 
+        addPermission(key, principal, permissions, securableObjectType, expirationDate)
+    }
+
+    override fun addPermission(
+            key: AclKey,
+            principal: Principal,
+            permissions: Set<Permission>,
+            securableObjectType: SecurableObjectType,
+            expirationDate: OffsetDateTime
+    ) {
         aces.executeOnKey(AceKey(key, principal), PermissionMerger(permissions, securableObjectType, expirationDate))
 
         signalMaterializationPermissionChange(key, principal, permissions, securableObjectType)
@@ -154,16 +168,14 @@ class HazelcastAuthorizationService(
     /** Remove Permissions **/
 
     override fun removePermissions(acls: List<Acl>) {
-        acls
-                .map {
-                    AclKey(it.aclKey) to it.aces
-                            .filter { ace -> ace.permissions.contains(Permission.OWNER) }
-                            .map { ace -> ace.principal }
-                            .toSet()
-                }
-                .filter { (_, owners) -> owners.isNotEmpty() }
-                .forEach { (aclKey, owners) -> ensureAclKeysHaveOtherUserOwners(ImmutableSet.of(aclKey), owners) }
-
+        acls.map {
+            AclKey(it.aclKey) to it.aces
+                    .filter { ace -> ace.permissions.contains(Permission.OWNER) }
+                    .map { ace -> ace.principal }
+                    .toSet()
+        }.filter { (_, owners) -> owners.isNotEmpty() }.forEach { (aclKey, owners) ->
+            ensureAclKeysHaveOtherUserOwners(ImmutableSet.of(aclKey), owners)
+        }
 
         val updates = getAceValueToAceKeyMap(acls)
 

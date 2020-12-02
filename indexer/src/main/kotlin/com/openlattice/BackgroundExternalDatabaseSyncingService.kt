@@ -55,7 +55,6 @@ class BackgroundExternalDatabaseSyncingService(
     private val organizations = HazelcastMap.ORGANIZATIONS.getMap(hazelcastInstance)
     private val expirationLocks = HazelcastMap.EXPIRATION_LOCKS.getMap(hazelcastInstance)
 
-
     init {
         expirationLocks.addIndex(IndexType.SORTED, QueryConstants.THIS_ATTRIBUTE_NAME.value())
     }

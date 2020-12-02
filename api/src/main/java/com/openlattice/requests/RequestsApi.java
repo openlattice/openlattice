@@ -26,6 +26,7 @@ import java.util.Set;
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
+@Deprecated
 public interface RequestsApi {
     String SERVICE    = "/datastore";
     String CONTROLLER = "/requests";
