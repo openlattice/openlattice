@@ -75,6 +75,8 @@ fun buildPreparableFiltersSql(
         linking: Boolean,
         idsPresent: Boolean,
         partitionsPresent: Boolean,
+        entitySetIds: Set<UUID>,
+        partitions: Set<Int>,
         detailed: Boolean = false,
         filteredDataPageDefinition: FilteredDataPageDefinition? = null
 ): Pair<String, Set<SqlBinder>> {
@@ -88,7 +90,14 @@ fun buildPreparableFiltersSql(
 
     val linkingClause = if (linking) " AND ${ORIGIN_ID.name} != '${IdConstants.EMPTY_ORIGIN_ID.id}' " else ""
 
-    val (prefix, filterIdsOnCTEClause, suffix) = filteredDataPagePrefixAndSuffix(filteredDataPageDefinition, propertyTypes)
+    val (sqlTriple, filterBinders) = filteredDataPagePrefixAndSuffix(
+            startIndex,
+            filteredDataPageDefinition,
+            propertyTypes,
+            entitySetIds,
+            partitions
+    )
+    val (prefix, filterIdsOnCTEClause, suffix) = sqlTriple
 
     val innerSql = selectEntitiesGroupedByIdAndPropertyTypeId(
             metadataOptions,
@@ -111,7 +120,56 @@ fun buildPreparableFiltersSql(
         $suffix
     """.trimIndent()
 
-    return sql to filtersClauses.second
+    return sql to filtersClauses.second + filterBinders
+}
+
+internal fun filteredDataPagePrefixAndSuffix(
+        startIndex: Int,
+        filteredDataPageDefinition: FilteredDataPageDefinition?,
+        propertyTypes: Map<UUID, PropertyType>,
+        entitySetIds: Set<UUID>,
+        partitions: Set<Int>
+): Pair<Triple<String, String, String>, Set<SqlBinder>> {
+    if (filteredDataPageDefinition == null) {
+        return Triple("", "", "") to setOf()
+    }
+
+    var index = startIndex
+
+    val sqlBinders = mutableSetOf<SqlBinder>(
+            SqlBinder(SqlBindInfo(index++, entitySetIds), ::doBind),
+            SqlBinder(SqlBindInfo(index++, partitions), ::doBind)
+    )
+
+    val nextPageSql = filteredDataPageDefinition.bookmarkId?.let {
+        sqlBinders.add(SqlBinder(SqlBindInfo(index++, it), ::doBind))
+        "AND ${ID.name} > ?"
+    } ?: ""
+
+    val (filterSql, binders) = buildPreparableFiltersClause(
+            index,
+            propertyTypes,
+            mapOf(filteredDataPageDefinition.propertyTypeId to setOf(filteredDataPageDefinition.filter))
+    )
+
+    val prefix = """
+        WITH $PAGED_IDS_CTE_NAME AS (
+          SELECT DISTINCT ${ID.name}
+          FROM ${DATA.name}
+          WHERE
+            ${ENTITY_SET_ID.name} = ANY(?) AND ${PARTITION.name} = ANY(?)
+            AND $filterSql
+            $nextPageSql
+          LIMIT ${filteredDataPageDefinition.pageSize}
+          ORDER BY ${ID.name}
+        )
+    """.trimIndent()
+
+    val filterClause = " AND ${ID.name} IN (SELECT ${ID.name} FROM $PAGED_IDS_CTE_NAME)"
+
+    val suffix = " ORDER BY ${ID.name}"
+
+    return Triple(prefix, filterClause, suffix) to sqlBinders + binders
 }
 
 internal fun filteredDataPagePrefixAndSuffix(
@@ -278,6 +336,7 @@ internal fun doBind(ps: PreparedStatement, info: SqlBindInfo) {
                 is Long -> PostgresArrays.createLongArray(ps.connection, v as Collection<Long>)
                 is Boolean -> PostgresArrays.createBooleanArray(ps.connection, v as Collection<Boolean>)
                 is Short -> PostgresArrays.createShortArray(ps.connection, v as Collection<Short>)
+                is UUID -> PostgresArrays.createUuidArray(ps.connection, v as Collection<UUID>)
                 else -> throw IllegalArgumentException(
                         "Collection with elements of ${elem.javaClass} are not " +
                                 "supported in filters"
@@ -864,40 +923,6 @@ fun createOrUpdateLinkFromEntity(): String {
                     "ELSE ${DATA.name}.${VERSION.name} " +
                 "END"
     // @formatter:on
-}
-
-/* For materialized views */
-
-/**
- * This function generates preparable sql for selecting property values columnar for a given entity set.
- * Bind order is the following:
- * 1. entity set ids (uuid array)
- * 2. partitions (int array)
- */
-fun selectPropertyTypesOfEntitySetColumnar(
-        authorizedPropertyTypes: Map<UUID, PropertyType>,
-        linking: Boolean
-): String {
-    val idColumnsList = listOf(ENTITY_SET_ID.name, ID.name, ENTITY_KEY_IDS_COL.name)
-    val (entitySetData, _) = buildPreparableFiltersSql(
-            3,
-            authorizedPropertyTypes,
-            mapOf(),
-            EnumSet.of(MetadataOption.ENTITY_KEY_IDS),
-            linking,
-            idsPresent = false,
-            partitionsPresent = true
-    )
-
-    val selectColumns = (idColumnsList +
-            (authorizedPropertyTypes.map { selectPropertyColumn(it.value) }))
-            .joinToString()
-    val groupByColumns = idColumnsList.joinToString()
-    val selectArrayColumns = (idColumnsList +
-            (authorizedPropertyTypes.map { selectPropertyArray(it.value) }))
-            .joinToString()
-
-    return "SELECT $selectArrayColumns FROM (SELECT $selectColumns FROM ($entitySetData) as entity_set_data) as grouped_data GROUP BY ($groupByColumns)"
 }
 
 /**

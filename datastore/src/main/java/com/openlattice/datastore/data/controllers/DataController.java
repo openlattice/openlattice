@@ -175,7 +175,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
 
     @Override
     @RequestMapping(
-            path = { BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + FILTERED },
+            path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + FILTERED },
             method = RequestMethod.POST,
             consumes = { MediaType.APPLICATION_JSON_VALUE },
             produces = { MediaType.APPLICATION_JSON_VALUE }

@@ -232,6 +232,8 @@ class PostgresEntityDataQueryService(
                 linking,
                 ids.isNotEmpty(),
                 partitions.isNotEmpty(),
+                entitySetIds,
+                partitions,
                 detailed,
                 filteredDataPageDefinition
         )
