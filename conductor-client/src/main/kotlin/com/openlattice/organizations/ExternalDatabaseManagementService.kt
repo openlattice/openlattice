@@ -7,8 +7,6 @@ import com.hazelcast.query.Predicates
 import com.hazelcast.query.QueryConstants
 import com.openlattice.assembler.AssemblerConnectionManager.Companion.OPENLATTICE_SCHEMA
 import com.openlattice.assembler.AssemblerConnectionManager.Companion.STAGING_SCHEMA
-import com.openlattice.assembler.PostgresRoles.Companion.getSecurablePrincipalIdFromUserName
-import com.openlattice.assembler.PostgresRoles.Companion.isPostgresUserName
 import com.openlattice.assembler.dropAllConnectionsToDatabaseSql
 import com.openlattice.authorization.*
 import com.openlattice.authorization.processors.PermissionMerger
@@ -496,14 +494,14 @@ class ExternalDatabaseManagementService(
     }
 
     fun syncPermissions(
-            orgOwnerIds: List<UUID>,
+            orgOwnerAclKeys: List<AclKey>,
             orgId: UUID,
             tableId: UUID,
             tableName: String,
             maybeColumnId: Optional<UUID>,
             maybeColumnName: Optional<String>
     ): List<Acl> {
-        val privilegesByUser = HashMap<UUID, MutableSet<PostgresPrivileges>>()
+        val privilegesByUser = HashMap<AclKey, MutableSet<PostgresPrivileges>>()
         val aclKeyUUIDs = mutableListOf(tableId)
         var objectType = SecurableObjectType.OrganizationExternalDatabaseTable
         var aclKey = AclKey(aclKeyUUIDs)
@@ -518,26 +516,29 @@ class ExternalDatabaseManagementService(
             val sql = privilegesFields.first
             objectType = privilegesFields.second
 
-
-            BasePostgresIterable(
+            val usernamesToPrivileges = BasePostgresIterable(
                     StatementHolderSupplier(externalDbManager.connectToOrg(orgId), sql)
             ) { rs ->
                 user(rs) to PostgresPrivileges.valueOf(privilegeType(rs).toUpperCase())
-            }
-                    .filter { isPostgresUserName(it.first) }
-                    .forEach {
-                        val securablePrincipalId = getSecurablePrincipalIdFromUserName(it.first)
-                        privilegesByUser.getOrPut(securablePrincipalId) { mutableSetOf() }.add(it.second)
+            }.toMap()
+
+            val usernamesToAclKeys = dbCredentialService.getSecurablePrincipalAclKeysFromUsernames(usernamesToPrivileges.keys)
+
+            usernamesToPrivileges
+                    .forEach { (username, privileges) ->
+                        usernamesToAclKeys[username]?.let { aclKey ->
+                            privilegesByUser.getOrPut(aclKey) { mutableSetOf() }.add(privileges)
+                        }
                     }
         }
 
         //give organization owners all privileges
-        orgOwnerIds.forEach { orgOwnerId ->
-            privilegesByUser.getOrPut(orgOwnerId) { mutableSetOf() }.addAll(ownerPrivileges)
+        orgOwnerAclKeys.forEach { orgOwnerAclKey ->
+            privilegesByUser.getOrPut(orgOwnerAclKey) { mutableSetOf() }.addAll(ownerPrivileges)
         }
 
-        return privilegesByUser.map { (securablePrincipalId, privileges) ->
-            val principal = securePrincipalsManager.getSecurablePrincipalById(securablePrincipalId).principal
+        return privilegesByUser.map { (securablePrincipalAclKey, privileges) ->
+            val principal = securePrincipalsManager.getSecurablePrincipal(securablePrincipalAclKey).principal
             val aceKey = AceKey(aclKey, principal)
             val permissions = EnumSet.noneOf(Permission::class.java)
 
