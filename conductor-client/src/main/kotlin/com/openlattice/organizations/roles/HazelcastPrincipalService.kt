@@ -28,6 +28,7 @@ import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.openlattice.authorization.*
 import com.openlattice.authorization.mapstores.PrincipalMapstore
+import com.openlattice.authorization.mapstores.PrincipalTreesMapstore
 import com.openlattice.datastore.util.Util
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.processors.GetPrincipalFromSecurablePrincipalsEntryProcessor
@@ -35,6 +36,8 @@ import com.openlattice.organization.roles.Role
 import com.openlattice.organizations.processors.NestedPrincipalRemover
 import com.openlattice.organizations.roles.processors.PrincipalDescriptionUpdater
 import com.openlattice.organizations.roles.processors.PrincipalTitleUpdater
+import com.openlattice.postgres.external.ExternalDatabasePermissioningService
+import com.openlattice.postgres.external.ExternalDatabasePermissionsManager
 import com.openlattice.principals.AddPrincipalToPrincipalEntryProcessor
 import com.openlattice.principals.PrincipalExistsEntryProcessor
 import com.openlattice.principals.RoleCreatedEvent
@@ -48,7 +51,7 @@ class HazelcastPrincipalService(
         hazelcastInstance: HazelcastInstance,
         private val reservations: HazelcastAclKeyReservationService,
         private val authorizations: AuthorizationManager,
-        private val eventBus: EventBus
+        private val extDatabasePermsManager: ExternalDatabasePermissioningService
 ) : SecurePrincipalsManager, AuthorizingComponent {
 
     private val principals = HazelcastMap.PRINCIPALS.getMap(hazelcastInstance)
@@ -72,11 +75,11 @@ class HazelcastPrincipalService(
         }
 
         private fun hasSecurablePrincipal(principalAclKey: AclKey): Predicate<AclKey, AclKeySet> {
-            return Predicates.equal("this.index[any]", principalAclKey.index)
+            return Predicates.equal("this.${PrincipalTreesMapstore.INDEX}", principalAclKey.index)
         }
 
         private fun hasAnySecurablePrincipal(aclKeys: Set<AclKey>): Predicate<AclKey, AclKeySet> {
-            return Predicates.`in`("this.index[any]", *aclKeys.map { it.index }.toTypedArray())
+            return Predicates.`in`("this.${PrincipalTreesMapstore.INDEX}", *aclKeys.map { it.index }.toTypedArray())
         }
     }
 
@@ -106,8 +109,8 @@ class HazelcastPrincipalService(
 
             // Post to EventBus if principal is a USER or ROLE
             when (principal.principalType) {
-                PrincipalType.USER -> eventBus.post(UserCreatedEvent(principal))
-                PrincipalType.ROLE -> eventBus.post(RoleCreatedEvent(principal as Role))
+                PrincipalType.USER -> extDatabasePermsManager.createUnprivilegedUser(principal)
+                PrincipalType.ROLE -> extDatabasePermsManager.createRole(principal as Role)
                 else -> Unit
             }
 
@@ -182,20 +185,24 @@ class HazelcastPrincipalService(
     override fun addPrincipalToPrincipals(source: AclKey, targets: Set<AclKey>): Set<AclKey> {
         ensurePrincipalsExist(targets + setOf(source))
 
-        return principalTrees
+        val updatedKeys = principalTrees
                 .executeOnKeys(targets, AddPrincipalToPrincipalEntryProcessor(source))
                 .values
                 .filterNotNull()
                 .toSet()
+
+        extDatabasePermsManager.addPrincipalToPrincipals(source, updatedKeys)
+        return updatedKeys
     }
 
     override fun removePrincipalFromPrincipal(source: AclKey, target: AclKey) {
         removePrincipalsFromPrincipals(setOf(source), setOf(target))
     }
 
-    override fun removePrincipalsFromPrincipals(source: Set<AclKey>, target: Set<AclKey>) {
-        ensurePrincipalsExist(target + source)
-        principalTrees.executeOnKeys(target, NestedPrincipalRemover(source))
+    override fun removePrincipalsFromPrincipals(principalsToRemove: Set<AclKey>, fromPrincipals: Set<AclKey>) {
+        ensurePrincipalsExist(fromPrincipals + principalsToRemove)
+        principalTrees.executeOnKeys(fromPrincipals, NestedPrincipalRemover(principalsToRemove))
+        extDatabasePermsManager.removePrincipalsFromPrincipals(principalsToRemove, fromPrincipals)
     }
 
     override fun getAllPrincipalsWithPrincipal(aclKey: AclKey): Collection<SecurablePrincipal> {
@@ -352,7 +359,7 @@ class HazelcastPrincipalService(
 
     override fun ensurePrincipalsExist(aclKeys: Set<AclKey>) {
         val principalsMap = principals.executeOnKeys(aclKeys, PrincipalExistsEntryProcessor())
-        val nonexistentAclKeys = principalsMap.filterValues { !(it as Boolean) }.keys
+        val nonexistentAclKeys = principalsMap.filterValues { !it }.keys
 
         Preconditions.checkState(
                 nonexistentAclKeys.isEmpty(),

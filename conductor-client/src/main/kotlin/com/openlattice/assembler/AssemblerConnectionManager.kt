@@ -33,13 +33,11 @@ import com.openlattice.authorization.*
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.organization.OrganizationEntitySetFlag
-import com.openlattice.organization.roles.Role
 import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.E
-import com.openlattice.postgres.PostgresTable.PRINCIPALS
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
 import com.openlattice.postgres.external.ExternalDatabasePermissionsManager
 import com.openlattice.postgres.external.Schemas
@@ -47,7 +45,6 @@ import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.sql.Connection
-import java.sql.Statement
 import java.util.*
 import kotlin.NoSuchElementException
 
@@ -619,8 +616,6 @@ class AssemblerConnectionManager(
 }
 
 val MEMBER_ORG_DATABASE_PERMISSIONS = setOf("CREATE", "CONNECT", "TEMPORARY", "TEMP")
-
-private val PRINCIPALS_SQL = "SELECT ${ACL_KEY.name} FROM ${PRINCIPALS.name} WHERE ${PRINCIPAL_TYPE.name} = ?"
 
 internal fun grantOrgUserPrivilegesOnSchemaSql(schema: Schemas, orgUserId: String): String {
     return "GRANT USAGE, CREATE ON SCHEMA $schema TO $orgUserId"

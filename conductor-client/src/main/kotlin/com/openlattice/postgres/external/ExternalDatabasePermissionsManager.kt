@@ -36,7 +36,7 @@ class ExternalDatabasePermissionsManager(
         private val securePrincipalsManager: SecurePrincipalsManager,
         private val permissionsManager: AuthorizationManager,
         eventBus: EventBus
-) {
+): ExternalDatabasePermissioningService {
     private val atlas: HikariDataSource = extDbManager.connect("postgres")
 
     init {
@@ -45,11 +45,6 @@ class ExternalDatabasePermissionsManager(
 
     companion object {
         private val logger = LoggerFactory.getLogger(ExternalDatabasePermissionsManager::class.java)
-    }
-
-    @Subscribe
-    fun handleRoleCreated(roleCreatedEvent: RoleCreatedEvent) {
-        createRole(roleCreatedEvent.role)
     }
 
     @Subscribe
@@ -75,9 +70,8 @@ class ExternalDatabasePermissionsManager(
         }
     }
 
-    internal fun createRole(role: Role) {
+    override fun createRole(role: Role) {
         val dbRole = PostgresRoles.buildPostgresRoleName(role)
-
         atlas.connection.use { connection ->
             connection.createStatement().use { statement ->
                 statement.execute(createRoleIfNotExistsSql(dbRole))
@@ -88,7 +82,7 @@ class ExternalDatabasePermissionsManager(
         }
     }
 
-    internal fun createUnprivilegedUser(user: SecurablePrincipal) {
+    override fun createUnprivilegedUser(user: SecurablePrincipal) {
         /**
          * To simplify work-around for ESRI username limitations, we are only introducing one additional
          * field into the dbcreds table. We keep the results of calling [buildPostgresUsername] as the lookup
@@ -109,6 +103,27 @@ class ExternalDatabasePermissionsManager(
                 //Don't allow users to access public schema which will contain foreign data wrapper tables.
                 logger.info("Revoking ${Schemas.PUBLIC_SCHEMA} schema right from user {}", user)
                 statement.execute("REVOKE USAGE ON SCHEMA ${Schemas.PUBLIC_SCHEMA} FROM ${DataTables.quote(dbUser)}")
+            }
+        }
+    }
+
+    override fun addPrincipalToPrincipals(sourcePrincipalAclKey: AclKey, targetPrincipalAclKeys: Set<AclKey>) {
+        val grantPrincipalToPrincipalsSQL = "GRANT $sourcePrincipalAclKey TO ${targetPrincipalAclKeys.joinToString()};"
+        atlas.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                stmt.execute(grantPrincipalToPrincipalsSQL)
+            }
+        }
+    }
+
+    override fun removePrincipalsFromPrincipals(principalsToRemove: Set<AclKey>, fromPrincipals: Set<AclKey>) {
+        val rolesToRemoveString = fromPrincipals.joinToString()
+        atlas.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                principalsToRemove.forEach { principal ->
+                    stmt.addBatch("REVOKE $principal FROM $rolesToRemoveString")
+                }
+                stmt.executeBatch()
             }
         }
     }

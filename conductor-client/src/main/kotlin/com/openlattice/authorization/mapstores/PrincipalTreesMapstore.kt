@@ -150,7 +150,6 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
         return AclKeySet(ImmutableList.of(generateTestKey(), generateTestKey(), generateTestKey()))
     }
 
-
     override fun getMapStoreConfig(): MapStoreConfig {
         return MapStoreConfig()
                 .setInitialLoadMode(MapStoreConfig.InitialLoadMode.EAGER)

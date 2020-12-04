@@ -11,12 +11,11 @@ class AddPrincipalToPrincipalEntryProcessor(
     override fun process(entry: MutableMap.MutableEntry<AclKey, AclKeySet?>): AclKey? {
         val currentChildPrincipals: AclKeySet = entry.value ?: AclKeySet()
 
-        return if (currentChildPrincipals.contains(newAclKey)) {
-            null
-        } else {
-            currentChildPrincipals.add(newAclKey)
-            entry.setValue(currentChildPrincipals)
-            entry.key
+        if (currentChildPrincipals.contains(newAclKey)) {
+            return null
         }
+        currentChildPrincipals.add(newAclKey)
+        entry.setValue(currentChildPrincipals)
+        return entry.key
     }
 }

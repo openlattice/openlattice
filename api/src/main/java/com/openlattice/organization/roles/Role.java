@@ -37,8 +37,6 @@ import org.slf4j.LoggerFactory;
 
 public class Role extends SecurablePrincipal {
 
-    private static final Logger logger = LoggerFactory.getLogger( Role.class );
-
     private final UUID organizationId;
 
     @JsonCreator
