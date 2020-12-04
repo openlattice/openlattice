@@ -251,6 +251,8 @@ class Assembler(
     fun createOrganization(organizationId: UUID, dbName: String) {
         createOrganizationTimer.time().use {
 
+            assemblies.putIfAbsent(organizationId, OrganizationAssembly(organizationId))
+
             if (!assemblies.tryLock(organizationId)) {
                 logger.error("Could not initialize database for organization {} because it already being initialized.", organizationId)
             }
