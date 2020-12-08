@@ -2,7 +2,6 @@ package com.openlattice.data.storage
 
 import com.codahale.metrics.annotation.Timed
 import com.openlattice.IdConstants
-import com.openlattice.analysis.SqlBindInfo
 import com.openlattice.analysis.requests.Filter
 import com.openlattice.data.DeleteType
 import com.openlattice.data.FilteredDataPageDefinition
@@ -24,7 +23,6 @@ import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import java.lang.Exception
 import java.nio.ByteBuffer
 import java.security.InvalidParameterException
 import java.sql.Connection

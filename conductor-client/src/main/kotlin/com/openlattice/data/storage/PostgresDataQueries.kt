@@ -168,11 +168,9 @@ internal fun filteredDataPagePrefixAndSuffix(
         sqlBinders.add(SqlBinder(SqlBindInfo(index++, filteredDataPageDefinition.bookmarkId!!), ::doBind))
     }
 
-    val (filterSql, binders, nextIndex) = buildPreparableFiltersClause(
-            index,
-            propertyTypes,
-            mapOf(filteredDataPageDefinition.propertyTypeId to setOf(filteredDataPageDefinition.filter))
-    )
+    val filtersMap = filteredDataPageDefinition.propertyTypeId?.let { mapOf(it to setOf(filteredDataPageDefinition.filter!!)) } ?: mapOf()
+    val (filterSql, binders, nextIndex) = buildPreparableFiltersClause(index, propertyTypes, filtersMap)
+
     if (filterSql.isNotBlank()) {
         selectFilters.add(filterSql)
         sqlBinders.addAll(binders)
