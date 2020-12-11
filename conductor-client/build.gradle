@@ -22,17 +22,17 @@
 plugins {
     id 'eclipse'
     id 'idea'
+    id 'java-library'
     id 'jacoco'
     id 'checkstyle'
     id "maven-publish"
     id "signing"
-    id 'com.github.spotbugs' version '4.5.1'
-    id 'org.jetbrains.kotlin.jvm' version '1.3.72'
-    id 'org.jetbrains.kotlin.plugin.spring' version '1.3.72'
-    id 'org.jetbrains.dokka' version '0.9.18'
-    id 'java'
-    id 'com.github.jk1.dependency-license-report' version '1.11'
-    id 'org.owasp.dependencycheck' version '6.0.1'
+    id 'com.github.spotbugs'
+    id 'org.jetbrains.kotlin.jvm'
+    id 'org.jetbrains.kotlin.plugin.spring'
+    id 'org.jetbrains.dokka'
+    id 'com.github.jk1.dependency-license-report'
+    id 'org.owasp.dependencycheck'
 }
 
 description = "Conductor Client"
@@ -114,10 +114,11 @@ tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
 
 dependencies {
     spotbugsPlugins "com.h3xstream.findsecbugs:findsecbugs-plugin:${findsecbugs_version}"
-    compileOnly "net.jcip:jcip-annotations:${jcip_version}"
-    compileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugs_annotations_version}"
-    testCompileOnly "net.jcip:jcip-annotations:${jcip_version}"
-    testCompileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugs_annotations_version}"
+
+    annotationProcessor "net.jcip:jcip-annotations:${jcip_version}"
+    annotationProcessor "com.github.spotbugs:spotbugs-annotations:${spotbugs_annotations_version}"
+    testAnnotationProcessor "net.jcip:jcip-annotations:${jcip_version}"
+    testAnnotationProcessor "com.github.spotbugs:spotbugs-annotations:${spotbugs_annotations_version}"
 
     compileOnly "com.google.code.findbugs:findbugs:${findbugs_version}"
     /*
@@ -149,31 +150,28 @@ dependencies {
     compile "net.jpountz.lz4:lz4:${lz4_version}"
     compile "de.javakaffee:kryo-serializers:${kryo_serializers_version}"
 
-    if( project.hasProperty('developmentMode') && project.developmentMode ) {
-        logger.quiet(project.name + " using project dependencies.")
-        compile project(":api")
-        compile project(":scribe")
-        
-        testCompile( project(path: ":api", configuration: "tests"))
-        testCompile( project(path: ":scribe", configuration: "tests"))
-    } else {
-        logger.quiet(project.name + " using jar dependencies.")
-        compile "com.openlattice:api:${api_version}"
-        compile "com.openlattice:scribe:${scribe_version}"
-
-        testCompile "com.openlattice:api:${api_version}:tests"
-        testCompile "com.openlattice:scribe:${scribe_version}:tests"
-    }
+    compile "com.openlattice:api:${api_version}"
+    compile "com.openlattice:scribe:${scribe_version}"
 
     compile "com.openlattice:rhizome:${rhizome_version}"
-    testCompile "com.openlattice:rhizome:${rhizome_version}:tests"
-    testCompile "com.openlattice:rhizome-client:${rhizome_client_version}:tests"
     testImplementation "junit:junit:${junit_version}"
+
+    if( project.hasProperty('developmentMode') && project.developmentMode ) {
+        testImplementation(project(path: ":api", configuration: "tests"))
+        testImplementation(project(path: ":scribe", configuration: "tests"))
+        testImplementation(project(path: ":rhizome", configuration: "tests"))
+        testImplementation(project(path: ":rhizome-client", configuration: "tests"))
+    } else {
+        testImplementation "com.openlattice:api:${api_version}:tests"
+        testImplementation "com.openlattice:scribe:${scribe_version}:tests"
+        testImplementation "com.openlattice:rhizome:${rhizome_version}:tests"
+        testImplementation "com.openlattice:rhizome-client:${rhizome_client_version}:tests"
+    }
     /*
      * TESTING
      */
-    testCompile "junit:junit:${junit_version}"
-    testCompile( "org.mockito:mockito-all:${mockito_version}" ) {
+    testImplementation "junit:junit:${junit_version}"
+    testImplementation( "org.mockito:mockito-all:${mockito_version}" ) {
         exclude module : 'hamcrest'
         exclude module : 'hamcrest-core'
     }

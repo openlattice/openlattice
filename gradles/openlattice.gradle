@@ -13,6 +13,8 @@ if( branch == null || branch == "" ) {
     branch=stdout.toString().trim();
 }
 
+ext.developmentMode = !ext.has("jars")
+
 println project.name + " Using bpr: " + bpr
 
 def getVersionName = { ->
@@ -98,6 +100,17 @@ afterEvaluate {
 configurations.all {
   // check for updates every build
   resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
+
+  resolutionStrategy.dependencySubstitution.all { DependencySubstitution dependency ->
+    if (dependency.requested instanceof ModuleComponentSelector && dependency.requested.group == "com.openlattice") {
+      logger.debug("replacing ${dependency.requested} with local project :${dependency.requested.module} while resolving ${this.project}")
+      def targetProject = findProject(":${dependency.requested.module}")
+      if (targetProject != null) {
+        dependency.useTarget(targetProject)
+      }
+    }
+  }
+
 }
 
 ext.versionSuffix = ""
