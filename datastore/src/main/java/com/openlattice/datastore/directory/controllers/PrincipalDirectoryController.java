@@ -155,7 +155,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
             consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE
     )
-    public Map<String, User> getUsers( @Body Set<String> userIds ) {
+    public Map<String, User> getUsers( @RequestBody Set<String> userIds ) {
         return userDirectoryService.getUsers( userIds );
     }
 
