@@ -161,7 +161,7 @@ public class EdmService implements EdmManager {
 
     public void ensurePropertyTypeExists( UUID propertyTypeId ) {
         Preconditions.checkState(
-                entityTypes.containsKey(propertyTypeId),
+                propertyTypes.containsKey(propertyTypeId),
                 "Property type " + propertyTypeId.toString() + " does not exist."
         );
     }
