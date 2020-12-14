@@ -13,9 +13,6 @@
 [submodule "neuron"]
 	path = neuron
 	url = git@github.com:openlattice/neuron.git
-[submodule "rehearsal"]
-	path = rehearsal
-	url = git@github.com:openlattice/rehearsal.git
 [submodule "rhizome-client"]
 	path = rhizome-client
 	url = git@github.com:geekbeast/rhizome-client.git
