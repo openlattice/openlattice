@@ -32,6 +32,10 @@ class Auth0UserDirectoryService(
         return users.getValue(userId)
     }
 
+    override fun getUsers(userIds: Set<String>): Map<String, User> {
+        return users.getAll(userIds)
+    }
+
     override fun deleteUser(userId: String) {
         auth0ManagementApi.deleteUser(userId)
         users.delete(userId)
