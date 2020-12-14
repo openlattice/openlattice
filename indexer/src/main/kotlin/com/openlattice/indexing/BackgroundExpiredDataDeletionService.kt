@@ -115,6 +115,16 @@ class BackgroundExpiredDataDeletionService(
         }
     }
 
+    private fun getBatchOfExpiringEkids(entitySet: EntitySet, expirationPT: Optional<PropertyType>): MutableSet<UUID> {
+        return dataGraphService.getExpiringEntitiesFromEntitySet(
+                entitySet.id,
+                entitySet.expiration!!,
+                OffsetDateTime.now(),
+                entitySet.expiration!!.deleteType,
+                expirationPT
+        ).toMutableSet()
+    }
+
     private fun deleteExpiredData(entitySet: EntitySet, propertyTypes: Map<UUID, PropertyType>): Int {
         logger.info(
                 "Starting deletion of expired data for entity set {} with id {}",
@@ -125,36 +135,23 @@ class BackgroundExpiredDataDeletionService(
         var totalDeletedEntitiesCount = 0
 
         val expirationPT = entitySet.expiration!!.startDateProperty.map { propertyTypes[it]!! }
-        val entityKeyIds = dataGraphService.getExpiringEntitiesFromEntitySet(
-                entitySet.id,
-                entitySet.expiration!!,
-                OffsetDateTime.now(),
-                entitySet.expiration!!.deleteType,
-                expirationPT
-        )
-        while (entityKeyIds.iterator().hasNext()) {
-            val deletedEntityKeyIds: MutableSet<UUID> = mutableSetOf()
+        var idsBatch = getBatchOfExpiringEkids(entitySet, expirationPT)
 
-            val chunkedEntityKeyIds = Iterables.partition(entityKeyIds, MAX_BATCH_SIZE)
+        while (idsBatch.isNotEmpty()) {
 
-            for (idsChunk in chunkedEntityKeyIds) {
-                val ids = idsChunk.toSet()
+            val writeEvent = deletionManager.clearOrDeleteEntities(
+                    entitySet.id,
+                    idsBatch,
+                    entitySet.expiration!!.deleteType
+            )
 
-                val writeEvent = deletionManager.clearOrDeleteEntities(
-                        entitySet.id,
-                        ids,
-                        entitySet.expiration!!.deleteType
-                )
+            logger.info(
+                    "Completed deleting {} expired elements from entity set {}.",
+                    writeEvent.numUpdates,
+                    entitySet.name
+            )
 
-                logger.info(
-                        "Completed deleting {} expired elements from entity set {}.",
-                        writeEvent.numUpdates,
-                        entitySet.name
-                )
-
-                totalDeletedEntitiesCount += writeEvent.numUpdates
-                deletedEntityKeyIds.addAll(ids)
-            }
+            totalDeletedEntitiesCount += writeEvent.numUpdates
 
             auditingManager.recordEvents(
                     listOf(
@@ -163,23 +160,26 @@ class BackgroundExpiredDataDeletionService(
                                     AclKey(entitySet.id),
                                     AuditEventType.DELETE_EXPIRED_ENTITIES,
                                     "Expired entities deleted through BackgroundExpiredDataDeletionService",
-                                    Optional.of(deletedEntityKeyIds),
+                                    Optional.of(idsBatch),
                                     ImmutableMap.of(),
                                     OffsetDateTime.now(),
                                     Optional.empty()
                             )
                     )
             )
+
+            idsBatch = getBatchOfExpiringEkids(entitySet, expirationPT)
         }
-        return totalDeletedEntitiesCount
-    }
 
-    private fun tryLockEntitySet(entitySet: EntitySet): Boolean {
-        return expirationLocks.putIfAbsent(entitySet.id, System.currentTimeMillis() + MAX_DURATION_MILLIS) == null
-    }
+    return totalDeletedEntitiesCount
+}
 
-    private fun deleteIndexingLock(entitySet: EntitySet) {
-        expirationLocks.delete(entitySet.id)
-    }
+private fun tryLockEntitySet(entitySet: EntitySet): Boolean {
+    return expirationLocks.putIfAbsent(entitySet.id, System.currentTimeMillis() + MAX_DURATION_MILLIS) == null
+}
+
+private fun deleteIndexingLock(entitySet: EntitySet) {
+    expirationLocks.delete(entitySet.id)
+}
 
 }
