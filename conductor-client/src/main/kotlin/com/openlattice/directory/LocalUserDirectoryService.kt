@@ -7,13 +7,19 @@ import org.springframework.stereotype.Service
 
 @Service
 class LocalUserDirectoryService(auth0Configuration: Auth0Configuration) : UserDirectoryService {
+
     val users = auth0Configuration.users.associateBy { it.id }.toMutableMap()
+
     override fun getAllUsers(): Map<String, User> {
         return users
     }
 
     override fun getUser(userId: String): User {
         return users.getValue(userId)
+    }
+
+    override fun getUsers(userIds: Set<String>): Map<String, User> {
+        return userIds.associateBy({ it }, { users.getValue(it) })
     }
 
     override fun searchAllUsers(searchQuery: String): Map<String, Auth0UserBasic> {
