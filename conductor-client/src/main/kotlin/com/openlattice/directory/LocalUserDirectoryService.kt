@@ -19,7 +19,7 @@ class LocalUserDirectoryService(auth0Configuration: Auth0Configuration) : UserDi
     }
 
     override fun getUsers(userIds: Set<String>): Map<String, User> {
-        return userIds.associateBy({ it }, { users.getValue(it) })
+        return userIds.associateWith { users.getValue(it) }
     }
 
     override fun searchAllUsers(searchQuery: String): Map<String, Auth0UserBasic> {
