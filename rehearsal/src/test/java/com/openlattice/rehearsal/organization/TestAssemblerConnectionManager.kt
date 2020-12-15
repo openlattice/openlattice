@@ -79,7 +79,7 @@ class TestAssemblerConnectionManager {
                 edgeEntitySetId: Optional<UUID> = Optional.empty(),
                 dstEntitySetId: Optional<UUID> = Optional.empty()
         ): String {
-            return "SELECT * FROM ${AssemblerConnectionManager.MATERIALIZED_VIEWS_SCHEMA}.${PostgresTable.E.name} " +
+            return "SELECT * FROM ${AssemblerConnectionManager.OPENLATTICE_SCHEMA}.${PostgresTable.E.name} " +
                     if (!srcEntitySetId.isPresent && !edgeEntitySetId.isPresent && !dstEntitySetId.isPresent) {
                         ""
                     } else {
