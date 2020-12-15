@@ -244,6 +244,9 @@ public interface OrganizationsApi {
     @GET( BASE + PRINCIPALS + MEMBERS + COUNT )
     Map<UUID, Integer> getMemberCountForOrganizations( @Body Set<UUID> organizationIds );
 
+    @GET( BASE + PRINCIPALS + ROLES + COUNT )
+    Map<UUID, Integer> getRoleCountForOrganizations( @Body Set<UUID> organizationIds );
+
     @PUT( BASE + ID_PATH + PRINCIPALS + MEMBERS + USER_ID_PATH )
     Void addMember( @Path( ID ) UUID organizationId, @Path( USER_ID ) String userId );
 
