@@ -109,8 +109,12 @@ class ExternalDatabaseManagementService(
         return column.id
     }
 
-    fun getColumnMetadata(tableName: String, tableId: UUID, orgId: UUID, columnName: Optional<String>): BasePostgresIterable<
-            OrganizationExternalDatabaseColumn> {
+    fun getColumnMetadata(
+            tableName: String,
+            tableId: UUID,
+            orgId: UUID,
+            columnName: Optional<String>
+    ): List<OrganizationExternalDatabaseColumn> {
         var columnCondition = ""
         columnName.ifPresent { columnCondition = "AND information_schema.columns.column_name = '$it'" }
 
@@ -118,21 +122,26 @@ class ExternalDatabaseManagementService(
         return BasePostgresIterable(
                 StatementHolderSupplier(externalDbManager.connectToOrg(orgId), sql)
         ) { rs ->
-            val storedColumnName = columnName(rs)
-            val dataType = sqlDataType(rs)
-            val position = ordinalPosition(rs)
-            val isPrimaryKey = constraintType(rs) == primaryKeyConstraint
-            OrganizationExternalDatabaseColumn(
-                    Optional.empty(),
-                    storedColumnName,
-                    storedColumnName,
-                    Optional.empty(),
-                    tableId,
-                    orgId,
-                    dataType,
-                    isPrimaryKey,
-                    position)
-        }
+            try {
+                val storedColumnName = columnName(rs)
+                val dataType = sqlDataType(rs)
+                val position = ordinalPosition(rs)
+                val isPrimaryKey = constraintType(rs) == primaryKeyConstraint
+                OrganizationExternalDatabaseColumn(
+                        Optional.empty(),
+                        storedColumnName,
+                        storedColumnName,
+                        Optional.empty(),
+                        tableId,
+                        orgId,
+                        dataType,
+                        isPrimaryKey,
+                        position)
+            } catch (e: Exception) {
+                logger.error("Unable to map column to OrganizationExternalDatabaseColumn object for table {} in organization {}", tableName, orgId, e)
+                null
+            }
+        }.filterNotNull()
     }
 
     fun destroyTransportedEntitySet(entitySetId: UUID) {
