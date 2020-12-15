@@ -103,7 +103,7 @@ println "Enabled profiles: " + Arrays.toString(run.args)
 
 checkstyle {
   toolVersion = "${checkstyle_version}"
-  config project.resources.text.fromUri('https://raw.githubusercontent.com/openlattice/gradles/master/checkstyle.xml')
+  config project.resources.text.fromUri('https://raw.githubusercontent.com/openlattice/openlattice/develop/gradles/checkstyle.xml')
 }
 tasks.withType(Checkstyle) {
     reports {

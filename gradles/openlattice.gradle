@@ -1,6 +1,5 @@
 //Easy semantic version based off describe + tags
 
-def bpr="${System.getenv("bamboo_planRepository_revision")}"
 def branch ="$System.env.bamboo_planRepository_branchName"
 
 if( branch == null || branch == "" ) {
@@ -15,16 +14,10 @@ if( branch == null || branch == "" ) {
 
 ext.developmentMode = !ext.has("jars")
 
-println project.name + " Using bpr: " + bpr
-
 def getVersionName = { ->
   def stdout = new ByteArrayOutputStream()
   exec {
-    if( bpr == 'null' || bpr == null || ( project.hasProperty('developmentMode') && ext.developmentMode ) ) {
-        commandLine 'git', 'describe', '--tags', '--long'
-    } else {
-        commandLine 'git', 'describe', '--tags', '--long', bpr
-    }
+    commandLine 'git', 'describe', '--tags', '--long'
     standardOutput = stdout
   }
   def tagVer = stdout.toString().trim()
@@ -41,11 +34,7 @@ version = getVersionName()
 def getFullVersion = { ->
   def stdout = new ByteArrayOutputStream()
   exec {
-    if( bpr == 'null' || bpr == null || ( project.hasProperty('developmentMode') && ext.developmentMode ) ) {
-        commandLine 'git', 'describe', '--tags', '--long'
-    } else {
-        commandLine 'git', 'describe', '--tags', '--long', bpr
-    }
+    commandLine 'git', 'describe', '--tags', '--long'
     standardOutput = stdout
   }
   def tagVer = stdout.toString().trim()
@@ -66,8 +55,8 @@ tasks.withType(Tar){
   compression = Compression.GZIP
 }
 
-apply from: "https://raw.githubusercontent.com/openlattice/gradles/master/repos.gradle"
-apply from: "https://raw.githubusercontent.com/openlattice/gradles/master/publish.gradle"
+apply from: "https://raw.githubusercontent.com/openlattice/openlattice/develop/gradles/repos.gradle"
+apply from: "https://raw.githubusercontent.com/openlattice/openlattice/develop/gradles/publish.gradle"
 
 //Run jacoco after tests.
 if( project.hasProperty('projectName') && project.hasProperty('scmUrl')  ) {
