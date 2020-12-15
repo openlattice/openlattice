@@ -28,11 +28,15 @@ import com.openlattice.directory.pojo.Auth0UserBasic
 internal const val DEFAULT_PAGE_SIZE = 100
 
 interface UserDirectoryService {
+
     @Timed
     fun getAllUsers(): Map<String, User>
 
     @Timed
     fun getUser(userId: String): User
+
+    @Timed
+    fun getUsers(userIds: Set<String>): Map<String, User>
 
     //TODO: Switch over to a Hazelcast map to relieve pressure from Auth0
     @Timed

@@ -77,12 +77,14 @@ class ElasticsearchBlocker(
         logger.info("Blocking for entity data key {}", entityDataKey)
 
         val sw = Stopwatch.createStarted()
+        
+        val existingEntitySetIds = entitySets.keys.toSet()
         var blockedEntitySetSearchResults = elasticsearch.executeBlockingSearch(
                 personEntityType.id,
                 getFieldSearches(entity.orElseGet { dataLoader.getEntity(entityDataKey) }),
                 top,
                 false
-        )
+        ).filter { existingEntitySetIds.contains(it.key) }
 
         logger.info(
                 "Entity data key {} blocked to {} elements in {} ms.", entityDataKey,
