@@ -40,6 +40,8 @@ import com.openlattice.users.Auth0UtilsKt;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.*;
+import retrofit2.http.Body;
+import retrofit2.http.POST;
 
 import javax.inject.Inject;
 import java.util.EnumSet;
@@ -144,6 +146,17 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
             produces = MediaType.APPLICATION_JSON_VALUE )
     public User getUser( @PathVariable( USER_ID ) String userId ) {
         return userDirectoryService.getUser( userId );
+    }
+
+    @Timed
+    @RequestMapping(
+            path = USERS,
+            method = RequestMethod.POST,
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public Map<String, User> getUsers( @RequestBody Set<String> userIds ) {
+        return userDirectoryService.getUsers( userIds );
     }
 
     @Timed
