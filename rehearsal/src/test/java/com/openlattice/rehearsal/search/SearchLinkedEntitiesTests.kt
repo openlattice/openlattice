@@ -241,7 +241,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
 
         Thread.sleep(60000L) // wait for indexing to finish
 
-        val search = Search(Optional.of(esLinked.name), Optional.of(personEt.id), Optional.empty(), 0, 1)
+        val search = Search(Optional.of(esLinked.name), Optional.of(personEt.id), Optional.empty(), Optional.empty(), 0, 1)
         val properties1 = searchApi.executeEntitySetKeywordQuery(search).hits[0]["propertyTypes"] as ArrayList<LinkedHashMap<String, Any>>
 
         val newPropertyType = createPropertyType()
