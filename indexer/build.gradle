@@ -54,7 +54,7 @@ ext.scmUrl = 'scm:git:https://github.com/openlattice/indexer.git'
 ext.connectionUrl = 'scm:git:https://github.com/openlattice/indexer.git'
 ext.developerConnectionUrl = 'scm:git:https://github.com/openlattice/indexer.git'
 
-apply from: "../gradles/openlattice.gradle"
+apply from: "https://raw.githubusercontent.com/openlattice/openlattice/fix/build/gradles/openlattice.gradle"
 apply plugin: 'kotlin'
 apply plugin: 'license-report'
 

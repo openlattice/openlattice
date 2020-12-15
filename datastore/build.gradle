@@ -43,7 +43,7 @@ distTar {
     archiveName "datastore.tgz"
 }
 
-apply from: "../gradles/openlattice.gradle"
+apply from: "https://raw.githubusercontent.com/openlattice/openlattice/fix/build/gradles/openlattice.gradle"
 
 mainClassName = "com.openlattice.datastore.Datastore"
 
