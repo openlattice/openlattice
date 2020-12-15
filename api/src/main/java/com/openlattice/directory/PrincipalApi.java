@@ -84,6 +84,9 @@ public interface PrincipalApi {
     @GET( BASE + USERS + USER_ID_PATH )
     User getUser( @Path( USER_ID ) String userId );
 
+    @POST( BASE + USERS )
+    Map<String, User> getUsers( @Body Set<String> userIds );
+
     @GET( BASE + DB )
     MaterializedViewAccount getMaterializedViewAccount();
 
