@@ -34,6 +34,7 @@ java {
 
 checkstyle {
     toolVersion = '7.4'
+    showViolations = false
     config project.resources.text.fromUri('https://raw.githubusercontent.com/openlattice/openlattice/develop/gradles/checkstyle.xml')
 }
 
