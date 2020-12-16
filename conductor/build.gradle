@@ -25,6 +25,7 @@ plugins {
     id "eclipse"
     id "idea"
     id "jacoco"
+    id 'checkstyle'
     id "maven-publish"
     id "signing"
     id 'com.github.spotbugs'

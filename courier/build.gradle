@@ -25,6 +25,7 @@ plugins {
     id "eclipse"
     id "idea"
     id "jacoco"
+    id 'checkstyle'
     id 'com.github.spotbugs'
     id 'org.jetbrains.kotlin.jvm'
     id 'org.jetbrains.kotlin.plugin.spring'
