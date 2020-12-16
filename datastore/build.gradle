@@ -90,6 +90,7 @@ targetCompatibility = JavaVersion.VERSION_11
 
 checkstyle {
     toolVersion = '7.4'
+    config project.resources.text.fromUri('https://raw.githubusercontent.com/openlattice/openlattice/develop/gradles/checkstyle.xml')
 }
 
 tasks.withType(Checkstyle) {

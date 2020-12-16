@@ -103,6 +103,18 @@ jacoco {
     toolVersion = "0.8.2"
 }
 
+checkstyle {
+    toolVersion = '7.4'
+    config project.resources.text.fromUri('https://raw.githubusercontent.com/openlattice/openlattice/develop/gradles/checkstyle.xml')
+}
+
+tasks.withType(Checkstyle) {
+    reports {
+        xml.enabled = false
+        html.enabled = true
+    }
+}
+
 spotbugs {
     reportLevel = 'high'
     toolVersion = "${spotbugs_annotations_version}"

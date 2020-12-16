@@ -57,18 +57,13 @@ licenseReport {
     renderers = [new InventoryHtmlReportRenderer()]
 }
 
-checkstyle {
-    toolVersion = '7.4'
-    config project.resources.text.fromUri('https://raw.githubusercontent.com/openlattice/openlattice/develop/gradles/checkstyle.xml')
+jacoco {
+    toolVersion = "0.8.2"
 }
 
 spotbugs {
     reportLevel = 'high'
     toolVersion = "${spotbugs_annotations_version}"
-}
-
-jacoco {
-    toolVersion = "0.8.2"
 }
 
 spotbugsMain {
@@ -78,9 +73,9 @@ spotbugsMain {
     }
 }
 
-
-tasks.withType(Javadoc) {
-    enabled = false
+checkstyle {
+    toolVersion = '7.4'
+    config project.resources.text.fromUri('https://raw.githubusercontent.com/openlattice/openlattice/develop/gradles/checkstyle.xml')
 }
 
 tasks.withType(Checkstyle) {
@@ -88,6 +83,10 @@ tasks.withType(Checkstyle) {
         xml.enabled = false
         html.enabled = true
     }
+}
+
+tasks.withType(Javadoc) {
+    enabled = false
 }
 
 //TODO: Once Swagger 3.0 has working OpenAPI support finish wiring all this in.

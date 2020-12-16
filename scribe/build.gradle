@@ -44,6 +44,17 @@ apply plugin: 'kotlin'
 sourceCompatibility=JavaVersion.VERSION_11
 ext.targetCompatibility = JavaVersion.VERSION_11
 
+checkstyle {
+    toolVersion = '7.4'
+    config project.resources.text.fromUri('https://raw.githubusercontent.com/openlattice/openlattice/develop/gradles/checkstyle.xml')
+}
+
+tasks.withType(Checkstyle) {
+    reports {
+        xml.enabled = false
+        html.enabled = true
+    }
+}
 spotbugs {
     reportLevel = 'high'
     toolVersion = "${spotbugs_annotations_version}"

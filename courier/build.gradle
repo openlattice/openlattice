@@ -43,17 +43,28 @@ apply from: "https://raw.githubusercontent.com/openlattice/openlattice/fix/build
 sourceCompatibility=JavaVersion.VERSION_11
 targetCompatibility=JavaVersion.VERSION_11
 
+jacoco {
+    toolVersion = "0.8.2"
+}
+
 spotbugs {
     reportLevel = 'high'
     toolVersion = "${spotbugs_annotations_version}"
 }
 
-jacoco {
-    toolVersion = "0.8.2"
+spotbugsMain {
+    reports {
+        xml.enabled = false
+        html.enabled = true
+    }
 }
 
+checkstyle {
+    toolVersion = '7.4'
+    config project.resources.text.fromUri('https://raw.githubusercontent.com/openlattice/openlattice/develop/gradles/checkstyle.xml')
+}
 
-spotbugsMain {
+tasks.withType(Checkstyle) {
     reports {
         xml.enabled = false
         html.enabled = true
