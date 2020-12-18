@@ -7,7 +7,6 @@ logging/
 bin/
 build/
 artifacts/
-gradle.properties
 .DS_Store
 *.iml
 *.swp

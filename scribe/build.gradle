@@ -82,12 +82,28 @@ dependencies {
     compileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugs_annotations_version}"
     testCompileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugs_annotations_version}"
 
+    /*
+     * JAVAMAIL
+     * Java email client.
+     */
+    implementation "org.jodd:jodd-mail:${jodd_mail_version}"
+
+    /*
+     * @Inject and @Nullable support
+     */
+    implementation "javax.inject:javax.inject:${javax_inject_version}"
+
+    implementation "com.google.guava:guava:${guava_version}"
+    implementation "commons-codec:commons-codec:${commons_codec_version}"
+    implementation "org.apache.commons:commons-lang3:${commonsLang_version}"
+    implementation "com.fasterxml.jackson.module:jackson-module-jaxb-annotations:${jackson_version}"
+
+    implementation "com.hazelcast:hazelcast:${hazelcast_version}"
+
     compile "com.esotericsoftware:kryo-shaded:${kryo_shaded_version}"
     compile "com.esotericsoftware:minlog:${minlog_version}"
     compile "com.esotericsoftware:reflectasm:${reflectasm_version}"
     compile "org.objenesis:objenesis:${objenesis_version}"
-
-    implementation "com.openlattice:rhizome:${rhizome_client_version}"
 
     if( project.hasProperty('developmentMode') && project.developmentMode ) {
         testImplementation(project(path: ":rhizome-client", configuration: "tests"))
