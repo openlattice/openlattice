@@ -238,7 +238,7 @@ class BackgroundExternalDatabaseSyncingService(
             currentColumnIds: MutableSet<UUID>
     ): Int {
         var totalSynced = 0
-        val columns = edms.getColumnMetadata(tableName, tableId, orgId, columnName).toList()
+        val columns = edms.getColumnMetadata(tableName, tableId, orgId, columnName)
 
         organizationMetadataEntitySetsService.addDatasetColumns(
                 orgId,
