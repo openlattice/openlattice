@@ -105,6 +105,8 @@ dependencies {
     compile "com.esotericsoftware:reflectasm:${reflectasm_version}"
     compile "org.objenesis:objenesis:${objenesis_version}"
 
+    implementation "com.openlattice:rhizome:${rhizome_client_version}"
+
     if( project.hasProperty('developmentMode') && project.developmentMode ) {
         testImplementation(project(path: ":rhizome-client", configuration: "tests"))
     } else {
