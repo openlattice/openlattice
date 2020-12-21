@@ -156,6 +156,10 @@ sourceSets {
     test.runtimeClasspath += configurations.provided
 }
 
+test {
+    ignoreFailures = true
+}
+
 dependencies {
     spotbugsPlugins "com.h3xstream.findsecbugs:findsecbugs-plugin:${findsecbugs_version}"
     compileOnly "net.jcip:jcip-annotations:${jcip_version}"

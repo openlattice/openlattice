@@ -86,6 +86,7 @@ if (GC == 'null' || GC == null || GC == "") {
 
 mainClassName = "com.openlattice.indexing.Indexer"
 applicationDefaultJvmArgs = [INDEXER_XMS, INDEXER_XMX, "-server", GC, PARALLEL]
+
 sourceCompatibility = JavaVersion.VERSION_11
 targetCompatibility = JavaVersion.VERSION_11
 
@@ -142,6 +143,10 @@ sourceSets {
     main.compileClasspath += configurations.provided
     test.compileClasspath += configurations.provided
     test.runtimeClasspath += configurations.provided
+}
+
+test {
+  ignoreFailures = true
 }
 
 dependencies {
