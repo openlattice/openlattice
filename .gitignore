@@ -6,6 +6,7 @@ logging/
 .idea/
 bin/
 build/
+out/
 artifacts/
 .DS_Store
 *.iml
