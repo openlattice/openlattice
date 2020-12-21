@@ -302,7 +302,7 @@ class AssemblerConnectionManager(
         val db = quote(dbName)
         val dbRole = quote(buildOrganizationRoleName(dbName))
         val unquotedDbAdminUser = buildOrganizationUserId(organizationId)
-        val dbAdminUser = dbCredentialService.getDbUsername(unquotedDbAdminUser)
+        val dbAdminUser = quote(dbCredentialService.getDbUsername(unquotedDbAdminUser))
 
         val dropDb = " DROP DATABASE $db"
         val dropDbUser = "DROP ROLE $dbAdminUser"
