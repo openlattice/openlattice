@@ -12,7 +12,12 @@ if( branch == null || branch == "" ) {
     branch=stdout.toString().trim();
 }
 
-ext.developmentMode = !ext.has("jars")
+def setDevMode = { ->
+  def mono = findProject(":conductor-client")
+  return mono != null
+}
+
+ext.developmentMode = setDevMode()
 
 def getVersionName = { ->
   def stdout = new ByteArrayOutputStream()
