@@ -7,7 +7,6 @@ import com.openlattice.edm.PropertyTypeIdFqn
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.transporter.types.TransporterDatastore
 import com.openlattice.transporter.types.TransporterDependent
-import com.zaxxer.hikari.HikariDataSource
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.slf4j.LoggerFactory
 import java.util.UUID
@@ -19,7 +18,6 @@ import java.util.UUID
 @SuppressFBWarnings(value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"], justification = "Ignore internal kotlin redundant nullchecks")
 data class TransportEntitySetEntryProcessor(
         val organizationId: UUID,
-        val orgHds: HikariDataSource,
         val ptIdToFqnColumns: Set<PropertyTypeIdFqn>,
         val usersToColumnPermissions: Map<String, List<String>>
 ) : AbstractRhizomeEntryProcessor<UUID, EntitySet, Void?>(),
@@ -42,7 +40,6 @@ data class TransportEntitySetEntryProcessor(
         try {
             data.transportEntitySet(
                     organizationId,
-                    orgHds,
                     es,
                     ptIdToFqnColumns,
                     usersToColumnPermissions

@@ -144,8 +144,8 @@ class ExternalDatabaseManagementService(
     }
 
     fun destroyTransportedEntitySet(organizationId: UUID, entitySetId: UUID) {
-        val orgHds = externalDbManager.connectToOrg(organizationId)
-        entitySets.executeOnKey(entitySetId, DestroyTransportedEntitySetEntryProcessor(orgHds).init(transporterDatastore))
+        transporterService.destroyTransportedEntitySet(organizationId, entitySetId)
+        entitySets.executeOnKey(entitySetId, DestroyTransportedEntitySetEntryProcessor())
     }
 
     fun transportEntitySet(organizationId: UUID, entitySetId: UUID) {

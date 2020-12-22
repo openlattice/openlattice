@@ -129,7 +129,7 @@ class Assembler(
             )
             assemblies.executeOnEntries(
                     AddFlagsToOrganizationMaterializedEntitySetProcessor(entitySetId, setOf(flag)),
-                    entitySetIdInOrganizationPredicate(entitySetId) as Predicate<UUID, OrganizationAssembly>
+                    entitySetIdInOrganizationPredicate(entitySetId)
             )
         }
     }

@@ -167,6 +167,10 @@ final class TransporterService(
                 .toSet()
     }
 
+    fun destroyTransportedEntitySet(organizationId: UUID, entitySetId: UUID) {
+
+    }
+
     fun transportEntitySet(
             organizationId: UUID,
             es: EntitySet,

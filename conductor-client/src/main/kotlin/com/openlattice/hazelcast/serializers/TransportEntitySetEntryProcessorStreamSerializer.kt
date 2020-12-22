@@ -1,14 +1,15 @@
 package com.openlattice.hazelcast.serializers
 
 import com.google.common.collect.Maps
+import com.google.common.collect.Sets
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
+import com.openlattice.edm.PropertyTypeIdFqn
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.transporter.processors.TransportEntitySetEntryProcessor
 import com.openlattice.transporter.types.TransporterDatastore
 import com.openlattice.transporter.types.TransporterDependent
-import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.springframework.stereotype.Component
 import java.util.ArrayList
 import java.util.UUID
@@ -18,7 +19,7 @@ import java.util.UUID
  */
 @Component
 class TransportEntitySetEntryProcessorStreamSerializer:
-        TestableSelfRegisteringStreamSerializer<TransportEntitySetEntryProcessor> ,
+        TestableSelfRegisteringStreamSerializer<TransportEntitySetEntryProcessor>,
         TransporterDependent<Void?>
 {
     @Transient
@@ -26,7 +27,7 @@ class TransportEntitySetEntryProcessorStreamSerializer:
 
     override fun write(out: ObjectDataOutput, `object`: TransportEntitySetEntryProcessor) {
         out.writeInt(`object`.ptIdToFqnColumns.size)
-        `object`.ptIdToFqnColumns.forEach { id, fqn ->
+        `object`.ptIdToFqnColumns.forEach { (id, fqn) ->
             UUIDStreamSerializerUtils.serialize(out, id)
             FullQualifiedNameStreamSerializer.serialize(out, fqn)
         }
@@ -43,33 +44,35 @@ class TransportEntitySetEntryProcessorStreamSerializer:
 
     override fun read(`in`: ObjectDataInput): TransportEntitySetEntryProcessor {
         val colSize = `in`.readInt()
-        val columns = Maps.newLinkedHashMapWithExpectedSize<UUID, FullQualifiedName>( colSize )
-        for ( i in 0 until colSize ) {
-            columns.put(
-                    UUIDStreamSerializerUtils.deserialize(`in`),
-                    FullQualifiedNameStreamSerializer.deserialize(`in`)
+        val columns = Sets.newLinkedHashSetWithExpectedSize<PropertyTypeIdFqn>(colSize)
+        for (i in 0 until colSize) {
+            columns.add(
+                    PropertyTypeIdFqn(
+                            UUIDStreamSerializerUtils.deserialize(`in`),
+                            FullQualifiedNameStreamSerializer.deserialize(`in`)
+                    )
             )
         }
         val orgId = UUIDStreamSerializerUtils.deserialize(`in`)
         val size = `in`.readInt()
         val usersToColPerms = Maps.newLinkedHashMapWithExpectedSize<String, List<String>>(size)
         var innerSize: Int
-        for ( i in 0 until size ) {
+        for (i in 0 until size) {
             val key = `in`.readUTF()
             innerSize = `in`.readInt()
             val list = ArrayList<String>(innerSize)
-            for ( j in 0 until innerSize ) {
+            for (j in 0 until innerSize) {
                 list.add(`in`.readUTF())
             }
             usersToColPerms[key] = list
         }
-        return TransportEntitySetEntryProcessor(columns, orgId, usersToColPerms).init(data)
+        return TransportEntitySetEntryProcessor(orgId, columns, usersToColPerms).init(data)
     }
 
     override fun generateTestValue(): TransportEntitySetEntryProcessor {
         return TransportEntitySetEntryProcessor(
-                mapOf(),
                 UUID.randomUUID(),
+                setOf(),
                 mapOf()
         )
     }
