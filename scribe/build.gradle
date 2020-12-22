@@ -39,7 +39,7 @@ ext.scmUrl = 'scm:git:https://github.com/openlattice/scribe.git'
 ext.connectionUrl = 'scm:git:https://github.com/openlattice/scribe.git'
 ext.developerConnectionUrl = 'scm:git:https://github.com/openlattice/scribe.git'
 
-apply from: "https://raw.githubusercontent.com/openlattice/openlattice/fix/build/gradles/openlattice.gradle"
+apply from: "../gradles/openlattice.gradle"
 apply plugin: 'kotlin'
 sourceCompatibility=JavaVersion.VERSION_11
 ext.targetCompatibility = JavaVersion.VERSION_11
