@@ -36,7 +36,7 @@ ext.scmUrl = 'scm:git:https://github.com/openlattice/api.git'
 ext.connectionUrl = 'scm:git:https://github.com/openlattice/api.git'
 ext.developerConnectionUrl = 'scm:git:https://github.com/openlattice/api.git'
 
-apply from: "https://raw.githubusercontent.com/openlattice/openlattice/fix/build/gradles/openlattice.gradle"
+apply from: "../gradles/openlattice.gradle"
 apply plugin: 'org.openapi.generator'
 
 java {
