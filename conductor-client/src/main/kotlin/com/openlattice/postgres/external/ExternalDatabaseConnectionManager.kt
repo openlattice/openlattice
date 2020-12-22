@@ -66,6 +66,10 @@ class ExternalDatabaseConnectionManager(
         return perDbCache.get(dbName)
     }
 
+    fun connectAsSuperuser(): HikariDataSource {
+        return perDbCache.get("postgres")
+    }
+
     fun connectToOrg(organizationId: UUID): HikariDataSource {
         return perDbCache.get(getOrganizationDatabaseName(organizationId))
     }
