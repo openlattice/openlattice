@@ -94,6 +94,14 @@ class DataGraphService(
         return eds.getEntities(entityKeyIds, orderedPropertyNames, authorizedPropertyTypes, linking)
     }
 
+    override fun getFilteredEntitySetData(
+            entitySetId: UUID,
+            filteredDataPageDefinition: FilteredDataPageDefinition,
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
+    ): List<Map<FullQualifiedName, Set<Any>>> {
+        return eds.getFilteredEntitySetData(entitySetId, filteredDataPageDefinition, authorizedPropertyTypes)
+    }
+
     override fun getEntity(
             entitySetId: UUID,
             entityKeyId: UUID,
