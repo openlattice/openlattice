@@ -2,9 +2,9 @@ package com.openlattice.data.storage
 
 import com.codahale.metrics.annotation.Timed
 import com.openlattice.IdConstants
-import com.openlattice.analysis.SqlBindInfo
 import com.openlattice.analysis.requests.Filter
 import com.openlattice.data.DeleteType
+import com.openlattice.data.FilteredDataPageDefinition
 import com.openlattice.data.WriteEvent
 import com.openlattice.data.storage.PostgresEntitySetSizesInitializationTask.Companion.ENTITY_SET_SIZES_VIEW
 import com.openlattice.data.storage.partitions.PartitionManager
@@ -23,7 +23,6 @@ import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import java.lang.Exception
 import java.nio.ByteBuffer
 import java.security.InvalidParameterException
 import java.sql.Connection
@@ -164,7 +163,8 @@ class PostgresEntityDataQueryService(
             propertyTypeFilters: Map<UUID, Set<Filter>> = mapOf(),
             metadataOptions: Set<MetadataOption> = EnumSet.noneOf(MetadataOption::class.java),
             version: Optional<Long> = Optional.empty(),
-            linking: Boolean = false
+            linking: Boolean = false,
+            filteredDataPageDefinition: FilteredDataPageDefinition? = null
     ): Map<UUID, MutableMap<FullQualifiedName, MutableSet<Any>>> {
         return getEntitySetIterable(
                 entityKeyIds,
@@ -172,7 +172,9 @@ class PostgresEntityDataQueryService(
                 propertyTypeFilters,
                 metadataOptions,
                 version,
-                linking
+                linking,
+                false,
+                filteredDataPageDefinition
         ) { rs ->
             getEntityPropertiesByFullQualifiedName(
                     rs,
@@ -194,6 +196,7 @@ class PostgresEntityDataQueryService(
             version: Optional<Long> = Optional.empty(),
             linking: Boolean = false,
             detailed: Boolean = false,
+            filteredDataPageDefinition: FilteredDataPageDefinition? = null,
             adapter: (ResultSet) -> T
     ): BasePostgresIterable<T> {
         val propertyTypes = authorizedPropertyTypes.values.flatMap { it.values }.associateBy { it.id }
@@ -212,51 +215,21 @@ class PostgresEntityDataQueryService(
                 entitySetPartitions
             }
         }.toSet()
-        var startIndex = 2
-        if (ids.isNotEmpty()) {
-            startIndex++
-        }
-        if (partitions.isNotEmpty()) {
-            startIndex++
-        }
 
         val (sql, binders) = buildPreparableFiltersSql(
-                startIndex,
                 propertyTypes,
                 propertyTypeFilters,
                 metadataOptions,
                 linking,
-                ids.isNotEmpty(),
-                partitions.isNotEmpty(),
-                detailed
+                entitySetIds,
+                partitions,
+                ids,
+                detailed,
+                filteredDataPageDefinition
         )
 
         return BasePostgresIterable(PreparedStatementHolderSupplier(reader, sql, FETCH_SIZE) { ps ->
-            val metaBinders = linkedSetOf<SqlBinder>()
-            var bindIndex = 1
-            metaBinders.add(
-                    SqlBinder(
-                            SqlBindInfo(bindIndex++, PostgresArrays.createUuidArray(ps.connection, entitySetIds)),
-                            ::doBind
-                    )
-            )
-            if (ids.isNotEmpty()) {
-                metaBinders.add(
-                        SqlBinder(
-                                SqlBindInfo(bindIndex++, PostgresArrays.createUuidArray(ps.connection, ids)), ::doBind
-                        )
-                )
-            }
-
-            if (partitions.isNotEmpty()) {
-                metaBinders.add(
-                        SqlBinder(
-                                SqlBindInfo(bindIndex, PostgresArrays.createIntArray(ps.connection, partitions)),
-                                ::doBind
-                        )
-                )
-            }
-            (metaBinders + binders).forEach { it.bind(ps) }
+            binders.forEach { it.bind(ps) }
         }, adapter)
     }
 

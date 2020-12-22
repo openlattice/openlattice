@@ -248,8 +248,25 @@ class Assembler(
 
     fun createOrganization(organizationId: UUID, dbName: String) {
         createOrganizationTimer.time().use {
-            assemblies.set(organizationId, OrganizationAssembly(organizationId))
-            assemblies.executeOnKey(organizationId, InitializeOrganizationAssemblyProcessor(dbName).init(acm))
+
+            assemblies.putIfAbsent(organizationId, OrganizationAssembly(organizationId))
+
+            if (!assemblies.tryLock(organizationId)) {
+                logger.error("Could not initialize database for organization {} because it already being initialized.", organizationId)
+            }
+
+            try {
+                if (assemblies[organizationId]?.initialized == true) {
+                    logger.info("The database for organization {} has already been initialized", organizationId)
+                    return@use
+                }
+
+                acm.createAndInitializeOrganizationDatabase(organizationId, dbName)
+                assemblies[organizationId] = OrganizationAssembly(organizationId, true)
+            } finally {
+                assemblies.unlock(organizationId)
+            }
+
             return@use
         }
     }
