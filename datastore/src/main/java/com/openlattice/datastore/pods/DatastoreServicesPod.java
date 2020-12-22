@@ -39,11 +39,23 @@ import com.openlattice.assembler.AssemblerConnectionManager;
 import com.openlattice.assembler.AssemblerDependencies;
 import com.openlattice.assembler.pods.AssemblerConfigurationPod;
 import com.openlattice.assembler.tasks.UserCredentialSyncTask;
-import com.openlattice.auditing.*;
+import com.openlattice.auditing.AuditRecordEntitySetsManager;
+import com.openlattice.auditing.AuditingConfiguration;
+import com.openlattice.auditing.AuditingManager;
+import com.openlattice.auditing.AuditingProfiles;
+import com.openlattice.auditing.LocalAuditingService;
+import com.openlattice.auditing.S3AuditingService;
 import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.auth0.AwsAuth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
-import com.openlattice.authorization.*;
+import com.openlattice.authorization.AuthorizationManager;
+import com.openlattice.authorization.DbCredentialService;
+import com.openlattice.authorization.EdmAuthorizationHelper;
+import com.openlattice.authorization.HazelcastAclKeyReservationService;
+import com.openlattice.authorization.HazelcastSecurableObjectResolveTypeService;
+import com.openlattice.authorization.PostgresUserApi;
+import com.openlattice.authorization.Principals;
+import com.openlattice.authorization.SecurableObjectResolveTypeService;
 import com.openlattice.authorization.mapstores.ResolvedPrincipalTreesMapLoader;
 import com.openlattice.authorization.mapstores.SecurablePrincipalsMapLoader;
 import com.openlattice.codex.CodexService;
@@ -56,12 +68,23 @@ import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.graph.DataGraphServiceHelper;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
-import com.openlattice.data.storage.*;
+import com.openlattice.data.storage.ByteBlobDataManager;
+import com.openlattice.data.storage.DataDeletionService;
+import com.openlattice.data.storage.EntityDatastore;
+import com.openlattice.data.storage.IndexingMetadataManager;
+import com.openlattice.data.storage.PostgresEntityDataQueryService;
+import com.openlattice.data.storage.PostgresEntityDatastore;
+import com.openlattice.data.storage.PostgresEntitySetSizesTaskDependency;
 import com.openlattice.data.storage.aws.AwsDataSinkService;
 import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datastore.configuration.DatastoreConfiguration;
 import com.openlattice.datastore.configuration.ReadonlyDatasourceSupplier;
-import com.openlattice.datastore.services.*;
+import com.openlattice.datastore.services.AnalysisService;
+import com.openlattice.datastore.services.DatastoreElasticsearchImpl;
+import com.openlattice.datastore.services.EdmManager;
+import com.openlattice.datastore.services.EdmService;
+import com.openlattice.datastore.services.EntitySetManager;
+import com.openlattice.datastore.services.EntitySetService;
 import com.openlattice.directory.Auth0UserDirectoryService;
 import com.openlattice.directory.LocalUserDirectoryService;
 import com.openlattice.directory.UserDirectoryService;
@@ -84,7 +107,6 @@ import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.OrganizationExternalDatabaseConfiguration;
 import com.openlattice.organizations.OrganizationMetadataEntitySetsService;
 import com.openlattice.organizations.pods.OrganizationExternalDatabaseConfigurationPod;
-import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.PostgresTableManager;
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
@@ -97,6 +119,7 @@ import com.openlattice.subscriptions.PostgresSubscriptionService;
 import com.openlattice.subscriptions.SubscriptionService;
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies;
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask;
+import com.openlattice.transporter.services.TransporterService;
 import com.openlattice.transporter.types.TransporterDatastore;
 import com.openlattice.twilio.TwilioConfiguration;
 import com.openlattice.twilio.pods.TwilioConfigurationPod;
@@ -184,6 +207,9 @@ public class DatastoreServicesPod {
     private TransporterDatastore transporterDatastore;
 
     @Inject
+    private TransporterService transporterService;
+
+    @Inject
     public SecurePrincipalsManager principalService;
 
     @Inject
@@ -191,6 +217,9 @@ public class DatastoreServicesPod {
 
     @Inject
     public AuthorizationManager authorizationManager;
+
+    @Inject
+    public ExternalDatabasePermissionsManager externalDatabasePermissionsManager;
 
     @Bean
     public PostgresUserApi pgUserApi() {
@@ -505,7 +534,6 @@ public class DatastoreServicesPod {
                 organizationsManager(),
                 dcs(),
                 extDbPermManager,
-                eventBus,
                 metricRegistry );
     }
 
@@ -601,9 +629,11 @@ public class DatastoreServicesPod {
                 aclKeyReservationService,
                 authorizationManager,
                 organizationExternalDatabaseConfiguration,
-                transporterDatastore,
+                transporterService,
                 dcs(),
-                hikariDataSource );
+                externalDatabasePermissionsManager,
+                hikariDataSource
+        );
     }
 
     @Bean

@@ -30,7 +30,11 @@ import com.openlattice.assembler.EntitySetAssemblyKey
 import com.openlattice.assembler.MaterializedEntitySet
 import com.openlattice.assembler.OrganizationAssembly
 import com.openlattice.auditing.AuditRecordEntitySetConfiguration
-import com.openlattice.authorization.*
+import com.openlattice.authorization.AceKey
+import com.openlattice.authorization.AceValue
+import com.openlattice.authorization.AclKey
+import com.openlattice.authorization.AclKeySet
+import com.openlattice.authorization.SecurablePrincipal
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.codex.Base64Media
 import com.openlattice.collections.CollectionTemplateKey
@@ -41,7 +45,11 @@ import com.openlattice.directory.MaterializedViewAccount
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetPropertyKey
 import com.openlattice.edm.set.EntitySetPropertyMetadata
-import com.openlattice.edm.type.*
+import com.openlattice.edm.type.AssociationType
+import com.openlattice.edm.type.EntityType
+import com.openlattice.edm.type.EntityTypePropertyKey
+import com.openlattice.edm.type.EntityTypePropertyMetadata
+import com.openlattice.edm.type.PropertyType
 import com.openlattice.ids.Range
 import com.openlattice.linking.EntityKeyPair
 import com.openlattice.notifications.sms.SmsEntitySetInformation
@@ -61,7 +69,8 @@ import com.openlattice.scheduling.ScheduledTask
 import com.openlattice.shuttle.Integration
 import com.openlattice.shuttle.IntegrationJob
 import com.openlattice.transporter.types.TransporterColumnSet
-import java.util.*
+import java.util.ArrayList
+import java.util.UUID
 
 class HazelcastMap<K, V> internal constructor(val name: String) : TypedMapIdentifier<K, V> {
     private val checker = instanceChecker.checkInstance(name)
@@ -95,6 +104,8 @@ class HazelcastMap<K, V> internal constructor(val name: String) : TypedMapIdenti
         @JvmField val ALLOWED_EMAIL_DOMAINS = HazelcastMap<UUID, DelegatedStringSet>("ALLOWED_EMAIL_DOMAINS")
         @JvmField val APP_CONFIGS = HazelcastMap<AppConfigKey, AppTypeSetting>("APP_CONFIGS")
         @JvmField val APPS = HazelcastMap<UUID, App>("APPS")
+
+        //        @JvmField val ASSEMBLED_ENTITY_SET_METADATA = HazelcastMap<EntitySetAssemblyKey, OrganizationAssembly>("ASSEMBLIES")
         @JvmField val ASSEMBLIES = HazelcastMap<UUID, OrganizationAssembly>("ASSEMBLIES")
         @JvmField val ASSOCIATION_TYPES = HazelcastMap<UUID, AssociationType>("ASSOCIATION_TYPES")
         @JvmField val AUDIT_RECORD_ENTITY_SETS = HazelcastMap<AclKey, AuditRecordEntitySetConfiguration>("AUDIT_RECORD_ENTITY_SETS")

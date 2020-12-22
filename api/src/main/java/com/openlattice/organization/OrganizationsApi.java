@@ -23,7 +23,16 @@ import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.Grant;
 import com.openlattice.organizations.Organization;
 import com.openlattice.organizations.OrganizationMetadataEntitySetIds;
-import retrofit2.http.*;
+import kotlin.Deprecated;
+import kotlin.DeprecationLevel;
+import retrofit2.http.Body;
+import retrofit2.http.DELETE;
+import retrofit2.http.GET;
+import retrofit2.http.HTTP;
+import retrofit2.http.PATCH;
+import retrofit2.http.POST;
+import retrofit2.http.PUT;
+import retrofit2.http.Path;
 
 import javax.annotation.Nonnull;
 import java.util.EnumSet;
@@ -143,6 +152,7 @@ public interface OrganizationsApi {
      * @param refreshRatesOfEntitySets The refresh rate in minutes of each entity set to assemble into materialized
      *                                 views mapped by their ids.
      */
+    @Deprecated( message = "Use transportEntitySet endpoint instead", level = DeprecationLevel.ERROR )
     @POST( BASE + ID_PATH + ENTITY_SETS + ASSEMBLE )
     Map<UUID, Set<OrganizationEntitySetFlag>> assembleEntitySets(
             @Path( ID ) UUID organizationId,

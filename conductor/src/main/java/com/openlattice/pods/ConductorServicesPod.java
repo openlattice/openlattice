@@ -38,7 +38,6 @@ import com.openlattice.assembler.Assembler.OrganizationAssembliesInitializerTask
 import com.openlattice.assembler.AssemblerConfiguration;
 import com.openlattice.assembler.AssemblerConnectionManager;
 import com.openlattice.assembler.AssemblerDependencies;
-import com.openlattice.assembler.MaterializedEntitySetsDependencies;
 import com.openlattice.assembler.pods.AssemblerConfigurationPod;
 import com.openlattice.assembler.tasks.UsersAndRolesInitializationTask;
 import com.openlattice.auditing.AuditInitializationTask;
@@ -48,7 +47,13 @@ import com.openlattice.auditing.pods.AuditingConfigurationPod;
 import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.auth0.AwsAuth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
-import com.openlattice.authorization.*;
+import com.openlattice.authorization.AuthorizationManager;
+import com.openlattice.authorization.DbCredentialService;
+import com.openlattice.authorization.EdmAuthorizationHelper;
+import com.openlattice.authorization.HazelcastAclKeyReservationService;
+import com.openlattice.authorization.HazelcastSecurableObjectResolveTypeService;
+import com.openlattice.authorization.Principals;
+import com.openlattice.authorization.SecurableObjectResolveTypeService;
 import com.openlattice.authorization.initializers.AuthorizationInitializationDependencies;
 import com.openlattice.authorization.initializers.AuthorizationInitializationTask;
 import com.openlattice.authorization.mapstores.ResolvedPrincipalTreesMapLoader;
@@ -60,7 +65,13 @@ import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.DataGraphService;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
-import com.openlattice.data.storage.*;
+import com.openlattice.data.storage.ByteBlobDataManager;
+import com.openlattice.data.storage.EntityDatastore;
+import com.openlattice.data.storage.IndexingMetadataManager;
+import com.openlattice.data.storage.PostgresEntityDataQueryService;
+import com.openlattice.data.storage.PostgresEntityDatastore;
+import com.openlattice.data.storage.PostgresEntitySetSizesInitializationTask;
+import com.openlattice.data.storage.PostgresEntitySetSizesTaskDependency;
 import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
@@ -107,7 +118,13 @@ import com.openlattice.subscriptions.SubscriptionNotificationTask;
 import com.openlattice.subscriptions.SubscriptionService;
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies;
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask;
-import com.openlattice.users.*;
+import com.openlattice.users.Auth0SyncInitializationTask;
+import com.openlattice.users.Auth0SyncService;
+import com.openlattice.users.Auth0SyncTask;
+import com.openlattice.users.Auth0SyncTaskDependencies;
+import com.openlattice.users.Auth0UserListingService;
+import com.openlattice.users.LocalUserListingService;
+import com.openlattice.users.UserListingService;
 import com.openlattice.users.export.Auth0ApiExtension;
 import com.zaxxer.hikari.HikariDataSource;
 import org.springframework.context.annotation.Bean;
@@ -255,18 +272,6 @@ public class ConductorServicesPod {
     }
 
     @Bean
-    public MaterializedEntitySetsDependencies materializedEntitySetsDependencies() {
-        return new MaterializedEntitySetsDependencies(
-                assembler(),
-                HazelcastMap.MATERIALIZED_ENTITY_SETS.getMap( hazelcastInstance ),
-                organizationsManager(),
-                dataModelService(),
-                authorizingComponent(),
-                hikariDataSource
-        );
-    }
-
-    @Bean
     public AuthorizationInitializationTask authorizationBootstrap() {
         return new AuthorizationInitializationTask();
     }
@@ -299,13 +304,13 @@ public class ConductorServicesPod {
 
     @Bean
     public AssemblerConnectionManager assemblerConnectionManager() {
-        return new AssemblerConnectionManager( assemblerConfiguration,
+        return new AssemblerConnectionManager(
+                assemblerConfiguration,
                 externalDbConnMan,
                 principalService,
                 organizationsManager(),
                 dbCredService(),
                 extDbPermManager,
-                eventBus,
                 metricRegistry );
     }
 

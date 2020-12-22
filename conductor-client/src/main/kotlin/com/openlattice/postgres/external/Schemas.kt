@@ -1,7 +1,7 @@
 package com.openlattice.postgres.external
 
 /**
- * @author Drew Bailey (drewbaileym@gmail.com)
+ * @author Drew Bailey (drew@openlattice.com)
  */
 enum class Schemas(val label: String) {
     INTEGRATIONS_SCHEMA("integrations"),

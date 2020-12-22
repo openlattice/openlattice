@@ -1,8 +1,9 @@
 package com.openlattice.assembler
 
+import com.openlattice.authorization.Permission
 import com.openlattice.authorization.PrincipalType
 import com.openlattice.organization.roles.Role
-import java.util.*
+import java.util.UUID
 import java.util.regex.Pattern
 
 private const val ADFS_PREFIX = "adfs|"
@@ -17,6 +18,13 @@ private val USERNAME_REGEX = Pattern.compile(".*(\\|).*(\\|).*")
  */
 class PostgresRoles private constructor() {
     companion object {
+
+        @JvmStatic
+        fun buildPermissionRoleName(tableId: UUID, columnId: UUID, permission: Permission): String {
+            return "permission_${tableId}_${columnId}_${permission.name.toLowerCase()}"
+//            return "$INTERNAL_PREFIX|permission|${role.id}"
+        }
+
         @JvmStatic
         fun buildOrganizationUserId(organizationId: UUID): String {
             return "$INTERNAL_PREFIX|organization|$organizationId"
@@ -24,6 +32,7 @@ class PostgresRoles private constructor() {
 
         @JvmStatic
         fun buildPostgresRoleName(role: Role): String {
+//            return "principal_${principal}"
             return "$INTERNAL_PREFIX|role|${role.id}"
         }
 

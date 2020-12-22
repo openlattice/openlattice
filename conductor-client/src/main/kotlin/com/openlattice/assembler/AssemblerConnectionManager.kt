@@ -24,15 +24,12 @@ package com.openlattice.assembler
 import com.codahale.metrics.MetricRegistry
 import com.codahale.metrics.MetricRegistry.name
 import com.codahale.metrics.Timer
-import com.google.common.eventbus.EventBus
 import com.openlattice.ApiHelpers
 import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationRoleName
 import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationUserId
-import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresRoleName
 import com.openlattice.authorization.*
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
-import com.openlattice.organization.OrganizationEntitySetFlag
 import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.DataTables.quote
@@ -46,7 +43,6 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.sql.Connection
 import java.util.*
-import kotlin.NoSuchElementException
 
 private val logger = LoggerFactory.getLogger(AssemblerConnectionManager::class.java)
 
@@ -62,7 +58,6 @@ class AssemblerConnectionManager(
         private val organizations: HazelcastOrganizationService,
         private val dbCredentialService: DbCredentialService,
         private val extDbPermsMananger: ExternalDatabasePermissionsManager,
-        eventBus: EventBus,
         metricRegistry: MetricRegistry
 ) {
 
@@ -71,10 +66,6 @@ class AssemblerConnectionManager(
             metricRegistry.timer(name(AssemblerConnectionManager::class.java, "materializeAll"))
     private val materializeEntitySetsTimer: Timer =
             metricRegistry.timer(name(AssemblerConnectionManager::class.java, "materializeEntitySets"))
-
-    init {
-        eventBus.register(this)
-    }
 
     companion object {
         const val PUBLIC_ROLE = "public"
@@ -294,99 +285,9 @@ class AssemblerConnectionManager(
         }
     }
 
-    internal fun materializeEntitySets(
-            organizationId: UUID,
-            authorizedPropertyTypesByEntitySet: Map<EntitySet, Map<UUID, PropertyType>>,
-            authorizedPropertyTypesOfPrincipalsByEntitySetId: Map<UUID, Map<Principal, Set<PropertyType>>>
-    ): Map<UUID, Set<OrganizationEntitySetFlag>> {
-        logger.info(
-                "Materializing entity sets ${authorizedPropertyTypesByEntitySet.keys.map { it.id }} in " +
-                        "organization $organizationId database."
-        )
-
-        materializeAllTimer.time().use {
-            extDbConnManager.connectToOrg(organizationId).let { datasource ->
-                materializeEntitySets(
-                        datasource,
-                        authorizedPropertyTypesByEntitySet,
-                        authorizedPropertyTypesOfPrincipalsByEntitySetId
-                )
-            }
-            return authorizedPropertyTypesByEntitySet
-                    .map { it.key.id to EnumSet.of(OrganizationEntitySetFlag.MATERIALIZED) }
-                    .toMap()
-        }
-    }
-
-
-    private fun materializeEntitySets(
-            dataSource: HikariDataSource,
-            materializablePropertyTypesByEntitySet: Map<EntitySet, Map<UUID, PropertyType>>,
-            authorizedPropertyTypesOfPrincipalsByEntitySetId: Map<UUID, Map<Principal, Set<PropertyType>>>
-    ) {
-        materializablePropertyTypesByEntitySet.forEach { (entitySet, _) ->
-            materialize(
-                    dataSource,
-                    entitySet,
-                    authorizedPropertyTypesOfPrincipalsByEntitySetId.getValue(entitySet.id)
-            )
-        }
-    }
-
-    /**
-     * Materializes an entity set on atlas.
-     */
-    private fun materialize(
-            dataSource: HikariDataSource,
-            entitySet: EntitySet,
-            authorizedPropertyTypesOfPrincipals: Map<Principal, Set<PropertyType>>
-    ) {
-        materializeEntitySetsTimer.time().use {
-            val tableName = entitySetNameTableName(entitySet.name)
-
-            dataSource.connection.use { connection ->
-                // first drop and create materialized view
-                logger.info("Materialized entity set ${entitySet.id}")
-
-                //Next we need to grant select on materialize view to everyone who has permission.
-                val selectGrantedResults = grantSelectForEntitySet(
-                        connection,
-                        tableName,
-                        entitySet.id,
-                        authorizedPropertyTypesOfPrincipals
-                )
-                logger.info(
-                        "Granted select for ${selectGrantedResults.filter { it >= 0 }.size} users/roles " +
-                                "on materialized view $tableName"
-                )
-            }
-        }
-    }
-
     private fun getSelectColumnsForMaterializedView(propertyTypes: Collection<PropertyType>): List<String> {
         return listOf(ENTITY_SET_ID.name, ID_VALUE.name, ENTITY_KEY_IDS_COL.name) + propertyTypes.map {
             quote(it.type.fullQualifiedNameAsString)
-        }
-    }
-
-    private fun grantSelectForEntitySet(
-            connection: Connection,
-            tableName: String,
-            entitySetId: UUID,
-            authorizedPropertyTypesOfPrincipals: Map<Principal, Set<PropertyType>>
-    ): IntArray {
-        // prepare batch queries
-        return connection.createStatement().use { stmt ->
-            authorizedPropertyTypesOfPrincipals.forEach { (principal, propertyTypes) ->
-                val columns = getSelectColumnsForMaterializedView(propertyTypes)
-                try {
-                    val grantSelectSql = grantSelectSql(tableName, principal, columns)
-                    stmt.addBatch(grantSelectSql)
-                } catch (e: NoSuchElementException) {
-                    logger.error("Principal $principal does not exists but has permission on entity set $entitySetId")
-                }
-            }
-            stmt.executeBatch()
         }
     }
 
@@ -417,28 +318,6 @@ class AssemblerConnectionManager(
                     }
             stmt.executeBatch()
         }
-    }
-
-    /**
-     * Build grant select sql statement for a given table and principal with column level security.
-     * If properties (columns) are left empty, it will grant select on whole table.
-     */
-    @Throws(NoSuchElementException::class)
-    private fun grantSelectSql(
-            entitySetTableName: String,
-            principal: Principal,
-            columns: List<String>
-    ): String {
-        val postgresUserName = when (principal.type) {
-            PrincipalType.USER -> dbCredentialService.getDbUsername(securePrincipalsManager.getPrincipal(principal.id))
-            PrincipalType.ROLE -> buildPostgresRoleName(securePrincipalsManager.lookupRole(principal))
-            else -> throw IllegalArgumentException(
-                    "Only ${PrincipalType.USER} and ${PrincipalType.ROLE} principal " +
-                            "types can be granted select."
-            )
-        }
-
-        return grantSelectSql(entitySetTableName, quote(postgresUserName), columns)
     }
 
     /**
@@ -476,16 +355,6 @@ class AssemblerConnectionManager(
                 "Renamed materialized view of entity set with old name $oldName to new name $newName in " +
                         "organization $organizationId"
         )
-    }
-
-    /**
-     * Removes a materialized entity set from atlas.
-     */
-    internal fun dematerializeEntitySets(organizationId: UUID, entitySetIds: Set<UUID>) {
-        extDbConnManager.connectToOrg(organizationId).let { dataSource ->
-            //TODO: Implement de-materialization code here.
-        }
-        logger.info("Removed materialized entity sets $entitySetIds from organization $organizationId")
     }
 
     internal fun exists(dbName: String): Boolean {

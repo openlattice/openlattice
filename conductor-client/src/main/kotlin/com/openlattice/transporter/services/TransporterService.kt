@@ -8,6 +8,7 @@ import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EntitySet
+import com.openlattice.edm.PropertyTypeIdFqn
 import com.openlattice.edm.events.AssociationTypeCreatedEvent
 import com.openlattice.edm.events.EntityTypeCreatedEvent
 import com.openlattice.edm.events.EntityTypeDeletedEvent
@@ -41,7 +42,7 @@ final class TransporterService(
         private val entitySetService: EntitySetManager,
         private val executor: ListeningExecutorService,
         hazelcastInstance: HazelcastInstance,
-        private val data: TransporterDatastore
+        private val transporter: TransporterDatastore
 ) {
 
     companion object {
@@ -63,14 +64,12 @@ final class TransporterService(
                 .register()
     }
 
-    private val transporter = data.datastore()
-
     init {
         eventBus.register(this)
     }
 
-    private val transporterState = HazelcastMap.TRANSPORTER_DB_COLUMNS.getMap( hazelcastInstance )
-    private val entitySets = HazelcastMap.ENTITY_SETS.getMap( hazelcastInstance )
+    private val transporterState = HazelcastMap.TRANSPORTER_DB_COLUMNS.getMap(hazelcastInstance)
+    private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
 
     /**
      * Initialization called by [TransporterInitializeServiceTask]
@@ -85,7 +84,7 @@ final class TransporterService(
                     .map { it.get().get() }
                     .count()
             logger.info("Creating edges table")
-            data.datastore().connection.use { connection ->
+            transporter.datastore().connection.use { connection ->
                 transportTable(MAT_EDGES_TABLE, connection, logger)
             }
             logger.info("synchronization finished with {} entity type tables updated", tablesCreated)
@@ -102,7 +101,7 @@ final class TransporterService(
         }
         val props = dataModelService.getPropertyTypes(et.properties)
         return Optional.of(
-                transporterState.submitToKey(et.id, TransporterSynchronizeTableDefinitionEntryProcessor(props).init(data))
+                transporterState.submitToKey(et.id, TransporterSynchronizeTableDefinitionEntryProcessor(props).init(transporter))
                         .toCompletableFuture()
         )
     }
@@ -125,10 +124,10 @@ final class TransporterService(
             val partitions = partitions(entitySetIds)
             val ft = transporterState.submitToKey(
                     entityTypeId,
-                    TransporterPropagateDataEntryProcessor(relevantEntitySets, partitions).init(data)
+                    TransporterPropagateDataEntryProcessor(relevantEntitySets, partitions).init(transporter)
             ).toCompletableFuture()
 
-            entitySetIds.count() to ft
+            entitySetIds.size to ft
         }
         val setsPolled = futures.map { it.first }.sum()
         // wait for all futures to complete.
@@ -136,7 +135,7 @@ final class TransporterService(
         futures.forEach { (_, f) ->
             try {
                 f.get()
-            } catch(e: Exception) {
+            } catch (e: Exception) {
                 errorCount.inc()
                 exception.add(e)
             }
@@ -147,16 +146,16 @@ final class TransporterService(
     }
 
     private fun refreshDataForEntitySet(entitySetId: UUID) {
-        val esCompletion = entitySets.getAsync( entitySetId )
-        val partitions = partitionManager.getEntitySetPartitions( entitySetId )
+        val esCompletion = entitySets.getAsync(entitySetId)
+        val partitions = partitionManager.getEntitySetPartitions(entitySetId)
         val refreshTimer = refreshTimer.startTimer()
-        esCompletion.thenCompose{ es ->
+        esCompletion.thenCompose { es ->
             transporterState.submitToKey(es.entityTypeId,
-                    TransporterPropagateDataEntryProcessor(setOf(es), partitions).init(data)
+                    TransporterPropagateDataEntryProcessor(setOf(es), partitions).init(transporter)
             )
         }.whenCompleteAsync { _, throwable ->
             refreshTimer.observeDuration()
-            if ( throwable != null ){
+            if (throwable != null) {
                 errorCount.inc()
             }
         }
@@ -166,6 +165,20 @@ final class TransporterService(
         return entitySetService.getEntitySetsOfType(entityTypeId)
                 .filter { !it.isLinking && it.flags.contains(EntitySetFlag.TRANSPORTED) }
                 .toSet()
+    }
+
+    fun transportEntitySet(
+            organizationId: UUID,
+            es: EntitySet,
+            ptIdToFqnColumns: Set<PropertyTypeIdFqn>,
+            usersToColumnPermissions: Map<String, List<String>>
+    ) {
+        transporter.transportEntitySet(
+                organizationId,
+                es,
+                ptIdToFqnColumns,
+                usersToColumnPermissions
+        )
     }
 
     @Subscribe
@@ -183,9 +196,9 @@ final class TransporterService(
 
     @Subscribe
     fun handleEntityTypeDeleted(e: EntityTypeDeletedEvent) {
-        this.transporterState.remove(e.entityTypeId)?: return
+        this.transporterState.remove(e.entityTypeId) ?: return
         executor.submit {
-            data.datastore().connection.use { conn ->
+            transporter.datastore().connection.use { conn ->
                 val st = conn.createStatement()
                 st.execute("DROP TABLE ${tableName(e.entityTypeId)}")
             }
@@ -196,7 +209,7 @@ final class TransporterService(
     fun handlePropertyTypesRemovedFromEntityTypeEvent(e: PropertyTypesRemovedFromEntityTypeEvent) {
         this.transporterState.executeOnKey(e.entityType.id,
                 TransporterSynchronizeTableDefinitionEntryProcessor(removedProperties = e.removedPropertyTypes)
-                        .init(data)
+                        .init(transporter)
         )
     }
 
@@ -204,7 +217,7 @@ final class TransporterService(
     fun handlePropertyTypesAddedToEntityTypeEvent(e: PropertyTypesAddedToEntityTypeEvent) {
         this.transporterState.executeOnKey(e.entityType.id,
                 TransporterSynchronizeTableDefinitionEntryProcessor(newProperties = e.newPropertyTypes)
-                        .init(data)
+                        .init(transporter)
         )
     }
 }

@@ -32,7 +32,12 @@ import com.openlattice.assembler.AssemblerConnectionManager;
 import com.openlattice.assembler.pods.AssemblerConfigurationPod;
 import com.openlattice.auditing.AuditingConfiguration;
 import com.openlattice.auditing.pods.AuditingConfigurationPod;
-import com.openlattice.authorization.*;
+import com.openlattice.authorization.AuthorizationManager;
+import com.openlattice.authorization.DbCredentialService;
+import com.openlattice.authorization.HazelcastAclKeyReservationService;
+import com.openlattice.authorization.HazelcastSecurableObjectResolveTypeService;
+import com.openlattice.authorization.Principals;
+import com.openlattice.authorization.SecurableObjectResolveTypeService;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datastore.services.EdmManager;
@@ -44,16 +49,13 @@ import com.openlattice.edm.schemas.SchemaQueryService;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
 import com.openlattice.ids.HazelcastLongIdService;
 import com.openlattice.linking.LinkingConfiguration;
-import com.openlattice.linking.LinkingLogService;
 import com.openlattice.linking.Matcher;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
-import com.openlattice.linking.PostgresLinkingLogService;
 import com.openlattice.linking.matching.SocratesMatcher;
 import com.openlattice.linking.util.PersonProperties;
 import com.openlattice.notifications.sms.PhoneNumberService;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.OrganizationMetadataEntitySetsService;
-import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
 import com.openlattice.postgres.external.ExternalDatabasePermissionsManager;
@@ -167,7 +169,6 @@ public class LinkerServicesPod {
                 organizationsManager(),
                 dbcs(),
                 extDbPermManager,
-                eventBus,
                 metricRegistry
         );
     }

@@ -30,7 +30,23 @@ import com.openlattice.auditing.AuditEventType;
 import com.openlattice.auditing.AuditableEvent;
 import com.openlattice.auditing.AuditingComponent;
 import com.openlattice.auditing.AuditingManager;
-import com.openlattice.authorization.*;
+import com.openlattice.authorization.AccessCheck;
+import com.openlattice.authorization.Ace;
+import com.openlattice.authorization.Acl;
+import com.openlattice.authorization.AclData;
+import com.openlattice.authorization.AclExplanation;
+import com.openlattice.authorization.AclKey;
+import com.openlattice.authorization.Action;
+import com.openlattice.authorization.Authorization;
+import com.openlattice.authorization.AuthorizationManager;
+import com.openlattice.authorization.AuthorizingComponent;
+import com.openlattice.authorization.HazelcastSecurableObjectResolveTypeService;
+import com.openlattice.authorization.Permission;
+import com.openlattice.authorization.PermissionsApi;
+import com.openlattice.authorization.Principal;
+import com.openlattice.authorization.PrincipalType;
+import com.openlattice.authorization.Principals;
+import com.openlattice.authorization.SecurablePrincipal;
 import com.openlattice.controllers.exceptions.BadRequestException;
 import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.organizations.ExternalDatabaseManagementService;
@@ -46,7 +62,15 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.inject.Inject;
 import java.time.OffsetDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -88,6 +112,14 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
             consumes = MediaType.APPLICATION_JSON_VALUE )
     public Void updateAcls( @RequestBody List<AclData> req ) {
 
+        for ( AclData datum : req ){
+            for ( Ace ace : datum.getAcl().getAces() ) {
+                if (!areValidPermissions(ace.getPermissions())) {
+                    throw new IllegalStateException("Permissions ${ace.permissions} are not valid");
+                }
+            }
+        }
+
         Map<Action, List<Acl>> requestsByActionType = req.stream().collect( Collectors
                 .groupingBy( AclData::getAction, Collectors.mapping( AclData::getAcl, Collectors.toList() ) ) );
 
@@ -110,30 +142,25 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
         }
 
         requestsByActionType.forEach( ( action, acls ) -> {
-
+            AuditEventType eventType;
             switch ( action ) {
                 case ADD:
-                    authorizations.addPermissions( acls );
-                    edms.executePrivilegesUpdate( action, getOrganizationExternalDbColumnAcls( acls ) );
-                    recordEvents( createAuditableEvents( acls, AuditEventType.ADD_PERMISSION ) );
+                    eventType = AuditEventType.ADD_PERMISSION;
                     break;
-
                 case REMOVE:
-                    authorizations.removePermissions( acls );
-                    edms.executePrivilegesUpdate( action, getOrganizationExternalDbColumnAcls( acls ) );
-                    recordEvents( createAuditableEvents( acls, AuditEventType.REMOVE_PERMISSION ) );
+                    eventType = AuditEventType.REMOVE_PERMISSION;
                     break;
-
                 case SET:
-                    authorizations.setPermissions( acls );
-                    edms.executePrivilegesUpdate( action, getOrganizationExternalDbColumnAcls( acls ) );
-                    recordEvents( createAuditableEvents( acls, AuditEventType.SET_PERMISSION ) );
+                    eventType = AuditEventType.SET_PERMISSION;
                     break;
-
                 default:
                     logger.error( "Invalid action {} specified for request.", action );
                     throw new BadRequestException( "Invalid action specified: " + action );
             }
+
+            authorizations.addPermissions( acls );
+            edms.executePrivilegesUpdate( action, getOrganizationExternalDbColumnAcls( acls ) );
+            recordEvents( createAuditableEvents( acls, eventType) );
         } );
 
         return null;
@@ -248,6 +275,16 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
     @Override
     public AuditingManager getAuditingManager() {
         return auditingManager;
+    }
+
+    private boolean areValidPermissions(Set<Permission> permissions){
+        if (permissions.isEmpty()) {
+            return false;
+        }
+        if (!(permissions.contains(Permission.OWNER) || permissions.contains(Permission.READ) || permissions.contains(Permission.WRITE))) {
+            return false;
+        }
+        return true;
     }
 
     private List<Acl> getOrganizationExternalDbColumnAcls( List<Acl> acls ) {

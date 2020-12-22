@@ -27,7 +27,17 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.openlattice.apps.services.AppService;
 import com.openlattice.assembler.Assembler;
-import com.openlattice.authorization.*;
+import com.openlattice.authorization.AccessCheck;
+import com.openlattice.authorization.AclKey;
+import com.openlattice.authorization.Authorization;
+import com.openlattice.authorization.AuthorizationManager;
+import com.openlattice.authorization.AuthorizingComponent;
+import com.openlattice.authorization.Permission;
+import com.openlattice.authorization.Principal;
+import com.openlattice.authorization.PrincipalType;
+import com.openlattice.authorization.Principals;
+import com.openlattice.authorization.SecurableObjectResolveTypeService;
+import com.openlattice.authorization.SecurablePrincipal;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.authorization.util.AuthorizationUtilsKt;
 import com.openlattice.controllers.exceptions.ForbiddenException;
@@ -50,11 +60,26 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
 
 import javax.inject.Inject;
-import java.util.*;
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -202,7 +227,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         organizations.ensureOrganizationExists( organizationId );
         ensureRead( organizationId );
         ensureTransportAccess( new AclKey( entitySetId ) );
-        edms.destroyTransportedEntitySet( entitySetId );
+        edms.destroyTransportedEntitySet( organizationId, entitySetId );
         return null;
     }
 

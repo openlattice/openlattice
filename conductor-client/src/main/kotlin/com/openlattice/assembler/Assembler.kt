@@ -80,7 +80,6 @@ class Assembler(
         metricRegistry: MetricRegistry,
         hazelcast: HazelcastInstance,
         eventBus: EventBus
-
 ) : HazelcastTaskDependencies, AssemblerConnectionManagerDependent<Void?> {
 
     private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcast)

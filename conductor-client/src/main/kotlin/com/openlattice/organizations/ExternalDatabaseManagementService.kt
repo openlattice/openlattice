@@ -9,8 +9,8 @@ import com.openlattice.assembler.PostgresRoles.Companion.getSecurablePrincipalId
 import com.openlattice.assembler.PostgresRoles.Companion.isPostgresUserName
 import com.openlattice.assembler.dropAllConnectionsToDatabaseSql
 import com.openlattice.authorization.*
-import com.openlattice.authorization.processors.PermissionMerger
 import com.openlattice.authorization.securable.SecurableObjectType
+import com.openlattice.edm.PropertyTypeIdFqn
 import com.openlattice.edm.processors.GetEntityTypeFromEntitySetEntryProcessor
 import com.openlattice.edm.processors.GetFqnFromPropertyTypeEntryProcessor
 import com.openlattice.edm.requests.MetadataUpdate
@@ -27,14 +27,14 @@ import com.openlattice.postgres.*
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.ResultSetAdapters.*
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
+import com.openlattice.postgres.external.ExternalDatabasePermissioningService
 import com.openlattice.postgres.external.Schemas
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.openlattice.postgres.streams.StatementHolderSupplier
 import com.openlattice.transporter.processors.DestroyTransportedEntitySetEntryProcessor
 import com.openlattice.transporter.processors.GetPropertyTypesFromTransporterColumnSetEntryProcessor
-import com.openlattice.transporter.processors.TransportEntitySetEntryProcessor
-import com.openlattice.transporter.types.TransporterDatastore
+import com.openlattice.transporter.services.TransporterService
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
@@ -47,6 +47,7 @@ import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import java.time.OffsetDateTime
 import java.util.*
+import java.util.concurrent.TimeUnit
 import kotlin.collections.HashMap
 import kotlin.streams.toList
 
@@ -58,8 +59,9 @@ class ExternalDatabaseManagementService(
         private val aclKeyReservations: HazelcastAclKeyReservationService,
         private val authorizationManager: AuthorizationManager,
         private val organizationExternalDatabaseConfiguration: OrganizationExternalDatabaseConfiguration,
-        private val transporterDatastore: TransporterDatastore,
+        private val transporterService: TransporterService,
         private val dbCredentialService: DbCredentialService,
+        private var externalDbPermsService: ExternalDatabasePermissioningService,
         private val hds: HikariDataSource
 ) {
 
@@ -132,8 +134,9 @@ class ExternalDatabaseManagementService(
         }
     }
 
-    fun destroyTransportedEntitySet(entitySetId: UUID) {
-        entitySets.executeOnKey(entitySetId, DestroyTransportedEntitySetEntryProcessor().init(transporterDatastore))
+    fun destroyTransportedEntitySet(organizationId: UUID, entitySetId: UUID) {
+        val orgHds = externalDbManager.connectToOrg(organizationId)
+        entitySets.executeOnKey(entitySetId, DestroyTransportedEntitySetEntryProcessor(orgHds).init(transporterDatastore))
     }
 
     fun transportEntitySet(organizationId: UUID, entitySetId: UUID) {
@@ -178,14 +181,20 @@ class ExternalDatabaseManagementService(
         userToPermissionsCompletion.thenCombine(transporterColumnsCompletion) { userToPtCols, transporterColumns ->
             val userToEntitySetColumnNames = userToPtCols.mapValues { (_, columns) ->
                 columns.map {
-                    transporterColumns.get(it).toString()
+                    transporterColumns[it].toString()
                 }
             }
-            entitySets.submitToKey(entitySetId,
-                    TransportEntitySetEntryProcessor(transporterColumns, organizationId, userToEntitySetColumnNames)
-                            .init(transporterDatastore)
+            val asPtFqns = transporterColumns.mapTo(mutableSetOf()) { PropertyTypeIdFqn(it.key, it.value) }
+            entitySets.lock(entitySetId, 10, TimeUnit.SECONDS)
+            val es = entitySets.getValue(entitySetId)
+            transporterService.transportEntitySet(
+                    organizationId,
+                    es,
+                    asPtFqns,
+                    userToEntitySetColumnNames
             )
-        }.toCompletableFuture().get().toCompletableFuture().get()
+            entitySets.unlock(entitySetId)
+        }.toCompletableFuture().get()
     }
 
     /*GET*/
@@ -445,38 +454,7 @@ class ExternalDatabaseManagementService(
     fun executePrivilegesUpdate(action: Action, columnAcls: List<Acl>) {
         val columnIds = columnAcls.map { it.aclKey[1] }.toSet()
         val columnsById = organizationExternalDatabaseColumns.getAll(columnIds)
-        val columnAclsByOrg = columnAcls.groupBy {
-            columnsById.getValue(it.aclKey[1]).organizationId
-        }
-
-        columnAclsByOrg.forEach { (orgId, columnAcls) ->
-            externalDbManager.connectToOrg(orgId).connection.use { conn ->
-                conn.autoCommit = false
-                val stmt = conn.createStatement()
-                columnAcls.forEach {
-                    val tableAndColumnNames = getTableAndColumnNames(AclKey(it.aclKey))
-                    val tableName = tableAndColumnNames.first
-                    val columnName = tableAndColumnNames.second
-                    it.aces.forEach { ace ->
-                        if (!areValidPermissions(ace.permissions)) {
-                            throw IllegalStateException("Permissions ${ace.permissions} are not valid")
-                        }
-                        val dbUser = getDBUser(ace.principal.id)
-
-                        //revoke any previous privileges before setting specified ones
-                        if (action == Action.SET) {
-                            val revokeSql = createPrivilegesUpdateSql(Action.REMOVE, listOf("ALL"), tableName, columnName, dbUser)
-                            stmt.addBatch(revokeSql)
-                        }
-                        val privileges = getPrivilegesFromPermissions(ace.permissions)
-                        val grantSql = createPrivilegesUpdateSql(action, privileges, tableName, columnName, dbUser)
-                        stmt.addBatch(grantSql)
-                    }
-                    stmt.executeBatch()
-                    conn.commit()
-                }
-            }
-        }
+        externalDbPermsService.updateExternalTablePermissions(action, columnAcls, columnsById)
     }
 
     /**
@@ -519,8 +497,7 @@ class ExternalDatabaseManagementService(
                     StatementHolderSupplier(externalDbManager.connectToOrg(orgId), sql)
             ) { rs ->
                 user(rs) to PostgresPrivileges.valueOf(privilegeType(rs).toUpperCase())
-            }
-                    .filter { isPostgresUserName(it.first) }
+            }.filter { isPostgresUserName(it.first) }
                     .forEach {
                         val securablePrincipalId = getSecurablePrincipalIdFromUserName(it.first)
                         privilegesByUser.getOrPut(securablePrincipalId) { mutableSetOf() }.add(it.second)
@@ -559,55 +536,8 @@ class ExternalDatabaseManagementService(
         return columnNames.joinToString(", ") { "DROP COLUMN ${quote(it)}" }
     }
 
-    private fun createPrivilegesUpdateSql(action: Action, privileges: List<String>, tableName: String, columnName: String, dbUser: String): String {
-        val privilegesAsString = privileges.joinToString(separator = ", ")
-        checkState(action == Action.REMOVE || action == Action.ADD || action == Action.SET,
-                "Invalid action $action specified")
-        return if (action == Action.REMOVE) {
-            "REVOKE $privilegesAsString (${quote(columnName)}) ON $tableName FROM $dbUser"
-        } else {
-            "GRANT $privilegesAsString (${quote(columnName)}) ON $tableName TO $dbUser"
-        }
-    }
-
-    private fun getTableAndColumnNames(aclKey: AclKey): Pair<String, String> {
-        val securableObjectId = aclKey[1]
-        val organizationAtlasColumn = organizationExternalDatabaseColumns.getValue(securableObjectId)
-        val tableName = organizationExternalDatabaseTables.getValue(organizationAtlasColumn.tableId).name
-        val columnName = organizationAtlasColumn.name
-        return Pair(tableName, columnName)
-    }
-
     private fun getDBUser(principalId: String): String {
-        val securePrincipal = securePrincipalsManager.getPrincipal(principalId)
-        checkState(securePrincipal.principalType == PrincipalType.USER, "Principal must be of type USER")
-        return dbCredentialService.getDbUsername(securePrincipal)
-    }
-
-    private fun areValidPermissions(permissions: Set<Permission>): Boolean {
-        if (!(permissions.contains(Permission.OWNER) || permissions.contains(Permission.READ) || permissions.contains(Permission.WRITE))) {
-            return false
-        } else if (permissions.isEmpty()) {
-            return false
-        }
-        return true
-    }
-
-    private fun getPrivilegesFromPermissions(permissions: Set<Permission>): List<String> {
-        val privileges = mutableListOf<String>()
-        if (permissions.contains(Permission.OWNER)) {
-            privileges.add(PostgresPrivileges.ALL.toString())
-        } else {
-            if (permissions.contains(Permission.WRITE)) {
-                privileges.addAll(listOf(
-                        PostgresPrivileges.INSERT.toString(),
-                        PostgresPrivileges.UPDATE.toString()))
-            }
-            if (permissions.contains(Permission.READ)) {
-                privileges.add(PostgresPrivileges.SELECT.toString())
-            }
-        }
-        return privileges
+        return dbCredentialService.getDbUserRole(principalId, securePrincipalsManager)
     }
 
     private fun getPrivilegesFields(tableName: String, maybeColumnName: Optional<String>): Pair<String, SecurableObjectType> {

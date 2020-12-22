@@ -28,6 +28,7 @@ import com.openlattice.assembler.ORGANIZATION_PREFIX
 import com.openlattice.directory.MaterializedViewAccount
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.ids.HazelcastLongIdService
+import com.openlattice.organizations.roles.SecurePrincipalsManager
 import org.slf4j.LoggerFactory
 import java.security.SecureRandom
 
@@ -41,6 +42,8 @@ class DbCredentialService(
         hazelcastInstance: HazelcastInstance,
         val longIdService: HazelcastLongIdService
 ) {
+
+    private val dbCreds: IMap<String, MaterializedViewAccount> = HazelcastMap.DB_CREDS.getMap(hazelcastInstance)
 
     companion object {
         private val logger = LoggerFactory.getLogger(
@@ -72,11 +75,17 @@ class DbCredentialService(
         }
     }
 
-    private val dbCreds: IMap<String, MaterializedViewAccount> = HazelcastMap.DB_CREDS.getMap(hazelcastInstance)
-
     fun getDbCredential(user: SecurablePrincipal): MaterializedViewAccount? = dbCreds[buildPostgresUsername(user)]
 
     fun getDbCredential(userId: String): MaterializedViewAccount? = dbCreds[userId]
+
+    fun getDbUserRole(principalId: String, securePrincipalsManager: SecurePrincipalsManager): String {
+        val securePrincipal = securePrincipalsManager.getPrincipal(principalId)
+        check(securePrincipal.principalType == PrincipalType.USER) {
+            "Principal must be of type USER"
+        }
+        return getDbUsername(securePrincipal)
+    }
 
     fun getDbUsername(user: SecurablePrincipal): String = dbCreds.getValue(buildPostgresUsername(user)).username
 

@@ -30,7 +30,6 @@ class TransporterPod {
     private lateinit var eventBus: EventBus
     @Inject
     private lateinit var executor: ListeningExecutorService
-
     @Inject
     private lateinit var transporterDatastore: TransporterDatastore
 

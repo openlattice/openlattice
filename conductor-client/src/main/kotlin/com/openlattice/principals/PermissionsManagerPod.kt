@@ -7,19 +7,23 @@ import com.openlattice.authorization.HazelcastAclKeyReservationService
 import com.openlattice.authorization.HazelcastAuthorizationService
 import com.openlattice.organizations.roles.HazelcastPrincipalService
 import com.openlattice.organizations.roles.SecurePrincipalsManager
+import com.openlattice.postgres.external.ExternalDatabasePermissionsManager
 import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import javax.inject.Inject
 
 /**
- * @author Drew Bailey (drewbaileym@gmail.com)
+ * @author Drew Bailey (drew@openlattice.com)
  */
 @Configuration
 class PermissionsManagerPod {
 
     @Inject
     private lateinit var hazelcastInstance: HazelcastInstance
+
+    @Inject
+    private lateinit var extDatabasePermsManager: ExternalDatabasePermissionsManager
 
     @Inject
     private lateinit var eventBus: EventBus
@@ -41,6 +45,7 @@ class PermissionsManagerPod {
                 hazelcastInstance,
                 aclKeyReservationService(),
                 authorizationManager(),
-                eventBus)
+                extDatabasePermsManager
+        )
     }
 }

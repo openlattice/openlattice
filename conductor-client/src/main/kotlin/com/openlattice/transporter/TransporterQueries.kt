@@ -3,12 +3,12 @@ package com.openlattice.transporter
 import com.openlattice.ApiHelpers
 import com.openlattice.IdConstants
 import com.openlattice.edm.EdmConstants
+import com.openlattice.edm.PropertyTypeIdFqn
 import com.openlattice.postgres.*
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.external.Schemas
 import com.openlattice.transporter.types.TransporterColumn
 import com.zaxxer.hikari.HikariDataSource
-import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.Logger
 import java.sql.Connection
 import java.util.*
@@ -356,12 +356,12 @@ fun createEntitySetViewInSchemaFromSchema(
         entitySetId: UUID,
         destinationSchema: Schemas,
         entityTypeId: UUID,
-        propertyTypes: Map<UUID, FullQualifiedName>,
+        propertyTypes: Set<PropertyTypeIdFqn>,
         sourceSchema: Schemas
 ): String {
-    val colsSql = propertyTypes.map { (id, ptName) ->
+    val colsSql = propertyTypes.map { (id, fqn) ->
         val column = ApiHelpers.dbQuote(id.toString())
-        val quotedPt = ApiHelpers.dbQuote(ptName.toString())
+        val quotedPt = ApiHelpers.dbQuote(fqn.toString())
         "$column as $quotedPt"
     }.joinToString()
 

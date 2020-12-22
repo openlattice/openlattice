@@ -9,7 +9,9 @@ import com.openlattice.data.DataExpiration
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.entitysets.StorageType
 import org.apache.commons.lang3.StringUtils
-import java.util.*
+import java.util.EnumSet
+import java.util.LinkedHashSet
+import java.util.UUID
 
 
 /**
@@ -37,12 +39,9 @@ data class EntitySet
         @JsonProperty(SerializationConstants.TITLE_FIELD) val _title: String,
         @JsonProperty(SerializationConstants.DESCRIPTION_FIELD) val _description: String = "",
         @JsonProperty(SerializationConstants.CONTACTS) var contacts: MutableSet<String>,
-        @JsonProperty(
-                SerializationConstants.LINKED_ENTITY_SETS
-        ) val linkedEntitySets: MutableSet<UUID> = mutableSetOf(),
+        @JsonProperty(SerializationConstants.LINKED_ENTITY_SETS) val linkedEntitySets: MutableSet<UUID> = mutableSetOf(),
         @JsonProperty(SerializationConstants.ORGANIZATION_ID) var organizationId: UUID,
-        @JsonProperty(SerializationConstants.FLAGS_FIELD) val flags: EnumSet<EntitySetFlag> =
-                EnumSet.of(EntitySetFlag.EXTERNAL),
+        @JsonProperty(SerializationConstants.FLAGS_FIELD) val flags: EnumSet<EntitySetFlag> = EnumSet.of(EntitySetFlag.EXTERNAL),
         @JsonProperty(SerializationConstants.PARTITIONS) val partitions: LinkedHashSet<Int> = linkedSetOf(),
         @JsonProperty(SerializationConstants.EXPIRATION) var expiration: DataExpiration? = null,
         @JsonProperty(SerializationConstants.STORAGE_TYPE) val storageType: StorageType = StorageType.STANDARD

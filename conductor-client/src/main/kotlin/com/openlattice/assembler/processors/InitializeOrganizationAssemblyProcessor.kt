@@ -28,7 +28,7 @@ import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.AssemblerConnectionManagerDependent
 import com.openlattice.assembler.OrganizationAssembly
 import org.slf4j.LoggerFactory
-import java.util.*
+import java.util.UUID
 
 private val logger = LoggerFactory.getLogger(InitializeOrganizationAssemblyProcessor::class.java)
 
@@ -37,7 +37,7 @@ private val logger = LoggerFactory.getLogger(InitializeOrganizationAssemblyProce
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 
-class InitializeOrganizationAssemblyProcessor( val dbName: String ) :
+class InitializeOrganizationAssemblyProcessor(val dbName: String) :
         AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(),
         AssemblerConnectionManagerDependent<InitializeOrganizationAssemblyProcessor>,
         Offloadable {

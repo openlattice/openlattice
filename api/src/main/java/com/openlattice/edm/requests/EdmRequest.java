@@ -26,7 +26,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class EdmRequest {
-    public static enum Action {
+    public enum Action {
         ADD,
         REMOVE,
         REPLACE

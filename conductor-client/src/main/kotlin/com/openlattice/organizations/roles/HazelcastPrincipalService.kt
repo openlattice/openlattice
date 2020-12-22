@@ -22,7 +22,6 @@ package com.openlattice.organizations.roles
 import com.auth0.json.mgmt.users.User
 import com.google.common.base.Preconditions
 import com.google.common.collect.Sets
-import com.google.common.eventbus.EventBus
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
@@ -37,11 +36,8 @@ import com.openlattice.organizations.processors.NestedPrincipalRemover
 import com.openlattice.organizations.roles.processors.PrincipalDescriptionUpdater
 import com.openlattice.organizations.roles.processors.PrincipalTitleUpdater
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService
-import com.openlattice.postgres.external.ExternalDatabasePermissionsManager
 import com.openlattice.principals.AddPrincipalToPrincipalEntryProcessor
 import com.openlattice.principals.PrincipalExistsEntryProcessor
-import com.openlattice.principals.RoleCreatedEvent
-import com.openlattice.principals.UserCreatedEvent
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.util.*
@@ -107,13 +103,11 @@ class HazelcastPrincipalService(
             authorizations.setSecurableObjectType(aclKey, principal.category)
             authorizations.addPermission(aclKey, owner, EnumSet.allOf(Permission::class.java))
 
-            // Post to EventBus if principal is a USER or ROLE
             when (principal.principalType) {
                 PrincipalType.USER -> extDatabasePermsManager.createUnprivilegedUser(principal)
                 PrincipalType.ROLE -> extDatabasePermsManager.createRole(principal as Role)
                 else -> Unit
             }
-
         } catch (e: Exception) {
             logger.error("Unable to create principal {}", principal, e)
             Util.deleteSafely(principals, aclKey)
@@ -191,6 +185,7 @@ class HazelcastPrincipalService(
                 .filterNotNull()
                 .toSet()
 
+        // consider renaming to updateExternalPrincipalTrees
         extDatabasePermsManager.addPrincipalToPrincipals(source, updatedKeys)
         return updatedKeys
     }

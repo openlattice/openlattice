@@ -183,7 +183,6 @@ public class IndexerServicesPod {
                 organizationsManager(),
                 dbcs(),
                 extDbPermManager,
-                eventBus,
                 metricRegistry
         );
     }

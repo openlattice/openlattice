@@ -6,17 +6,19 @@ import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.transporter.types.TransporterDatastore
 import com.openlattice.transporter.types.TransporterDependent
+import com.zaxxer.hikari.HikariDataSource
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
-import java.util.*
+import java.util.UUID
 
 /**
  * @author Drew Bailey &lt;drew@openlattice.com&gt;
  */
 @SuppressFBWarnings(value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"], justification = "Ignore internal kotlin redundant nullchecks")
-class DestroyTransportedEntitySetEntryProcessor(): AbstractRhizomeEntryProcessor<UUID, EntitySet, Void?>(),
+class DestroyTransportedEntitySetEntryProcessor(
+        orgHds: HikariDataSource
+) : AbstractRhizomeEntryProcessor<UUID, EntitySet, Void?>(),
         Offloadable,
-        TransporterDependent<DestroyTransportedEntitySetEntryProcessor>
-{
+        TransporterDependent<DestroyTransportedEntitySetEntryProcessor> {
 
     @Transient
     private lateinit var data: TransporterDatastore
@@ -25,12 +27,14 @@ class DestroyTransportedEntitySetEntryProcessor(): AbstractRhizomeEntryProcessor
         check(::data.isInitialized) { TransporterDependent.NOT_INITIALIZED }
         val es = entry.value
 
-        data.destroyEntitySetViewInOrgDb( es.organizationId, es.name )
-
-        data.destroyTransportedEntityTypeTableInOrg( es.organizationId, es.entityTypeId )
-
+        data.destroyTransportedEntitySet(
+                organizationId,
+                orgHds,
+                entityTypeId,
+                name
+        )
         es.flags.remove(EntitySetFlag.TRANSPORTED)
-        entry.setValue( es )
+        entry.setValue(es)
         return null
     }
 
