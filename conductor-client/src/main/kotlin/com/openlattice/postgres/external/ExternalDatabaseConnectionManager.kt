@@ -58,6 +58,10 @@ class ExternalDatabaseConnectionManager(
         return organizationDatabases.getValue(organizationId).name
     }
 
+    fun deleteOrganizationDatabase(organizationId: UUID) {
+        organizationDatabases.delete(organizationId)
+    }
+
     fun connect(dbName: String): HikariDataSource {
         return perDbCache.get(dbName)
     }

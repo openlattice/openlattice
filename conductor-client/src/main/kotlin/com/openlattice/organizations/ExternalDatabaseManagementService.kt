@@ -404,6 +404,9 @@ class ExternalDatabaseManagementService(
             stmt.execute(dropAllConnectionsToDatabaseSql(dbName))
             stmt.execute("DROP DATABASE $dbName")
         }
+
+
+        externalDbManager.deleteOrganizationDatabase(orgId)
     }
 
     /*PERMISSIONS*/
