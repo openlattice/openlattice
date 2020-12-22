@@ -22,6 +22,7 @@
 package com.openlattice.organizations
 
 import com.dataloom.mappers.ObjectMappers
+import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.AbstractSecurableObject
 import com.openlattice.data.DataGraphManager
 import com.openlattice.data.EntityKey
@@ -59,7 +60,10 @@ private const val DESCRIPTION = "ol.description"
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 @Service
-class OrganizationMetadataEntitySetsService(private val edmService: EdmManager) {
+class OrganizationMetadataEntitySetsService(
+        private val edmService: EdmManager,
+        private val authorizationManager: AuthorizationManager
+) {
     private val mapper = ObjectMappers.newJsonMapper()
 
 
@@ -118,8 +122,7 @@ class OrganizationMetadataEntitySetsService(private val edmService: EdmManager) 
         val organizationId = adminRole.organizationId
 
         val organizationMetadataEntitySetIds = organizationService.getOrganizationMetadataEntitySetIds(organizationId)
-        val organizationPrincipal = organizationService.getOrganizationPrincipal(organizationId)!!
-        var createdEntitySets = mutableSetOf<UUID>()
+        val createdEntitySets = mutableSetOf<UUID>()
 
         val organizationMetadataEntitySetId = if (organizationMetadataEntitySetIds.organization == UNINITIALIZED_METADATA_ENTITY_SET_ID) {
             val organizationMetadataEntitySet = buildOrganizationMetadataEntitySet(organizationId)
@@ -161,6 +164,11 @@ class OrganizationMetadataEntitySetsService(private val edmService: EdmManager) 
             entitySetsManager.getEntitySetsAsMap(createdEntitySets).values.forEach {
                 entitySetsManager.setupOrganizationMetadataAndAuditEntitySets(it)
             }
+
+            val orgPrincipal = organizationService.getOrganizationPrincipal(organizationId)!!.principal
+            val orgPrincipalAce = Ace(orgPrincipal, EnumSet.of(Permission.READ))
+
+            authorizationManager.addPermissions(createdEntitySets.map { Acl(AclKey(it), setOf(orgPrincipalAce)) })
         }
     }
 
@@ -223,7 +231,7 @@ class OrganizationMetadataEntitySetsService(private val edmService: EdmManager) 
         val organizationId = entitySet.organizationId
         val organizationMetadataEntitySetIds = organizationService.getOrganizationMetadataEntitySetIds(organizationId)
 
-        val propertyTypeEntities = propertyTypesInEntitySet.associate {propertyType ->
+        val propertyTypeEntities = propertyTypesInEntitySet.associate { propertyType ->
             getColumnEntityKeyId(organizationMetadataEntitySetIds, entitySet.id, propertyType) to mutableMapOf<UUID, Set<Any>>(
                     propertyTypes.getValue(ID).id to setOf(propertyType.id.toString()),
                     propertyTypes.getValue(DATASET_NAME).id to setOf(entitySet.name),
@@ -259,7 +267,7 @@ class OrganizationMetadataEntitySetsService(private val edmService: EdmManager) 
         val organizationMetadataEntitySetIds = organizationService.getOrganizationMetadataEntitySetIds(organizationId)
 
         val columnEntities = columns.associate { column ->
-            getColumnEntityKeyId(organizationMetadataEntitySetIds, column.tableId, column) to  mutableMapOf<UUID, Set<Any>>(
+            getColumnEntityKeyId(organizationMetadataEntitySetIds, column.tableId, column) to mutableMapOf<UUID, Set<Any>>(
                     propertyTypes.getValue(ID).id to setOf(column.id.toString()),
                     propertyTypes.getValue(DATASET_NAME).id to setOf(table.name),
                     propertyTypes.getValue(COL_NAME).id to setOf(column.name),
