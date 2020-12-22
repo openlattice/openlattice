@@ -9,6 +9,7 @@ import com.google.common.eventbus.EventBus
 import com.openlattice.assembler.events.MaterializedEntitySetDataChangeEvent
 import com.openlattice.data.DeleteType
 import com.openlattice.data.EntitySetData
+import com.openlattice.data.FilteredDataPageDefinition
 import com.openlattice.data.WriteEvent
 import com.openlattice.data.events.EntitiesDeletedEvent
 import com.openlattice.data.events.EntitiesUpsertedEvent
@@ -230,6 +231,20 @@ class PostgresEntityDatastore(
         context.stop()
 
         return entitySetData
+    }
+
+    @Timed
+    override fun getFilteredEntitySetData(
+            entitySetId: UUID,
+            filteredDataPageDefinition: FilteredDataPageDefinition,
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
+    ): List<Map<FullQualifiedName, Set<Any>>> {
+
+        return dataQueryService.getEntitiesWithPropertyTypeFqns(
+                entityKeyIds = ImmutableMap.of(entitySetId, Optional.empty()),
+                authorizedPropertyTypes = authorizedPropertyTypes,
+                filteredDataPageDefinition = filteredDataPageDefinition
+        ).values.toList()
     }
 
     @Timed
