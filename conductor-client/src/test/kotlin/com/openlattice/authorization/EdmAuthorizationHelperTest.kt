@@ -28,7 +28,6 @@ import com.openlattice.datastore.services.EdmService
 import com.openlattice.datastore.services.EntitySetService
 import com.openlattice.edm.properties.PostgresTypeManager
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager
-import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.organizations.OrganizationMetadataEntitySetsService
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -42,12 +41,13 @@ class EdmAuthorizationHelperTest : HzAuthzTest() {
 
     init {
         val auditingConfig = testServer.context.getBean(AuditingConfiguration::class.java)
+        val pgTypeMan = PostgresTypeManager(hds, hazelcastInstance)
         val edmManager = EdmService(
                 hazelcastInstance,
                 HazelcastAclKeyReservationService(hazelcastInstance),
                 hzAuthz,
-                PostgresTypeManager(hds),
-                HazelcastSchemaManager(hazelcastInstance, PostgresSchemaQueryService(hds))
+                pgTypeMan,
+                HazelcastSchemaManager(hazelcastInstance, pgTypeMan)
         )
         val entitySetManager = EntitySetService(
                 hazelcastInstance,

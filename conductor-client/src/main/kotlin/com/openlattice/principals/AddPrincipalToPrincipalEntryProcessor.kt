@@ -19,4 +19,24 @@ class AddPrincipalToPrincipalEntryProcessor(
             entry.key
         }
     }
+
+    fun getAclKey(): AclKey {
+        return newAclKey
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as AddPrincipalToPrincipalEntryProcessor
+
+        if (newAclKey != other.newAclKey) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return newAclKey.hashCode()
+    }
+
 }

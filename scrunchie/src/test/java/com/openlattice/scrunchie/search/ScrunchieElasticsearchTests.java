@@ -105,12 +105,6 @@ public class ScrunchieElasticsearchTests extends BaseElasticsearchTest {
         elasticsearchApi.executeOrganizationSearch( "loom", ImmutableSet.of( new AclKey( organizationId ) ), 0, 50 );
     }
 
-    @Test
-    public void testUpdateOrganization() throws InterruptedException {
-        String newDescription = "this is a new description";
-        elasticsearchApi.updateOrganization( organizationId, Optional.empty(), Optional.of( newDescription ) );
-    }
-
     @BeforeClass
     public static void createIndicesAndData() {
         elasticsearchApi.saveEntityTypeToElasticsearch( entityType, allPropertyTypesList );
