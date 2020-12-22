@@ -39,7 +39,7 @@ ext.scmUrl = 'scm:git:https://github.com/openlattice/courier.git'
 ext.connectionUrl = 'scm:git:https://github.com/openlattice/courier.git'
 ext.developerConnectionUrl = 'scm:git:https://github.com/openlattice/courier.git'
 
-apply from: "https://raw.githubusercontent.com/openlattice/openlattice/fix/build/gradles/openlattice.gradle"
+apply from: "../gradles/openlattice.gradle"
 sourceCompatibility=JavaVersion.VERSION_11
 targetCompatibility=JavaVersion.VERSION_11
 
