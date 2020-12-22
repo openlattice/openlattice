@@ -499,11 +499,25 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE
     )
-    public Map<UUID, Integer> getMemberCountForOrganizations( Set<UUID> organizationIds ) {
+        public Map<UUID, Integer> getMemberCountForOrganizations( Set<UUID> organizationIds ) {
         EnumSet<Permission> readPermissions = EnumSet.of( Permission.READ );
         accessCheck( organizationIds.stream().collect( Collectors.toMap( AclKey::new, id -> readPermissions ) ) );
 
         return organizations.getMemberCountsForOrganizations( organizationIds );
+    }
+
+    @Timed
+    @Override
+    @GetMapping(
+            value = PRINCIPALS + ROLES + COUNT,
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public Map<UUID, Integer> getRoleCountForOrganizations( Set<UUID> organizationIds ) {
+        EnumSet<Permission> readPermissions = EnumSet.of( Permission.READ );
+        accessCheck( organizationIds.stream().collect( Collectors.toMap( AclKey::new, id -> readPermissions ) ) );
+
+        return organizations.getRoleCountsForOrganizations( organizationIds );
     }
 
     @Timed

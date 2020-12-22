@@ -41,9 +41,27 @@ public interface SecurePrincipalsManager {
     /**
      * @param owner     The owner of a role. Usually the organization.
      * @param principal The principal which to create.
+     *
      * @return True if the securable principal was created false otherwise.
      */
     boolean createSecurablePrincipalIfNotExists( Principal owner, SecurablePrincipal principal );
+
+    /**
+     * Retrieves a securable principal by acl key lookup.
+     *
+     * @param aclKey The acl key for the securable principal.
+     *
+     * @return The securable principal identified by acl key.
+     */
+    SecurablePrincipal getSecurablePrincipal( AclKey aclKey );
+
+    @Nonnull SecurablePrincipal getPrincipal( String principalId );
+
+    Collection<SecurablePrincipal> getAllRolesInOrganization( UUID organizationId );
+
+    Map<UUID, Collection<SecurablePrincipal>> getAllRolesInOrganizations( Collection<UUID> organizationIds );
+
+    Collection<SecurablePrincipal> getSecurablePrincipals( Predicate<AclKey, SecurablePrincipal> p );
 
     void createSecurablePrincipal(
             Principal owner, SecurablePrincipal principal );
