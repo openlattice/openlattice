@@ -16,27 +16,4 @@
  * You can contact the owner of the copyright at support@openlattice.com
  */
 
-description = "OpenLattice Development Environment."
-group = "com.openlattice"
-
-if ( !ext.has("jars") ){
-  ext.developmentMode = true
-}
-
-allprojects {
-  apply plugin: "jacoco"
-  if ( !ext.has("jars") ){
-    ext.developmentMode = true
-  } else {
-    ext.developmentMode = false
-  }
-}
-
-task getVersions(description: "Print the current versions of all local projects") {
-  doLast {
-    logger.warn("\nCurrent project versions: ")
-    subprojects.each { project ->
-      logger.warn("${project.name}:${project.version}")
-    }
-  }
-}
+rootProject.name='rehearsal'
