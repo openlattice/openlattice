@@ -60,13 +60,13 @@ public class RenderableEmailRequestTest extends AbstractJacksonSerializationTest
         expected = IllegalStateException.class )
     public void testNoTo() {
         new RenderableEmailRequest(
-                Optional.<String> empty(),
+                Optional.empty(),
                 new String[] {},
-                Optional.<String[]> empty(),
-                Optional.<String[]> empty(),
+                Optional.empty(),
+                Optional.empty(),
                 "TemplateName",
-                Optional.<String> empty(),
-                Optional.<Object> empty(),
+                Optional.empty(),
+                Optional.empty(),
                 Optional.of( new EmailAttachment[] {} ),
                 Optional.empty() );
     }
@@ -75,13 +75,13 @@ public class RenderableEmailRequestTest extends AbstractJacksonSerializationTest
         expected = NullPointerException.class )
     public void testNullTo() {
         new RenderableEmailRequest(
-                Optional.<String> empty(),
+                Optional.empty(),
                 null,
-                Optional.<String[]> empty(),
-                Optional.<String[]> empty(),
+                Optional.empty(),
+                Optional.empty(),
                 "",
-                Optional.<String> empty(),
-                Optional.<Object> empty(),
+                Optional.empty(),
+                Optional.empty(),
                 Optional.of( new EmailAttachment[] {} ),
                 Optional.empty() );
     }
