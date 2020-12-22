@@ -114,22 +114,30 @@ if( ext.fullVersion.contains("-SNAPSHOT") ) {
 
 println "Using dependencies for " + branch
 /**
+ * Monorepo Versions
+ **/
+ext.monorepo_version='2.1.0-SNAPSHOT'
+ext.api_version="${monorepo_version}"
+ext.conductor_client_version="${monorepo_version}"
+ext.conductor_version="${monorepo_version}"
+ext.courier_version="${monorepo_version}"
+ext.datastore_version="${monorepo_version}"
+ext.scribe_version="${monorepo_version}"
+ext.scrunchie_version="${monorepo_version}"
+
+/**
  * Internal Versions
  **/
-ext.api_version='0.0.12-SNAPSHOT'
-ext.conductor_client_version='0.0.7-SNAPSHOT'
-ext.conductor_version='0.0.2-SNAPSHOT'
-ext.courier_version='0.0.2-SNAPSHOT'
-ext.datastore_version='0.0.1-SNAPSHOT'
+ext.chronicle_server_version='0.0.0-SNAPSHOT'
+ext.chronicle_api_version='0.0.0-SNAPSHOT'
 ext.kindling_version='0.0.1-SNAPSHOT'
 ext.launchpad_version='1.2.2-SNAPSHOT'
-ext.mail_service_client_version='0.0.1-SNAPSHOT'
-ext.mail_service_version='0.0.3-SNAPSHOT'
-ext.rhizome_client_version='0.0.13-SNAPSHOT'
+ext.mechanic_version='0.0.0-SNAPSHOT'
+ext.neuron_version='0.0.0-SNAPSHOT'
 ext.rhizome_version='3.0.2-SNAPSHOT'
-ext.scribe_version='0.0.2-SNAPSHOT'
-ext.scrunchie_version='0.0.3-SNAPSHOT'
+ext.rhizome_client_version='0.0.13-SNAPSHOT'
 ext.shuttle_version='0.0.4-SNAPSHOT'
+ext.socrates_version='0.0.4-SNAPSHOT'
 
 /**
  * External versions
