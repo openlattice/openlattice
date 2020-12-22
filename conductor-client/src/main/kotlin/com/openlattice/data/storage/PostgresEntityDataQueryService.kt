@@ -32,8 +32,6 @@ import java.util.*
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.streams.asStream
 
-const val S3_DELETE_BATCH_SIZE = 10_000
-
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -47,6 +45,9 @@ class PostgresEntityDataQueryService(
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(PostgresEntityDataQueryService::class.java)
+
+        private const val S3_DELETE_BATCH_SIZE = 10_000
+        private const val EXPIRED_DATA_BATCH_SIZE = 10_000
     }
 
     fun getEntitySetCounts(): Map<UUID, Long> {
@@ -1171,7 +1172,8 @@ class PostgresEntityDataQueryService(
                 "AND ${PARTITION.name} = ANY(?) " +
                 "AND ${PROPERTY_TYPE_ID.name} != ? " +
                 "AND $expirationBaseColumn <= ? " +
-                ignoredClearedEntitiesClause // this clause ignores entities that have already been cleared
+                ignoredClearedEntitiesClause + // this clause ignores entities that have already been cleared
+                "LIMIT $EXPIRED_DATA_BATCH_SIZE"
     }
 }
 
