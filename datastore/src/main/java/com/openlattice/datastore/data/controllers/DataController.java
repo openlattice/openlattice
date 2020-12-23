@@ -24,6 +24,7 @@ import com.auth0.spring.security.api.authentication.PreAuthenticatedAuthenticati
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.*;
+import com.openlattice.analysis.requests.Filter;
 import com.openlattice.auditing.AuditEventType;
 import com.openlattice.auditing.AuditableEvent;
 import com.openlattice.auditing.AuditingComponent;
@@ -170,6 +171,26 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             EntitySetSelection selection,
             FileType fileType ) {
         return loadEntitySetData( entitySetId, selection );
+    }
+
+    @Override
+    @RequestMapping(
+            path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + FILTERED },
+            method = RequestMethod.POST,
+            consumes = { MediaType.APPLICATION_JSON_VALUE },
+            produces = { MediaType.APPLICATION_JSON_VALUE }
+    )
+    public Iterable<Map<FullQualifiedName, Set<Object>>> loadFilteredEntitySetData(
+            @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
+            @RequestBody FilteredDataPageDefinition filteredDataPageDefinition
+    ) {
+        ensureReadAccess( new AclKey( entitySetId ) );
+        ensureReadAccess( new AclKey( entitySetId, filteredDataPageDefinition.getPropertyTypeId() ) );
+
+        Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes = authzHelper
+                .getAuthorizedPropertiesOnEntitySets( ImmutableSet.of( entitySetId ), EnumSet.of( Permission.READ ) );
+
+        return dgm.getFilteredEntitySetData( entitySetId, filteredDataPageDefinition, authorizedPropertyTypes );
     }
 
     private EntitySetData<FullQualifiedName> loadEntitySetData(
