@@ -3,6 +3,7 @@ package com.openlattice.data.storage
 import com.google.common.collect.SetMultimap
 import com.openlattice.data.DeleteType
 import com.openlattice.data.EntitySetData
+import com.openlattice.data.FilteredDataPageDefinition
 import com.openlattice.data.WriteEvent
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.streams.BasePostgresIterable
@@ -58,6 +59,12 @@ interface EntityDatastore {
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             linking: Boolean
     ): EntitySetData<FullQualifiedName>
+
+    fun getFilteredEntitySetData(
+            entitySetId: UUID,
+            filteredDataPageDefinition: FilteredDataPageDefinition,
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
+    ): List<Map<FullQualifiedName, Set<Any>>>
 
     fun getEntitiesAcrossEntitySets(
             entitySetIdsToEntityKeyIds: SetMultimap<UUID, UUID>,
