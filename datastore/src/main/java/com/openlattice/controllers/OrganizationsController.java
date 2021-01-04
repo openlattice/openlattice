@@ -168,6 +168,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     @DeleteMapping( value = ID_PATH, produces = MediaType.APPLICATION_JSON_VALUE )
     @ResponseStatus( HttpStatus.OK )
     public Void destroyOrganization( @PathVariable( ID ) UUID organizationId ) {
+        ensureOwner( organizationId );
         ensureObjectCanBeDeleted( organizationId );
         organizations.ensureOrganizationExists( organizationId );
 
