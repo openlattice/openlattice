@@ -168,15 +168,12 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     @DeleteMapping( value = ID_PATH, produces = MediaType.APPLICATION_JSON_VALUE )
     @ResponseStatus( HttpStatus.OK )
     public Void destroyOrganization( @PathVariable( ID ) UUID organizationId ) {
-        AclKey aclKey = ensureOwner( organizationId );
-
+        ensureOwner( organizationId );
         ensureObjectCanBeDeleted( organizationId );
         organizations.ensureOrganizationExists( organizationId );
 
         organizations.destroyOrganization( organizationId );
         edms.deleteOrganizationExternalDatabase( organizationId );
-        authorizations.deletePermissions( aclKey );
-        securableObjectTypes.deleteSecurableObjectType( new AclKey( organizationId ) );
         return null;
     }
 
@@ -474,7 +471,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE
     )
-        public Map<UUID, Integer> getMemberCountForOrganizations( Set<UUID> organizationIds ) {
+    public Map<UUID, Integer> getMemberCountForOrganizations( Set<UUID> organizationIds ) {
         EnumSet<Permission> readPermissions = EnumSet.of( Permission.READ );
         accessCheck( organizationIds.stream().collect( Collectors.toMap( AclKey::new, id -> readPermissions ) ) );
 
