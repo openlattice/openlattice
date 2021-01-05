@@ -221,9 +221,9 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Map<String, Auth0UserBasic> searchAllUsersByEmail( @PathVariable( SEARCH_QUERY ) String emailSearchQuery ) {
 
-        // to search by an exact email, the search query must be in this format: email.raw:"hristo@openlattice.com"
-        // https://auth0.com/docs/api/management/v2/user-search#search-by-email
-        String exactEmailSearchQuery = "email.raw:\"" + emailSearchQuery + "\"";
+        // to search by an exact email, the search query must be in this format: email:"hristo@openlattice.com"
+        // https://auth0.com/docs/users/user-search/migrate-v2-v3
+        String exactEmailSearchQuery = "email:\"" + emailSearchQuery + "\"";
 
         return userDirectoryService.searchAllUsers( exactEmailSearchQuery );
     }
