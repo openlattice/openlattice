@@ -182,7 +182,10 @@ class OrganizationMetadataEntitySetsService(
             val organizationMetadataEntitySetIds = organizationService.getOrganizationMetadataEntitySetIds(organizationId)
 
             val datasetEntityKeyIds = getDatasetEntityKeyIds(organizationMetadataEntitySetIds, orgEntitySets.map { it.id })
-            val columnEntityKeyIds = getColumnEntityKeyIds(organizationMetadataEntitySetIds, propertyTypesByEntitySet.mapValues { it.value.map { pt -> pt.id } })
+            val columnEntityKeyIds = getColumnEntityKeyIds(
+                    organizationMetadataEntitySetIds,
+                    entitySets.associate { it.id to propertyTypesByEntitySet.getOrDefault(it.id, listOf()).map { pt -> pt.id } }
+            )
 
             val datasetEntities = mutableMapOf<UUID, MutableMap<UUID, Set<Any>>>()
             val columnEntities = mutableMapOf<UUID, MutableMap<UUID, Set<Any>>>()
@@ -239,7 +242,10 @@ class OrganizationMetadataEntitySetsService(
         val organizationMetadataEntitySetIds = organizationService.getOrganizationMetadataEntitySetIds(organizationId)
 
         val datasetEntityKeyIds = getDatasetEntityKeyIds(organizationMetadataEntitySetIds, tables.map { it.id })
-        val columnEntityKeyIds = getColumnEntityKeyIds(organizationMetadataEntitySetIds, columnsByTableId.mapValues { it.value.map { c -> c.id } })
+        val columnEntityKeyIds = getColumnEntityKeyIds(
+                organizationMetadataEntitySetIds,
+                tables.associate { it.id to columnsByTableId.getOrDefault(it.id, listOf()).map { c -> c.id } }
+        )
 
         val datasetEntities = mutableMapOf<UUID, MutableMap<UUID, Set<Any>>>()
         val columnEntities = mutableMapOf<UUID, MutableMap<UUID, Set<Any>>>()
