@@ -232,7 +232,7 @@ class OrganizationMetadataEntitySetsService(
             columnsByTableId: Map<UUID, Collection<OrganizationExternalDatabaseColumn>>
     ) {
         initializeFields()
-        if (!isFullyInitialized()) {
+        if (!isFullyInitialized() || tables.isEmpty()) {
             return
         }
 
