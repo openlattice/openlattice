@@ -76,7 +76,7 @@ class OrganizationMetadataEntitySetsService(
     private lateinit var datasetEntityTypeId: UUID
     private lateinit var columnsEntityTypeId: UUID
     private lateinit var omAuthorizedPropertyTypes: Map<UUID, PropertyType>
-    private lateinit var datasetsAuthorizedPropertTypes: Map<UUID, PropertyType>
+    private lateinit var datasetsAuthorizedPropertyTypes: Map<UUID, PropertyType>
     private lateinit var columnAuthorizedPropertyTypes: Map<UUID, PropertyType>
     private lateinit var propertyTypes: Map<String, PropertyType>
 
@@ -95,7 +95,7 @@ class OrganizationMetadataEntitySetsService(
         if (!this::datasetEntityTypeId.isInitialized) {
             val ds = edmService.getEntityType(DATASETS_ET)
             datasetEntityTypeId = ds.id
-            datasetsAuthorizedPropertTypes = edmService.getPropertyTypesAsMap(ds.properties)
+            datasetsAuthorizedPropertyTypes = edmService.getPropertyTypesAsMap(ds.properties)
         }
         if (!this::columnsEntityTypeId.isInitialized) {
             val c = edmService.getEntityType(COLUMNS_ET)
@@ -103,14 +103,14 @@ class OrganizationMetadataEntitySetsService(
             columnAuthorizedPropertyTypes = edmService.getPropertyTypesAsMap(c.properties)
         }
         if (!this::propertyTypes.isInitialized) {
-            propertyTypes = (omAuthorizedPropertyTypes.values + datasetsAuthorizedPropertTypes.values + columnAuthorizedPropertyTypes.values)
+            propertyTypes = (omAuthorizedPropertyTypes.values + datasetsAuthorizedPropertyTypes.values + columnAuthorizedPropertyTypes.values)
                     .associateBy { it.type.fullQualifiedNameAsString }
         }
     }
 
     fun isFullyInitialized(): Boolean = this::organizationMetadataEntityTypeId.isInitialized &&
             this::datasetEntityTypeId.isInitialized && this::columnsEntityTypeId.isInitialized &&
-            this::omAuthorizedPropertyTypes.isInitialized && this::datasetsAuthorizedPropertTypes.isInitialized &&
+            this::omAuthorizedPropertyTypes.isInitialized && this::datasetsAuthorizedPropertyTypes.isInitialized &&
             this::columnAuthorizedPropertyTypes.isInitialized && this::propertyTypes.isInitialized
 
     fun initializeOrganizationMetadataEntitySets(adminRole: Role) {
@@ -215,7 +215,7 @@ class OrganizationMetadataEntitySetsService(
             dataGraphManager.partialReplaceEntities(
                     organizationMetadataEntitySetIds.datasets,
                     datasetEntities,
-                    datasetsAuthorizedPropertTypes
+                    datasetsAuthorizedPropertyTypes
             )
 
             dataGraphManager.partialReplaceEntities(
@@ -272,7 +272,7 @@ class OrganizationMetadataEntitySetsService(
         dataGraphManager.partialReplaceEntities(
                 organizationMetadataEntitySetIds.datasets,
                 datasetEntities,
-                datasetsAuthorizedPropertTypes
+                datasetsAuthorizedPropertyTypes
         )
 
         dataGraphManager.partialReplaceEntities(
@@ -301,7 +301,7 @@ class OrganizationMetadataEntitySetsService(
         dataGraphManager.partialReplaceEntities(
                 organizationMetadataEntitySetIds.datasets,
                 mapOf(datasetEntityKeyId to datasetEntity),
-                datasetsAuthorizedPropertTypes
+                datasetsAuthorizedPropertyTypes
         )
     }
 
@@ -337,7 +337,7 @@ class OrganizationMetadataEntitySetsService(
         dataGraphManager.partialReplaceEntities(
                 organizationMetadataEntitySetIds.datasets,
                 mapOf(datasetEntityKeyId to datasetColumnEntity),
-                datasetsAuthorizedPropertTypes
+                datasetsAuthorizedPropertyTypes
         )
     }
 
