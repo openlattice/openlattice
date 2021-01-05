@@ -77,7 +77,7 @@ class OrganizationMetadataEntitySetsService(
     private lateinit var columnsEntityTypeId: UUID
     private lateinit var omAuthorizedPropertyTypes: Map<UUID, PropertyType>
     private lateinit var datasetsAuthorizedPropertTypes: Map<UUID, PropertyType>
-    private lateinit var columnAuthorizedPropertTypes: Map<UUID, PropertyType>
+    private lateinit var columnAuthorizedPropertyTypes: Map<UUID, PropertyType>
     private lateinit var propertyTypes: Map<String, PropertyType>
 
     /**
@@ -100,10 +100,10 @@ class OrganizationMetadataEntitySetsService(
         if (!this::columnsEntityTypeId.isInitialized) {
             val c = edmService.getEntityType(COLUMNS_ET)
             columnsEntityTypeId = c.id
-            columnAuthorizedPropertTypes = edmService.getPropertyTypesAsMap(c.properties)
+            columnAuthorizedPropertyTypes = edmService.getPropertyTypesAsMap(c.properties)
         }
         if (!this::propertyTypes.isInitialized) {
-            propertyTypes = (omAuthorizedPropertyTypes.values + datasetsAuthorizedPropertTypes.values + columnAuthorizedPropertTypes.values)
+            propertyTypes = (omAuthorizedPropertyTypes.values + datasetsAuthorizedPropertTypes.values + columnAuthorizedPropertyTypes.values)
                     .associateBy { it.type.fullQualifiedNameAsString }
         }
     }
@@ -111,7 +111,7 @@ class OrganizationMetadataEntitySetsService(
     fun isFullyInitialized(): Boolean = this::organizationMetadataEntityTypeId.isInitialized &&
             this::datasetEntityTypeId.isInitialized && this::columnsEntityTypeId.isInitialized &&
             this::omAuthorizedPropertyTypes.isInitialized && this::datasetsAuthorizedPropertTypes.isInitialized &&
-            this::columnAuthorizedPropertTypes.isInitialized && this::propertyTypes.isInitialized
+            this::columnAuthorizedPropertyTypes.isInitialized && this::propertyTypes.isInitialized
 
     fun initializeOrganizationMetadataEntitySets(adminRole: Role) {
         initializeFields()
@@ -221,7 +221,7 @@ class OrganizationMetadataEntitySetsService(
             dataGraphManager.partialReplaceEntities(
                     organizationMetadataEntitySetIds.columns,
                     columnEntities,
-                    columnAuthorizedPropertTypes
+                    columnAuthorizedPropertyTypes
             )
         }
     }
@@ -278,7 +278,7 @@ class OrganizationMetadataEntitySetsService(
         dataGraphManager.partialReplaceEntities(
                 organizationMetadataEntitySetIds.columns,
                 columnEntities,
-                columnAuthorizedPropertTypes
+                columnAuthorizedPropertyTypes
         )
     }
 
@@ -326,7 +326,7 @@ class OrganizationMetadataEntitySetsService(
         dataGraphManager.partialReplaceEntities(
                 organizationMetadataEntitySetIds.columns,
                 columnEntities,
-                columnAuthorizedPropertTypes
+                columnAuthorizedPropertyTypes
         )
 
         val datasetEntityKeyId = getDatasetEntityKeyId(organizationMetadataEntitySetIds, table.id)
