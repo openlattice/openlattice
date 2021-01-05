@@ -60,7 +60,7 @@ private const val DESCRIPTION = "ol.description"
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 @Service
-class   OrganizationMetadataEntitySetsService(
+class OrganizationMetadataEntitySetsService(
         private val edmService: EdmManager,
         private val authorizationManager: AuthorizationManager
 ) {
