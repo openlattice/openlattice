@@ -189,7 +189,7 @@ class OrganizationMetadataEntitySetsService(
 
             orgEntitySets.forEach { entitySet ->
 
-                val entitySetPropertyTypeEntities = propertyTypesByEntitySet.getValue(entitySet.id).associate { propertyType ->
+                val entitySetPropertyTypeEntities = propertyTypesByEntitySet.getOrDefault(entitySet.id, listOf()).associate { propertyType ->
                     columnEntityKeyIds.getValue(AclKey(entitySet.id, propertyType.id)) to mutableMapOf<UUID, Set<Any>>(
                             propertyTypes.getValue(ID).id to setOf(propertyType.id.toString()),
                             propertyTypes.getValue(DATASET_NAME).id to setOf(entitySet.name),
@@ -246,7 +246,7 @@ class OrganizationMetadataEntitySetsService(
 
         tables.forEach { table ->
 
-            val tableColumnEntities = columnsByTableId.getValue(table.id).associate { column ->
+            val tableColumnEntities = columnsByTableId.getOrDefault(table.id, listOf()).associate { column ->
                 columnEntityKeyIds.getValue(AclKey(table.id, column.id)) to mutableMapOf<UUID, Set<Any>>(
                         propertyTypes.getValue(ID).id to setOf(column.id.toString()),
                         propertyTypes.getValue(DATASET_NAME).id to setOf(table.name),
