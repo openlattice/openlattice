@@ -47,7 +47,7 @@ class Auth0UserDirectoryService(
 
         var page = 0
         var pageOfUsers = auth0ManagementApi.searchAllUsers(searchQuery, page++,
-                                                            DEFAULT_PAGE_SIZE
+                                                            DEFAULT_PAGE_SIZE, "v3"
         )
         val users = mutableSetOf<Auth0UserBasic>()
 
@@ -56,7 +56,7 @@ class Auth0UserDirectoryService(
 
             if (pageOfUsers.size == DEFAULT_PAGE_SIZE) {
                 pageOfUsers = auth0ManagementApi.searchAllUsers(searchQuery, page++,
-                                                                DEFAULT_PAGE_SIZE
+                                                                DEFAULT_PAGE_SIZE, "v3"
                 )
             } else {
                 break

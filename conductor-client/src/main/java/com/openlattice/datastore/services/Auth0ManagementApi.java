@@ -36,6 +36,7 @@ public interface Auth0ManagementApi {
 
     String PAGE     = "page";
     String PER_PAGE = "per_page";
+    String SEARCH_ENGINE = "search_engine"
     String QUERY    = "q";
     String USERS    = "users";
 
@@ -55,7 +56,8 @@ public interface Auth0ManagementApi {
     Set<Auth0UserBasic> searchAllUsers(
             @Query( QUERY ) String searchQuery,
             @Query( PAGE ) int page,
-            @Query( PER_PAGE ) int perPage );
+            @Query( PER_PAGE ) int perPage
+            @Query( SEARCH_ENGINE ) String searchEngine );
 
     @DELETE( USERS + "/" + USER_ID_PATH )
     Void deleteUser( @Path( USER_ID ) String userId );
