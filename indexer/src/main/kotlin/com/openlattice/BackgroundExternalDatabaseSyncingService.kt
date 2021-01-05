@@ -219,7 +219,7 @@ class BackgroundExternalDatabaseSyncingService(
                 Optional.empty()
         )
 
-        organizationMetadataEntitySetsService.addDataset(orgId, table.oid, table.id, table.name)
+        organizationMetadataEntitySetsService.addDataset(orgId, table)
 
         //create audit entity set and audit permissions
         ares.createAuditEntitySetForExternalDBTable(table)
