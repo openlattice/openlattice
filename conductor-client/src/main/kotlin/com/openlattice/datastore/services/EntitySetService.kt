@@ -176,10 +176,8 @@ class EntitySetService(
     }
 
     override fun setupOrganizationMetadataAndAuditEntitySets(entitySet: EntitySet) {
-        organizationMetadataEntitySetsService.addDataset(entitySet)
         val propertyTypes = edm.getPropertyTypesOfEntityType(entitySet.entityTypeId)
-
-        organizationMetadataEntitySetsService.addDatasetColumns(entitySet, propertyTypes.values)
+        organizationMetadataEntitySetsService.addDatasetsAndColumns(listOf(entitySet), mapOf(entitySet.id to propertyTypes.values))
 
         aresManager.createAuditEntitySetForEntitySet(entitySet)
 

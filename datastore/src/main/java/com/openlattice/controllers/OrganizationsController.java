@@ -23,6 +23,8 @@ package com.openlattice.controllers;
 import com.auth0.json.mgmt.users.User;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.openlattice.apps.services.AppService;
@@ -722,12 +724,13 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
                 .getExternalDatabaseTablesWithColumns( organizationId );
         tables
                 .forEach( ( t, c ) -> {
-                    organizationMetadataEntitySetsService.addDataset( organizationId, t.getSecond() );
                     organizationMetadataEntitySetsService
-                            .addDatasetColumns(
+                            .addDatasetsAndColumns(
                                     organizationId,
-                                    t.getSecond(),
-                                    c.stream().map( Entry::getValue ).collect( Collectors.toList() ) );
+                                    ImmutableList.of( t.getSecond() ),
+                                    ImmutableMap.of( t.getSecond().getId(),
+                                            c.stream().map( Entry::getValue ).collect( Collectors.toList() ) ) );
+
                 } );
 
         entitySetManager
@@ -736,8 +739,9 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
                     var entitySet = Objects.requireNonNull( entitySetManager.getEntitySet( e ) );
                     var propertyTypes = edmService.getPropertyTypesOfEntityType( entitySet.getEntityTypeId() );
 
-                    organizationMetadataEntitySetsService.addDataset( entitySet );
-                    organizationMetadataEntitySetsService.addDatasetColumns( entitySet, propertyTypes.values() );
+                    organizationMetadataEntitySetsService.addDatasetsAndColumns(
+                            ImmutableList.of( entitySet ),
+                            ImmutableMap.of( entitySet.getId(), propertyTypes.values() ) );
                 } );
 
         return null;
