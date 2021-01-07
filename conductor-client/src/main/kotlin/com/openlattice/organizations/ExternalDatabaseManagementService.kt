@@ -709,7 +709,7 @@ class ExternalDatabaseManagementService(
     private fun getCurrentTableAndColumnNamesSql(): String {
         return """
             SELECT
-              oid,
+              ${OID.name},
               information_schema.tables.table_name AS ${NAME.name},
               information_schema.tables.table_schema AS $SCHEMA_NAME_FIELD,
               (
