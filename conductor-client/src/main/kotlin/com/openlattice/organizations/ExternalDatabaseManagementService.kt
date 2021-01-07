@@ -272,19 +272,14 @@ class ExternalDatabaseManagementService(
         return organizationExternalDatabaseColumns.getValue(columnId)
     }
 
-    fun getColumnNamesByTableName(dbName: String): Map<String, TableSchemaInfo> {
-        val columnNamesByTableName = mutableMapOf<String, TableSchemaInfo>()
-        val sql = getCurrentTableAndColumnNamesSql()
-        BasePostgresIterable(
-                StatementHolderSupplier(externalDbManager.connect(dbName), sql, FETCH_SIZE)
-        ) { rs -> TableInfo(oid(rs), name(rs), columnName(rs)) }
-                .forEach {
-                    columnNamesByTableName
-                            .getOrPut(it.tableName) {
-                                TableSchemaInfo(it.oid, mutableSetOf())
-                            }.columnNames.add(it.columnName)
-                }
-        return columnNamesByTableName
+    fun getColumnNamesByTableName(dbName: String): List<TableInfo> {
+        return BasePostgresIterable(StatementHolderSupplier(
+                externalDbManager.connect(dbName),
+                getCurrentTableAndColumnNamesSql(),
+                FETCH_SIZE
+        )) { rs ->
+            TableInfo(oid(rs), name(rs), schemaName(rs), columnNames(rs))
+        }.toList()
     }
 
     /*UPDATE*/
@@ -701,10 +696,28 @@ class ExternalDatabaseManagementService(
     }
 
     /*INTERNAL SQL QUERIES*/
+
+    /**
+     * For a database, retrieves a ResultSet enumerating all tables and columns in the openlattice and staging schemas.
+     * Each row maps to a single table, containing the following columns
+     * - oid: the table's OID
+     * - name: table name
+     * - schema_name: the table's schema
+     * - column_names: array of the table's columnds
+     */
     private fun getCurrentTableAndColumnNamesSql(): String {
-        return selectExpression + fromExpression + leftJoinColumnsExpression +
-                "WHERE information_schema.tables.table_schema=ANY('{$OPENLATTICE_SCHEMA,$STAGING_SCHEMA}') " +
-                "AND table_type='BASE TABLE'"
+        return """
+            SELECT
+              oid,
+              information_schema.tables.table_name AS name,
+              information_schema.tables.table_schema AS schema_name,
+              (SELECT '{}' || array_agg(col_name) from UNNEST(array_agg(information_schema.columns.column_name)) col_name WHERE col_name IS NOT NULL) AS column_names
+            $fromExpression $leftJoinColumnsExpression
+            WHERE
+              information_schema.tables.table_schema=ANY('{$OPENLATTICE_SCHEMA,$STAGING_SCHEMA}')
+              AND table_type='BASE TABLE'
+            GROUP BY oid, name, information_schema.tables.table_schema;
+        """.trimIndent()
     }
 
     private fun getColumnMetadataSql(tableName: String, columnCondition: String): String {
@@ -740,7 +753,12 @@ class ExternalDatabaseManagementService(
     private val fromExpression = "FROM information_schema.tables "
 
     private val leftJoinColumnsExpression0 = "LEFT JOIN pg_class ON relname = information_schema.tables.table_name "
-    private val leftJoinColumnsExpression = "LEFT JOIN information_schema.columns ON information_schema.tables.table_name = information_schema.columns.table_name $leftJoinColumnsExpression0"
+    private val leftJoinColumnsExpression = """
+        LEFT JOIN information_schema.columns
+          ON information_schema.tables.table_name = information_schema.columns.table_name
+          AND information_schema.tables.table_schema = information_schema.columns.table_schema
+        $leftJoinColumnsExpression0        
+    """.trimIndent()
 
     private fun getInsertRecordSql(table: PostgresTableDefinition, columns: String, pkey: String, record: PostgresAuthenticationRecord): String {
         return "INSERT INTO ${table.name} $columns VALUES(${record.buildPostgresRecord()}) " +
@@ -782,13 +800,9 @@ class ExternalDatabaseManagementService(
 
 }
 
-data class TableSchemaInfo(
-        val oid: Int,
-        val columnNames: MutableSet<String>
-)
-
 data class TableInfo(
         val oid: Int,
         val tableName: String,
-        val columnName: String
+        val schemaName: String,
+        val columnNames: List<String>
 )
