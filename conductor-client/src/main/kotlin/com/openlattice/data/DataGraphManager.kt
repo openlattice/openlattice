@@ -53,6 +53,12 @@ interface DataGraphManager {
             linking: Boolean
     ): EntitySetData<FullQualifiedName>
 
+    fun getFilteredEntitySetData(
+            entitySetId: UUID,
+            filteredDataPageDefinition: FilteredDataPageDefinition,
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
+    ): List<Map<FullQualifiedName, Set<Any>>>
+
     /*
      * CRUD methods for entity
      */

@@ -397,11 +397,14 @@ class ExternalDatabaseManagementService(
 
         //drop db from schema
         val dbName = externalDbManager.getOrganizationDatabaseName(orgId)
-        externalDbManager.connect(dbName).connection.use { conn ->
+        externalDbManager.connectAsSuperuser().connection.use { conn ->
             val stmt = conn.createStatement()
             stmt.execute(dropAllConnectionsToDatabaseSql(dbName))
             stmt.execute("DROP DATABASE $dbName")
         }
+
+
+        externalDbManager.deleteOrganizationDatabase(orgId)
     }
 
     /*PERMISSIONS*/

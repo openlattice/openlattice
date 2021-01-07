@@ -20,6 +20,7 @@ package com.openlattice.data;
 
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.SetMultimap;
+import com.openlattice.analysis.requests.Filter;
 import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
 import com.openlattice.search.requests.EntityNeighborsFilter;
@@ -56,6 +57,7 @@ public interface DataApi {
     String S3_URL                = "s3Url";
     String S3_URLS               = "s3Urls";
     String FILE_TYPE             = "fileType";
+    String FILTERED              = "filtered";
     String NEIGHBORS             = "neighbors";
     String PARTIAL               = "partial";
     String DETAILED              = "detailed";
@@ -92,6 +94,12 @@ public interface DataApi {
     List<UUID> createEntities(
             @Query( ENTITY_SET_ID ) UUID entitySetId,
             @Body List<Map<UUID, Set<Object>>> entities );
+
+    @POST( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + FILTERED)
+    Iterable<Map<FullQualifiedName, Set<Object>>> loadFilteredEntitySetData(
+            @Path( ENTITY_SET_ID ) UUID entitySetId,
+            @Body FilteredDataPageDefinition filteredDataPageDefinition
+    );
 
     /**
      * Replaces a single entity from an entity set.
@@ -296,4 +304,5 @@ public interface DataApi {
             @Path( ENTITY_SET_ID ) UUID linkedEntitySetId,
             @Body EntitySetSelection selection
     );
+
 }
