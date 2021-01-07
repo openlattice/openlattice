@@ -709,11 +709,11 @@ class ExternalDatabaseManagementService(
     private fun getCurrentTableAndColumnNamesSql(): String {
         return """
             SELECT
-              ${OID.name},
+              $oidFromPgTables,
               information_schema.tables.table_name AS ${NAME.name},
               information_schema.tables.table_schema AS $SCHEMA_NAME_FIELD,
               (
-                SELECT '{}' || array_agg(col_name)
+                SELECT '{}' || array_agg(col_name::text)
                 FROM UNNEST(array_agg(information_schema.columns.column_name)) col_name
                 WHERE col_name IS NOT NULL
               ) AS $COLUMN_NAMES_FIELD
@@ -721,15 +721,17 @@ class ExternalDatabaseManagementService(
             WHERE
               information_schema.tables.table_schema=ANY('{$OPENLATTICE_SCHEMA,$STAGING_SCHEMA}')
               AND table_type='BASE TABLE'
-            GROUP BY oid, name, information_schema.tables.table_schema;
+            GROUP BY name, information_schema.tables.table_schema;
         """.trimIndent()
     }
+
+    private val oidFromPgTables = "(information_schema.tables.table_schema || '.' || information_schema.tables.table_name)::regclass::oid AS ${OID.name}"
 
     private fun getColumnMetadataSql(tableName: String, columnCondition: String): String {
         return selectExpression + ", information_schema.columns.data_type AS datatype, " +
                 "information_schema.columns.ordinal_position, " +
                 "information_schema.table_constraints.constraint_type " +
-                fromExpression + leftJoinColumnsExpression +
+                fromExpression + leftJoinColumnsExpression + leftJoinPgClass +
                 "LEFT OUTER JOIN information_schema.constraint_column_usage ON " +
                 "information_schema.columns.column_name = information_schema.constraint_column_usage.column_name " +
                 "AND information_schema.columns.table_name = information_schema.constraint_column_usage.table_name " +
@@ -757,12 +759,11 @@ class ExternalDatabaseManagementService(
 
     private val fromExpression = "FROM information_schema.tables "
 
-    private val leftJoinColumnsExpression0 = "LEFT JOIN pg_class ON relname = information_schema.tables.table_name "
+    private val leftJoinPgClass = " LEFT JOIN pg_class ON relname = information_schema.tables.table_name "
     private val leftJoinColumnsExpression = """
         LEFT JOIN information_schema.columns
           ON information_schema.tables.table_name = information_schema.columns.table_name
           AND information_schema.tables.table_schema = information_schema.columns.table_schema
-        $leftJoinColumnsExpression0        
     """.trimIndent()
 
     private fun getInsertRecordSql(table: PostgresTableDefinition, columns: String, pkey: String, record: PostgresAuthenticationRecord): String {
