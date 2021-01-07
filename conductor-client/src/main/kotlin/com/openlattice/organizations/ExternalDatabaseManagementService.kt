@@ -27,6 +27,7 @@ import com.openlattice.organizations.mapstores.TABLE_ID_INDEX
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.*
 import com.openlattice.postgres.DataTables.quote
+import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.ResultSetAdapters.*
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
 import com.openlattice.postgres.streams.BasePostgresIterable
@@ -709,9 +710,13 @@ class ExternalDatabaseManagementService(
         return """
             SELECT
               oid,
-              information_schema.tables.table_name AS name,
-              information_schema.tables.table_schema AS schema_name,
-              (SELECT '{}' || array_agg(col_name) from UNNEST(array_agg(information_schema.columns.column_name)) col_name WHERE col_name IS NOT NULL) AS column_names
+              information_schema.tables.table_name AS ${NAME.name},
+              information_schema.tables.table_schema AS $SCHEMA_NAME_FIELD,
+              (
+                SELECT '{}' || array_agg(col_name)
+                FROM UNNEST(array_agg(information_schema.columns.column_name)) col_name
+                WHERE col_name IS NOT NULL
+              ) AS $COLUMN_NAMES_FIELD
             $fromExpression $leftJoinColumnsExpression
             WHERE
               information_schema.tables.table_schema=ANY('{$OPENLATTICE_SCHEMA,$STAGING_SCHEMA}')
