@@ -725,7 +725,7 @@ class ExternalDatabaseManagementService(
         """.trimIndent()
     }
 
-    private val oidFromPgTables = "(information_schema.tables.table_schema || '.' || information_schema.tables.table_name)::regclass::oid AS ${OID.name}"
+    private val oidFromPgTables = "(information_schema.tables.table_schema || '.' || quote_ident(information_schema.tables.table_name))::regclass::oid AS ${OID.name}"
 
     private fun getColumnMetadataSql(tableName: String, columnCondition: String): String {
         return selectExpression + ", information_schema.columns.data_type AS datatype, " +
