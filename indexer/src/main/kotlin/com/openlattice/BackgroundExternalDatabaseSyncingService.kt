@@ -109,6 +109,8 @@ class BackgroundExternalDatabaseSyncingService(
                     totalSynced,
                     timer
             )
+        } catch ( ex: Exception ) {
+            logger.info("Failed while syncing external database metadata")
         } finally {
             taskLock.unlock()
         }
@@ -116,7 +118,7 @@ class BackgroundExternalDatabaseSyncingService(
 
     private fun syncOrganizationDatabases(orgId: UUID): Int {
         var totalSynced = 0
-        val dbName = organizationDatabases.getValue(orgId).name
+        val dbName= checkNotNull( organizationDatabases[orgId], { "Organization $orgId does not exist in the organizationDatabases mapstore" }).name
         val orgOwnerIds = edms.getOrganizationOwners(orgId).map { it.id }
         val currentTableIds = mutableSetOf<UUID>()
         val currentColumnIds = mutableSetOf<UUID>()
