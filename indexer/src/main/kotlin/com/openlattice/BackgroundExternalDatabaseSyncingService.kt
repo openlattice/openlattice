@@ -110,7 +110,7 @@ class BackgroundExternalDatabaseSyncingService(
                     timer
             )
         } catch ( ex: Exception ) {
-            logger.info("Failed while syncing external database metadata")
+            logger.error("Failed while syncing external database metadata", ex)
         } finally {
             taskLock.unlock()
         }
