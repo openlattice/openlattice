@@ -15,7 +15,10 @@ import java.util.UUID
  *
  * @author Drew Bailey &lt;drew@openlattice.com&gt;
  */
-@SuppressFBWarnings(value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"], justification = "Ignore internal kotlin redundant nullchecks")
+@SuppressFBWarnings(
+        value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE", "SE_BAD_FIELD"],
+        justification = "Ignore internal kotlin redundant nullchecks, ignore bad field b/c custom serializers used"
+)
 data class TransportEntitySetEntryProcessor(
         val organizationId: UUID,
         val ptIdToFqnColumns: Set<PropertyTypeIdFqn>,
