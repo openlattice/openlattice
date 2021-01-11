@@ -2,9 +2,7 @@ package com.openlattice.organization
 
 import com.auth0.json.mgmt.users.User
 import com.openlattice.organization.roles.Role
-import com.openlattice.organizations.Grant
-import com.openlattice.organizations.Organization
-import com.openlattice.organizations.OrganizationMetadataEntitySetIds
+import com.openlattice.organizations.*
 import retrofit2.http.*
 import java.util.*
 import javax.annotation.Nonnull
@@ -58,6 +56,10 @@ interface OrganizationsApi {
         const val TYPE_PATH = "/{$TYPE}"
         const val USER_ID = "userId"
         const val USER_ID_PATH = "/{$USER_ID:.*}"
+
+        const val DATASOURCE = "/datasource"
+        const val DATASOURCE_ID = "datasource_id"
+        const val DATASOURCE_ID_PATH = "/{$DATASOURCE_ID}"
 
     }
 
@@ -421,5 +423,38 @@ interface OrganizationsApi {
             @Path(ID) organizationId: UUID, @Body newDatabaseName: String
     ): Void?
 
+    /**
+     * Lists the datasources registered in an organization.
+     *
+     * @param organizationId The id of the organization
+     *
+     */
+    @GET(BASE + ID_PATH + DATASOURCE)
+    fun listDatasources(@Path(ID) organizationId: UUID): List<JdbcConnection>
 
+    /**
+     * Registers a datasource with an organization.
+     *
+     * @return The id assigned to the newly registered datasource.
+     */
+    @POST(BASE + ID_PATH + DATASOURCE)
+    fun registerDatasource(
+            @Path(ID) organizationId: UUID,
+            @Body datasource: JdbcConnection
+    ): UUID
+
+    /**
+     * Updates a datasource in an organization.
+     *
+     * @param organizationId The id of the organization
+     * @param datasourceId The id of the data source to update
+     * @param datasource The datasource information to set.
+     *
+     */
+    @PUT(BASE + ID_PATH + DATASOURCE + DATASOURCE_ID_PATH)
+    fun updateDatasource(
+            @Path(ID) organizationId: UUID,
+            @Path(DATASOURCE) datasourceId: UUID,
+            @Body datasource: JdbcConnection
+    )
 }

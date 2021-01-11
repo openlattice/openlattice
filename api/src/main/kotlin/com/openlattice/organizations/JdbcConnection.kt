@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonFilter
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.openlattice.client.serialization.SerializationConstants
-import java.util.*
+import java.util.Properties
 
 /**
  *
