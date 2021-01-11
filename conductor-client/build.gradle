@@ -136,7 +136,6 @@ dependencies {
     compile "com.esotericsoftware:reflectasm:${reflectasm_version}"
     compile "org.objenesis:objenesis:${objenesis_version}"
 
-
     compile "com.google.guava:guava:${guava_version}"
     compile "org.apache.olingo:odata-commons-api:${odata_version}"
     compile "org.apache.olingo:odata-commons-core:${odata_version}"
