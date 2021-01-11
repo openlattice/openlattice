@@ -107,6 +107,7 @@ public final class PostgresColumn {
     public static final String                   COLUMN_NAME_FIELD                 = "column_name";
     public static final PostgresColumnDefinition COLUMN_NAME                       =
             new PostgresColumnDefinition( COLUMN_NAME_FIELD, TEXT );
+    public static final String                   COLUMN_NAMES_FIELD                = "column_names";
     public static final String                   COMPONENT_TYPES_FIELD             = "comp_types";
     public static final PostgresColumnDefinition COMPONENT_TYPES                   =
             new PostgresColumnDefinition( COMPONENT_TYPES_FIELD, INTEGER )
@@ -452,6 +453,7 @@ public final class PostgresColumn {
     public static final String                   SCHEMAS_FIELD                     = "schemas";
     public static final PostgresColumnDefinition SCHEMAS                           =
             new PostgresColumnDefinition( SCHEMAS_FIELD, TEXT_ARRAY ).notNull();
+    public static final String                   SCHEMA_NAME_FIELD                     = "schema_name";
     public static final String                   SCOPE_FIELD                       = "scope";
     public static final PostgresColumnDefinition SCOPE                             = new PostgresColumnDefinition(
             SCOPE_FIELD,

@@ -24,6 +24,7 @@ import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -125,6 +126,7 @@ import static com.openlattice.postgres.PostgresColumn.CATEGORY;
 import static com.openlattice.postgres.PostgresColumn.CLASS_NAME;
 import static com.openlattice.postgres.PostgresColumn.CLASS_PROPERTIES;
 import static com.openlattice.postgres.PostgresColumn.COLUMN_NAME;
+import static com.openlattice.postgres.PostgresColumn.COLUMN_NAMES_FIELD;
 import static com.openlattice.postgres.PostgresColumn.CONFIG_ID;
 import static com.openlattice.postgres.PostgresColumn.CONNECTION_TYPE;
 import static com.openlattice.postgres.PostgresColumn.CONSTRAINT_TYPE;
@@ -203,6 +205,7 @@ import static com.openlattice.postgres.PostgresColumn.REASON;
 import static com.openlattice.postgres.PostgresColumn.REFRESH_RATE;
 import static com.openlattice.postgres.PostgresColumn.SCHEDULED_DATE;
 import static com.openlattice.postgres.PostgresColumn.SCHEMAS;
+import static com.openlattice.postgres.PostgresColumn.SCHEMA_NAME_FIELD;
 import static com.openlattice.postgres.PostgresColumn.SCORE_FIELD;
 import static com.openlattice.postgres.PostgresColumn.SEARCH_CONSTRAINTS_FIELD;
 import static com.openlattice.postgres.PostgresColumn.SECURABLE_OBJECTID;
@@ -298,7 +301,7 @@ public final class ResultSetAdapters {
     }
 
     public static EntityDataKey srcEntityDataKey( ResultSet rs ) throws SQLException {
-    final UUID srcEntitySetId = (UUID) rs.getObject( SRC_ENTITY_SET_ID_FIELD );
+        final UUID srcEntitySetId = (UUID) rs.getObject( SRC_ENTITY_SET_ID_FIELD );
         final UUID srcEntityKeyId = (UUID) rs.getObject( SRC_ENTITY_KEY_ID_FIELD );
         return new EntityDataKey( srcEntitySetId, srcEntityKeyId );
     }
@@ -467,7 +470,7 @@ public final class ResultSetAdapters {
     }
 
     public static int oid( ResultSet rs ) throws SQLException {
-        return rs.getInt("oid");
+        return rs.getInt( "oid" );
     }
 
     public static String name( ResultSet rs ) throws SQLException {
@@ -486,6 +489,10 @@ public final class ResultSetAdapters {
 
     public static String description( ResultSet rs ) throws SQLException {
         return rs.getString( DESCRIPTION.getName() );
+    }
+
+    public static String schemaName( ResultSet rs ) throws SQLException {
+        return rs.getString( SCHEMA_NAME_FIELD );
     }
 
     public static Set<FullQualifiedName> schemas( ResultSet rs ) throws SQLException {
@@ -1081,9 +1088,9 @@ public final class ResultSetAdapters {
         String title = title( rs );
         Optional<String> description = Optional.ofNullable( description( ( rs ) ) );
         UUID organizationId = organizationId( rs );
-        int oid = oid(rs);
+        int oid = oid( rs );
 
-        return new OrganizationExternalDatabaseTable( id, name, title, description, organizationId,oid );
+        return new OrganizationExternalDatabaseTable( id, name, title, description, organizationId, oid );
     }
 
     public static OrganizationExternalDatabaseColumn organizationExternalDatabaseColumn( ResultSet rs )
@@ -1111,6 +1118,10 @@ public final class ResultSetAdapters {
 
     public static String columnName( ResultSet rs ) throws SQLException {
         return rs.getString( COLUMN_NAME.getName() );
+    }
+
+    public static List<String> columnNames( ResultSet rs ) throws SQLException {
+        return Lists.newArrayList( getTextArray( rs, COLUMN_NAMES_FIELD ) );
     }
 
     public static PostgresDatatype sqlDataType( ResultSet rs ) throws SQLException {
@@ -1190,6 +1201,6 @@ public final class ResultSetAdapters {
         int oid = rs.getInt( OID.getName() );
         String name = name( rs );
 
-        return new OrganizationDatabase(oid, name);
+        return new OrganizationDatabase( oid, name );
     }
 }

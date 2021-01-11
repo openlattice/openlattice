@@ -438,7 +438,7 @@ public class ConductorServicesPod {
 
     @Bean
     public OrganizationMetadataEntitySetsService organizationMetadataEntitySetsService() {
-        return new OrganizationMetadataEntitySetsService( dataModelService() );
+        return new OrganizationMetadataEntitySetsService( dataModelService(), authorizationManager() );
     }
 
     @Bean

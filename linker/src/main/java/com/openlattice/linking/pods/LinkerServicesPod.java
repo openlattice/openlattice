@@ -260,7 +260,7 @@ public class LinkerServicesPod {
 
     @Bean
     public OrganizationMetadataEntitySetsService organizationMetadataEntitySetsService() {
-        return new OrganizationMetadataEntitySetsService( dataModelService() );
+        return new OrganizationMetadataEntitySetsService( dataModelService(), authorizationManager() );
     }
 
     @Bean

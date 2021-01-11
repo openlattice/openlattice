@@ -22,9 +22,7 @@ import com.openlattice.postgres.PostgresDatatype
  * @param ordinalPosition The index of the column within the containing table
  */
 
-class OrganizationExternalDatabaseColumn
-
-constructor(
+class OrganizationExternalDatabaseColumn(
         @JsonProperty(SerializationConstants.ID_FIELD) id: Optional<UUID>,
         @JsonProperty(SerializationConstants.NAME_FIELD) var name: String,
         @JsonProperty(SerializationConstants.TITLE_FIELD) title: String,

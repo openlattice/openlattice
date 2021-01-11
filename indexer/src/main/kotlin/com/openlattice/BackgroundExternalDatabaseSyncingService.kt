@@ -119,8 +119,9 @@ class BackgroundExternalDatabaseSyncingService(
         val orgOwnerIds = edms.getOrganizationOwners(orgId).map { it.id }
         val currentTableIds = mutableSetOf<UUID>()
         val currentColumnIds = mutableSetOf<UUID>()
-        val currentColumnNamesByTableName = edms.getColumnNamesByTableName(dbName)
-        currentColumnNamesByTableName.forEach { (tableName, schemaInfo) ->
+
+        edms.getColumnNamesByTableName(dbName).forEach { (oid, tableName, schemaName, columnNames) ->
+
             //check if we had a record of this table name previously
             val tableFQN = FullQualifiedName(orgId.toString(), tableName)
             val tableId = aclKeys[tableFQN.fullQualifiedNameAsString]
@@ -132,7 +133,7 @@ class BackgroundExternalDatabaseSyncingService(
                         tableName,
                         Optional.empty(),
                         orgId,
-                        schemaInfo.oid
+                        oid
                 )
                 val newTableId = createSecurableTableObject(orgOwnerIds, orgId, currentTableIds, newTable)
                 totalSynced++
@@ -149,7 +150,7 @@ class BackgroundExternalDatabaseSyncingService(
             } else {
                 currentTableIds.add(tableId)
                 //check if columns existed previously
-                schemaInfo.columnNames.forEach {
+                columnNames.forEach {
                     val columnFQN = FullQualifiedName(tableId.toString(), it)
                     val columnId = aclKeys[columnFQN.fullQualifiedNameAsString]
                     if (columnId == null) {
@@ -218,7 +219,7 @@ class BackgroundExternalDatabaseSyncingService(
                 Optional.empty()
         )
 
-        organizationMetadataEntitySetsService.addDataset(orgId, table.oid, table.id, table.name)
+        organizationMetadataEntitySetsService.addDataset(orgId, table)
 
         //create audit entity set and audit permissions
         ares.createAuditEntitySetForExternalDBTable(table)
