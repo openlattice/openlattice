@@ -239,7 +239,7 @@ class AssemblerTest : AssemblerTestBase() {
 
         // materialize entity set with all it's properties and no automatic refresh
         grantMaterializePermissions(organization, es, et.properties)
-        organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to null))
+        organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to 2))
         // data is not supposed to be there, only the columns
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
@@ -387,7 +387,7 @@ class AssemblerTest : AssemblerTestBase() {
         grantMaterializePermissions(organization, esEdge, edge.properties)
 
         // materialize src entity set
-        organizationsApi.assembleEntitySets(organizationID, mapOf(esSrc.id to null))
+        organizationsApi.assembleEntitySets(organizationID, mapOf(esSrc.id to 1))
 
         // edges should be there but empty
         organizationDataSource.connection.use { connection ->
@@ -422,7 +422,7 @@ class AssemblerTest : AssemblerTestBase() {
         dataApi.createEdges(edges)
 
         // re-materialize src entity set
-        organizationsApi.assembleEntitySets(organizationID, mapOf(esSrc.id to null))
+        organizationsApi.assembleEntitySets(organizationID, mapOf(esSrc.id to 2))
 
         // edges should contain all ids
         organizationDataSource.connection.use { connection ->
@@ -449,7 +449,7 @@ class AssemblerTest : AssemblerTestBase() {
         }
 
         // materialize other entity set too
-        organizationsApi.assembleEntitySets(organizationID, mapOf(esEdge.id to null))
+        organizationsApi.assembleEntitySets(organizationID, mapOf(esEdge.id to 1))
 
         // edges should contain same ids as before
         organizationDataSource.connection.use { connection ->
@@ -977,7 +977,7 @@ class AssemblerTest : AssemblerTestBase() {
 
         // materialize entity set
         grantMaterializePermissions(organization, es, setOf())
-        organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to null))
+        organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to 1))
 
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
@@ -1037,7 +1037,7 @@ class AssemblerTest : AssemblerTestBase() {
         dataApi.createEntities(es.id, entities)
 
         grantMaterializePermissions(organization, es, setOf())
-        organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to null))
+        organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to 1))
 
         // check if entity set is materialized in organization
         organizationDataSource.connection.use { connection ->
@@ -1089,9 +1089,9 @@ class AssemblerTest : AssemblerTestBase() {
         val es2 = createEntitySet(et, organizationID)
 
         grantMaterializePermissions(organization, es1, setOf())
-        organizationsApi.assembleEntitySets(organizationID, mapOf(es1.id to null))
+        organizationsApi.assembleEntitySets(organizationID, mapOf(es1.id to 1))
         grantMaterializePermissions(organization, es2, setOf())
-        organizationsApi.assembleEntitySets(organizationID, mapOf(es2.id to null))
+        organizationsApi.assembleEntitySets(organizationID, mapOf(es2.id to 1))
 
         // add read on both to user1
         val readPermission = EnumSet.of(Permission.READ)
@@ -1237,7 +1237,7 @@ class AssemblerTest : AssemblerTestBase() {
         val et = createEntityType()
         val es = createEntitySet(et, organizationId)
         grantMaterializePermissions(organization, es, et.properties)
-        organizationsApi.assembleEntitySets(organizationId, mapOf(es.id to null))
+        organizationsApi.assembleEntitySets(organizationId, mapOf(es.id to 1))
 
         val organizationDataSource = TestAssemblerConnectionManager.connect(organizationId)
         organizationDataSource.connection.use { connection ->
@@ -1288,7 +1288,7 @@ class AssemblerTest : AssemblerTestBase() {
         /* Revoke permission on 1 property in entity set */
         val propertyFqns = et.properties.map { edmApi.getPropertyType(it).type.fullQualifiedNameAsString }
 
-        organizationsApi.assembleEntitySets(organizationId, mapOf(es.id to null))
+        organizationsApi.assembleEntitySets(organizationId, mapOf(es.id to 1))
         checkMaterializedEntitySetColumns(organizationDataSource, es, et, propertyFqns)
 
         val ptAcl = Acl(
@@ -1326,7 +1326,7 @@ class AssemblerTest : AssemblerTestBase() {
         // wait for background task
         Thread.sleep(60_000L)
 
-        organizationsApi.assembleEntitySets(organizationId, mapOf(es.id to null))
+        organizationsApi.assembleEntitySets(organizationId, mapOf(es.id to 1))
         checkMaterializedEntitySetColumns(organizationDataSource, es, et, propertyFqns)
     }
 
@@ -1342,13 +1342,13 @@ class AssemblerTest : AssemblerTestBase() {
 
         val es1 = createEntitySet(et, organizationId1)
         grantMaterializePermissions(organization1, es1, et.properties)
-        organizationsApi.assembleEntitySets(organizationId1, mapOf(es1.id to null))
+        organizationsApi.assembleEntitySets(organizationId1, mapOf(es1.id to 1))
         grantMaterializePermissions(organization2, es1, et.properties)
-        organizationsApi.assembleEntitySets(organizationId2, mapOf(es1.id to null))
+        organizationsApi.assembleEntitySets(organizationId2, mapOf(es1.id to 1))
 
         val es2 = createEntitySet(et, organizationId1)
         grantMaterializePermissions(organization1, es2, et.properties)
-        organizationsApi.assembleEntitySets(organizationId1, mapOf(es2.id to null))
+        organizationsApi.assembleEntitySets(organizationId1, mapOf(es2.id to 1))
 
         val organization1DataSource = TestAssemblerConnectionManager.connect(organizationId1)
         val organization2DataSource = TestAssemblerConnectionManager.connect(organizationId2)
