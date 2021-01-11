@@ -17,6 +17,7 @@ import com.openlattice.controllers.exceptions.ForbiddenException
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.organization.*
+import com.openlattice.organization.OrganizationsApi.Companion.CONTROLLER
 import com.openlattice.organization.roles.Role
 import com.openlattice.organizations.*
 import com.openlattice.organizations.roles.SecurePrincipalsManager
@@ -33,6 +34,8 @@ import javax.inject.Inject
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
+@RestController
+@RequestMapping(CONTROLLER)
 class OrganizationsController : AuthorizingComponent, OrganizationsApi {
     @Inject
     private lateinit var authorizations: AuthorizationManager
