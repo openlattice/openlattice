@@ -124,7 +124,7 @@ class AssemblerTest : AssemblerTestBase() {
 
         // materialize entity set, no automatic refresh
         grantMaterializePermissions(organization, es1, setOf())
-        organizationsApi.assembleEntitySets(organizationID, mapOf(es1.id to null))
+        organizationsApi.assembleEntitySets(organizationID, mapOf(es1.id to 2))
         Assert.assertFalse(
                 organizationsApi.getOrganizationEntitySets(organizationID)[es1.id]!!
                         .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED)
@@ -157,11 +157,11 @@ class AssemblerTest : AssemblerTestBase() {
         val es2 = createEntitySet(et)
         // materialize entity set, no automatic refresh
         grantMaterializePermissions(organization, es2, et.properties)
-        organizationsApi.assembleEntitySets(organizationID, mapOf(es2.id to null))
+        organizationsApi.assembleEntitySets(organizationID, mapOf(es2.id to 1))
 
 
         Assert.assertFalse(
-                organizationsApi.getOrganizationEntitySets(organizationID)[es2.id]!!
+                organizationsApi.getOrganizationEntitySets(organizationID).getValue(es2.id)
                         .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED)
         )
         // change property type fqn
