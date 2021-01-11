@@ -449,10 +449,14 @@ public final class PostgresColumn {
     public static final PostgresColumnDefinition SCHEDULED_DATE                    = new PostgresColumnDefinition(
             SCHEDULED_DATE_FIELD,
             TIMESTAMPTZ ).notNull();
+    public static final String                   SCHEMA_FIELD                      = "schema";
+    public static final PostgresColumnDefinition SCHEMA                            = new PostgresColumnDefinition(
+            SCHEMA_FIELD,
+            TEXT );
     public static final String                   SCHEMAS_FIELD                     = "schemas";
     public static final PostgresColumnDefinition SCHEMAS                           =
             new PostgresColumnDefinition( SCHEMAS_FIELD, TEXT_ARRAY ).notNull();
-    public static final String                   SCHEMA_NAME_FIELD                     = "schema_name";
+    public static final String                   SCHEMA_NAME_FIELD                 = "schema_name";
     public static final String                   SCOPE_FIELD                       = "scope";
     public static final PostgresColumnDefinition SCOPE                             = new PostgresColumnDefinition(
             SCOPE_FIELD,

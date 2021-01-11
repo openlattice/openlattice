@@ -124,7 +124,7 @@ import static com.openlattice.postgres.PostgresColumn.REASON;
 import static com.openlattice.postgres.PostgresColumn.REFRESH_RATE;
 import static com.openlattice.postgres.PostgresColumn.ROLES;
 import static com.openlattice.postgres.PostgresColumn.SCHEDULED_DATE;
-import static com.openlattice.postgres.PostgresColumn.SCHEMAS;
+import static com.openlattice.postgres.PostgresColumn.SCHEMA;
 import static com.openlattice.postgres.PostgresColumn.SCOPE;
 import static com.openlattice.postgres.PostgresColumn.SCORE;
 import static com.openlattice.postgres.PostgresColumn.SEARCH_CONSTRAINTS;
@@ -266,7 +266,7 @@ public final class PostgresTable {
                             PROPERTIES,
                             PROPERTY_TAGS,
                             BASE_TYPE,
-                            SCHEMAS,
+                            PostgresColumn.SCHEMAS,
                             CATEGORY,
                             SHARDS );
     //.setUnique( NAMESPACE, NAME );
@@ -278,7 +278,7 @@ public final class PostgresTable {
                             NAME,
                             TITLE,
                             DESCRIPTION,
-                            SCHEMAS,
+                            PostgresColumn.SCHEMAS,
                             TEMPLATE );
     public static final PostgresTableDefinition ENTITY_TYPE_PROPERTY_METADATA =
             new PostgresTableDefinition( "entity_type_property_metadata" )
@@ -292,7 +292,7 @@ public final class PostgresTable {
                             TITLE,
                             DESCRIPTION,
                             MEMBERS,
-                            SCHEMAS,
+                            PostgresColumn.SCHEMAS,
                             DATATYPE,
                             FLAGS,
                             PII,
@@ -432,7 +432,8 @@ public final class PostgresTable {
                             OID,
                             TITLE,
                             DESCRIPTION,
-                            ORGANIZATION_ID );
+                            ORGANIZATION_ID,
+                            SCHEMA );
 
     public static final PostgresTableDefinition PERMISSIONS         =
             new PostgresTableDefinition( "permissions" )
@@ -466,7 +467,7 @@ public final class PostgresTable {
             "propagation_graph" )
             .addColumns( SRC_ENTITY_SET_ID, SRC_PROPERTY_TYPE_ID, DST_ENTITY_SET_ID, DST_PROPERTY_TYPE_ID )
             .primaryKey( SRC_ENTITY_SET_ID, SRC_PROPERTY_TYPE_ID, DST_ENTITY_SET_ID, DST_PROPERTY_TYPE_ID );
-    public static final PostgresTableDefinition PROPERTY_TYPES      =
+    public static final PostgresTableDefinition PROPERTY_TYPES    =
 
             new PostgresTableDefinition( "property_types" )
                     .addColumns( ID,
@@ -476,7 +477,7 @@ public final class PostgresTable {
                             TITLE,
                             DESCRIPTION,
                             ENUM_VALUES,
-                            SCHEMAS,
+                            PostgresColumn.SCHEMAS,
                             PII,
                             ANALYZER,
                             MULTI_VALUED,
@@ -495,14 +496,14 @@ public final class PostgresTable {
             new PostgresTableDefinition( "requests" )
                     .addColumns( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID, PostgresColumn.PERMISSIONS, REASON, STATUS )
                     .primaryKey( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID );
-    public static final PostgresTableDefinition SCHEDULED_TASKS     =
+    public static final PostgresTableDefinition SCHEDULED_TASKS   =
             new PostgresTableDefinition( "scheduled_tasks" )
                     .addColumns( ID, SCHEDULED_DATE, CLASS_NAME, CLASS_PROPERTIES );
-    public static final PostgresTableDefinition SCHEMA              =
+    public static final PostgresTableDefinition SCHEMAS           =
             new PostgresTableDefinition( "schemas" )
                     .addColumns( NAMESPACE, NAME_SET )
                     .primaryKey( NAMESPACE );
-    public static final PostgresTableDefinition SECURABLE_OBJECTS   =
+    public static final PostgresTableDefinition SECURABLE_OBJECTS =
             new PostgresTableDefinition( "securable_objects" )
                     .addColumns( ACL_KEY, SECURABLE_OBJECT_TYPE )
                     .primaryKey( ACL_KEY );

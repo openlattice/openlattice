@@ -29,6 +29,7 @@ open class OrganizationExternalDatabaseTableMapstore(
         ps.setString(index++, value.title)
         ps.setString(index++, value.description)
         ps.setObject(index++, value.organizationId)
+        ps.setString(index++, value.schema)
 
         //update
         ps.setString(index++, value.name)
@@ -36,6 +37,8 @@ open class OrganizationExternalDatabaseTableMapstore(
         ps.setString(index++, value.title)
         ps.setString(index++, value.description)
         ps.setObject(index++, value.organizationId)
+        ps.setString(index++, value.schema)
+
     }
 
     override fun bind(ps: PreparedStatement, key: UUID, offset: Int): Int {

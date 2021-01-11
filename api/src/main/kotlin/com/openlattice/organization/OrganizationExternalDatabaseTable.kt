@@ -25,7 +25,8 @@ constructor(
         @JsonProperty(SerializationConstants.TITLE_FIELD) title: String,
         @JsonProperty(SerializationConstants.DESCRIPTION_FIELD) description: Optional<String>,
         @JsonProperty(SerializationConstants.ORGANIZATION_ID) var organizationId: UUID,
-        @JsonProperty(SerializationConstants.OID) val oid: Int
+        @JsonProperty(SerializationConstants.OID) val oid: Int,
+        @JsonProperty(SerializationConstants.SCHEMA) val schema: String
 ) : AbstractSecurableObject(id, title, description) {
 
     constructor(
@@ -34,8 +35,9 @@ constructor(
             title: String,
             description: Optional<String>,
             organizationId: UUID,
-            oid: Int
-    ) : this(Optional.of(id), name, title, description, organizationId, oid)
+            oid: Int,
+            schema: String
+    ) : this(Optional.of(id), name, title, description, organizationId, oid, schema)
 
     @JsonIgnore
     override fun getCategory(): SecurableObjectType {
@@ -44,12 +46,15 @@ constructor(
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is OrganizationExternalDatabaseTable) return false
+        if (javaClass != other?.javaClass) return false
         if (!super.equals(other)) return false
+
+        other as OrganizationExternalDatabaseTable
 
         if (name != other.name) return false
         if (organizationId != other.organizationId) return false
         if (oid != other.oid) return false
+        if (schema != other.schema) return false
 
         return true
     }
@@ -59,7 +64,9 @@ constructor(
         result = 31 * result + name.hashCode()
         result = 31 * result + organizationId.hashCode()
         result = 31 * result + oid
+        result = 31 * result + schema.hashCode()
         return result
     }
+
 
 }

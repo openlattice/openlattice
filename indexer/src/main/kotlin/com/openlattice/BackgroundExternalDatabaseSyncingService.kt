@@ -134,7 +134,8 @@ class BackgroundExternalDatabaseSyncingService(
                         tableName,
                         Optional.empty(),
                         orgId,
-                        oid
+                        oid,
+                        schemaName
                 )
                 val newTableId = createSecurableTableObject(orgOwnerIds, orgId, currentTableIds, newTable)
                 totalSynced++

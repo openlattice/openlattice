@@ -205,6 +205,7 @@ import static com.openlattice.postgres.PostgresColumn.PROPERTY_TYPE_ID;
 import static com.openlattice.postgres.PostgresColumn.REASON;
 import static com.openlattice.postgres.PostgresColumn.REFRESH_RATE;
 import static com.openlattice.postgres.PostgresColumn.SCHEDULED_DATE;
+import static com.openlattice.postgres.PostgresColumn.SCHEMA;
 import static com.openlattice.postgres.PostgresColumn.SCHEMAS;
 import static com.openlattice.postgres.PostgresColumn.SCHEMA_NAME_FIELD;
 import static com.openlattice.postgres.PostgresColumn.SCORE_FIELD;
@@ -1045,6 +1046,10 @@ public final class ResultSetAdapters {
         return rs.getObject( TEMPLATE_TYPE_ID.getName(), UUID.class );
     }
 
+    public static String schema( ResultSet rs ) throws SQLException {
+        return rs.getString( SCHEMA.getName() );
+    }
+
     public static EntityTypeCollection entityTypeCollection( ResultSet rs ) throws SQLException, IOException {
         UUID id = id( rs );
         FullQualifiedName type = fqn( rs );
@@ -1090,8 +1095,9 @@ public final class ResultSetAdapters {
         Optional<String> description = Optional.ofNullable( description( ( rs ) ) );
         UUID organizationId = organizationId( rs );
         int oid = oid( rs );
+        String schema = schema( rs );
 
-        return new OrganizationExternalDatabaseTable( id, name, title, description, organizationId, oid );
+        return new OrganizationExternalDatabaseTable( id, name, title, description, organizationId, oid, schema );
     }
 
     public static OrganizationExternalDatabaseColumn organizationExternalDatabaseColumn( ResultSet rs )
