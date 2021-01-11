@@ -135,6 +135,7 @@ dependencies {
     compile "com.esotericsoftware:minlog:${minlog_version}"
     compile "com.esotericsoftware:reflectasm:${reflectasm_version}"
     compile "org.objenesis:objenesis:${objenesis_version}"
+    compile "net.snowflake:snowflake-jdbc:${snowflake_version}"
 
     compile "com.google.guava:guava:${guava_version}"
     compile "org.apache.olingo:odata-commons-api:${odata_version}"
