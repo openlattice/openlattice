@@ -642,13 +642,12 @@ class AssemblerConnectionManager(
         dataSource.connection.use { connection ->
             connection.createStatement().use { statement ->
                 logger.info(
-                        "Granting USAGE on {} schema, and granting USAGE and CREATE on {} schema for users: {}",
+                        "Granting USAGE and CREATE on {} and {} schemas for users: {}",
                         OPENLATTICE_SCHEMA,
                         STAGING_SCHEMA,
-                        PUBLIC_SCHEMA,
                         userIds
                 )
-                statement.execute("GRANT USAGE ON SCHEMA $OPENLATTICE_SCHEMA TO $userIdsSql")
+                statement.execute("GRANT USAGE, CREATE ON SCHEMA $OPENLATTICE_SCHEMA TO $userIdsSql")
                 statement.execute("GRANT USAGE, CREATE ON SCHEMA $STAGING_SCHEMA TO $userIdsSql")
                 //Set the search path for the user
                 logger.info("Setting search_path to $OPENLATTICE_SCHEMA,$TRANSPORTED_VIEWS_SCHEMA for users $userIds")
