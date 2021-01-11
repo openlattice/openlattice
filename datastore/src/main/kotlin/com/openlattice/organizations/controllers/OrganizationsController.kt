@@ -21,6 +21,7 @@ import com.openlattice.organization.OrganizationsApi.Companion.CONTROLLER
 import com.openlattice.organization.roles.Role
 import com.openlattice.organizations.*
 import com.openlattice.organizations.roles.SecurePrincipalsManager
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.commons.lang3.NotImplementedException
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
@@ -36,6 +37,9 @@ import javax.inject.Inject
  */
 @RestController
 @RequestMapping(CONTROLLER)
+@SuppressFBWarnings(
+        value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"],
+        justification = "Allowing redundant kotlin null check on lateinit variables")
 class OrganizationsController : AuthorizingComponent, OrganizationsApi {
     @Inject
     private lateinit var authorizations: AuthorizationManager
