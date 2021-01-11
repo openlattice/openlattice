@@ -141,7 +141,7 @@ class AssemblerLinkingTest : AssemblerTestBase() {
 
         // materialize linking entity set, no refresh
         grantMaterializePermissions(organization, esLinking1, personEt.properties)
-        organizationsApi.assembleEntitySets(organizationID, mapOf(esLinking1.id to null))
+        organizationsApi.assembleEntitySets(organizationID, mapOf(esLinking1.id to 1))
 
         // add property type
         val newPropertyType = createPropertyType()
@@ -178,7 +178,7 @@ class AssemblerLinkingTest : AssemblerTestBase() {
 
         // materialize entity set, no refresh
         grantMaterializePermissions(organization, esLinking2, personEt.properties)
-        organizationsApi.assembleEntitySets(organizationID, mapOf(esLinking2.id to null))
+        organizationsApi.assembleEntitySets(organizationID, mapOf(esLinking2.id to 1))
 
         Assert.assertFalse(
                 organizationsApi.getOrganizationEntitySets(organizationID)[esLinking2.id]!!
@@ -269,7 +269,7 @@ class AssemblerLinkingTest : AssemblerTestBase() {
 
         // materialize entity set with all it's properties, no refresh
         grantMaterializePermissions(organization, esLinking, personEt.properties)
-        organizationsApi.assembleEntitySets(organizationID, mapOf(esLinking.id to null))
+        organizationsApi.assembleEntitySets(organizationID, mapOf(esLinking.id to 1))
 
         Assert.assertFalse(
                 organizationsApi.getOrganizationEntitySets(organizationID)[esLinking.id]!!
@@ -374,7 +374,7 @@ class AssemblerLinkingTest : AssemblerTestBase() {
 
         // materialize entity set with all it's properties, no refresh
         grantMaterializePermissions(organization, esLinking, personEt.properties)
-        organizationsApi.assembleEntitySets(organizationID, mapOf(esLinking.id to null))
+        organizationsApi.assembleEntitySets(organizationID, mapOf(esLinking.id to 1))
 
         // data is not supposed to be there, only the columns
         organizationDataSource.connection.use { connection ->
@@ -569,7 +569,7 @@ class AssemblerLinkingTest : AssemblerTestBase() {
 
         // materialize linking entity set, no refresh
         grantMaterializePermissions(organization, esLinking, personEt.properties)
-        organizationsApi.assembleEntitySets(organizationID, mapOf(esLinking.id to null))
+        organizationsApi.assembleEntitySets(organizationID, mapOf(esLinking.id to 1))
 
         // edges should be there but empty
         organizationDataSource.connection.use { connection ->
@@ -607,7 +607,7 @@ class AssemblerLinkingTest : AssemblerTestBase() {
         }
 
         // re-materialize linking entity set, no refresh
-        organizationsApi.assembleEntitySets(organizationID, mapOf(esLinking.id to null))
+        organizationsApi.assembleEntitySets(organizationID, mapOf(esLinking.id to 1))
 
         // edges should be still empty, since we materialize only the linking entity set
         organizationDataSource.connection.use { connection ->
