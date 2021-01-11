@@ -35,7 +35,7 @@ import com.openlattice.datastore.permissions.controllers.PermissionsController;
 import com.openlattice.datastore.requests.controllers.RequestsController;
 import com.openlattice.datastore.search.controllers.PersistentSearchController;
 import com.openlattice.datastore.search.controllers.SearchController;
-import com.openlattice.datastore.services.com.openlattice.organizations.controllers.OrganizationsController;
+import com.openlattice.organizations.controllers.OrganizationsController;
 import com.openlattice.datastore.util.DataStoreExceptionHandler;
 import com.openlattice.entitysets.controllers.EntitySetsController;
 import com.openlattice.graph.controllers.GraphController;

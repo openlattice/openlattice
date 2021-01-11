@@ -1,4 +1,4 @@
-package com.openlattice.datastore.services.com.openlattice.organizations.controllers
+package com.openlattice.organizations.controllers
 
 import com.auth0.json.mgmt.users.User
 import com.codahale.metrics.annotation.Timed
