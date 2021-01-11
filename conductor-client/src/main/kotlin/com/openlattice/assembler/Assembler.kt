@@ -211,11 +211,6 @@ class Assembler(
     }
 
     fun deleteEntitySetAssemblies(entitySetAssemblies: Set<EntitySetAssemblyKey>) {
-        materializedEntitySets.executeOnKeys(
-                entitySetAssemblies,
-                DropMaterializedEntitySetProcessor().init(acm)
-        )
-
         // also remove entries from assemblies entity sets and re-materialize edges
         entitySetAssemblies
                 .groupBy { it.organizationId }

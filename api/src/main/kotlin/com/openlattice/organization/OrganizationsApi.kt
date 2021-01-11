@@ -145,7 +145,6 @@ interface OrganizationsApi {
      * @param refreshRatesOfEntitySets The refresh rate in minutes of each entity set to assemble into materialized
      * views mapped by their ids.
      */
-    @Deprecated( message = "Use transportEntitySet endpoint instead", level = DeprecationLevel.ERROR )
     @POST(BASE + ID_PATH + ENTITY_SETS + ASSEMBLE)
     fun assembleEntitySets(
             @Path(ID) organizationId: UUID,

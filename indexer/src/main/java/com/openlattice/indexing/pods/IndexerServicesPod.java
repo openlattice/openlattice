@@ -80,6 +80,7 @@ import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
 import com.openlattice.postgres.external.ExternalDatabasePermissionsManager;
 import com.openlattice.scrunchie.search.ConductorElasticsearchImpl;
+import com.openlattice.transporter.services.TransporterService;
 import com.openlattice.transporter.types.TransporterDatastore;
 import com.zaxxer.hikari.HikariDataSource;
 import org.springframework.context.annotation.Bean;
@@ -135,7 +136,7 @@ public class IndexerServicesPod {
     private ExternalDatabasePermissionsManager extDbPermManager;
 
     @Inject
-    private TransporterDatastore transporterDatastore;
+    private TransporterService transporterService;
 
     @Inject
     public SecurePrincipalsManager principalService;
@@ -145,6 +146,9 @@ public class IndexerServicesPod {
 
     @Inject
     public AuthorizationManager authorizationManager;
+
+    @Inject
+    private ExternalDatabasePermissionsManager extDbPermsManager;
 
     @Bean
     public ConductorElasticsearchApi elasticsearchApi() {
@@ -337,8 +341,9 @@ public class IndexerServicesPod {
                 aclKeyReservationService,
                 authorizationManager,
                 organizationExternalDatabaseConfiguration,
-                transporterDatastore,
+                transporterService,
                 dbcs(),
+                extDbPermsManager,
                 hikariDataSource );
     }
 
@@ -380,7 +385,7 @@ public class IndexerServicesPod {
 
     @Bean
     public OrganizationMetadataEntitySetsService organizationMetadataEntitySetsService() {
-        return new OrganizationMetadataEntitySetsService( dataModelService(), authorizationManager() );
+        return new OrganizationMetadataEntitySetsService( dataModelService(), authorizationManager );
     }
 
     @PostConstruct

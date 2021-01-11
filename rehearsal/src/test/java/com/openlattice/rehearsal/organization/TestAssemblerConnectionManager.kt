@@ -29,6 +29,7 @@ import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
+import com.openlattice.postgres.external.Schemas
 import com.openlattice.rehearsal.application.TestServer
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
@@ -94,7 +95,7 @@ class TestAssemblerConnectionManager {
                 edgeEntitySetId: Optional<UUID> = Optional.empty(),
                 dstEntitySetId: Optional<UUID> = Optional.empty()
         ): String {
-            return "SELECT * FROM ${AssemblerConnectionManager.OPENLATTICE_SCHEMA}.${PostgresTable.E.name} " +
+            return "SELECT * FROM ${Schemas.OPENLATTICE_SCHEMA}.${PostgresTable.E.name} " +
                     if (!srcEntitySetId.isPresent && !edgeEntitySetId.isPresent && !dstEntitySetId.isPresent) {
                         ""
                     } else {
