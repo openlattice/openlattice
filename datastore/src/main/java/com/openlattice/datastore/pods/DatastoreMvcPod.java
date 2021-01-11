@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openlattice.admin.AdminController;
 import com.openlattice.codex.controllers.CodexController;
 import com.openlattice.collection.CollectionsController;
-import com.openlattice.controllers.OrganizationsController;
 import com.openlattice.data.DataApi;
 import com.openlattice.datastore.analysis.controllers.AnalysisController;
 import com.openlattice.datastore.apps.controllers.AppController;
@@ -36,6 +35,7 @@ import com.openlattice.datastore.permissions.controllers.PermissionsController;
 import com.openlattice.datastore.requests.controllers.RequestsController;
 import com.openlattice.datastore.search.controllers.PersistentSearchController;
 import com.openlattice.datastore.search.controllers.SearchController;
+import com.openlattice.organizations.controllers.OrganizationsController;
 import com.openlattice.datastore.util.DataStoreExceptionHandler;
 import com.openlattice.entitysets.controllers.EntitySetsController;
 import com.openlattice.graph.controllers.GraphController;
@@ -47,6 +47,8 @@ import com.openlattice.web.converters.YamlHttpMessageConverter;
 import com.openlattice.web.mediatypes.CustomMediaType;
 import com.ryantenney.metrics.spring.config.annotation.EnableMetrics;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.util.List;
+import javax.inject.Inject;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -59,9 +61,6 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.web.servlet.config.annotation.ContentNegotiationConfigurer;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurationSupport;
-
-import javax.inject.Inject;
-import java.util.List;
 
 @Configuration
 @ComponentScan(
