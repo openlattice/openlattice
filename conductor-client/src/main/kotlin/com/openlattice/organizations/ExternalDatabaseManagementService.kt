@@ -545,7 +545,8 @@ class ExternalDatabaseManagementService(
     }
 
     private fun getDBUser(principalId: String): String {
-        return dbCredentialService.getDbUserRole(principalId, securePrincipalsManager)
+        val securePrincipal = securePrincipalsManager.getSecurablePrincipal(principalId)
+        return dbCredentialService.getDbUserRole(securePrincipal)
     }
 
     private fun getPrivilegesFields(tableName: String, maybeColumnName: Optional<String>): Pair<String, SecurableObjectType> {

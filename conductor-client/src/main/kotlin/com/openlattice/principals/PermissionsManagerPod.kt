@@ -39,7 +39,7 @@ class PermissionsManagerPod {
     }
 
     @Bean
-    fun principalService(): SecurePrincipalsManager? {
+    fun principalService(): SecurePrincipalsManager {
         LoggerFactory.getLogger(PermissionsManagerPod::class.java).info("Constructing SecurePrincipalsManager")
         return HazelcastPrincipalService(
                 hazelcastInstance,

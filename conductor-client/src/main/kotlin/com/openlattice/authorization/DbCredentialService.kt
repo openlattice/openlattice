@@ -79,12 +79,11 @@ class DbCredentialService(
 
     fun getDbCredential(userId: String): MaterializedViewAccount? = dbCreds[userId]
 
-    fun getDbUserRole(principalId: String, securePrincipalsManager: SecurePrincipalsManager): String {
-        val securePrincipal = securePrincipalsManager.getPrincipal(principalId)
-        check(securePrincipal.principalType == PrincipalType.USER) {
+    fun getDbUserRole(securablePrincipal: SecurablePrincipal): String {
+        check(securablePrincipal.principalType == PrincipalType.USER) {
             "Principal must be of type USER"
         }
-        return getDbUsername(securePrincipal)
+        return getDbUsername(securablePrincipal)
     }
 
     fun getDbUsername(user: SecurablePrincipal): String = dbCreds.getValue(buildPostgresUsername(user)).username

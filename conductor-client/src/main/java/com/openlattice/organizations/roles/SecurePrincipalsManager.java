@@ -78,7 +78,7 @@ public interface SecurePrincipalsManager {
      * Reads
      */
 
-    @Nonnull SecurablePrincipal getPrincipal( String principalId );
+    @Nonnull SecurablePrincipal getSecurablePrincipal( String principalId );
 
     /**
      * Retrieves a securable principal by acl key lookup.
@@ -118,6 +118,8 @@ public interface SecurePrincipalsManager {
     Map<Principal, AclKey> lookup( Set<Principal> principals );
 
     Role lookupRole( Principal principal );
+
+    Role lookupRole( AclKey aclKey );
 
     Collection<SecurablePrincipal> getSecurablePrincipals( Collection<Principal> members );
 

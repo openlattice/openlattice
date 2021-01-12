@@ -138,16 +138,21 @@ class HazelcastPrincipalService(
         return principals.entrySet(findPrincipals(p)).associate { it.value.principal to it.key }.toMutableMap()
     }
 
+    override fun lookupRole(aclKey: AclKey): Role {
+        val principal = principals.getValue(aclKey)
+        return lookupRole(principal.principal)
+    }
+
     override fun lookupRole(principal: Principal): Role {
         require(principal.type == PrincipalType.ROLE) { "The provided principal is not a role" }
         return getFirstSecurablePrincipal(findPrincipal(principal)) as Role
     }
 
-    override fun getPrincipal(principalId: String): SecurablePrincipal {
+    override fun getSecurablePrincipal(principalId: String): SecurablePrincipal {
         val id = Preconditions.checkNotNull(reservations.getId(principalId),
                 "AclKey not found for Principal %s", principalId
         )
-        return Util.getSafely(principals, AclKey(id))
+        return principals.getValue(AclKey(id))
     }
 
     override fun getAllRolesInOrganization(organizationId: UUID): Collection<SecurablePrincipal> {
@@ -379,7 +384,7 @@ class HazelcastPrincipalService(
     }
 
     override fun getCurrentUserId(): UUID {
-        return getPrincipal(Principals.getCurrentUser().id).id
+        return getSecurablePrincipal(Principals.getCurrentUser().id).id
     }
 
     override fun getAllRoles(): Set<Role> {

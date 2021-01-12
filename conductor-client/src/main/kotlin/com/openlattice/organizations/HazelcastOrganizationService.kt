@@ -86,7 +86,7 @@ class HazelcastOrganizationService(
 
     @Timed
     fun getOrganization(p: Principal): OrganizationPrincipal {
-        return checkNotNull(securePrincipalsManager.getPrincipal(p.id) as OrganizationPrincipal)
+        return checkNotNull(securePrincipalsManager.getSecurablePrincipal(p.id) as OrganizationPrincipal)
     }
 
     @Timed
@@ -99,7 +99,7 @@ class HazelcastOrganizationService(
     @Timed
     fun maybeGetOrganization(p: Principal): Optional<SecurablePrincipal> {
         return try {
-            Optional.of(securePrincipalsManager.getPrincipal(p.id))
+            Optional.of(securePrincipalsManager.getSecurablePrincipal(p.id))
         } catch (e: NullPointerException) {
             Optional.empty()
         }
@@ -677,7 +677,7 @@ class HazelcastOrganizationService(
 
     @JvmOverloads
     fun removeMemberFromAllOrganizations(principal: Principal, clearPermissions: Boolean = true) {
-        val organizationIds = securePrincipalsManager.getAllPrincipals(securePrincipalsManager.getPrincipal(principal.id))
+        val organizationIds = securePrincipalsManager.getAllPrincipals(securePrincipalsManager.getSecurablePrincipal(principal.id))
                 .filter { it.principalType == PrincipalType.ORGANIZATION }
                 .map { it.id }
 

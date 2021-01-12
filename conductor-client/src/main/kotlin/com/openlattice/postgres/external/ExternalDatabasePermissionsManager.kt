@@ -103,11 +103,7 @@ class ExternalDatabasePermissionsManager(
     override fun addPrincipalToPrincipals(sourcePrincipalAclKey: AclKey, targetPrincipalAclKeys: Set<AclKey>) {
         val grantTargets = principalsToPostgresRoleNames(targetPrincipalAclKeys)
 
-        val sourceRole = PostgresRoles.buildPostgresRoleName(
-                securePrincipalsManager.lookupRole(
-                        securePrincipalsManager.getSecurablePrincipal(sourcePrincipalAclKey).principal
-                )
-        )
+        val sourceRole = PostgresRoles.buildPostgresRoleName(securePrincipalsManager.lookupRole(sourcePrincipalAclKey))
 
         atlas.connection.use { connection ->
             connection.createStatement().use { stmt ->
@@ -120,9 +116,9 @@ class ExternalDatabasePermissionsManager(
         val removeFrom = principalsToPostgresRoleNames(fromPrincipals)
         atlas.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                principalsToRemove.forEach { principal ->
-                    val role = securePrincipalsManager.lookupRole(securePrincipalsManager.getSecurablePrincipal(principal).principal)
-                    stmt.addBatch(revokeRole(PostgresRoles.buildPostgresRoleName(role), removeFrom))
+                principalsToRemove.forEach { aclKey ->
+                    val roleName = PostgresRoles.buildPostgresRoleName(securePrincipalsManager.lookupRole(aclKey))
+                    stmt.addBatch(revokeRoleSql(roleName, removeFrom))
                 }
                 stmt.executeBatch()
             }
@@ -131,11 +127,7 @@ class ExternalDatabasePermissionsManager(
 
     private fun principalsToPostgresRoleNames(principals: Set<AclKey>): String {
         return principals.joinToString { aclKey ->
-            PostgresRoles.buildPostgresRoleName(
-                    securePrincipalsManager.lookupRole(
-                            securePrincipalsManager.getSecurablePrincipal(aclKey).principal
-                    )
-            )
+            PostgresRoles.buildPostgresRoleName( securePrincipalsManager.lookupRole(aclKey) )
         }
     }
 
@@ -306,12 +298,13 @@ class ExternalDatabasePermissionsManager(
             column: OrganizationExternalDatabaseColumn,
             viewOrTable: TableType
     ): List<String> {
-        val userRole = dbCredentialService.getDbUserRole(principal.id, securePrincipalsManager)
+        val securablePrincipal = securePrincipalsManager.getSecurablePrincipal(principal.id)
+        val userRole = dbCredentialService.getDbUserRole(securablePrincipal)
         return when (viewOrTable) {
             TableType.VIEW -> allViewPermissions
             TableType.TABLE -> allTablePermissions
         }.map {
-            revokeRole(PostgresRoles.buildPermissionRoleName(column.tableId, column.id, it), userRole)
+            revokeRoleSql(PostgresRoles.buildPermissionRoleName(column.tableId, column.id, it), userRole)
         }
     }
 
@@ -324,17 +317,18 @@ class ExternalDatabasePermissionsManager(
     }
 
     private fun updatePermissionsOnColumnSql(ace: Ace, column: TableColumn, action: PgPermAction): List<String> {
-        val userRole = dbCredentialService.getDbUserRole(ace.principal.id, securePrincipalsManager)
+        val securablePrincipal = securePrincipalsManager.getSecurablePrincipal(ace.principal.id)
+        val userRole = dbCredentialService.getDbUserRole(securablePrincipal)
         return filteredAcePermissions(ace.permissions).map { perm ->
             val permissionsRole = PostgresRoles.buildPermissionRoleName(column.tableId, column.id, perm)
             when (action) {
                 PgPermAction.GRANT -> grantRoleToRole(permissionsRole, userRole)
-                PgPermAction.REVOKE -> revokeRole(permissionsRole, userRole)
+                PgPermAction.REVOKE -> revokeRoleSql(permissionsRole, userRole)
             }
         }
     }
 
-    private fun revokeRole(roleName: String, targetRoleName: String): String {
+    private fun revokeRoleSql(roleName: String, targetRoleName: String): String {
         return "REVOKE ${ApiHelpers.dbQuote(roleName)} FROM ${ApiHelpers.dbQuote(targetRoleName)}"
     }
 

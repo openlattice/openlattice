@@ -40,8 +40,6 @@ import com.openlattice.users.Auth0UtilsKt;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.*;
-import retrofit2.http.Body;
-import retrofit2.http.POST;
 
 import javax.inject.Inject;
 import java.util.EnumSet;
@@ -268,7 +266,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
 
         //First remove from all organizations
         organizationService.removeMemberFromAllOrganizations( new Principal( PrincipalType.USER, userId ) );
-        SecurablePrincipal securablePrincipal = spm.getPrincipal( userId );
+        SecurablePrincipal securablePrincipal = spm.getSecurablePrincipal( userId );
         spm.deletePrincipal( securablePrincipal.getAclKey() );
 
         //Remove from materialized view account
