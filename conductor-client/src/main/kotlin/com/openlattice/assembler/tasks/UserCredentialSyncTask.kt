@@ -44,7 +44,7 @@ class UserCredentialSyncTask : HazelcastInitializationTask<AssemblerDependencies
                 .forEach { user ->
                     dependencies.target.connection.use { conn ->
                         conn.createStatement().use { stmt ->
-                            val (username, credential) = dependencies.dbCredentialService.getOrCreateUserCredentials( user )
+                            val (username, credential) = dependencies.dbCredentialService.getOrCreateDbAccount( user )
 
                             try {
                                 stmt.execute(

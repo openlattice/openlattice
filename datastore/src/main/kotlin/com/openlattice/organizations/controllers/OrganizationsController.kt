@@ -208,7 +208,7 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
             @PathVariable(OrganizationsApi.ID) organizationId: UUID
     ): OrganizationIntegrationAccount {
         ensureOwner(organizationId)
-        val account = assembler.rollIntegrationAccount(organizationId, PrincipalType.ORGANIZATION)
+        val account = assembler.rollIntegrationAccount(AclKey(organizationId), PrincipalType.ORGANIZATION)
         return OrganizationIntegrationAccount(account.username, account.credential)
     }
 
@@ -591,12 +591,12 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
     private fun getAuthorizedRoleAclKeys(roles: Set<Role>): Set<AclKey> {
         return authorizations
                 .accessChecksForPrincipals(roles.stream()
-                                                   .map { role: Role ->
-                                                       AccessCheck(
-                                                               role.aclKey, EnumSet.of(Permission.READ)
-                                                       )
-                                                   }
-                                                   .collect(Collectors.toSet()), Principals.getCurrentPrincipals())
+                        .map { role: Role ->
+                            AccessCheck(
+                                    role.aclKey, EnumSet.of(Permission.READ)
+                            )
+                        }
+                        .collect(Collectors.toSet()), Principals.getCurrentPrincipals())
                 .filter { authorization: Authorization ->
                     authorization.permissions.getOrDefault(Permission.READ, false)
                 }

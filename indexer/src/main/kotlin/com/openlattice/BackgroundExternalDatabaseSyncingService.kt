@@ -118,13 +118,14 @@ class BackgroundExternalDatabaseSyncingService(
 
     private fun syncOrganizationDatabases(orgId: UUID): Int {
         var totalSynced = 0
-        val maybeOrg = organizationDatabases[orgId]
-        if ( maybeOrg == null ){
-            logger.error("Organization $orgId does not exist in the organizationDatabases mapstore")
+        val maybeOrgDatabaseInfo = organizationDatabases[orgId]
+        if ( maybeOrgDatabaseInfo == null ){
+            logger.error("Organization {} does not exist in the organizationDatabases mapstore", orgId)
             return 0
         }
-        val dbName = maybeOrg.name
-        val orgOwnerIds = edms.getOrganizationOwners(orgId).map { it.id }
+        val dbName = maybeOrgDatabaseInfo.name
+        val orgOwnerAclKeys = edms.getOrganizationOwners(orgId).map { it.aclKey }
+
         val currentTableIds = mutableSetOf<UUID>()
         val currentColumnIds = mutableSetOf<UUID>()
 
@@ -143,12 +144,12 @@ class BackgroundExternalDatabaseSyncingService(
                         orgId,
                         oid
                 )
-                val newTableId = createSecurableTableObject(orgOwnerIds, orgId, currentTableIds, newTable)
+                val newTableId = createSecurableTableObject(orgOwnerAclKeys, orgId, currentTableIds, newTable)
                 totalSynced++
 
                 //create new securable objects for columns in this table
                 totalSynced += createSecurableColumnObjects(
-                        orgOwnerIds,
+                        orgOwnerAclKeys,
                         orgId,
                         newTable.name,
                         newTableId,
@@ -164,7 +165,7 @@ class BackgroundExternalDatabaseSyncingService(
                     if (columnId == null) {
                         //create new securable object for this column
                         totalSynced += createSecurableColumnObjects(
-                                orgOwnerIds,
+                                orgOwnerAclKeys,
                                 orgId,
                                 tableName,
                                 tableId,
@@ -209,7 +210,7 @@ class BackgroundExternalDatabaseSyncingService(
     }
 
     private fun createSecurableTableObject(
-            orgOwnerIds: List<UUID>,
+            orgOwnerAclKeys: List<AclKey>,
             orgId: UUID,
             currentTableIds: MutableSet<UUID>,
             table: OrganizationExternalDatabaseTable
@@ -219,7 +220,7 @@ class BackgroundExternalDatabaseSyncingService(
 
         //add table-level permissions
         val acls = edms.syncPermissions(
-                orgOwnerIds,
+                orgOwnerAclKeys,
                 orgId,
                 newTableId,
                 table.name,
@@ -238,7 +239,7 @@ class BackgroundExternalDatabaseSyncingService(
     }
 
     private fun createSecurableColumnObjects(
-            orgOwnerIds: List<UUID>,
+            orgOwnerAclKeys: List<AclKey>,
             orgId: UUID,
             tableName: String,
             tableId: UUID,
@@ -255,14 +256,14 @@ class BackgroundExternalDatabaseSyncingService(
         )
 
         columns.forEach { column ->
-            createSecurableColumnObject(orgOwnerIds, orgId, tableName, currentColumnIds, column)
+            createSecurableColumnObject(orgOwnerAclKeys, orgId, tableName, currentColumnIds, column)
             totalSynced++
         }
         return totalSynced
     }
 
     private fun createSecurableColumnObject(
-            orgOwnerIds: List<UUID>,
+            orgOwnerAclKeys: List<AclKey>,
             orgId: UUID,
             tableName: String,
             currentColumnIds: MutableSet<UUID>,
@@ -273,7 +274,7 @@ class BackgroundExternalDatabaseSyncingService(
 
         //add and audit column-level permissions and postgres privileges
         val acls = edms.syncPermissions(
-                orgOwnerIds,
+                orgOwnerAclKeys,
                 orgId,
                 column.tableId,
                 tableName,

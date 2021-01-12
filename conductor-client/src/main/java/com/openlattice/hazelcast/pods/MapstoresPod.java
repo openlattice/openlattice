@@ -189,7 +189,7 @@ public class MapstoresPod {
     }
 
     @Bean
-    public SelfRegisteringMapStore<String, MaterializedViewAccount> dbCredentialsMapstore() {
+    public SelfRegisteringMapStore<AclKey, MaterializedViewAccount> dbCredentialsMapstore() {
         return new PostgresCredentialMapstore( hikariDataSource );
     }
 
