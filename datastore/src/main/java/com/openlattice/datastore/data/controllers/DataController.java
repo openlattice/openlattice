@@ -185,7 +185,9 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             @RequestBody FilteredDataPageDefinition filteredDataPageDefinition
     ) {
         ensureReadAccess( new AclKey( entitySetId ) );
-        ensureReadAccess( new AclKey( entitySetId, filteredDataPageDefinition.getPropertyTypeId() ) );
+        if ( filteredDataPageDefinition.getPropertyTypeId() != null ) {
+            ensureReadAccess( new AclKey( entitySetId, filteredDataPageDefinition.getPropertyTypeId() ) );
+        }
 
         Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes = authzHelper
                 .getAuthorizedPropertiesOnEntitySets( ImmutableSet.of( entitySetId ), EnumSet.of( Permission.READ ) );
