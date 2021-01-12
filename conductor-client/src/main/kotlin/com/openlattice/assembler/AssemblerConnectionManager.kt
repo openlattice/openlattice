@@ -186,7 +186,7 @@ class AssemblerConnectionManager(
     }
 
     private fun configureOrganizationUser(organizationId: UUID, dataSource: HikariDataSource) {
-        val dbOrgUser = quote(dbCredentialService.getDbUsername(buildOrganizationUserId(organizationId)))
+        val dbOrgUser = quote(dbCredentialService.getDbUsername(AclKey(organizationId)))
         dataSource.connection.createStatement().use { statement ->
             //Allow usage and create on schema openlattice to organization user
             statement.execute(grantOrgUserPrivilegesOnSchemaSql(OPENLATTICE_SCHEMA, dbOrgUser))
@@ -270,7 +270,7 @@ class AssemblerConnectionManager(
 
         val unquotedDbAdminUser = buildOrganizationUserId(organizationId)
 
-        val (dbOrgUser, dbAdminUserPassword) = dbCredentialService.getOrCreateUserCredentials(unquotedDbAdminUser)
+        val (dbOrgUser, dbAdminUserPassword) = dbCredentialService.getOrCreateDbAccount(AclKey(organizationId), true)
 
         val createOrgDbRole = createRoleIfNotExistsSql(dbRole)
         val createOrgDbUser = createUserIfNotExistsSql(unquotedDbAdminUser, dbAdminUserPassword)
@@ -301,8 +301,7 @@ class AssemblerConnectionManager(
         val dbName = extDbManager.getOrganizationDatabaseName(organizationId)
         val db = quote(dbName)
         val dbRole = quote(buildOrganizationRoleName(dbName))
-        val unquotedDbAdminUser = buildOrganizationUserId(organizationId)
-        val dbAdminUser = quote(dbCredentialService.getDbUsername(unquotedDbAdminUser))
+        val dbAdminUser = quote(dbCredentialService.getDbUsername(AclKey(organizationId)))
 
         val dropDb = " DROP DATABASE $db"
         val dropDbUser = "DROP ROLE $dbAdminUser"
@@ -579,7 +578,7 @@ class AssemblerConnectionManager(
 //                    statement.execute(dropOwnedIfExistsSql(user.name))
                 logger.info("Attempting to drop user {}", user.name)
                 statement.execute(dropUserIfExistsSql(user.name)) //Clean out the old users.
-                dbCredentialService.deleteUserCredential(user.name)
+                dbCredentialService.deletePrincipalDbAccount(user)
                 //Don't allow users to access public schema which will contain foreign data wrapper tables.
                 logger.info("Revoking $PUBLIC_SCHEMA schema right from user {}", user)
             }
@@ -605,7 +604,7 @@ class AssemblerConnectionManager(
          * field into the dbcreds table. We keep the results of calling [buildPostgresUsername] as the lookup
          * key, but instead use the username and password returned from the db credential service.
          */
-        val (dbUser, dbUserPassword) = dbCredentialService.getOrCreateUserCredentials(user)
+        val (dbUser, dbUserPassword) = dbCredentialService.getOrCreateDbAccount(user)
 
         atlas.connection.use { connection ->
             connection.createStatement().use { statement ->
@@ -642,13 +641,12 @@ class AssemblerConnectionManager(
         dataSource.connection.use { connection ->
             connection.createStatement().use { statement ->
                 logger.info(
-                        "Granting USAGE on {} schema, and granting USAGE and CREATE on {} schema for users: {}",
+                        "Granting USAGE and CREATE on {} and {} schemas for users: {}",
                         OPENLATTICE_SCHEMA,
                         STAGING_SCHEMA,
-                        PUBLIC_SCHEMA,
                         userIds
                 )
-                statement.execute("GRANT USAGE ON SCHEMA $OPENLATTICE_SCHEMA TO $userIdsSql")
+                statement.execute("GRANT USAGE, CREATE ON SCHEMA $OPENLATTICE_SCHEMA TO $userIdsSql")
                 statement.execute("GRANT USAGE, CREATE ON SCHEMA $STAGING_SCHEMA TO $userIdsSql")
                 //Set the search path for the user
                 logger.info("Setting search_path to $OPENLATTICE_SCHEMA,$TRANSPORTED_VIEWS_SCHEMA for users $userIds")
