@@ -201,15 +201,18 @@ class ExternalDatabaseManagementService(
 
     /*GET*/
 
-    fun getExternalDatabaseTables(orgId: UUID): Set<Map.Entry<UUID, OrganizationExternalDatabaseTable>> {
-        return organizationExternalDatabaseTables.entrySet(belongsToOrganization(orgId))
+    fun getExternalDatabaseTables(orgId: UUID): Map<UUID, OrganizationExternalDatabaseTable> {
+        return organizationExternalDatabaseTables.values(belongsToOrganization(orgId)).associateBy { it.id }
     }
 
-    fun getExternalDatabaseTablesWithColumns(orgId: UUID): Map<Pair<UUID, OrganizationExternalDatabaseTable>, Set<Map.Entry<UUID, OrganizationExternalDatabaseColumn>>> {
-        val tables = getExternalDatabaseTables(orgId)
-        return tables.map {
-            Pair(it.key, it.value) to (organizationExternalDatabaseColumns.entrySet(belongsToTable(it.key)))
-        }.toMap()
+    /**
+     * Returns a map from tableId to its columns, as a map from columnId to column
+     */
+    fun getColumnsForTables(tableIds: Set<UUID>): Map<UUID, Map<UUID, OrganizationExternalDatabaseColumn>> {
+        return organizationExternalDatabaseColumns
+                .values(belongsToTables(tableIds))
+                .groupBy { it.tableId }
+                .mapValues { it.value.associateBy { c -> c.id } }
     }
 
     fun getExternalDatabaseTableWithColumns(tableId: UUID): OrganizationExternalDatabaseTableColumnsPair {
@@ -774,9 +777,9 @@ class ExternalDatabaseManagementService(
 
     private fun getDeleteRecordSql(table: PostgresTableDefinition, record: PostgresAuthenticationRecord): String {
         return "DELETE FROM ${table.name} WHERE ${PostgresColumn.USERNAME.name} = '${record.username}' " +
-                "AND ${PostgresColumn.DATABASE.name} = '${record.database}' " +
-                "AND ${PostgresColumn.CONNECTION_TYPE.name} = '${record.connectionType}' " +
-                "AND ${PostgresColumn.IP_ADDRESS.name} = '${record.ipAddress}'"
+                "AND ${DATABASE.name} = '${record.database}' " +
+                "AND ${CONNECTION_TYPE.name} = '${record.connectionType}' " +
+                "AND ${IP_ADDRESS.name} = '${record.ipAddress}'"
     }
 
     private fun getSelectRecordsSql(tableName: String): String {
@@ -799,6 +802,10 @@ class ExternalDatabaseManagementService(
 
     private fun belongsToTable(tableId: UUID): Predicate<UUID, OrganizationExternalDatabaseColumn> {
         return Predicates.equal(TABLE_ID_INDEX, tableId)
+    }
+
+    private fun belongsToTables(tableIds: Collection<UUID>): Predicate<UUID, OrganizationExternalDatabaseColumn> {
+        return Predicates.`in`(TABLE_ID_INDEX, *tableIds.toTypedArray())
     }
 
     private fun publishStagingTableSql(tableName: String): String {
