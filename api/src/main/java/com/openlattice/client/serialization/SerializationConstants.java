@@ -140,6 +140,7 @@ public final class SerializationConstants {
     public static final String EXPIRATION                       = "expiration";
     public static final String EXPLANATION                      = "explanation";
     public static final String EXTERNAL                         = "external";
+    public static final String EXTERNAL_ID                      = "externalId";
     public static final String FEATURES                         = "features";
     public static final String FILTER                           = "filter";
     public static final String FILTERS                          = "filters";
@@ -248,6 +249,7 @@ public final class SerializationConstants {
     public static final String RESULT                           = "result";
     public static final String RESULT_SUMMARY                   = "resultSummary";
     public static final String ROLES                            = "roles";
+    public static final String ROLE_MANAGER                     = "roleManager";
     public static final String S3_BUCKET                        = "s3Bucket";
     public static final String SCHEMA                           = "schema";
     public static final String SCHEMAS                          = "schemas";
