@@ -190,7 +190,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
             method = RequestMethod.GET,
             produces = MediaType.APPLICATION_JSON_VALUE )
     public MaterializedViewAccount getMaterializedViewAccount() {
-        return dbCredService.getDbCredential( Principals.getCurrentSecurablePrincipal() );
+        return dbCredService.getDbAccount( Principals.getCurrentSecurablePrincipal() );
     }
 
     @Timed
@@ -201,7 +201,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
             produces = MediaType.APPLICATION_JSON_VALUE )
     public MaterializedViewAccount regenerateCredential() {
         var sp = Principals.getCurrentSecurablePrincipal();
-        return assembler.rollIntegrationAccount( sp.getId(), sp.getPrincipalType() );
+        return assembler.rollIntegrationAccount( sp.getAclKey(), sp.getPrincipalType() );
     }
 
     @Timed
@@ -272,7 +272,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
         spm.deletePrincipal( securablePrincipal.getAclKey() );
 
         //Remove from materialized view account
-        dbCredService.deleteUserCredential(  securablePrincipal );
+        dbCredService.deletePrincipalDbAccount(  securablePrincipal );
 
         //Delete from auth0
         userDirectoryService.deleteUser( userId );

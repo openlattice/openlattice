@@ -24,12 +24,15 @@ package com.openlattice.authorization
 import com.google.common.base.MoreObjects
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.map.IMap
-import com.openlattice.assembler.ORGANIZATION_PREFIX
+import com.hazelcast.query.Predicates
+import com.openlattice.assembler.PostgresRoles.Companion.buildExternalPrincipalId
+import com.openlattice.authorization.mapstores.PostgresCredentialMapstore
 import com.openlattice.directory.MaterializedViewAccount
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.ids.HazelcastLongIdService
 import org.slf4j.LoggerFactory
 import java.security.SecureRandom
+import kotlin.math.max
 
 const val USER_PREFIX = "user"
 
@@ -56,6 +59,7 @@ class DbCredentialService(
         private val srcBuf = source.toCharArray()
 
         private const val CREDENTIAL_LENGTH = 29
+        private const val MIN_USERNAME_LENGTH = 8
 
         private val r = SecureRandom()
 
@@ -66,65 +70,57 @@ class DbCredentialService(
             }
             return String(cred)
         }
-
-        private fun buildPostgresUsername(securablePrincipal: SecurablePrincipal): String {
-            return "ol-internal|user|${securablePrincipal.id}"
-        }
     }
 
-    private val dbCreds: IMap<String, MaterializedViewAccount> = HazelcastMap.DB_CREDS.getMap(hazelcastInstance)
+    private val dbCreds: IMap<AclKey, MaterializedViewAccount> = HazelcastMap.DB_CREDS.getMap(hazelcastInstance)
 
-    fun getDbCredential(user: SecurablePrincipal): MaterializedViewAccount? = dbCreds[buildPostgresUsername(user)]
+    fun getDbAccount(securablePrincipal: SecurablePrincipal): MaterializedViewAccount? = dbCreds[securablePrincipal.aclKey]
 
-    fun getDbCredential(userId: String): MaterializedViewAccount? = dbCreds[userId]
+    fun getDbAccount(aclKey: AclKey): MaterializedViewAccount? = dbCreds[aclKey]
 
-    fun getDbUsername(user: SecurablePrincipal): String = dbCreds.getValue(buildPostgresUsername(user)).username
+    fun getDbUsername(user: SecurablePrincipal): String = getDbAccount(user)!!.username
 
-    fun getDbUsername(userId: String): String = dbCreds.getValue(userId).username
+    fun getDbUsername(aclKey: AclKey): String = getDbAccount(aclKey)!!.username
 
-    fun getOrCreateUserCredentials(user: SecurablePrincipal): MaterializedViewAccount {
-        return getOrCreateUserCredentials(buildPostgresUsername(user))
+    fun getOrCreateDbAccount(securablePrincipal: SecurablePrincipal): MaterializedViewAccount {
+        return getOrCreateDbAccount(securablePrincipal.aclKey)
     }
 
-    fun getOrCreateUserCredentials(userId: String): MaterializedViewAccount {
-        return if (dbCreds.containsKey(userId)) {
-            getDbCredential(userId)!!
+    fun getOrCreateDbAccount(principalAclKey: AclKey, isOrganization: Boolean = false): MaterializedViewAccount {
+        getDbAccount(principalAclKey)?.let { return it }
+
+        logger.info("Generating credentials for principal {}", principalAclKey)
+
+        val username = if (isOrganization) {
+            buildExternalPrincipalId(principalAclKey, PrincipalType.ORGANIZATION)
         } else {
-            logger.info("Generating credentials for user id {}", userId)
-            val cred: String = generateCredential()
             val id = longIdService.getId(scope)
-            val unpaddedLength = (USER_PREFIX.length + id.toString().length)
-            val username = if (userId.startsWith(ORGANIZATION_PREFIX)) {
-                userId
-            } else {
-                if (unpaddedLength < 8) {
-                    "user" + ("0".repeat(8 - unpaddedLength)) + id
-                } else {
-                    "user$id"
-                }
-            }
-            val account = MaterializedViewAccount(username, cred)
-            logger.info("Generated credentials for user id {} with username {}", userId, username)
-            return MoreObjects.firstNonNull(dbCreds.putIfAbsent(userId, account), account)
+            val padding = "0".repeat(max(0, MIN_USERNAME_LENGTH - USER_PREFIX.length - id.toString().length))
+
+            "$USER_PREFIX$padding$id"
         }
+        val cred = generateCredential()
+
+        logger.info("Generated credential for principal {} with username {}", principalAclKey, username)
+
+        val account = MaterializedViewAccount(username, cred)
+        return MoreObjects.firstNonNull(dbCreds.putIfAbsent(principalAclKey, account), account)
     }
 
-    fun deleteUserCredential(user: SecurablePrincipal) {
-        dbCreds.delete(buildPostgresUsername(user))
+    fun deletePrincipalDbAccount(securablePrincipal: SecurablePrincipal) {
+        dbCreds.delete(securablePrincipal.aclKey)
     }
 
-    fun deleteUserCredential(userId: String) {
-        dbCreds.delete(userId)
-    }
-
-    fun rollUserCredential(userId: String): String {
+    fun rollCredential(principalAclKey: AclKey): String {
         val cred: String = generateCredential()
-        dbCreds.set(userId, MaterializedViewAccount(dbCreds.getValue(userId).username, cred))
+        dbCreds.set(principalAclKey, MaterializedViewAccount(getDbUsername(principalAclKey), cred))
         return cred
     }
 
-    fun lookupSecurablePrincipal(dbUser: String): String {
-
+    fun getSecurablePrincipalAclKeysFromUsernames(usernames: Collection<String>): Map<String, AclKey> {
+        return dbCreds.entrySet(Predicates.`in`(PostgresCredentialMapstore.USERNAME_INDEX, *usernames.toTypedArray())).associate {
+            it.value.username to it.key
+        }
     }
 
 }

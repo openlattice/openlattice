@@ -208,7 +208,7 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
             @PathVariable(OrganizationsApi.ID) organizationId: UUID
     ): OrganizationIntegrationAccount {
         ensureOwner(organizationId)
-        val account = assembler.rollIntegrationAccount(organizationId, PrincipalType.ORGANIZATION)
+        val account = assembler.rollIntegrationAccount(AclKey(organizationId), PrincipalType.ORGANIZATION)
         return OrganizationIntegrationAccount(account.username, account.credential)
     }
 
@@ -591,12 +591,12 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
     private fun getAuthorizedRoleAclKeys(roles: Set<Role>): Set<AclKey> {
         return authorizations
                 .accessChecksForPrincipals(roles.stream()
-                                                   .map { role: Role ->
-                                                       AccessCheck(
-                                                               role.aclKey, EnumSet.of(Permission.READ)
-                                                       )
-                                                   }
-                                                   .collect(Collectors.toSet()), Principals.getCurrentPrincipals())
+                        .map { role: Role ->
+                            AccessCheck(
+                                    role.aclKey, EnumSet.of(Permission.READ)
+                            )
+                        }
+                        .collect(Collectors.toSet()), Principals.getCurrentPrincipals())
                 .filter { authorization: Authorization ->
                     authorization.permissions.getOrDefault(Permission.READ, false)
                 }
@@ -783,20 +783,16 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
                 principalService
                         .getRole(adminRoleAclKey[0], adminRoleAclKey[1])
         )
-        val tables = externalDatabaseManagementService
-                .getExternalDatabaseTablesWithColumns(organizationId)
-        tables
-                .forEach { (t, c) ->
-                    organizationMetadataEntitySetsService
-                            .addDatasetsAndColumns(
-                                    organizationId,
-                                    ImmutableList.of(t.second),
-                                    ImmutableMap.of(
-                                            t.second.id,
-                                            c.map { obj -> obj.value }
-                                    )
-                            )
-                }
+
+        val orgTables = externalDatabaseManagementService.getExternalDatabaseTables(organizationId)
+        val tableCols = externalDatabaseManagementService.getColumnsForTables(orgTables.keys)
+
+        orgTables.values.groupBy { it.organizationId }.forEach { (orgId, tables) ->
+            val cols = tables.associate { it.id to (tableCols[it.id]?.values ?: listOf()) }
+
+            organizationMetadataEntitySetsService.addDatasetsAndColumns(organizationId, tables, cols)
+        }
+
         entitySetManager
                 .getEntitySetsForOrganization(organizationId)
                 .forEach { e: UUID ->

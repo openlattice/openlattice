@@ -20,14 +20,17 @@
 
 package com.openlattice.authorization.mapstores;
 
+import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.config.IndexConfig;
 import com.hazelcast.config.IndexType;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapStoreConfig;
 import com.hazelcast.config.MapStoreConfig.InitialLoadMode;
+import com.openlattice.authorization.AclKey;
 import com.openlattice.directory.MaterializedViewAccount;
 import com.openlattice.hazelcast.HazelcastMap;
-import com.openlattice.postgres.PostgresColumn;
+import com.openlattice.mapstores.TestDataFactory;
+import com.openlattice.postgres.PostgresArrays;
 import com.openlattice.postgres.PostgresTable;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore;
@@ -43,22 +46,23 @@ import org.apache.commons.lang3.RandomStringUtils;
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class PostgresCredentialMapstore extends AbstractBasePostgresMapstore<String, MaterializedViewAccount> {
+
+public class PostgresCredentialMapstore extends AbstractBasePostgresMapstore<AclKey, MaterializedViewAccount> {
     public static final String USERNAME_INDEX = "username";
 
     public PostgresCredentialMapstore( HikariDataSource hds ) {
         super( HazelcastMap.DB_CREDS, PostgresTable.DB_CREDS, hds );
     }
 
-    @Override public String generateTestKey() {
-        return RandomStringUtils.random( 5 );
+    @Override public AclKey generateTestKey() {
+        return TestDataFactory.aclKey();
     }
 
     @Override public MaterializedViewAccount generateTestValue() {
         return new MaterializedViewAccount( RandomStringUtils.random( 5 ), RandomStringUtils.random( 5 ) );
     }
 
-    @Override protected void bind( PreparedStatement ps, String key, MaterializedViewAccount value )
+    @Override protected void bind( PreparedStatement ps, AclKey key, MaterializedViewAccount value )
             throws SQLException {
         bind( ps, key, 1 );
         ps.setString( 2, value.getUsername() );
@@ -68,16 +72,16 @@ public class PostgresCredentialMapstore extends AbstractBasePostgresMapstore<Str
         ps.setString( 5, value.getCredential() );
     }
 
-    @Override protected int bind( PreparedStatement ps, String key, int parameterIndex ) throws SQLException {
-        ps.setString( parameterIndex++, key );
+    @Override protected int bind( PreparedStatement ps, AclKey key, int parameterIndex ) throws SQLException {
+        ps.setArray( parameterIndex++, PostgresArrays.createUuidArray( ps.getConnection(), key ) );
         return parameterIndex;
     }
 
-    @Override public void delete( String key ) {
+    @Override public void delete( AclKey key ) {
         super.delete( key );
     }
 
-    @Override public void deleteAll( Collection<String> keys ) {
+    @Override public void deleteAll( Collection<AclKey> keys ) {
         super.deleteAll( keys );
     }
 
@@ -85,17 +89,19 @@ public class PostgresCredentialMapstore extends AbstractBasePostgresMapstore<Str
         return ResultSetAdapters.materializedViewAccount( rs );
     }
 
-    @Override protected String mapToKey( ResultSet rs ) throws SQLException {
-        return rs.getString( PostgresColumn.PRINCIPAL_ID_FIELD );
-    }
-
-    @Override public MapConfig getMapConfig() {
-        return super.getMapConfig()
-                .addIndexConfig( new IndexConfig( IndexType.HASH, USERNAME_INDEX ) );
+    @Override protected AclKey mapToKey( ResultSet rs ) throws SQLException {
+        return ResultSetAdapters.aclKey( rs );
     }
 
     @Override public MapStoreConfig getMapStoreConfig() {
         return super.getMapStoreConfig()
                 .setInitialLoadMode( InitialLoadMode.EAGER );
+    }
+
+    @Override public MapConfig getMapConfig() {
+        return super
+                .getMapConfig()
+                .setInMemoryFormat( InMemoryFormat.OBJECT )
+                .addIndexConfig( new IndexConfig( IndexType.HASH, USERNAME_INDEX ) );
     }
 }
