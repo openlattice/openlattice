@@ -21,15 +21,21 @@ interface ExternalSqlDatabaseManager {
     fun grantPrivilegeOnDatabaseToRole(privilege: DatabasePrivilege, role: Role)
     fun grantRoleToRole(roleToGrant: Role, target: Role)
 
-    fun createSchema( schema: SchemaMetadata, owner:Role )
-    fun createTable( table:TableMetadata, owner:Role)
-    fun createView( view: ViewMetadata, owner: Role)
+    fun createSchema(schema: SchemaMetadata, owner: Role)
+    fun createTable(table: TableMetadata, owner: Role)
+    fun createView(view: ViewMetadata, owner: Role)
 
-    //Only usable if JdbcConnection.ROLE_MANAGER = true
-    fun createUser(user:SecurablePrincipal)
-    fun createRole(role:SecurablePrincipal)
+    fun isDataMaskingNativelySupported(): Boolean
+    //These function only work for native policies.
+    fun createDataMaskingPolicy(maskingPolicy: String, schema: String)
+    fun applyDataMaskingPolicy(table: TableMetadata)
+
+    //Only usable if JdbcConnection.ROLE_MANAGER = true, i.e isRoleManagementEnabled = true
+    fun isRoleManagementEnabled(): Boolean
+    fun createUser(user: SecurablePrincipal)
+    fun createRole(role: SecurablePrincipal)
 
     //TODO: We should probably use aclKey or principal
-    fun deleteUser(user:SecurablePrincipal)
-    fun deleteRole(role:SecurablePrincipal)
+    fun deleteUser(user: SecurablePrincipal)
+    fun deleteRole(role: SecurablePrincipal)
 }

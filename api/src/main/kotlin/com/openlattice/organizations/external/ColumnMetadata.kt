@@ -6,6 +6,6 @@ package com.openlattice.organizations.external
  */
 data class ColumnMetadata(
         val name: String,
-        val permission: Map<String, Set<ColumnPrivilege>>
-) {
-}
+        val permission: Map<String, Set<ColumnPrivilege>>,
+        val maskingPolicy: String
+)

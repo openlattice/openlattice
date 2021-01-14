@@ -7,6 +7,7 @@ package com.openlattice.organizations.external
 data class TableMetadata(
         val name: String,
         val columns: List<ColumnMetadata>,
+        val comment: String,
         val permissions: Map<String,Set<TablePrivilege>>
 ) {
 }
