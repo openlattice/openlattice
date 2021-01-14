@@ -25,6 +25,7 @@ import com.hazelcast.core.HazelcastInstance;
 import com.openlattice.BackgroundExternalDatabaseSyncingService;
 import com.openlattice.auditing.AuditRecordEntitySetsManager;
 import com.openlattice.auditing.AuditingManager;
+import com.openlattice.authorization.HazelcastAclKeyReservationService;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.DataDeletionManager;
 import com.openlattice.data.DataGraphManager;
@@ -98,6 +99,9 @@ public class IndexerPostConfigurationServicesPod {
     @Inject
     private PostgresLinkingFeedbackService postgresLinkingFeedbackService;
 
+    @Inject
+    private HazelcastAclKeyReservationService reservationService;
+
     @Bean
     public PartitionManager partitionManager() {
         return new PartitionManager( hazelcastInstance, hikariDataSource );
@@ -161,7 +165,8 @@ public class IndexerPostConfigurationServicesPod {
                 auditingManager,
                 ares,
                 indexerConfiguration,
-                organizationMetadataEntitySetsService );
+                organizationMetadataEntitySetsService,
+                reservationService );
     }
 
     @Bean

@@ -2,6 +2,7 @@ package com.openlattice.organization
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.securable.AbstractSecurableObject
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.client.serialization.SerializationConstants
@@ -49,5 +50,19 @@ class OrganizationExternalDatabaseColumn(
     @JsonIgnore
     override fun getCategory(): SecurableObjectType {
         return SecurableObjectType.OrganizationExternalDatabaseColumn
+    }
+
+    // This is an intermediate cleanup step to address places in the code where a unique name (used to reserve the
+    // object's id in HazelcastAclKeyReservationService) is manually constructed, which is pretty dangerous as any
+    // slight difference can contribute to failed lookup and duplicate object creation. Ideally this should eventually
+    // be replaced with something better.
+    @JsonIgnore
+    fun getUniqueName(): String {
+        return "$tableId.$name"
+    }
+
+    @JsonIgnore
+    fun getAclKey(): AclKey {
+        return AclKey(tableId, id)
     }
 }

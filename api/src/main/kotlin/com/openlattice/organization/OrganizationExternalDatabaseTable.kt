@@ -44,6 +44,15 @@ constructor(
         return SecurableObjectType.OrganizationExternalDatabaseTable
     }
 
+    // This is an intermediate cleanup step to address places in the code where a unique name (used to reserve the
+    // object's id in HazelcastAclKeyReservationService) is manually constructed, which is pretty dangerous as any
+    // slight difference can contribute to failed lookup and duplicate object creation. Ideally this should eventually
+    // be replaced with something better.
+    @JsonIgnore
+    fun getUniqueName(): String {
+        return "$organizationId.$schema.$name"
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false

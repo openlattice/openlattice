@@ -82,10 +82,10 @@ class ExternalDatabaseManagementService(
 
     /*CREATE*/
     fun createOrganizationExternalDatabaseTable(orgId: UUID, table: OrganizationExternalDatabaseTable): UUID {
-        val tableFQN = FullQualifiedName(orgId.toString(), table.name)
+        val tableUniqueName = table.getUniqueName()
         checkState(organizationExternalDatabaseTables.putIfAbsent(table.id, table) == null,
-                "OrganizationExternalDatabaseTable ${tableFQN.fullQualifiedNameAsString} already exists")
-        aclKeyReservations.reserveIdAndValidateType(table, tableFQN::getFullQualifiedNameAsString)
+                "OrganizationExternalDatabaseTable $tableUniqueName already exists")
+        aclKeyReservations.reserveIdAndValidateType(table) { tableUniqueName }
 
         val tableAclKey = AclKey(table.id)
         authorizationManager.setSecurableObjectType(tableAclKey, SecurableObjectType.OrganizationExternalDatabaseTable)
@@ -97,13 +97,12 @@ class ExternalDatabaseManagementService(
         checkState(organizationExternalDatabaseTables[column.tableId] != null,
                 "OrganizationExternalDatabaseColumn ${column.name} belongs to " +
                         "a table with id ${column.tableId} that does not exist")
-        val columnFQN = FullQualifiedName(column.tableId.toString(), column.name)
+        val columnUniqueName = column.getUniqueName()
         checkState(organizationExternalDatabaseColumns.putIfAbsent(column.id, column) == null,
-                "OrganizationExternalDatabaseColumn $columnFQN already exists")
-        aclKeyReservations.reserveIdAndValidateType(column, columnFQN::getFullQualifiedNameAsString)
+                "OrganizationExternalDatabaseColumn $columnUniqueName already exists")
+        aclKeyReservations.reserveIdAndValidateType(column) { columnUniqueName }
 
-        val columnAclKey = AclKey(column.tableId, column.id)
-        authorizationManager.setSecurableObjectType(columnAclKey, SecurableObjectType.OrganizationExternalDatabaseColumn)
+        authorizationManager.setSecurableObjectType(column.getAclKey(), SecurableObjectType.OrganizationExternalDatabaseColumn)
 
         return column.id
     }
@@ -112,7 +111,7 @@ class ExternalDatabaseManagementService(
             tableName: String,
             tableId: UUID,
             orgId: UUID,
-            columnName: Optional<String>
+            columnName: Optional<String> = Optional.empty()
     ): List<OrganizationExternalDatabaseColumn> {
         var columnCondition = ""
         columnName.ifPresent { columnCondition = "AND information_schema.columns.column_name = '$it'" }
@@ -419,7 +418,7 @@ class ExternalDatabaseManagementService(
         hds.connection.use { connection ->
             connection.createStatement().use { stmt ->
                 val hbaTable = PostgresTable.HBA_AUTHENTICATION_RECORDS
-                val columns = hbaTable.columns.joinToString(", ", "(", ")") { it.name }
+                val columns = hbaTable.columns.joinToString(", ",   "(", ")") { it.name }
                 val pkey = hbaTable.primaryKey.joinToString(", ", "(", ")") { it.name }
                 val insertRecordSql = getInsertRecordSql(hbaTable, columns, pkey, record)
                 stmt.executeUpdate(insertRecordSql)
