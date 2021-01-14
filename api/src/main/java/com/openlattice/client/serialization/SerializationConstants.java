@@ -249,7 +249,7 @@ public final class SerializationConstants {
     public static final String RESULT                           = "result";
     public static final String RESULT_SUMMARY                   = "resultSummary";
     public static final String ROLES                            = "roles";
-    public static final String ROLE_MANAGER                     = "roleManager";
+    public static final String ROLE_MANAGEMENT_ENABLED          = "roleManagementEnabled";
     public static final String S3_BUCKET                        = "s3Bucket";
     public static final String SCHEMA                           = "schema";
     public static final String SCHEMAS                          = "schemas";

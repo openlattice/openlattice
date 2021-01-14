@@ -9,6 +9,7 @@ import com.openlattice.organizations.external.*
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 interface ExternalSqlDatabaseManager {
+    fun getDriverName() : String
     //These aren't paged for now, since even if warehouse has a 1M tables with each entry taking 1kb to describe it would
     //only be 1 GB of metadata from API call.
     fun getTables(): Map<String, TableMetadata>
@@ -26,6 +27,12 @@ interface ExternalSqlDatabaseManager {
     fun createView(view: ViewMetadata, owner: Role)
 
     fun isDataMaskingNativelySupported(): Boolean
+    /**
+     * These polices are applied by calling alter table in SQL server and snowflake
+     * Mariadb requires configuring max scale, we will need to refine how to express these
+     * more flexibly... i.e a standard set of templates and then allow for custom entry across
+     * registered database types.
+     */
     //These function only work for native policies.
     fun createDataMaskingPolicy(maskingPolicy: String, schema: String)
     fun applyDataMaskingPolicy(table: TableMetadata)

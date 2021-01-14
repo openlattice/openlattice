@@ -20,6 +20,9 @@
 
 package com.openlattice.authorization.mapstores;
 
+import com.hazelcast.config.IndexConfig;
+import com.hazelcast.config.IndexType;
+import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapStoreConfig;
 import com.hazelcast.config.MapStoreConfig.InitialLoadMode;
 import com.openlattice.directory.MaterializedViewAccount;
@@ -41,6 +44,7 @@ import org.apache.commons.lang3.RandomStringUtils;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class PostgresCredentialMapstore extends AbstractBasePostgresMapstore<String, MaterializedViewAccount> {
+    public static final String USERNAME_INDEX = "username";
 
     public PostgresCredentialMapstore( HikariDataSource hds ) {
         super( HazelcastMap.DB_CREDS, PostgresTable.DB_CREDS, hds );
@@ -83,6 +87,11 @@ public class PostgresCredentialMapstore extends AbstractBasePostgresMapstore<Str
 
     @Override protected String mapToKey( ResultSet rs ) throws SQLException {
         return rs.getString( PostgresColumn.PRINCIPAL_ID_FIELD );
+    }
+
+    @Override public MapConfig getMapConfig() {
+        return super.getMapConfig()
+                .addIndexConfig( new IndexConfig( IndexType.HASH, USERNAME_INDEX ) );
     }
 
     @Override public MapStoreConfig getMapStoreConfig() {

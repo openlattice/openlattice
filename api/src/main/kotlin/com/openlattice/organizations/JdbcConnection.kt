@@ -16,7 +16,7 @@ data class JdbcConnection
 /**
  * Creates an instance of a jdbc connection.
  *
- * @param roleManager Flags whether this connection be used for managing users and roles in the database.
+ * @param roleManagementEnabled Flags whether this connection be used for managing users and roles in the database.
  */
 constructor(
         @JsonProperty(SerializationConstants.NAME) val name: String,
@@ -25,6 +25,6 @@ constructor(
         @JsonProperty(SerializationConstants.DATABASE) val database: String = "",
         @JsonProperty(SerializationConstants.USERNAME) val username: String = "",
         @JsonProperty(SerializationConstants.PASSWORD) val password: String = "",
-        @JsonProperty(SerializationConstants.ROLE_MANAGER) val roleManager : Boolean = false,
+        @JsonProperty(SerializationConstants.ROLE_MANAGEMENT_ENABLED) val roleManagementEnabled: Boolean = false,
         @JsonProperty(SerializationConstants.PROPERTIES_FIELD) val properties: Properties = Properties()
 )

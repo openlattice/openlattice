@@ -1,13 +1,21 @@
 package com.openlattice.organizations.external
 
+import java.time.OffsetDateTime
+
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-data class TableMetadata(
+data class TableMetadata
+/**
+ * @param permissions A map from roles to the set of privileges they have on the table.
+ */
+constructor(
         val name: String,
-        val columns: List<ColumnMetadata>,
+        val externalId: String = name,
+        val schema: String,
         val comment: String,
-        val permissions: Map<String,Set<TablePrivilege>>
-) {
-}
+        val columns: List<ColumnMetadata>,
+        val permissions: Map<String,Set<TablePrivilege>>,
+        val lastUpdated: OffsetDateTime
+)

@@ -39,7 +39,7 @@ const val USER_PREFIX = "user"
  */
 class DbCredentialService(
         hazelcastInstance: HazelcastInstance,
-        val longIdService: HazelcastLongIdService
+        private val longIdService: HazelcastLongIdService
 ) {
 
     companion object {
@@ -121,6 +121,10 @@ class DbCredentialService(
         val cred: String = generateCredential()
         dbCreds.set(userId, MaterializedViewAccount(dbCreds.getValue(userId).username, cred))
         return cred
+    }
+
+    fun lookupSecurablePrincipal(dbUser: String): String {
+
     }
 
 }
