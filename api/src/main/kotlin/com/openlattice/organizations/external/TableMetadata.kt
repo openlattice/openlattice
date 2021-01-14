@@ -8,7 +8,7 @@ import java.time.OffsetDateTime
  */
 data class TableMetadata
 /**
- * @param permissions A map from roles to the set of privileges they have on the table.
+ * @param privileges A map from roles to the set of privileges they have on the table.
  */
 constructor(
         val name: String,
@@ -16,6 +16,6 @@ constructor(
         val schema: String,
         val comment: String,
         val columns: List<ColumnMetadata>,
-        val permissions: Map<String,Set<TablePrivilege>>,
+        val privileges: Map<String,Set<TablePrivilege>>,
         val lastUpdated: OffsetDateTime
 )

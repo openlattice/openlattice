@@ -1,5 +1,6 @@
 package com.openlattice.external
 
+import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.Permission
 import com.openlattice.authorization.SecurablePrincipal
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
@@ -11,8 +12,7 @@ import com.openlattice.organization.OrganizationExternalDatabaseTable
  */
 class ExternalSqlDatabaseTableMapping(
         val organizationExternalDatabaseTable: OrganizationExternalDatabaseTable,
-        val tablePermissions: Map<SecurablePrincipal, Set<Permission>>,
-        val columnPermissions: Map<OrganizationExternalDatabaseColumn, Map<SecurablePrincipal, Set<Permission>>>,
-        val roleMappings: Map<String, SecurablePrincipal>
+        val tablePermissions: Map<AclKey, Set<Permission>>,
+        val columnPermissions: Map<OrganizationExternalDatabaseColumn, Map<AclKey, Set<Permission>>>,
 
 )

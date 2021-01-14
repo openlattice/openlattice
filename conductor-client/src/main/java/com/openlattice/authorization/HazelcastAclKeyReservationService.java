@@ -201,7 +201,7 @@ public class HazelcastAclKeyReservationService {
      *
      * This routine is simpler, because it doesn't have to worry about other calls generating conflicting ids for the
      * same name. It should be used whenever the name of the object is known before the object is created.
-     * 
+     *
      * @param name The name to reservation.
      * @return A UUID for the name reservation.
      */
