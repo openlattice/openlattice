@@ -25,6 +25,7 @@ package com.openlattice.authorization;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableSet;
 import com.hazelcast.core.HazelcastInstance;
@@ -38,6 +39,7 @@ import com.openlattice.datastore.util.Util;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.hazelcast.HazelcastMap;
 
+import com.openlattice.hazelcast.HazelcastUtils;
 import java.util.*;
 import java.util.function.Supplier;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
@@ -191,6 +193,29 @@ public class HazelcastAclKeyReservationService {
         } else {
             throw new UniqueIdConflictException( "AclKey is already associated with different type." );
         }
+    }
+
+    /**
+     * Simple reservation algorithm named securable objects. It finds a free id and then either returns the actual
+     * id of the object (as reserved by another caller).
+     *
+     * This routine is simpler, because it doesn't have to worry about other calls generating conflicting ids for the
+     * same name. It should be used whenever the name of the object is known before the object is created.
+     * 
+     * @param name The name to reservation.
+     * @return A UUID for the name reservation.
+     */
+    public UUID reserveOrGetId( String name ) {
+        final var generatedId =  HazelcastUtils.insertIntoUnusedKey( names, name, UUID::randomUUID );
+        final var maybeActualId = aclKeys.putIfAbsent( name, generatedId );
+
+        if( maybeActualId == null ) {
+            return generatedId;
+        } else {
+            names.delete( generatedId );
+            return maybeActualId;
+        }
+
     }
 
     /**
