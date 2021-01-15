@@ -39,11 +39,9 @@ import java.util.*
 @Service
 class ExternalSqlDatabasesManagementService(
         hazelcastInstance: HazelcastInstance,
-        private val externalDbManager: ExternalDatabaseConnectionManager,
         private val securePrincipalsManager: SecurePrincipalsManager,
         private val aclKeyReservations: HazelcastAclKeyReservationService,
         private val authorizationManager: AuthorizationManager,
-        private val organizationExternalDatabaseConfiguration: OrganizationExternalDatabaseConfiguration,
         private val organizationMetadataEntitySetsService: OrganizationMetadataEntitySetsService,
         private val dbCredentialService: DbCredentialService,
         private val hds: HikariDataSource

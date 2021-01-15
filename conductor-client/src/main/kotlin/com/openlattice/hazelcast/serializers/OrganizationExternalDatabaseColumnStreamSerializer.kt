@@ -6,7 +6,6 @@ import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
-import com.openlattice.postgres.PostgresDatatype
 import org.springframework.stereotype.Component
 import java.util.*
 
@@ -14,15 +13,16 @@ import java.util.*
 class OrganizationExternalDatabaseColumnStreamSerializer : SelfRegisteringStreamSerializer<OrganizationExternalDatabaseColumn> {
 
     companion object {
-        private val postgresDatatypes = PostgresDatatype.values()
         fun serialize(output: ObjectDataOutput, obj: OrganizationExternalDatabaseColumn) {
             UUIDStreamSerializerUtils.serialize(output, obj.id)
             output.writeUTF(obj.name)
             output.writeUTF(obj.title)
             output.writeUTF(obj.description)
+            output.writeUTF(obj.externalId)
             UUIDStreamSerializerUtils.serialize(output, obj.tableId)
             UUIDStreamSerializerUtils.serialize(output, obj.organizationId)
-            PostgresDatatypeStreamSerializer.serialize(output, obj.dataType)
+            UUIDStreamSerializerUtils.serialize(output, obj.dataSourceId)
+            output.writeUTF(obj.dataType)
             output.writeBoolean(obj.primaryKey)
             output.writeInt(obj.ordinalPosition)
         }
@@ -32,12 +32,26 @@ class OrganizationExternalDatabaseColumnStreamSerializer : SelfRegisteringStream
             val name = input.readUTF()
             val title = input.readUTF()
             val description = input.readUTF()
+            val externalId = input.readUTF()
             val tableId = UUIDStreamSerializerUtils.deserialize(input)
             val orgId = UUIDStreamSerializerUtils.deserialize(input)
-            val dataType = PostgresDatatypeStreamSerializer.deserialize(input)
+            val dataSourceId = UUIDStreamSerializerUtils.deserialize(input)
+            val dataType = input.readUTF()
             val isPrimaryKey = input.readBoolean()
             val ordinalPosition = input.readInt()
-            return OrganizationExternalDatabaseColumn(id, name, title, Optional.of(description), tableId, orgId, dataType, isPrimaryKey, ordinalPosition)
+            return OrganizationExternalDatabaseColumn(
+                    id,
+                    name,
+                    title,
+                    Optional.of(description),
+                    externalId,
+                    tableId,
+                    orgId,
+                    dataSourceId,
+                    dataType,
+                    isPrimaryKey,
+                    ordinalPosition
+            )
         }
     }
 

@@ -2,6 +2,7 @@ package com.openlattice.external
 
 import com.openlattice.authorization.SecurablePrincipal
 import com.openlattice.organization.roles.Role
+import com.openlattice.organizations.JdbcConnection
 import com.openlattice.organizations.external.*
 
 /**
