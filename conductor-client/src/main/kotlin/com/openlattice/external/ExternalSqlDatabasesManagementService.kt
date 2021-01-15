@@ -21,20 +21,8 @@ import java.security.InvalidParameterException
 import java.util.*
 
 /**
+ * This class enables database specific plugins to not have to be aware of internal OL semantics.
  *
- * The requirement is that each individual table and catalog can be permissioned independently. So if we want to use
- * securable objects that means we can't use our flexible data api as tables are merely rows.
- *
- * So challenge is to actually link database metadata ->  entities associated with that data.
- * The only ACL that needs to be directly managed by organizations is the one for row level visibility in metadata
- * catalog,
- *
- * Q: Should an API that can modify the actual SQL table make the call as the user or should it connect to db via
- * persistent connection? A: The data steward shouldn't be required to have a database account with access to information
- * in order to do their job and approve access requests (though frequently they will).
- *
- *
- * This class is intended to be called to impleme
  */
 @Service
 class ExternalSqlDatabasesManagementService(
