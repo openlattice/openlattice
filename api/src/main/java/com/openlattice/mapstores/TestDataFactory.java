@@ -51,7 +51,9 @@ import com.openlattice.edm.type.EntityTypePropertyMetadata;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.notifications.sms.SmsEntitySetInformation;
 import com.openlattice.organization.OrganizationExternalDatabaseColumn;
+import com.openlattice.organization.OrganizationExternalDatabaseSchema;
 import com.openlattice.organization.OrganizationExternalDatabaseTable;
+import com.openlattice.organization.OrganizationExternalDatabaseView;
 import com.openlattice.organization.OrganizationPrincipal;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.Grant;
@@ -792,11 +794,37 @@ public final class TestDataFactory {
                 randomAlphanumeric( 5 ),
                 randomAlphanumeric( 5 ),
                 Optional.of( randomAlphanumeric( 5 ) ),
+                randomAlphanumeric( 5 ),
                 table.getId(),
                 UUID.randomUUID(),
-                PostgresDatatype.TEXT,
+                UUID.randomUUID(),
+                PostgresDatatype.TEXT.toString(),
                 r.nextBoolean(),
                 r.nextInt( 1000 )
+        );
+    }
+
+    public static OrganizationExternalDatabaseSchema organizationExternalDatabaseSchema() {
+        return new OrganizationExternalDatabaseSchema(
+                UUID.randomUUID(),
+                randomAlphanumeric( 5 ),
+                randomAlphanumeric( 5 ),
+                Optional.of( randomAlphanumeric( 5 ) ),
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                randomAlphanumeric( 5 )
+        );
+    }
+
+    public static OrganizationExternalDatabaseView organizationExternalDatabaseView() {
+        return new OrganizationExternalDatabaseView(
+                UUID.randomUUID(),
+                randomAlphanumeric( 5 ),
+                randomAlphanumeric( 5 ),
+                Optional.of( randomAlphanumeric( 5 ) ),
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                randomAlphanumeric( 5 )
         );
     }
 
@@ -807,7 +835,8 @@ public final class TestDataFactory {
                 randomAlphanumeric( 5 ),
                 Optional.of( randomAlphanumeric( 5 ) ),
                 UUID.randomUUID(),
-                r.nextInt()
+                UUID.randomUUID(),
+                randomAlphanumeric( 5 )
         );
     }
 

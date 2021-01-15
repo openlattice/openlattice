@@ -8,7 +8,9 @@ data class ColumnMetadata(
         val name: String,
         val externalId: String = name,
         val schema: String,
-        val sqlDataType: SqlDataType,
+        val sqlDataType: String,
+        val isPrimaryKey: Boolean,
+        val ordinalPosition: Int,
         val privileges: Map<String, Set<ColumnPrivilege>>,
         val maskingPolicy: String
 )

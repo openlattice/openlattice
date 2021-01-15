@@ -42,12 +42,15 @@ import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetPropertyKey
 import com.openlattice.edm.set.EntitySetPropertyMetadata
 import com.openlattice.edm.type.*
+import com.openlattice.external.JdbcConnections
 import com.openlattice.ids.Range
 import com.openlattice.linking.EntityKeyPair
 import com.openlattice.notifications.sms.SmsEntitySetInformation
 import com.openlattice.notifications.sms.SmsInformationKey
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
+import com.openlattice.organization.OrganizationExternalDatabaseSchema
 import com.openlattice.organization.OrganizationExternalDatabaseTable
+import com.openlattice.organization.OrganizationExternalDatabaseView
 import com.openlattice.organizations.Organization
 import com.openlattice.organizations.OrganizationDatabase
 import com.openlattice.organizations.PrincipalSet
@@ -110,6 +113,7 @@ class HazelcastMap<K, V> internal constructor(val name: String) : TypedMapIdenti
         @JvmField val ENTITY_TYPE_PROPERTY_METADATA = HazelcastMap<EntityTypePropertyKey, EntityTypePropertyMetadata>("ENTITY_TYPE_PROPERTY_METADATA")
         @JvmField val ENTITY_TYPES = HazelcastMap<UUID, EntityType>("ENTITY_TYPES")
         @JvmField val EXPIRATION_LOCKS = HazelcastMap<UUID, Long>("EXPIRATION_LOCKS")
+        @JvmField val EXTERNAL_SQL_DATABASES = HazelcastMap<UUID, JdbcConnections> ("EXTERNAL_SQL_DATABASES")
         @JvmField val HBA_AUTHENTICATION_RECORDS = HazelcastMap<String, PostgresAuthenticationRecord>("HBA_AUTHENTICATION_RECORDS")
         @JvmField val ID_GENERATION = HazelcastMap<Long, Range>("ID_GENERATION")
         @JvmField val INDEXING_JOBS = HazelcastMap<UUID, DelegatedUUIDSet>("INDEXING_JOBS")
@@ -130,6 +134,8 @@ class HazelcastMap<K, V> internal constructor(val name: String) : TypedMapIdenti
         @JvmField val ORGANIZATION_DATABASES = HazelcastMap<UUID, OrganizationDatabase>("ORGANIZATION_DATABASES")
         @JvmField val ORGANIZATION_EXTERNAL_DATABASE_COLUMN = HazelcastMap<UUID, OrganizationExternalDatabaseColumn>("ORGANIZATION_EXTERNAL_DATABASE_COLUMN")
         @JvmField val ORGANIZATION_EXTERNAL_DATABASE_TABLE = HazelcastMap<UUID, OrganizationExternalDatabaseTable>("ORGANIZATION_EXTERNAL_DATABASE_TABLE")
+        @JvmField val ORGANIZATION_EXTERNAL_DATABASE_VIEW = HazelcastMap<UUID, OrganizationExternalDatabaseView>("ORGANIZATION_EXTERNAL_DATABASE_VIEW")
+        @JvmField val ORGANIZATION_EXTERNAL_DATABASE_SCHEMA = HazelcastMap<UUID, OrganizationExternalDatabaseSchema>("ORGANIZATION_EXTERNAL_DATABASE_SCHEMA")
         @JvmField val ORGANIZATIONS = HazelcastMap<UUID, Organization>("ORGANIZATIONS")
         @JvmField val ORGANIZATIONS_DESCRIPTIONS = HazelcastMap<UUID, String>("ORGANIZATIONS_DESCRIPTIONS")
         @JvmField val ORGANIZATIONS_MEMBERS = HazelcastMap<UUID, PrincipalSet>("ORGANIZATIONS_MEMBERS")

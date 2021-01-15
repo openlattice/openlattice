@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.openlattice.authorization.securable.AbstractSecurableObject
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.client.serialization.SerializationConstants
+import com.openlattice.organizations.external.SqlDataType
 import java.util.*
 import com.openlattice.postgres.PostgresDatatype
 
@@ -27,9 +28,11 @@ class OrganizationExternalDatabaseColumn(
         @JsonProperty(SerializationConstants.NAME_FIELD) var name: String,
         @JsonProperty(SerializationConstants.TITLE_FIELD) title: String,
         @JsonProperty(SerializationConstants.DESCRIPTION_FIELD) description: Optional<String>,
+        @JsonProperty(SerializationConstants.EXTERNAL_ID) val externalId: String,
         @JsonProperty(SerializationConstants.TABLE_ID) var tableId: UUID,
         @JsonProperty(SerializationConstants.ORGANIZATION_ID) var organizationId: UUID,
-        @JsonProperty(SerializationConstants.DATATYPE_FIELD) var dataType: PostgresDatatype,
+        @JsonProperty(SerializationConstants.DATA_SOURCE_ID) val dataSourceId: UUID,
+        @JsonProperty(SerializationConstants.DATATYPE_FIELD) var dataType: String,
         @JsonProperty(SerializationConstants.PRIMARY_KEY) var primaryKey: Boolean,
         @JsonProperty(SerializationConstants.ORDINAL_POSITION) var ordinalPosition: Int
 ) : AbstractSecurableObject(id, title, description) {
@@ -39,12 +42,26 @@ class OrganizationExternalDatabaseColumn(
             name: String,
             title: String,
             description: Optional<String>,
+            externalId: String,
             tableId: UUID,
             organizationId: UUID,
-            dataType: PostgresDatatype,
+            dataSourceId: UUID,
+            dataType: String,
             primaryKey: Boolean,
             ordinalPosition: Int
-    ) : this(Optional.of(id), name, title, description, tableId, organizationId, dataType, primaryKey, ordinalPosition)
+    ) : this(
+            Optional.of(id),
+            name,
+            title,
+            description,
+            externalId,
+            tableId,
+            organizationId,
+            dataSourceId,
+            dataType,
+            primaryKey,
+            ordinalPosition
+    )
 
     @JsonIgnore
     override fun getCategory(): SecurableObjectType {

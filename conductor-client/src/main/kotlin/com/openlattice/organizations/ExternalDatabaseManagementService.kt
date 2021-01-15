@@ -14,6 +14,7 @@ import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.edm.processors.GetEntityTypeFromEntitySetEntryProcessor
 import com.openlattice.edm.processors.GetFqnFromPropertyTypeEntryProcessor
 import com.openlattice.edm.requests.MetadataUpdate
+import com.openlattice.external.ExternalSqlDatabasesManagementService
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.processors.organizations.UpdateOrganizationExternalDatabaseColumnEntryProcessor
 import com.openlattice.hazelcast.processors.organizations.UpdateOrganizationExternalDatabaseTableEntryProcessor
@@ -123,7 +124,7 @@ class ExternalDatabaseManagementService(
         ) { rs ->
             try {
                 val storedColumnName = columnName(rs)
-                val dataType = sqlDataType(rs)
+                val dataType = postgresDatatype(rs)
                 val position = ordinalPosition(rs)
                 val isPrimaryKey = constraintType(rs) == primaryKeyConstraint
                 OrganizationExternalDatabaseColumn(
@@ -131,9 +132,11 @@ class ExternalDatabaseManagementService(
                         storedColumnName,
                         storedColumnName,
                         Optional.empty(),
+                        storedColumnName,
                         tableId,
                         orgId,
-                        dataType,
+                        ExternalSqlDatabasesManagementService.DEFAULT_DATA_SOURCE_ID,
+                        dataType.toString(),
                         isPrimaryKey,
                         position)
             } catch (e: Exception) {

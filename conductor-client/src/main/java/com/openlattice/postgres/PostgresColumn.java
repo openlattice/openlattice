@@ -104,10 +104,10 @@ public final class PostgresColumn {
             new PostgresColumnDefinition( CLASS_PROPERTIES_FIELD, JSONB );
     public static final PostgresColumnDefinition CLAUSES                           =
             new PostgresColumnDefinition( "clauses", INTEGER_ARRAY );
+    public static final String                   COLUMN_NAMES_FIELD                = "column_names";
     public static final String                   COLUMN_NAME_FIELD                 = "column_name";
     public static final PostgresColumnDefinition COLUMN_NAME                       =
             new PostgresColumnDefinition( COLUMN_NAME_FIELD, TEXT );
-    public static final String                   COLUMN_NAMES_FIELD                = "column_names";
     public static final String                   COMPONENT_TYPES_FIELD             = "comp_types";
     public static final PostgresColumnDefinition COMPONENT_TYPES                   =
             new PostgresColumnDefinition( COMPONENT_TYPES_FIELD, INTEGER )
@@ -149,6 +149,10 @@ public final class PostgresColumn {
     public static final String                   DATA_ID_FIELD                     = "data_id";
     public static final PostgresColumnDefinition DATA_ID                           =
             new PostgresColumnDefinition( DATA_ID_FIELD, UUID );
+    public static final String                   DATA_SOURCE_ID_FIELD              = "data_source_id";
+    public static final PostgresColumnDefinition DATA_SOURCE_ID                    = new PostgresColumnDefinition(
+            DATA_SOURCE_ID_FIELD,
+            UUID );
     public static final String                   DESCRIPTION_FIELD                 = "description";
     public static final PostgresColumnDefinition DESCRIPTION                       =
             new PostgresColumnDefinition( DESCRIPTION_FIELD, TEXT );
@@ -239,6 +243,10 @@ public final class PostgresColumn {
     public static final String                   EXTERNAL_FIELD                    = "external";
     public static final PostgresColumnDefinition EXTERNAL                          =
             new PostgresColumnDefinition( EXTERNAL_FIELD, BOOLEAN );
+    public static final String                   EXTERNAL_ID_FIELD                 = "external_id";
+    public static final PostgresColumnDefinition EXTERNAL_ID                       = new PostgresColumnDefinition(
+            EXTERNAL_ID_FIELD,
+            TEXT );
     public static final String                   FLAGS_FIELD                       = "flags";
     public static final PostgresColumnDefinition FLAGS                             =
             new PostgresColumnDefinition( FLAGS_FIELD, BOOLEAN ).notNull();
@@ -452,7 +460,7 @@ public final class PostgresColumn {
     public static final String                   SCHEMAS_FIELD                     = "schemas";
     public static final PostgresColumnDefinition SCHEMAS                           =
             new PostgresColumnDefinition( SCHEMAS_FIELD, TEXT_ARRAY ).notNull();
-    public static final String                   SCHEMA_NAME_FIELD                     = "schema_name";
+    public static final String                   SCHEMA_NAME_FIELD                 = "schema_name";
     public static final String                   SCOPE_FIELD                       = "scope";
     public static final PostgresColumnDefinition SCOPE                             = new PostgresColumnDefinition(
             SCOPE_FIELD,

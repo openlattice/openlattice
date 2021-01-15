@@ -12,6 +12,7 @@ import com.openlattice.auditing.AuditableEvent
 import com.openlattice.auditing.AuditingManager
 import com.openlattice.authorization.Acl
 import com.openlattice.authorization.AclKey
+import com.openlattice.external.ExternalSqlDatabasesManagementService.Companion.DEFAULT_DATA_SOURCE_ID
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastMap.Companion.ORGANIZATION_DATABASES
 import com.openlattice.hazelcast.HazelcastMap.Companion.ORGANIZATION_EXTERNAL_DATABASE_COLUMN
@@ -142,7 +143,8 @@ class BackgroundExternalDatabaseSyncingService(
                         tableName,
                         Optional.empty(),
                         orgId,
-                        oid
+                        DEFAULT_DATA_SOURCE_ID,
+                        oid.toString()
                 )
                 val newTableId = createSecurableTableObject(orgOwnerAclKeys, orgId, currentTableIds, newTable)
                 totalSynced++

@@ -24,7 +24,6 @@ import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.MoreObjects;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -77,7 +76,9 @@ import com.openlattice.notifications.sms.SmsEntitySetInformation;
 import com.openlattice.notifications.sms.SmsInformationKey;
 import com.openlattice.organization.OrganizationEntitySetFlag;
 import com.openlattice.organization.OrganizationExternalDatabaseColumn;
+import com.openlattice.organization.OrganizationExternalDatabaseSchema;
 import com.openlattice.organization.OrganizationExternalDatabaseTable;
+import com.openlattice.organization.OrganizationExternalDatabaseView;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.OrganizationDatabase;
 import com.openlattice.requests.Request;
@@ -95,7 +96,6 @@ import com.openlattice.subscriptions.SubscriptionContactType;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.jetbrains.annotations.NotNull;
-import org.postgresql.core.Oid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -136,6 +136,7 @@ import static com.openlattice.postgres.PostgresColumn.CONTACT_INFO;
 import static com.openlattice.postgres.PostgresColumn.COUNT;
 import static com.openlattice.postgres.PostgresColumn.DATABASE;
 import static com.openlattice.postgres.PostgresColumn.DATATYPE;
+import static com.openlattice.postgres.PostgresColumn.DATA_SOURCE_ID_FIELD;
 import static com.openlattice.postgres.PostgresColumn.DESCRIPTION;
 import static com.openlattice.postgres.PostgresColumn.DST;
 import static com.openlattice.postgres.PostgresColumn.DST_ENTITY_KEY_ID;
@@ -162,6 +163,7 @@ import static com.openlattice.postgres.PostgresColumn.EXPIRATION_BASE_FLAG_FIELD
 import static com.openlattice.postgres.PostgresColumn.EXPIRATION_DATE_FIELD;
 import static com.openlattice.postgres.PostgresColumn.EXPIRATION_DELETE_FLAG_FIELD;
 import static com.openlattice.postgres.PostgresColumn.EXPIRATION_START_ID_FIELD;
+import static com.openlattice.postgres.PostgresColumn.EXTERNAL_ID_FIELD;
 import static com.openlattice.postgres.PostgresColumn.FLAGS;
 import static com.openlattice.postgres.PostgresColumn.ID;
 import static com.openlattice.postgres.PostgresColumn.INDEX_TYPE;
@@ -1088,10 +1090,55 @@ public final class ResultSetAdapters {
         String name = name( rs );
         String title = title( rs );
         Optional<String> description = Optional.ofNullable( description( ( rs ) ) );
+        String externalId = externalId( rs );
         UUID organizationId = organizationId( rs );
-        int oid = oid( rs );
+        UUID dataSourceId = dataSourceId( rs );
 
-        return new OrganizationExternalDatabaseTable( id, name, title, description, organizationId, oid );
+        return new OrganizationExternalDatabaseTable( id,
+                name,
+                title,
+                description,
+                organizationId,
+                dataSourceId,
+                externalId );
+    }
+
+    public static OrganizationExternalDatabaseView organizationExternalDatabaseView( ResultSet rs )
+            throws SQLException {
+        UUID id = id( rs );
+        String name = name( rs );
+        String title = title( rs );
+        Optional<String> description = Optional.ofNullable( description( ( rs ) ) );
+        String externalId = externalId( rs );
+        UUID organizationId = organizationId( rs );
+        UUID dataSourceId = dataSourceId( rs );
+
+        return new OrganizationExternalDatabaseView( id,
+                name,
+                title,
+                description,
+                organizationId,
+                dataSourceId,
+                externalId );
+    }
+
+    public static OrganizationExternalDatabaseSchema organizationExternalDatabaseSchema( ResultSet rs )
+            throws SQLException {
+        UUID id = id( rs );
+        String name = name( rs );
+        String title = title( rs );
+        Optional<String> description = Optional.ofNullable( description( ( rs ) ) );
+        String externalId = externalId( rs );
+        UUID organizationId = organizationId( rs );
+        UUID dataSourceId = dataSourceId( rs );
+
+        return new OrganizationExternalDatabaseSchema( id,
+                name,
+                title,
+                description,
+                organizationId,
+                dataSourceId,
+                externalId );
     }
 
     public static OrganizationExternalDatabaseColumn organizationExternalDatabaseColumn( ResultSet rs )
@@ -1100,9 +1147,11 @@ public final class ResultSetAdapters {
         String name = name( rs );
         String title = title( rs );
         Optional<String> description = Optional.ofNullable( description( ( rs ) ) );
+        String externalId = externalId( rs );
         UUID tableId = tableId( rs );
         UUID organizationId = organizationId( rs );
-        PostgresDatatype dataType = sqlDataType( rs );
+        UUID dataSourceId = dataSourceId( rs );
+        String dataType = sqlDataType( rs );
         boolean isPrimaryKey = rs.getBoolean( IS_PRIMARY_KEY.getName() );
         Integer ordinalPosition = ordinalPosition( rs );
 
@@ -1110,11 +1159,21 @@ public final class ResultSetAdapters {
                 name,
                 title,
                 description,
+                externalId,
                 tableId,
                 organizationId,
+                dataSourceId,
                 dataType,
                 isPrimaryKey,
                 ordinalPosition );
+    }
+
+    public static UUID dataSourceId( ResultSet rs ) throws SQLException {
+        return rs.getObject( DATA_SOURCE_ID_FIELD, UUID.class );
+    }
+
+    public static String externalId( ResultSet rs ) throws SQLException {
+        return rs.getString( EXTERNAL_ID_FIELD );
     }
 
     public static String columnName( ResultSet rs ) throws SQLException {
@@ -1125,7 +1184,11 @@ public final class ResultSetAdapters {
         return Lists.newArrayList( getTextArray( rs, COLUMN_NAMES_FIELD ) );
     }
 
-    public static PostgresDatatype sqlDataType( ResultSet rs ) throws SQLException {
+    public static String sqlDataType( ResultSet rs ) throws SQLException {
+        return rs.getString( DATATYPE.getName() );
+    }
+
+    public static PostgresDatatype postgresDatatype( ResultSet rs ) throws SQLException {
         String dataType = rs.getString( DATATYPE.getName() ).toUpperCase();
         return PostgresDatatype.getEnum( dataType );
     }

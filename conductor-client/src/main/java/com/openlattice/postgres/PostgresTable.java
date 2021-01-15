@@ -50,6 +50,7 @@ import static com.openlattice.postgres.PostgresColumn.CONTACT_TYPE;
 import static com.openlattice.postgres.PostgresColumn.CREDENTIAL;
 import static com.openlattice.postgres.PostgresColumn.DATABASE;
 import static com.openlattice.postgres.PostgresColumn.DATATYPE;
+import static com.openlattice.postgres.PostgresColumn.DATA_SOURCE_ID;
 import static com.openlattice.postgres.PostgresColumn.DESCRIPTION;
 import static com.openlattice.postgres.PostgresColumn.DST;
 import static com.openlattice.postgres.PostgresColumn.DST_ENTITY_KEY_ID;
@@ -72,6 +73,7 @@ import static com.openlattice.postgres.PostgresColumn.EXPIRATION_BASE_FLAG;
 import static com.openlattice.postgres.PostgresColumn.EXPIRATION_DATE;
 import static com.openlattice.postgres.PostgresColumn.EXPIRATION_DELETE_FLAG;
 import static com.openlattice.postgres.PostgresColumn.EXPIRATION_START_ID;
+import static com.openlattice.postgres.PostgresColumn.EXTERNAL_ID;
 import static com.openlattice.postgres.PostgresColumn.FLAGS;
 import static com.openlattice.postgres.PostgresColumn.ID;
 import static com.openlattice.postgres.PostgresColumn.ID_MAP;
@@ -418,8 +420,10 @@ public final class PostgresTable {
                             NAME,
                             TITLE,
                             DESCRIPTION,
+                            EXTERNAL_ID,
                             TABLE_ID,
                             ORGANIZATION_ID,
+                            DATA_SOURCE_ID,
                             DATATYPE,
                             IS_PRIMARY_KEY,
                             ORDINAL_POSITION );
@@ -429,10 +433,31 @@ public final class PostgresTable {
                     .addColumns(
                             ID,
                             NAME,
-                            OID,
                             TITLE,
                             DESCRIPTION,
-                            ORGANIZATION_ID );
+                            ORGANIZATION_ID,
+                            DATA_SOURCE_ID,
+                            EXTERNAL_ID);
+    public static final PostgresTableDefinition ORGANIZATION_EXTERNAL_DATABASE_SCHEMA =
+            new PostgresTableDefinition( "organization_external_database_schemas" )
+                    .addColumns(
+                            ID,
+                            NAME,
+                            TITLE,
+                            DESCRIPTION,
+                            ORGANIZATION_ID,
+                            DATA_SOURCE_ID,
+                            EXTERNAL_ID);
+    public static final PostgresTableDefinition ORGANIZATION_EXTERNAL_DATABASE_VIEW =
+            new PostgresTableDefinition( "organization_external_database_views" )
+                    .addColumns(
+                            ID,
+                            NAME,
+                            TITLE,
+                            DESCRIPTION,
+                            ORGANIZATION_ID,
+                            DATA_SOURCE_ID,
+                            EXTERNAL_ID);
 
     public static final PostgresTableDefinition PERMISSIONS         =
             new PostgresTableDefinition( "permissions" )

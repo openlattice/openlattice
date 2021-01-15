@@ -64,11 +64,15 @@ import com.openlattice.ids.mapstores.LongIdsMapstore;
 import com.openlattice.linking.mapstores.LinkingFeedbackMapstore;
 import com.openlattice.notifications.sms.SmsInformationMapstore;
 import com.openlattice.organization.OrganizationExternalDatabaseColumn;
+import com.openlattice.organization.OrganizationExternalDatabaseSchema;
 import com.openlattice.organization.OrganizationExternalDatabaseTable;
+import com.openlattice.organization.OrganizationExternalDatabaseView;
 import com.openlattice.organizations.Organization;
 import com.openlattice.organizations.mapstores.OrganizationDatabasesMapstore;
 import com.openlattice.organizations.mapstores.OrganizationExternalDatabaseColumnMapstore;
+import com.openlattice.organizations.mapstores.OrganizationExternalDatabaseSchemaMapstore;
 import com.openlattice.organizations.mapstores.OrganizationExternalDatabaseTableMapstore;
+import com.openlattice.organizations.mapstores.OrganizationExternalDatabaseViewMapstore;
 import com.openlattice.organizations.mapstores.OrganizationsMapstore;
 import com.openlattice.postgres.PostgresPod;
 import com.openlattice.postgres.PostgresTableManager;
@@ -246,6 +250,15 @@ public class MapstoresPod {
     @Bean
     public SelfRegisteringMapStore<UUID, OrganizationExternalDatabaseTable> organizationExternalDatabaseTableMapstore() {
         return new OrganizationExternalDatabaseTableMapstore( hikariDataSource );
+    }
+
+    @Bean
+    public SelfRegisteringMapStore<UUID, OrganizationExternalDatabaseView> organizationExternalDatabaseViewMapstore() {
+        return new OrganizationExternalDatabaseViewMapstore( hikariDataSource );
+    }
+    @Bean
+    public SelfRegisteringMapStore<UUID, OrganizationExternalDatabaseSchema> organizationExternalDatabaseSchemaMapstore() {
+        return new OrganizationExternalDatabaseSchemaMapstore( hikariDataSource );
     }
 
     @Bean

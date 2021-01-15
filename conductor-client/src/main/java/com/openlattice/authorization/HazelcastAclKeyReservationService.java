@@ -41,6 +41,7 @@ import com.openlattice.hazelcast.HazelcastMap;
 
 import com.openlattice.hazelcast.HazelcastUtils;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
@@ -82,12 +83,12 @@ public class HazelcastAclKeyReservationService {
         return Util.getSafely( aclKeys, name );
     }
 
-    public Collection<UUID> getIds(Set<String> names) {
+    public Collection<UUID> getIds( Set<String> names ) {
         return Util.getSafely( aclKeys, names ).values();
     }
 
-    public Map<String, UUID> getIdsByFqn(Set<String> names) {
-        return Util.getSafely( aclKeys, names);
+    public Map<String, UUID> getIdsByFqn( Set<String> names ) {
+        return Util.getSafely( aclKeys, names );
     }
 
     public boolean isReserved( String name ) {
@@ -206,16 +207,23 @@ public class HazelcastAclKeyReservationService {
      * @return A UUID for the name reservation.
      */
     public UUID reserveOrGetId( String name ) {
-        final var generatedId =  HazelcastUtils.insertIntoUnusedKey( names, name, UUID::randomUUID );
-        final var maybeActualId = aclKeys.putIfAbsent( name, generatedId );
+        final UUID maybeActualId;
+        final UUID generatedId;
 
-        if( maybeActualId == null ) {
+        try {
+            aclKeys.lock( name, 1, TimeUnit.MINUTES );
+            generatedId = HazelcastUtils.insertIntoUnusedKey( names, name, UUID::randomUUID );
+            maybeActualId = aclKeys.putIfAbsent( name, generatedId );
+        } finally {
+            aclKeys.unlock( name );
+        }
+
+        if ( maybeActualId == null ) {
             return generatedId;
         } else {
             names.delete( generatedId );
             return maybeActualId;
         }
-
     }
 
     /**

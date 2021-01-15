@@ -17,7 +17,7 @@ import java.util.*
  * @param organizationId The id of the organization that owns this table
  */
 
-class OrganizationExternalDatabaseTable
+class OrganizationExternalDatabaseView
 
 constructor(
         @JsonProperty(SerializationConstants.ID_FIELD) id: Optional<UUID>,
@@ -41,12 +41,12 @@ constructor(
 
     @JsonIgnore
     override fun getCategory(): SecurableObjectType {
-        return SecurableObjectType.OrganizationExternalDatabaseTable
+        return SecurableObjectType.OrganizationExternalDatabaseView
     }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is OrganizationExternalDatabaseTable) return false
+        if (other !is OrganizationExternalDatabaseView) return false
         if (!super.equals(other)) return false
 
         if (name != other.name) return false

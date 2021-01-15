@@ -42,7 +42,10 @@ import java.util.*
 private val ORGANIZATION_METADATA_ET = FullQualifiedName("ol.organization_metadata")
 private val DATASETS_ET = FullQualifiedName("ol.dataset")
 private val COLUMNS_ET = FullQualifiedName("ol.column")
+private val SCHEMAS_ET = FullQualifiedName("ol.schema")
+private val VIEWS_ET = FullQualifiedName("ol.views")
 
+private const val EXTERNAL_ID = "ol.externalid"
 private const val PGOID = "ol.pgoid"
 private const val ID = "ol.id"
 private const val COL_INFO = "ol.columninfo"
@@ -266,7 +269,7 @@ class OrganizationMetadataEntitySetsService(
             columnEntities.putAll(tableColumnEntities)
 
             datasetEntities[datasetEntityKeyIds.getValue(table.id)] = mutableMapOf(
-                    propertyTypes.getValue(PGOID).id to setOf(table.oid),
+                    propertyTypes.getValue(EXTERNAL_ID).id to setOf(table.externalId),
                     propertyTypes.getValue(ID).id to setOf(table.id.toString()),
                     propertyTypes.getValue(DATASET_NAME).id to setOf(table.name),
                     propertyTypes.getValue(STANDARDIZED).id to setOf(false),
@@ -293,16 +296,17 @@ class OrganizationMetadataEntitySetsService(
         if (!isFullyInitialized()) {
             return
         }
+
         val organizationMetadataEntitySetIds = organizationService.getOrganizationMetadataEntitySetIds(organizationId)
 
         val datasetEntity = mutableMapOf<UUID, Set<Any>>(
-                propertyTypes.getValue(PGOID).id to setOf(table.oid),
+                propertyTypes.getValue(EXTERNAL_ID).id to setOf(table.externalId),
                 propertyTypes.getValue(ID).id to setOf(table.id.toString()),
                 propertyTypes.getValue(DATASET_NAME).id to setOf(table.name),
                 propertyTypes.getValue(STANDARDIZED).id to setOf(false)
         )
 
-        val datasetEntityKeyId = getDatasetEntityKeyId(organizationMetadataEntitySetIds, table.oid)
+        val datasetEntityKeyId = getDatasetEntityKeyId(organizationMetadataEntitySetIds, table.externalId)
 
         dataGraphManager.partialReplaceEntities(
                 organizationMetadataEntitySetIds.datasets,

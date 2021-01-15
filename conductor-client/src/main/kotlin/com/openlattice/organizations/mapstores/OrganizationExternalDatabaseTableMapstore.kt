@@ -11,11 +11,13 @@ import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore
 import com.zaxxer.hikari.HikariDataSource
+import org.springframework.stereotype.Component
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.util.*
 
-open class OrganizationExternalDatabaseTableMapstore(
+@Component
+class OrganizationExternalDatabaseTableMapstore(
         hds: HikariDataSource
 ) : AbstractBasePostgresMapstore<UUID, OrganizationExternalDatabaseTable>
     (HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE, PostgresTable.ORGANIZATION_EXTERNAL_DATABASE_TABLE, hds) {
@@ -25,17 +27,17 @@ open class OrganizationExternalDatabaseTableMapstore(
 
         //create
         ps.setString(index++, value.name)
-        ps.setInt(index++, value.oid)
         ps.setString(index++, value.title)
         ps.setString(index++, value.description)
         ps.setObject(index++, value.organizationId)
+        ps.setString(index++, value.externalId)
 
         //update
         ps.setString(index++, value.name)
-        ps.setInt(index++, value.oid)
         ps.setString(index++, value.title)
         ps.setString(index++, value.description)
         ps.setObject(index++, value.organizationId)
+        ps.setString(index++, value.externalId)
     }
 
     override fun bind(ps: PreparedStatement, key: UUID, offset: Int): Int {
@@ -55,6 +57,7 @@ open class OrganizationExternalDatabaseTableMapstore(
     override fun getMapConfig(): MapConfig {
         return super.getMapConfig()
                 .addIndexConfig(IndexConfig(IndexType.HASH, ORGANIZATION_ID_INDEX))
+                .addIndexConfig(IndexConfig(IndexType.HASH, DATA_SOURCE_ID_INDEX))
                 .setInMemoryFormat(InMemoryFormat.OBJECT)
     }
 
