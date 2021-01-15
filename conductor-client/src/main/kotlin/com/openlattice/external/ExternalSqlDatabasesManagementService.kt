@@ -5,7 +5,9 @@ import com.hazelcast.map.IMap
 import com.openlattice.authorization.*
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
+import com.openlattice.organization.OrganizationExternalDatabaseSchema
 import com.openlattice.organization.OrganizationExternalDatabaseTable
+import com.openlattice.organization.OrganizationExternalDatabaseView
 import com.openlattice.organizations.JdbcConnection
 import com.openlattice.organizations.OrganizationExternalDatabaseConfiguration
 import com.openlattice.organizations.OrganizationMetadataEntitySetsService
@@ -17,7 +19,6 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.security.InvalidParameterException
 import java.util.*
-import java.util.concurrent.TimeUnit
 
 /**
  *
@@ -54,6 +55,8 @@ class ExternalSqlDatabasesManagementService(
          */
         @JvmField
         val DEFAULT_DATA_SOURCE_ID = UUID(0, 0)
+
+        private val logger = LoggerFactory.getLogger(ExternalSqlDatabasesManagementService::class.java)
     }
 
     //TODO: Switch to a loading cache with a long expiration to avoid holding too many connections open forever.
@@ -67,19 +70,13 @@ class ExternalSqlDatabasesManagementService(
     private val organizationExternalDatabaseTables = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE.getMap(
             hazelcastInstance
     )
-    private val securableObjectTypes = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap(hazelcastInstance)
-    private val aces = HazelcastMap.PERMISSIONS.getMap(hazelcastInstance)
-    private val logger = LoggerFactory.getLogger(ExternalSqlDatabasesManagementService::class.java)
-    private val primaryKeyConstraint = "PRIMARY KEY"
-    private val FETCH_SIZE = 100_000
+    private val organizationExternalDatabaseSchemas = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_SCHEMA.getMap(
+            hazelcastInstance
+    )
+    private val organizationExternalDatabaseViews = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_VIEW.getMap(
+            hazelcastInstance
+    )
 
-    /**
-     * Only needed for materialize entity set, which should move elsewhere eventually
-     */
-    private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
-    private val entityTypes = HazelcastMap.ENTITY_TYPES.getMap(hazelcastInstance)
-    private val propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap(hazelcastInstance)
-    private val organizations = HazelcastMap.ORGANIZATIONS.getMap(hazelcastInstance)
 
     fun getExternalSqlDatabases(organizationId: UUID): JdbcConnections = externalSqlDatabases.getValue(organizationId)
 
@@ -128,41 +125,20 @@ class ExternalSqlDatabasesManagementService(
         }
     }
 
-
-    fun syncTable(organizationId: UUID, dataSourceId: UUID, tableMetadata: TableMetadata) {
-        val externalSqlDatabaseTableMapping = mapTable(organizationId, dataSourceId, tableMetadata)
-
-        organizationExternalDatabaseTables.set(
-                externalSqlDatabaseTableMapping.organizationExternalDatabaseTable.id,
-                externalSqlDatabaseTableMapping.organizationExternalDatabaseTable
-        )
-
-        organizationMetadataEntitySetsService.addDataset(
-                organizationId,
-                externalSqlDatabaseTableMapping.organizationExternalDatabaseTable
-        )
-
-        syncPermissions(externalSqlDatabaseTableMapping.tablePermissions)
-
-        externalSqlDatabaseTableMapping.columnMappings.forEach { (_, columnPermissions) ->
-            syncPermissions(columnPermissions)
-        }
-    }
-
-    fun syncSchema(organizationId: UUID, dataSourceId: UUID, schemaMetadata: SchemaMetadata) {
-
-    }
-
-    fun syncView(organizationId: UUID, dataSourceId: UUID, schemaMetadata: ViewMetadata) {
-
-    }
-
     fun syncPermissions(permissions: Map<AclKey, Map<Principal, Set<Permission>>>) {
         permissions.forEach { (aclKey, ace) ->
             ace.forEach { (principal, pset) ->
                 authorizationManager.setPermission(aclKey, principal, EnumSet.copyOf(pset))
             }
         }
+    }
+
+    fun buildSchemaFqn(organizationId: UUID, schemaMetadata: SchemaMetadata): String {
+        return "$organizationId.${schemaMetadata.externalId}"
+    }
+
+    fun buildViewFqn(organizationId: UUID, viewMetadata: ViewMetadata): String {
+        return "$organizationId.${viewMetadata.schema}.${viewMetadata.externalId}"
     }
 
     fun buildTableFqn(organizationId: UUID, tableMetadata: TableMetadata): String {
@@ -173,10 +149,63 @@ class ExternalSqlDatabasesManagementService(
         return "${buildTableFqn(organizationId, tableMetadata)}.${columnMetadata.externalId}"
     }
 
+    fun syncSchema(
+            organizationId: UUID,
+            dataSourceId: UUID,
+            schemaMetadata: SchemaMetadata
+    ): Pair<OrganizationExternalDatabaseSchema, Map<AclKey, Map<Principal, Set<Permission>>>> {
+        val schemaFqn = buildSchemaFqn(organizationId, schemaMetadata)
+        val schemaId = aclKeyReservations.reserveOrGetId(schemaFqn)
+        val schemaAclKey = AclKey(schemaId)
+
+        val schema = OrganizationExternalDatabaseSchema(
+                schemaId,
+                schemaMetadata.name,
+                schemaMetadata.name,
+                Optional.empty(),
+                organizationId,
+                dataSourceId,
+                schemaMetadata.externalId
+        )
+        val schemaPermissions = mapSchemaPrivileges(schemaAclKey, schemaMetadata.privileges)
+        //It's safe to do set here since this information is pass-through at this point. This mostly just
+        //unnecessary crud to leverage the authorization system.
+        organizationExternalDatabaseSchemas.set(schemaId, schema)
+        syncPermissions(schemaPermissions)
+        return schema to schemaPermissions
+    }
+
+    fun syncView(
+            organizationId: UUID,
+            dataSourceId: UUID,
+            viewMetadata: ViewMetadata
+    ): Pair<OrganizationExternalDatabaseView, Map<AclKey, Map<Principal, Set<Permission>>>> {
+        val viewFqn = buildViewFqn(organizationId, viewMetadata)
+        val viewId = aclKeyReservations.reserveOrGetId(viewFqn)
+        val viewAclKey = AclKey(viewId)
+
+        val view = OrganizationExternalDatabaseView(
+                viewId,
+                viewMetadata.name,
+                viewMetadata.name,
+                Optional.empty(),
+                organizationId,
+                dataSourceId,
+                viewMetadata.externalId
+        )
+
+        val viewPermissions = mapViewPrivileges(viewAclKey, viewMetadata.privileges)
+        //It's safe to do set here since this information is pass-through at this point. This mostly just
+        //unnecessary crud to leverage the authorization system.
+        organizationExternalDatabaseViews.set(viewId, view)
+        syncPermissions(viewPermissions)
+        return view to viewPermissions
+    }
+
     /**
      * This function maps the metadata and creates corresponding securable objects.
      */
-    private fun mapTable(
+    fun syncTable(
             organizationId: UUID,
             dataSourceId: UUID,
             tableMetadata: TableMetadata
@@ -195,13 +224,22 @@ class ExternalSqlDatabasesManagementService(
                 tableMetadata.externalId
         )
 
+        val tablePermissions = mapTablePrivileges(tableAclKey, tableMetadata.privileges)
+
+        organizationMetadataEntitySetsService.addDataset(organizationId, table)
+
+        //It's safe to do set here since this information is pass-through at this point. This mostly just
+        //unnecessary crud to leverage the authorization system.
+        organizationExternalDatabaseTables.set(tableId, table)
+        syncPermissions(tablePermissions)
+
         val columnMappings = tableMetadata.columns.map {
             mapColumn(organizationId, dataSourceId, tableMetadata, tableId, it)
         }
 
         return ExternalSqlDatabaseTableMapping(
                 table,
-                mapTablePrivileges(tableAclKey, tableMetadata.privileges),
+                tablePermissions,
                 columnMappings
         )
 
@@ -231,12 +269,44 @@ class ExternalSqlDatabasesManagementService(
                 columnMetadata.isPrimaryKey,
                 columnMetadata.ordinalPosition
         )
+        val columnPrivileges = mapColumnPrivileges(columnAclKey, columnMetadata.privileges)
 
         //It's safe to do set here since this information is pass-through at this point. This mostly just
         //unnecessary crud to leverage the authorization system.
         organizationExternalDatabaseColumns.set(columnId, column)
+        syncPermissions(columnPrivileges)
 
-        return ExternalSqlDatabaseColumnMapping(column, mapColumnPrivileges(columnAclKey, columnMetadata.privileges))
+        return ExternalSqlDatabaseColumnMapping(column, columnPrivileges)
+    }
+
+    private fun mapSchemaPrivileges(
+            tableAclKey: AclKey,
+            privileges: Map<String, Set<SchemaPrivilege>>
+    ): Map<AclKey, Map<Principal, Set<Permission>>> {
+        //TODO: Actually implement this
+        return mapPrivileges(tableAclKey, privileges) { stp ->
+            stp.flatMap { tp ->
+                when (tp) {
+                    SchemaPrivilege.CONNECT -> EnumSet.of(Permission.READ, Permission.WRITE)
+                    else -> EnumSet.noneOf(Permission::class.java)
+                }
+            }.toSet()
+        }
+    }
+
+    private fun mapViewPrivileges(
+            tableAclKey: AclKey,
+            privileges: Map<String, Set<TablePrivilege>>
+    ): Map<AclKey, Map<Principal, Set<Permission>>> {
+        //TODO: Actually implement this
+        return mapPrivileges(tableAclKey, privileges) { stp ->
+            stp.flatMap { tp ->
+                when (tp) {
+                    TablePrivilege.ALL -> EnumSet.of(Permission.READ, Permission.WRITE)
+                    else -> EnumSet.noneOf(Permission::class.java)
+                }
+            }.toSet()
+        }
     }
 
     private fun mapTablePrivileges(

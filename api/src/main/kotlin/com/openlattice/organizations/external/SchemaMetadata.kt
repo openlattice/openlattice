@@ -6,7 +6,8 @@ package com.openlattice.organizations.external
  */
 class SchemaMetadata(
         val name: String,
+        val externalId: String,
         val tables: Set<TableMetadata>,
-        val permissions: Map<String,Set<SchemaPrivilege>>
+        val privileges: Map<String,Set<SchemaPrivilege>>
 ) {
 }

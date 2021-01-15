@@ -14,7 +14,8 @@ data class ViewMetadata
 constructor(
         val name: String,
         val sql: String,
-        val stableId: String,
+        val externalId: String,
+        val schema: String,
         val columns: List<ColumnMetadata>,
-        val permissions: Map<String, Set<TablePrivilege>>
+        val privileges: Map<String, Set<TablePrivilege>>
 )
