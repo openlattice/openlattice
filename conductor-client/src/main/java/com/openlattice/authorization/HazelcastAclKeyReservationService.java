@@ -42,11 +42,14 @@ import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.hazelcast.HazelcastUtils;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 public class HazelcastAclKeyReservationService {
     public static final  String                               PRIVATE_NAMESPACE     = "_private";
+    public static final  String                               ANONYMOUS             =
+            PRIVATE_NAMESPACE + "." + "_anonymous";
     /**
      * This keeps mapping between SecurableObjectTypes that aren't associated to names and their placeholder names.
      */
@@ -77,6 +80,13 @@ public class HazelcastAclKeyReservationService {
     public HazelcastAclKeyReservationService( HazelcastInstance hazelcast ) {
         this.aclKeys = HazelcastMap.ACL_KEYS.getMap( hazelcast );
         this.names = HazelcastMap.NAMES.getMap( hazelcast );
+    }
+
+    public <T extends AbstractSecurableObject>  T reserveAnonymousId( T aso ) {
+        while ( names.putIfAbsent( aso.getId(), PRIVATE_NAMESPACE + "." + ANONYMOUS ) != null ) {
+            aso.assignNewId( UUID.randomUUID() );
+        }
+        return aso;
     }
 
     public UUID getId( String name ) {
@@ -224,6 +234,30 @@ public class HazelcastAclKeyReservationService {
             names.delete( generatedId );
             return maybeActualId;
         }
+    }
+
+    public <T extends AbstractSecurableObject> T reserveOrGetId(
+            T aso,
+            Function<AbstractSecurableObject, String> nameGen ) {
+        final var name = nameGen.apply( aso );
+        var id = aso.getId();
+
+        //Make sure ID is free.
+        while ( names.putIfAbsent( id, name ) != null ) {
+            id = UUID.randomUUID();
+        }
+
+        //Make sure name hasn't been assigned another id. If it has then return that id and free currently assigned id.
+        final var maybeActualId = aclKeys.putIfAbsent( nameGen.apply( aso ), aso.getId() );
+
+        if ( maybeActualId == null ) {
+            aso.assignNewId( id );
+        } else {
+            names.delete( id );
+            aso.assignNewId( maybeActualId );
+        }
+
+        return aso;
     }
 
     /**

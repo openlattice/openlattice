@@ -430,7 +430,7 @@ interface OrganizationsApi {
      *
      */
     @GET(BASE + ID_PATH + DATASOURCE)
-    fun listDatasources(@Path(ID) organizationId: UUID): List<JdbcConnection>
+    fun listDataSources(@Path(ID) organizationId: UUID): Map<UUID, JdbcConnection>
 
     /**
      * Registers a datasource with an organization.
@@ -438,9 +438,9 @@ interface OrganizationsApi {
      * @return The id assigned to the newly registered datasource.
      */
     @POST(BASE + ID_PATH + DATASOURCE)
-    fun registerDatasource(
+    fun registerDataSource(
             @Path(ID) organizationId: UUID,
-            @Body datasource: JdbcConnection
+            @Body dataSource: JdbcConnection
     ): UUID
 
     /**
@@ -452,9 +452,9 @@ interface OrganizationsApi {
      *
      */
     @PUT(BASE + ID_PATH + DATASOURCE + DATASOURCE_ID_PATH)
-    fun updateDatasource(
+    fun updateDataSource(
             @Path(ID) organizationId: UUID,
-            @Path(DATASOURCE) datasourceId: UUID,
-            @Body datasource: JdbcConnection
+            @Path(DATASOURCE) dataSourceId: UUID,
+            @Body dataSource: JdbcConnection
     )
 }

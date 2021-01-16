@@ -38,5 +38,6 @@ public enum SecurableObjectType {
     OrganizationExternalDatabaseTable,
     OrganizationExternalDatabaseColumn,
     OrganizationExternalDatabaseSchema,
-    OrganizationExternalDatabaseView
+    OrganizationExternalDatabaseView,
+    JdbcConnection
 }

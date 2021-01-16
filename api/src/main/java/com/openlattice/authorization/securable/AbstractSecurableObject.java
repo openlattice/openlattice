@@ -36,11 +36,11 @@ import org.apache.commons.lang3.StringUtils;
 @JsonInclude( value = Include.NON_ABSENT ) //This means empty collections will not be included in generated JSON.
 public abstract class AbstractSecurableObject {
 
-    protected final UUID    id;
-    private final   boolean idPresent;
+    private final boolean idPresent;
+    protected     UUID    id;
     //This is only a descriptive property so relax finality.
-    protected       String  title;
-    protected       String  description;
+    protected     String  title;
+    protected     String  description;
 
     /**
      * @param id The UUID of the securable object. Must not be null.
@@ -151,6 +151,16 @@ public abstract class AbstractSecurableObject {
     @JsonIgnore
     public boolean wasIdPresent() {
         return idPresent;
+    }
+
+    /**
+     * Assigns a new id to this securable object. Unless you know where all references to this object are held across
+     * the system, don't call this as it may have unexpected effects.
+     *
+     * @param id The new id to assign.
+     */
+    public void assignNewId( UUID id ) {
+        this.id = id;
     }
 
     public abstract SecurableObjectType getCategory();

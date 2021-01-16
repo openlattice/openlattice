@@ -231,6 +231,28 @@ class ExternalSqlDatabasesManagementService(
 
     }
 
+    fun listDataSources(organizationId: UUID): Map<UUID, JdbcConnection> {
+        return externalSqlDatabases.getValue( organizationId )
+    }
+
+    fun updateDataSource(organizationId: UUID, dataSourceId: UUID, dataSource: JdbcConnection) {
+        require( dataSourceId== dataSource.id ) { "Path id and object id do not match."}
+        externalSqlDatabases.executeOnKey(organizationId) { entry: MutableMap.MutableEntry<UUID, JdbcConnections> ->
+            val dataSources = entry.value
+            dataSources[dataSourceId]= dataSource
+            entry.setValue(dataSources)
+        }
+    }
+
+    fun registerDataSource(organizationId: UUID, dataSource: JdbcConnection): UUID {
+        val dataSourceWithReservedId = aclKeyReservations.reserveAnonymousId( dataSource )
+        return externalSqlDatabases.executeOnKey( organizationId ) { entry ->
+            val dataSources = entry.value
+            dataSources[dataSourceWithReservedId.id] = dataSourceWithReservedId
+            return@executeOnKey dataSourceWithReservedId.id
+        }
+    }
+
     private fun mapColumn(
             organizationId: UUID,
             dataSourceId: UUID,

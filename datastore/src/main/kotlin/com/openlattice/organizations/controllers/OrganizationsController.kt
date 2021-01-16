@@ -16,6 +16,7 @@ import com.openlattice.authorization.util.getLastAclKeySafely
 import com.openlattice.controllers.exceptions.ForbiddenException
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
+import com.openlattice.external.ExternalSqlDatabasesManagementService
 import com.openlattice.organization.*
 import com.openlattice.organization.OrganizationsApi.Companion.CONTROLLER
 import com.openlattice.organization.roles.Role
@@ -39,7 +40,8 @@ import javax.inject.Inject
 @RequestMapping(CONTROLLER)
 @SuppressFBWarnings(
         value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"],
-        justification = "Allowing redundant kotlin null check on lateinit variables")
+        justification = "Allowing redundant kotlin null check on lateinit variables"
+)
 class OrganizationsController : AuthorizingComponent, OrganizationsApi {
     @Inject
     private lateinit var authorizations: AuthorizationManager
@@ -73,6 +75,9 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
 
     @Inject
     private lateinit var edmService: EdmManager
+
+    @Inject
+    private lateinit var externalSqlDatabasesManagementService: ExternalSqlDatabasesManagementService
 
     @Timed
     @GetMapping(value = ["", "/"], produces = [MediaType.APPLICATION_JSON_VALUE])
@@ -591,12 +596,12 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
     private fun getAuthorizedRoleAclKeys(roles: Set<Role>): Set<AclKey> {
         return authorizations
                 .accessChecksForPrincipals(roles.stream()
-                        .map { role: Role ->
-                            AccessCheck(
-                                    role.aclKey, EnumSet.of(Permission.READ)
-                            )
-                        }
-                        .collect(Collectors.toSet()), Principals.getCurrentPrincipals())
+                                                   .map { role: Role ->
+                                                       AccessCheck(
+                                                               role.aclKey, EnumSet.of(Permission.READ)
+                                                       )
+                                                   }
+                                                   .collect(Collectors.toSet()), Principals.getCurrentPrincipals())
                 .filter { authorization: Authorization ->
                     authorization.permissions.getOrDefault(Permission.READ, false)
                 }
@@ -850,6 +855,37 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
         ensureOwner(organizationId)
         organizations.renameOrganizationDatabase(organizationId, newDatabaseName)
         return null
+    }
+
+    @GetMapping(
+            value = [OrganizationsApi.ID_PATH + OrganizationsApi.DATASOURCE],
+            consumes = [MediaType.APPLICATION_JSON_VALUE]
+    )
+    override fun listDataSources(organizationId: UUID): Map<UUID, JdbcConnection> {
+        return externalSqlDatabasesManagementService.listDataSources(organizationId)
+    }
+
+    @PostMapping(
+            value = [OrganizationsApi.ID_PATH + OrganizationsApi.DATASOURCE],
+            consumes = [MediaType.APPLICATION_JSON_VALUE]
+    )
+    override fun registerDataSource(
+            @PathVariable(OrganizationsApi.ID) organizationId: UUID,
+            @RequestBody datasource: JdbcConnection
+    ): UUID {
+        return externalSqlDatabasesManagementService.registerDataSource(organizationId, datasource)
+    }
+
+    @PutMapping(
+            value = [OrganizationsApi.ID_PATH + OrganizationsApi.DATASOURCE + OrganizationsApi.DATASOURCE_ID_PATH],
+            consumes = [MediaType.APPLICATION_JSON_VALUE]
+    )
+    override fun updateDataSource(
+            @PathVariable(OrganizationsApi.ID) organizationId: UUID,
+            @PathVariable(OrganizationsApi.DATASOURCE_ID) dataSourceId: UUID,
+            @RequestBody dataSource: JdbcConnection
+    ) {
+        externalSqlDatabasesManagementService.updateDataSource(organizationId, dataSourceId, dataSource)
     }
 
     private fun ensureRoleAdminAccess(organizationId: UUID, roleId: UUID) {
