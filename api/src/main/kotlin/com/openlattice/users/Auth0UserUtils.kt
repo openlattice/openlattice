@@ -34,12 +34,12 @@ fun getConnections(user: User): Map<String, String> {
 }
 
 fun getAppMetadata(user: User): Map<String, Set<String>> {
-    return user.appMetadata.mapValues { (_, v) ->
+    return user.appMetadata?.mapValues { (_, v) ->
         when (v) {
             is String -> listOf(v)
             else -> v as Collection<String>
         }.toSet()
-    }
+    } ?: mapOf()
 }
 
 fun getEmailDomain(email: String): String {
