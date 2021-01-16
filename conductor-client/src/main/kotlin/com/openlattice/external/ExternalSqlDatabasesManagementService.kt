@@ -9,11 +9,9 @@ import com.openlattice.organization.OrganizationExternalDatabaseSchema
 import com.openlattice.organization.OrganizationExternalDatabaseTable
 import com.openlattice.organization.OrganizationExternalDatabaseView
 import com.openlattice.organizations.JdbcConnection
-import com.openlattice.organizations.OrganizationExternalDatabaseConfiguration
-import com.openlattice.organizations.OrganizationMetadataEntitySetsService
+import com.openlattice.organizations.OrganizationEntitySetsService
 import com.openlattice.organizations.external.*
 import com.openlattice.organizations.roles.SecurePrincipalsManager
-import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -30,7 +28,7 @@ class ExternalSqlDatabasesManagementService(
         private val securePrincipalsManager: SecurePrincipalsManager,
         private val aclKeyReservations: HazelcastAclKeyReservationService,
         private val authorizationManager: AuthorizationManager,
-        private val organizationMetadataEntitySetsService: OrganizationMetadataEntitySetsService,
+        private val organizationMetadataEntitySetsService: OrganizationEntitySetsService,
         private val dbCredentialService: DbCredentialService,
         private val hds: HikariDataSource
 ) {

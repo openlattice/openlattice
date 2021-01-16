@@ -73,7 +73,7 @@ import com.openlattice.notifications.sms.PhoneNumberService;
 import com.openlattice.organizations.ExternalDatabaseManagementService;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.OrganizationExternalDatabaseConfiguration;
-import com.openlattice.organizations.OrganizationMetadataEntitySetsService;
+import com.openlattice.organizations.OrganizationEntitySetsService;
 import com.openlattice.organizations.pods.OrganizationExternalDatabaseConfigurationPod;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
@@ -385,8 +385,8 @@ public class IndexerServicesPod {
     }
 
     @Bean
-    public OrganizationMetadataEntitySetsService organizationMetadataEntitySetsService() {
-        return new OrganizationMetadataEntitySetsService( dataModelService(), authorizationManager() );
+    public OrganizationEntitySetsService organizationMetadataEntitySetsService() {
+        return new OrganizationEntitySetsService( dataModelService(), authorizationManager() );
     }
 
     @PostConstruct

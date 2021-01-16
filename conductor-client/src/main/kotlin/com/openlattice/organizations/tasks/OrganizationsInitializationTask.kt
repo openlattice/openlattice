@@ -34,6 +34,7 @@ import com.openlattice.organization.OrganizationPrincipal
 import com.openlattice.organizations.Grant
 import com.openlattice.organizations.GrantType
 import com.openlattice.organizations.Organization
+import com.openlattice.organizations.OrganizationEntitySetsService
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask
 import com.openlattice.tasks.Task
@@ -49,6 +50,13 @@ private val logger = LoggerFactory.getLogger(OrganizationsInitializationTask::cl
  */
 class OrganizationsInitializationTask : HazelcastInitializationTask<OrganizationsInitializationDependencies> {
     override fun initialize(dependencies: OrganizationsInitializationDependencies) {
+        logger.info("Creating any missing organization entity set property types.")
+        OrganizationEntitySetsService.PROPERTY_TYPES
+                .filterNot { dependencies.edmManager.checkPropertyTypeExists(it.type) }
+                .forEach(dependencies.edmManager::createPropertyTypeIfNotExists)
+        OrganizationEntitySetsService.ENTITY_TYPES
+                .filterNot { dependencies.edmManager.checkEntityTypeExists(it.type) }
+                .forEach(dependencies.edmManager::createEntityType)
         logger.info("Running bootstrap process for organizations.")
         val sw = Stopwatch.createStarted()
         val organizationService = dependencies.organizationService

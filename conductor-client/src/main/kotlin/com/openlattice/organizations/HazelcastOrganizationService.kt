@@ -67,7 +67,7 @@ class HazelcastOrganizationService(
         private val phoneNumbers: PhoneNumberService,
         private val partitionManager: PartitionManager,
         private val assembler: Assembler,
-        private val organizationMetadataEntitySetsService: OrganizationMetadataEntitySetsService
+        private val organizationMetadataEntitySetsService: OrganizationEntitySetsService
 ) {
 
     protected val organizations = HazelcastMap.ORGANIZATIONS.getMap(hazelcastInstance)
@@ -118,7 +118,9 @@ class HazelcastOrganizationService(
     }
 
     private fun initializeOrganizationAdminRole(
-            principal: Principal, adminRoleAclKey: AclKey, organization: Organization
+            principal: Principal,
+            adminRoleAclKey: AclKey,
+            organization: Organization
     ): Role {
         //Create the admin role for the organization and give it ownership of organization.
         val adminRole = createOrganizationAdminRole(organization.securablePrincipal, adminRoleAclKey)

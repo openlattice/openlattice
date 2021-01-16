@@ -52,7 +52,7 @@ import com.openlattice.linking.matching.SocratesMatcher;
 import com.openlattice.linking.util.PersonProperties;
 import com.openlattice.notifications.sms.PhoneNumberService;
 import com.openlattice.organizations.HazelcastOrganizationService;
-import com.openlattice.organizations.OrganizationMetadataEntitySetsService;
+import com.openlattice.organizations.OrganizationEntitySetsService;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
@@ -271,8 +271,8 @@ public class LinkerServicesPod {
     }
 
     @Bean
-    public OrganizationMetadataEntitySetsService organizationMetadataEntitySetsService() {
-        return new OrganizationMetadataEntitySetsService( dataModelService(), authorizationManager() );
+    public OrganizationEntitySetsService organizationMetadataEntitySetsService() {
+        return new OrganizationEntitySetsService( dataModelService(), authorizationManager() );
     }
 
     @Bean

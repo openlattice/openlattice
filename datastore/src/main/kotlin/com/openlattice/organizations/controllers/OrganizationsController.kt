@@ -68,7 +68,7 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
     private lateinit var appService: AppService
 
     @Inject
-    private lateinit var organizationMetadataEntitySetsService: OrganizationMetadataEntitySetsService
+    private lateinit var organizationMetadataEntitySetsService: OrganizationEntitySetsService
 
     @Inject
     private lateinit var externalDatabaseManagementService: ExternalDatabaseManagementService

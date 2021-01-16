@@ -60,7 +60,7 @@ import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.processors.AddEntitySetsToLinkingEntitySetProcessor
 import com.openlattice.hazelcast.processors.RemoveDataExpirationPolicyProcessor
 import com.openlattice.hazelcast.processors.RemoveEntitySetsFromLinkingEntitySetProcessor
-import com.openlattice.organizations.OrganizationMetadataEntitySetsService
+import com.openlattice.organizations.OrganizationEntitySetsService
 import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.mapstores.EntitySetMapstore
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
@@ -79,7 +79,7 @@ class EntitySetService(
         private val partitionManager: PartitionManager,
         private val edm: EdmManager,
         private val hds: HikariDataSource,
-        private val organizationMetadataEntitySetsService: OrganizationMetadataEntitySetsService,
+        private val organizationMetadataEntitySetsService: OrganizationEntitySetsService,
         auditingConfiguration: AuditingConfiguration
 ) : EntitySetManager {
     init {

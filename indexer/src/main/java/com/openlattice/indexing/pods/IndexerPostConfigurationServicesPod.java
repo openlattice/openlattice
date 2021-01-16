@@ -32,7 +32,6 @@ import com.openlattice.data.storage.EntityDatastore;
 import com.openlattice.data.storage.IndexingMetadataManager;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
 import com.openlattice.data.storage.partitions.PartitionManager;
-import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.indexing.BackgroundExpiredDataDeletionService;
 import com.openlattice.indexing.BackgroundIndexedEntitiesDeletionService;
 import com.openlattice.indexing.BackgroundIndexingService;
@@ -42,7 +41,7 @@ import com.openlattice.indexing.configuration.IndexerConfiguration;
 import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
 import com.openlattice.organizations.ExternalDatabaseManagementService;
-import com.openlattice.organizations.OrganizationMetadataEntitySetsService;
+import com.openlattice.organizations.OrganizationEntitySetsService;
 import com.zaxxer.hikari.HikariDataSource;
 import javax.annotation.PostConstruct;
 import org.springframework.context.annotation.Bean;
@@ -75,7 +74,7 @@ public class IndexerPostConfigurationServicesPod {
     private DataGraphManager dataGraphService;
 
     @Inject
-    private OrganizationMetadataEntitySetsService organizationMetadataEntitySetsService;
+    private OrganizationEntitySetsService organizationEntitySetsService;
 
     @Inject
     private PostgresEntityDataQueryService dataQueryService;
@@ -161,7 +160,7 @@ public class IndexerPostConfigurationServicesPod {
                 auditingManager,
                 ares,
                 indexerConfiguration,
-                organizationMetadataEntitySetsService );
+                organizationEntitySetsService );
     }
 
     @Bean
@@ -175,6 +174,6 @@ public class IndexerPostConfigurationServicesPod {
 
     @PostConstruct
     void initOrganizationMetadataEntitySetsService() {
-        this.organizationMetadataEntitySetsService.dataGraphManager = dataGraphService;
+        this.organizationEntitySetsService.dataGraphManager = dataGraphService;
     }
 }

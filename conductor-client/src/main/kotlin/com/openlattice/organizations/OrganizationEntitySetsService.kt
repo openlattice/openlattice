@@ -25,6 +25,7 @@ import com.dataloom.mappers.ObjectMappers
 import com.hazelcast.core.HazelcastInstance
 import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.AbstractSecurableObject
+import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.controllers.exceptions.ResourceNotFoundException
 import com.openlattice.data.DataGraphManager
 import com.openlattice.data.EntityKey
@@ -32,6 +33,8 @@ import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
+import com.openlattice.edm.type.Analyzer
+import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
@@ -39,17 +42,22 @@ import com.openlattice.organization.OrganizationExternalDatabaseTable
 import com.openlattice.organization.roles.Role
 import com.openlattice.organizations.HazelcastOrganizationService.Companion.getOrganizationPrincipal
 import com.openlattice.organizations.processors.OrganizationEntryProcessor
+import com.openlattice.organizations.processors.OrganizationReadEntryProcessor
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.DataTables.quote
+import com.openlattice.postgres.IndexType
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.springframework.stereotype.Service
 import java.util.*
+import kotlin.collections.LinkedHashMap
 
 private val ORGANIZATION_METADATA_ET = FullQualifiedName("ol.organization_metadata")
 private val DATASETS_ET = FullQualifiedName("ol.dataset")
 private val COLUMNS_ET = FullQualifiedName("ol.column")
 private val SCHEMAS_ET = FullQualifiedName("ol.schema")
 private val VIEWS_ET = FullQualifiedName("ol.views")
+private val ACCESS_REQUEST_ET = FullQualifiedName("ol.accessrequest")
 
 private const val EXTERNAL_ID = "ol.externalid"
 private const val PGOID = "ol.pgoid"
@@ -69,7 +77,7 @@ private const val DESCRIPTION = "ol.description"
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 @Service
-class OrganizationMetadataEntitySetsService(
+class OrganizationEntitySetsService(
         hazelcastInstance: HazelcastInstance,
         private val edmService: EdmManager,
         private val securePrincipalsManager: SecurePrincipalsManager,
@@ -86,9 +94,16 @@ class OrganizationMetadataEntitySetsService(
     private lateinit var organizationMetadataEntityTypeId: UUID
     private lateinit var datasetEntityTypeId: UUID
     private lateinit var columnsEntityTypeId: UUID
+    private lateinit var schemaEntityTypeId: UUID
+    private lateinit var viewsEntityTypeId: UUID
+    private lateinit var accessRequestsEntityTypeId: UUID
     private lateinit var omAuthorizedPropertyTypes: Map<UUID, PropertyType>
     private lateinit var datasetsAuthorizedPropertyTypes: Map<UUID, PropertyType>
     private lateinit var columnAuthorizedPropertyTypes: Map<UUID, PropertyType>
+    private lateinit var schemaAuthorizedPropertyTypes: Map<UUID, PropertyType>
+    private lateinit var viewAuthorizedPropertyTypes: Map<UUID, PropertyType>
+    private lateinit var accessRequestAuthorizedPropertyTypes: Map<UUID, PropertyType>
+
     private lateinit var propertyTypes: Map<String, PropertyType>
 
     /**
@@ -113,8 +128,32 @@ class OrganizationMetadataEntitySetsService(
             columnsEntityTypeId = c.id
             columnAuthorizedPropertyTypes = edmService.getPropertyTypesAsMap(c.properties)
         }
+        if (!this::schemaEntityTypeId.isInitialized) {
+            val et = edmService.getEntityType(SCHEMAS_ET)
+            columnsEntityTypeId = et.id
+            columnAuthorizedPropertyTypes = edmService.getPropertyTypesAsMap(et.properties)
+        }
+        if (!this::schemaEntityTypeId.isInitialized) {
+            val et = edmService.getEntityType(VIEWS_ET)
+            columnsEntityTypeId = et.id
+            columnAuthorizedPropertyTypes = edmService.getPropertyTypesAsMap(et.properties)
+        }
+        if (!this::schemaEntityTypeId.isInitialized) {
+            val et = edmService.getEntityType(ACCESS_REQUEST_ET)
+            columnsEntityTypeId = et.id
+            columnAuthorizedPropertyTypes = edmService.getPropertyTypesAsMap(et.properties)
+        }
+
         if (!this::propertyTypes.isInitialized) {
-            propertyTypes = (omAuthorizedPropertyTypes.values + datasetsAuthorizedPropertyTypes.values + columnAuthorizedPropertyTypes.values)
+            propertyTypes = listOf(
+                    omAuthorizedPropertyTypes.values,
+                    datasetsAuthorizedPropertyTypes.values,
+                    columnAuthorizedPropertyTypes.values,
+                    schemaAuthorizedPropertyTypes.values,
+                    viewAuthorizedPropertyTypes.values,
+                    accessRequestAuthorizedPropertyTypes.values
+            )
+                    .flatten()
                     .associateBy { it.type.fullQualifiedNameAsString }
         }
     }
@@ -123,6 +162,27 @@ class OrganizationMetadataEntitySetsService(
             this::datasetEntityTypeId.isInitialized && this::columnsEntityTypeId.isInitialized &&
             this::omAuthorizedPropertyTypes.isInitialized && this::datasetsAuthorizedPropertyTypes.isInitialized &&
             this::columnAuthorizedPropertyTypes.isInitialized && this::propertyTypes.isInitialized
+
+    fun initializeOrganizationMetadataEntitySets(organizationId: UUID) {
+        val adminAclKey = organizations.executeOnKey(
+                organizationId,
+                OrganizationReadEntryProcessor { it.adminRoleAclKey }
+        ) as AclKey
+
+        initializeOrganizationMetadataEntitySets(securePrincipalsManager.getRole(organizationId, adminAclKey[1]))
+    }
+
+    fun areOrganizationMetadataEntitySetIdsFullyInitialized(organizationId: UUID): Boolean = organizations
+            .executeOnKey(organizationId, OrganizationReadEntryProcessor { org ->
+                with(org.organizationMetadataEntitySetIds) {
+                    listOf(
+                            columns,
+                            datasets,
+                            organization
+                    ).any { it == UNINITIALIZED_METADATA_ENTITY_SET_ID }
+                }
+            }) as Boolean
+
 
     fun initializeOrganizationMetadataEntitySets(adminRole: Role) {
         initializeFields()
@@ -335,7 +395,8 @@ class OrganizationMetadataEntitySetsService(
     }
 
     fun addDatasetColumns(
-            organizationId: UUID, table: OrganizationExternalDatabaseTable,
+            organizationId: UUID,
+            table: OrganizationExternalDatabaseTable,
             columns: Collection<OrganizationExternalDatabaseColumn>
     ) {
         initializeFields()
@@ -473,4 +534,40 @@ class OrganizationMetadataEntitySetsService(
 
     private fun buildDatasetsEntitySetName(organizationId: UUID): String = quote("datasets-$organizationId")
     private fun buildColumnEntitySetName(organizationId: UUID): String = quote("column-$organizationId")
+
+    companion object {
+        @JvmField
+        val PROPERTY_TYPES = listOf(
+                PropertyType(
+                        Optional.empty<UUID>(), //id
+                        FullQualifiedName(EXTERNAL_ID), //fqn
+                        "External ID", //external id
+                        Optional.of(""), //description
+                        setOf<FullQualifiedName>(), //schemas
+                        EdmPrimitiveTypeKind.String, //dataType
+                        Optional.empty(), //enumValues
+                        Optional.of(false), //piiField
+                        Optional.of(false), //multiValued
+                        Optional.of(Analyzer.METAPHONE), //analyzer
+                        Optional.empty() //postgresIndexType
+                )
+        )
+
+        @JvmField
+        val ENTITY_TYPES = listOf(
+                EntityType(
+                        Optional.empty<UUID>(), //id
+                        ORGANIZATION_METADATA_ET, //type
+                        "", //title
+                        Optional.of(""), //description
+                        setOf<FullQualifiedName>(), //schemas
+                        linkedSetOf<UUID>(), //key
+                        linkedSetOf<UUID>(), //properties
+                        Optional.empty<LinkedHashMap<UUID, LinkedHashSet<String>>>(), //propertyTags
+                        Optional.empty<UUID>(), //baseType
+                        Optional.empty<SecurableObjectType>(), //category
+                        Optional.empty<Int>() //shards
+                )
+        )
+    }
 }

@@ -22,7 +22,7 @@ import com.openlattice.indexing.configuration.IndexerConfiguration
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.organization.OrganizationExternalDatabaseTable
 import com.openlattice.organizations.ExternalDatabaseManagementService
-import com.openlattice.organizations.OrganizationMetadataEntitySetsService
+import com.openlattice.organizations.OrganizationEntitySetsService
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
@@ -42,7 +42,7 @@ class BackgroundExternalDatabaseSyncingService(
         private val auditingManager: AuditingManager,
         private val ares: AuditRecordEntitySetsManager,
         private val indexerConfiguration: IndexerConfiguration,
-        private val organizationMetadataEntitySetsService: OrganizationMetadataEntitySetsService
+        private val organizationMetadataEntitySetsService: OrganizationEntitySetsService
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(BackgroundExternalDatabaseSyncingService::class.java)

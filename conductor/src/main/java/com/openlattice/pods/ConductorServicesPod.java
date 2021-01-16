@@ -91,7 +91,7 @@ import com.openlattice.mail.MailServiceClient;
 import com.openlattice.mail.config.MailServiceRequirements;
 import com.openlattice.notifications.sms.PhoneNumberService;
 import com.openlattice.organizations.HazelcastOrganizationService;
-import com.openlattice.organizations.OrganizationMetadataEntitySetsService;
+import com.openlattice.organizations.OrganizationEntitySetsService;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.organizations.tasks.OrganizationsInitializationDependencies;
@@ -239,7 +239,9 @@ public class ConductorServicesPod {
 
     @Bean
     public OrganizationsInitializationDependencies organizationBootstrapDependencies() {
-        return new OrganizationsInitializationDependencies( organizationsManager(),
+        return new OrganizationsInitializationDependencies(
+                dataModelService(),
+                organizationsManager(),
                 principalService(),
                 partitionManager(),
                 conductorConfiguration() );
@@ -436,8 +438,8 @@ public class ConductorServicesPod {
     }
 
     @Bean
-    public OrganizationMetadataEntitySetsService organizationMetadataEntitySetsService() {
-        return new OrganizationMetadataEntitySetsService(
+    public OrganizationEntitySetsService organizationMetadataEntitySetsService() {
+        return new OrganizationEntitySetsService(
                 hazelcastInstance,
                 dataModelService(),
                 principalService(),
