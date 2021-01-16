@@ -33,5 +33,8 @@ val UNINITIALIZED_METADATA_ENTITY_SET_ID = UUID(0, 0)
 data class OrganizationMetadataEntitySetIds(
         val organization: UUID = UNINITIALIZED_METADATA_ENTITY_SET_ID,
         val datasets: UUID = UNINITIALIZED_METADATA_ENTITY_SET_ID,
-        val columns: UUID = UNINITIALIZED_METADATA_ENTITY_SET_ID
+        val columns: UUID = UNINITIALIZED_METADATA_ENTITY_SET_ID,
+        val schemas: UUID = UNINITIALIZED_METADATA_ENTITY_SET_ID,
+        val views: UUID = UNINITIALIZED_METADATA_ENTITY_SET_ID,
+        val accessRequests: UUID = UNINITIALIZED_METADATA_ENTITY_SET_ID
 ) : Serializable

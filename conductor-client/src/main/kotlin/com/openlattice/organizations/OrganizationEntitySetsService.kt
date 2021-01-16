@@ -25,7 +25,6 @@ import com.dataloom.mappers.ObjectMappers
 import com.hazelcast.core.HazelcastInstance
 import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.AbstractSecurableObject
-import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.controllers.exceptions.ResourceNotFoundException
 import com.openlattice.data.DataGraphManager
 import com.openlattice.data.EntityKey
@@ -33,8 +32,6 @@ import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
-import com.openlattice.edm.type.Analyzer
-import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
@@ -45,12 +42,9 @@ import com.openlattice.organizations.processors.OrganizationEntryProcessor
 import com.openlattice.organizations.processors.OrganizationReadEntryProcessor
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.DataTables.quote
-import com.openlattice.postgres.IndexType
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.springframework.stereotype.Service
 import java.util.*
-import kotlin.collections.LinkedHashMap
 
 
 /**
@@ -152,17 +146,24 @@ class OrganizationEntitySetsService(
         initializeOrganizationMetadataEntitySets(securePrincipalsManager.getRole(organizationId, adminAclKey[1]))
     }
 
-    fun areOrganizationMetadataEntitySetIdsFullyInitialized(organizationId: UUID): Boolean = organizations
-            .executeOnKey(organizationId, OrganizationReadEntryProcessor { org ->
-                with(org.organizationMetadataEntitySetIds) {
-                    listOf(
-                            columns,
-                            datasets,
-                            organization
-                    ).any { it == UNINITIALIZED_METADATA_ENTITY_SET_ID }
-                }
-            }) as Boolean
-
+    fun ensureOrganizationMetadataEntitySetIdsFullyInitialized(organizationId: UUID) {
+        val fullyInitialized = organizations
+                .executeOnKey(organizationId, OrganizationReadEntryProcessor { org ->
+                    with(org.organizationMetadataEntitySetIds) {
+                        listOf(
+                                columns,
+                                datasets,
+                                organization,
+                                schemas,
+                                views,
+                                accessRequests
+                        ).any { it == UNINITIALIZED_METADATA_ENTITY_SET_ID }
+                    }
+                }) as Boolean
+        if( !fullyInitialized ) {
+            initializeOrganizationMetadataEntitySets(organizationId)
+        }
+    }
 
     fun initializeOrganizationMetadataEntitySets(adminRole: Role) {
         initializeFields()
@@ -202,13 +203,43 @@ class OrganizationEntitySetsService(
             organizationMetadataEntitySetIds.columns
         }
 
+        val schemaEntitySetId = if (organizationMetadataEntitySetIds.schemas == UNINITIALIZED_METADATA_ENTITY_SET_ID) {
+            val schemasEntitySet = buildColumnEntitySet(organizationId)
+            val id = entitySetsManager.createEntitySet(adminRole.principal, schemasEntitySet)
+            createdEntitySets.add(id)
+            id
+        } else {
+            organizationMetadataEntitySetIds.schemas
+        }
+
+        val viewsEntitySetId = if (organizationMetadataEntitySetIds.views == UNINITIALIZED_METADATA_ENTITY_SET_ID) {
+            val viewsEntitySet = buildViewsEntitySet(organizationId)
+            val id = entitySetsManager.createEntitySet(adminRole.principal, viewsEntitySet)
+            createdEntitySets.add(id)
+            id
+        } else {
+            organizationMetadataEntitySetIds.views
+        }
+
+        val accessRequestsEntitySetId = if (organizationMetadataEntitySetIds.accessRequests == UNINITIALIZED_METADATA_ENTITY_SET_ID) {
+            val accessRequestsEntitySet = buildViewsEntitySet(organizationId)
+            val id = entitySetsManager.createEntitySet(adminRole.principal, accessRequestsEntitySet)
+            createdEntitySets.add(id)
+            id
+        } else {
+            organizationMetadataEntitySetIds.accessRequests
+        }
+
         if (createdEntitySets.isNotEmpty()) {
             setOrganizationMetadataEntitySetIds(
                     organizationId,
                     OrganizationMetadataEntitySetIds(
                             organizationMetadataEntitySetId,
                             datasetsEntitySetId,
-                            columnsEntitySetId
+                            columnsEntitySetId,
+                            schemaEntitySetId,
+                            viewsEntitySetId,
+                            accessRequestsEntitySetId
                     )
             )
 
@@ -231,7 +262,9 @@ class OrganizationEntitySetsService(
             return
         }
 
+
         entitySets.groupBy { it.organizationId }.forEach { (organizationId, orgEntitySets) ->
+            ensureOrganizationMetadataEntitySetIdsFullyInitialized(organizationId)
             val organizationMetadataEntitySetIds = getOrganizationMetadataEntitySetIds(organizationId)
 
             val datasetEntityKeyIds = getDatasetEntityKeyIds(
@@ -300,7 +333,7 @@ class OrganizationEntitySetsService(
         if (!isFullyInitialized() || tables.isEmpty()) {
             return
         }
-
+        ensureOrganizationMetadataEntitySetIdsFullyInitialized(organizationId)
         val organizationMetadataEntitySetIds = getOrganizationMetadataEntitySetIds(organizationId)
 
         val datasetEntityKeyIds = getDatasetEntityKeyIds(organizationMetadataEntitySetIds, tables.map { it.id })
@@ -355,7 +388,7 @@ class OrganizationEntitySetsService(
         if (!isFullyInitialized()) {
             return
         }
-
+        ensureOrganizationMetadataEntitySetIdsFullyInitialized(organizationId)
         val organizationMetadataEntitySetIds = getOrganizationMetadataEntitySetIds(organizationId)
 
         val datasetEntity = mutableMapOf<UUID, Set<Any>>(
@@ -383,6 +416,8 @@ class OrganizationEntitySetsService(
         if (!isFullyInitialized()) {
             return
         }
+
+        ensureOrganizationMetadataEntitySetIdsFullyInitialized(organizationId)
         val organizationMetadataEntitySetIds = getOrganizationMetadataEntitySetIds(organizationId)
 
         val columnEntities = columns.associate { column ->
@@ -508,12 +543,44 @@ class OrganizationEntitySetsService(
             flags = EnumSet.of(EntitySetFlag.METADATA)
     )
 
+    private fun buildSchemaEntitySet(organizationId: UUID): EntitySet = EntitySet(
+            organizationId = organizationId,
+            entityTypeId = schemaEntityTypeId,
+            name = buildSchemasEntitySetName(organizationId),
+            _title = "Schemas for $organizationId",
+            _description = "Schemas for $organizationId",
+            contacts = mutableSetOf(),
+            flags = EnumSet.of(EntitySetFlag.METADATA)
+    )
+
+    private fun buildViewsEntitySet(organizationId: UUID): EntitySet = EntitySet(
+            organizationId = organizationId,
+            entityTypeId = viewEntityTypeId,
+            name = buildViewsEntitySetName(organizationId),
+            _title = "Views for $organizationId",
+            _description = "Views for $organizationId",
+            contacts = mutableSetOf(),
+            flags = EnumSet.of(EntitySetFlag.METADATA)
+    )
+
+    private fun buildAccessRequestEntitySet(organizationId: UUID): EntitySet = EntitySet(
+            organizationId = organizationId,
+            entityTypeId = accessRequestsEntityTypeId,
+            name = buildAccessRequestsEntitySetName(organizationId),
+            _title = "Access Requests for $organizationId",
+            _description = "Access Requests for $organizationId",
+            contacts = mutableSetOf(),
+            flags = EnumSet.of(EntitySetFlag.METADATA)
+    )
     private fun buildOrganizationMetadataEntitySetName(organizationId: UUID): String = quote(
             "org-metadata-$organizationId"
     )
 
     private fun buildDatasetsEntitySetName(organizationId: UUID): String = quote("datasets-$organizationId")
     private fun buildColumnEntitySetName(organizationId: UUID): String = quote("column-$organizationId")
+    private fun buildSchemasEntitySetName(organizationId: UUID): String = quote("schemas-$organizationId")
+    private fun buildViewsEntitySetName(organizationId: UUID): String = quote("views-$organizationId")
+    private fun buildAccessRequestsEntitySetName(organizationId: UUID): String = quote("access-requests-$organizationId")
 
     companion object {
         private val ORGANIZATION_METADATA_ET = FullQualifiedName("ol.organization_metadata")

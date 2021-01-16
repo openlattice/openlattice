@@ -239,7 +239,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public PostgresTypeManager entityTypeManager() {
-        return new PostgresTypeManager( hikariDataSource , hazelcastInstance );
+        return new PostgresTypeManager( hikariDataSource, hazelcastInstance );
     }
 
     @Bean
@@ -409,7 +409,10 @@ public class DatastoreServicesPod {
 
     @Bean
     public OrganizationEntitySetsService organizationMetadataEntitySetsService() {
-        return new OrganizationEntitySetsService( dataModelService(), authorizationManager() );
+        return new OrganizationEntitySetsService( hazelcastInstance,
+                dataModelService(),
+                principalService(),
+                authorizationManager() );
     }
 
     @Bean

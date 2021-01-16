@@ -240,7 +240,6 @@ public class ConductorServicesPod {
     @Bean
     public OrganizationsInitializationDependencies organizationBootstrapDependencies() {
         return new OrganizationsInitializationDependencies(
-                dataModelService(),
                 organizationsManager(),
                 principalService(),
                 partitionManager(),

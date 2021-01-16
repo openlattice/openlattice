@@ -30,7 +30,6 @@ import com.openlattice.tasks.HazelcastTaskDependencies
 
 
 data class OrganizationsInitializationDependencies constructor(
-        val edmManager: EdmManager,
         val organizationService: HazelcastOrganizationService,
         val spm: SecurePrincipalsManager,
         val partitionManager: PartitionManager,
