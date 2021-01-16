@@ -52,25 +52,6 @@ import org.springframework.stereotype.Service
 import java.util.*
 import kotlin.collections.LinkedHashMap
 
-private val ORGANIZATION_METADATA_ET = FullQualifiedName("ol.organization_metadata")
-private val DATASETS_ET = FullQualifiedName("ol.dataset")
-private val COLUMNS_ET = FullQualifiedName("ol.column")
-private val SCHEMAS_ET = FullQualifiedName("ol.schema")
-private val VIEWS_ET = FullQualifiedName("ol.views")
-private val ACCESS_REQUEST_ET = FullQualifiedName("ol.accessrequest")
-
-private const val EXTERNAL_ID = "ol.externalid"
-private const val PGOID = "ol.pgoid"
-private const val ID = "ol.id"
-private const val COL_INFO = "ol.columninfo"
-private const val DATASET_NAME = "ol.dataset_name"
-private const val ORG_ID = "ol.organization_id"
-private const val STANDARDIZED = "ol.standardized"
-private const val TYPE = "ol.type"
-private const val COL_NAME = "ol.column_name"
-private const val CONTACT = "contact.Email"
-private const val DESCRIPTION = "ol.description"
-
 
 /**
  *
@@ -90,12 +71,11 @@ class OrganizationEntitySetsService(
     lateinit var dataGraphManager: DataGraphManager
     lateinit var entitySetsManager: EntitySetManager
 
-    //    lateinit var organizationService: HazelcastOrganizationService
     private lateinit var organizationMetadataEntityTypeId: UUID
     private lateinit var datasetEntityTypeId: UUID
     private lateinit var columnsEntityTypeId: UUID
     private lateinit var schemaEntityTypeId: UUID
-    private lateinit var viewsEntityTypeId: UUID
+    private lateinit var viewEntityTypeId: UUID
     private lateinit var accessRequestsEntityTypeId: UUID
     private lateinit var omAuthorizedPropertyTypes: Map<UUID, PropertyType>
     private lateinit var datasetsAuthorizedPropertyTypes: Map<UUID, PropertyType>
@@ -130,20 +110,19 @@ class OrganizationEntitySetsService(
         }
         if (!this::schemaEntityTypeId.isInitialized) {
             val et = edmService.getEntityType(SCHEMAS_ET)
-            columnsEntityTypeId = et.id
-            columnAuthorizedPropertyTypes = edmService.getPropertyTypesAsMap(et.properties)
+            schemaEntityTypeId = et.id
+            schemaAuthorizedPropertyTypes = edmService.getPropertyTypesAsMap(et.properties)
         }
-        if (!this::schemaEntityTypeId.isInitialized) {
+        if (!this::viewEntityTypeId.isInitialized) {
             val et = edmService.getEntityType(VIEWS_ET)
-            columnsEntityTypeId = et.id
-            columnAuthorizedPropertyTypes = edmService.getPropertyTypesAsMap(et.properties)
+            viewEntityTypeId = et.id
+            viewAuthorizedPropertyTypes = edmService.getPropertyTypesAsMap(et.properties)
         }
-        if (!this::schemaEntityTypeId.isInitialized) {
+        if (!this::accessRequestsEntityTypeId.isInitialized) {
             val et = edmService.getEntityType(ACCESS_REQUEST_ET)
-            columnsEntityTypeId = et.id
-            columnAuthorizedPropertyTypes = edmService.getPropertyTypesAsMap(et.properties)
+            accessRequestsEntityTypeId = et.id
+            accessRequestAuthorizedPropertyTypes = edmService.getPropertyTypesAsMap(et.properties)
         }
-
         if (!this::propertyTypes.isInitialized) {
             propertyTypes = listOf(
                     omAuthorizedPropertyTypes.values,
@@ -536,12 +515,43 @@ class OrganizationEntitySetsService(
     private fun buildColumnEntitySetName(organizationId: UUID): String = quote("column-$organizationId")
 
     companion object {
+        private val ORGANIZATION_METADATA_ET = FullQualifiedName("ol.organization_metadata")
+        private val DATASETS_ET = FullQualifiedName("ol.dataset")
+        private val COLUMNS_ET = FullQualifiedName("ol.column")
+        private val SCHEMAS_ET = FullQualifiedName("ol.dbschema")
+        private val VIEWS_ET = FullQualifiedName("ol.views")
+        private val ACCESS_REQUEST_ET = FullQualifiedName("ol.accessrequest")
+
+        private const val EXTERNAL_ID = "ol.externalid"
+        private const val PGOID = "ol.pgoid"
+        private const val ID = "ol.id"
+        private const val COL_INFO = "ol.columninfo"
+        private const val DATASET_NAME = "ol.dataset_name"
+        private const val ORG_ID = "ol.organization_id"
+        private const val STANDARDIZED = "ol.standardized"
+        private const val TYPE = "ol.type"
+        private const val COL_NAME = "ol.column_name"
+        private const val CONTACT = "contact.Email"
+        private const val DESCRIPTION = "ol.description"
+        private const val SQL = "ol.sql"
+        private const val OWNER = "ol.owner" // TODO: figure out clean way of exposing owner of an object as owner may not be in OL system
+
+        private const val TEXT = "ol.text"
+        private const val PERMISSIONS = "ol.permissions"
+        private const val ACLKEY = "ol.aclkey"
+        private const val STATUS = "ol.status"
+        private const val REQUEST_PRINCIPAL_ID = "ol.requestprincipalid"
+        private const val RESPONSE_PRINCIPAL_ID = "ol.responseprincipalid"
+        private const val REQUEST_DATETIME = "ol.requestdatetime"
+        private const val RESPONSE_DATETIME = "ol.responsedatetime"
+
+
         @JvmField
         val PROPERTY_TYPES = listOf(
                 PropertyType(
                         Optional.empty<UUID>(), //id
                         FullQualifiedName(EXTERNAL_ID), //fqn
-                        "External ID", //external id
+                        "External ID", //title
                         Optional.of(""), //description
                         setOf<FullQualifiedName>(), //schemas
                         EdmPrimitiveTypeKind.String, //dataType
@@ -550,6 +560,270 @@ class OrganizationEntitySetsService(
                         Optional.of(false), //multiValued
                         Optional.of(Analyzer.METAPHONE), //analyzer
                         Optional.empty() //postgresIndexType
+                ),
+                PropertyType(
+                        Optional.empty<UUID>(), //id
+                        FullQualifiedName(PGOID), //fqn
+                        "Postgres OID", //title
+                        Optional.of("Postgres OID"), //description
+                        setOf<FullQualifiedName>(), //schemas
+                        EdmPrimitiveTypeKind.Int32, //dataType
+                        Optional.empty(), //enumValues
+                        Optional.of(false), //piiField
+                        Optional.of(true), //multiValued
+                        Optional.of(Analyzer.STANDARD), //analyzer
+                        Optional.empty() //postgresIndexType
+                ),
+                PropertyType(
+                        Optional.empty<UUID>(), //id
+                        FullQualifiedName(ID), //fqn
+                        "General Identifier", //title
+                        Optional.of("General Identifier"), //description
+                        setOf<FullQualifiedName>(), //schemas
+                        EdmPrimitiveTypeKind.String, //dataType
+                        Optional.empty(), //enumValues
+                        Optional.of(false), //piiField
+                        Optional.of(true), //multiValued
+                        Optional.of(Analyzer.STANDARD), //analyzer
+                        Optional.empty() //postgresIndexType
+                ),
+                PropertyType(
+                        Optional.empty<UUID>(), //id
+                        FullQualifiedName(COL_INFO), //fqn
+                        "Column info", //title
+                        Optional.of("Column Info"), //description
+                        setOf<FullQualifiedName>(), //schemas
+                        EdmPrimitiveTypeKind.String, //dataType
+                        Optional.empty(), //enumValues
+                        Optional.of(false), //piiField
+                        Optional.of(true), //multiValued
+                        Optional.of(Analyzer.STANDARD), //analyzer
+                        Optional.empty() //postgresIndexType
+                ),
+                PropertyType(
+                        Optional.empty<UUID>(), //id
+                        FullQualifiedName(DATASET_NAME), //fqn
+                        "Dataset Name", //title
+                        Optional.of("Dataset Name"), //description
+                        setOf<FullQualifiedName>(), //schemas
+                        EdmPrimitiveTypeKind.String, //dataType
+                        Optional.empty(), //enumValues
+                        Optional.of(false), //piiField
+                        Optional.of(true), //multiValued
+                        Optional.of(Analyzer.METAPHONE), //analyzer
+                        Optional.of(IndexType.BTREE)//postgresIndexType
+                ),
+                PropertyType(
+                        Optional.empty<UUID>(), //id
+                        FullQualifiedName(ORG_ID), //fqn
+                        "Organization ID", //title
+                        Optional.of("Organization ID"), //description
+                        setOf<FullQualifiedName>(), //schemas
+                        EdmPrimitiveTypeKind.String, //dataType
+                        Optional.empty(), //enumValues
+                        Optional.of(false), //piiField
+                        Optional.of(true), //multiValued
+                        Optional.of(Analyzer.STANDARD), //analyzer
+                        Optional.of(IndexType.BTREE) //postgresIndexType
+                ),
+                PropertyType(
+                        Optional.empty<UUID>(), //id
+                        FullQualifiedName(STANDARDIZED), //fqn
+                        "Standardized (Y/N)", //title
+                        Optional.of("Boolean for whether something is standardized."), //description
+                        setOf<FullQualifiedName>(), //schemas
+                        EdmPrimitiveTypeKind.String, //dataType
+                        Optional.empty(), //enumValues
+                        Optional.of(false), //piiField
+                        Optional.of(true), //multiValued
+                        Optional.of(Analyzer.STANDARD), //analyzer
+                        Optional.of(IndexType.BTREE) //postgresIndexType
+                ),
+                PropertyType(
+                        Optional.empty<UUID>(), //id
+                        FullQualifiedName(TYPE), //fqn
+                        "Type", //title
+                        Optional.of("Type"), //description
+                        setOf<FullQualifiedName>(), //schemas
+                        EdmPrimitiveTypeKind.String, //dataType
+                        Optional.empty(), //enumValues
+                        Optional.of(false), //piiField
+                        Optional.of(true), //multiValued
+                        Optional.of(Analyzer.STANDARD), //analyzer
+                        Optional.of(IndexType.NONE) //postgresIndexType
+                ),
+                PropertyType(
+                        Optional.empty<UUID>(), //id
+                        FullQualifiedName(COL_NAME), //fqn
+                        "Dataset Column Name", //title
+                        Optional.of("Dataset Column Name"), //description
+                        setOf<FullQualifiedName>(), //schemas
+                        EdmPrimitiveTypeKind.String, //dataType
+                        Optional.empty(), //enumValues
+                        Optional.of(false), //piiField
+                        Optional.of(true), //multiValued
+                        Optional.of(Analyzer.METAPHONE), //analyzer
+                        Optional.of(IndexType.BTREE) //postgresIndexType
+                ),
+                PropertyType(
+                        Optional.empty<UUID>(), //id
+                        FullQualifiedName(CONTACT), //fqn
+                        "Email", //title
+                        Optional.of("Email Address"), //description
+                        setOf<FullQualifiedName>(), //schemas
+                        EdmPrimitiveTypeKind.String, //dataType
+                        Optional.empty(), //enumValues
+                        Optional.of(false), //piiField
+                        Optional.of(true), //multiValued
+                        Optional.of(Analyzer.STANDARD), //analyzer
+                        Optional.of(IndexType.NONE) //postgresIndexType
+                ),
+                PropertyType(
+                        Optional.empty<UUID>(), //id
+                        FullQualifiedName(DESCRIPTION), //fqn
+                        "Description", //title
+                        Optional.of("Description"), //description
+                        setOf<FullQualifiedName>(), //schemas
+                        EdmPrimitiveTypeKind.String, //dataType
+                        Optional.empty(), //enumValues
+                        Optional.of(false), //piiField
+                        Optional.of(true), //multiValued
+                        Optional.of(Analyzer.METAPHONE), //analyzer
+                        Optional.of(IndexType.NONE) //postgresIndexType
+                ),
+                PropertyType(
+                        Optional.empty<UUID>(), //id
+                        FullQualifiedName(SQL), //fqn
+                        "SQL", //title
+                        Optional.of("SQL"), //description
+                        setOf<FullQualifiedName>(), //schemas
+                        EdmPrimitiveTypeKind.String, //dataType
+                        Optional.empty(), //enumValues
+                        Optional.of(false), //piiField
+                        Optional.of(true), //multiValued
+                        Optional.of(Analyzer.METAPHONE), //analyzer
+                        Optional.of(IndexType.BTREE) //postgresIndexType
+                ),
+                PropertyType(
+                        Optional.empty<UUID>(), //id
+                        FullQualifiedName(OWNER), //fqn
+                        "Owner", //title
+                        Optional.of("Owner of an external object"), //description
+                        setOf<FullQualifiedName>(), //schemas
+                        EdmPrimitiveTypeKind.String, //dataType
+                        Optional.empty(), //enumValues
+                        Optional.of(false), //piiField
+                        Optional.of(true), //multiValued
+                        Optional.of(Analyzer.STANDARD), //analyzer
+                        Optional.of(IndexType.NONE) //postgresIndexType
+                ),
+                PropertyType(
+                        Optional.empty<UUID>(), //id
+                        FullQualifiedName(TEXT), //fqn
+                        "Text (e.g., form content, information); reminder or statement text.", //title
+                        Optional.of(
+                                "Text of form; reminder text; text of statement to be administered to individual (write-in)."
+                        ), //description
+                        setOf<FullQualifiedName>(), //schemas
+                        EdmPrimitiveTypeKind.String, //dataType
+                        Optional.empty(), //enumValues
+                        Optional.of(false), //piiField
+                        Optional.of(true), //multiValued
+                        Optional.of(Analyzer.METAPHONE), //analyzer
+                        Optional.of(IndexType.NONE) //postgresIndexType
+                ),
+                PropertyType(
+                        Optional.empty<UUID>(), //id
+                        FullQualifiedName(PERMISSIONS), //fqn
+                        "Permissions", //title
+                        Optional.of("OpenLattice permissions"), //description
+                        setOf<FullQualifiedName>(), //schemas
+                        EdmPrimitiveTypeKind.String, //dataType
+                        Optional.empty(), //enumValues
+                        Optional.of(false), //piiField
+                        Optional.of(true), //multiValued
+                        Optional.of(Analyzer.METAPHONE), //analyzer
+                        Optional.of(IndexType.BTREE) //postgresIndexType
+                ),
+                PropertyType(
+                        Optional.empty<UUID>(), //id
+                        FullQualifiedName(ACLKEY), //fqn
+                        "Acl Key", //title
+                        Optional.of("An Acl Key for a securable object."), //description
+                        setOf<FullQualifiedName>(), //schemas
+                        EdmPrimitiveTypeKind.String, //dataType
+                        Optional.empty(), //enumValues
+                        Optional.of(false), //piiField
+                        Optional.of(true), //multiValued
+                        Optional.of(Analyzer.STANDARD), //analyzer
+                        Optional.of(IndexType.BTREE) //postgresIndexType
+                ),
+                PropertyType(
+                        Optional.empty<UUID>(), //id
+                        FullQualifiedName(STATUS), //fqn
+                        "General Status", //title
+                        Optional.of(
+                                "Status  (e.g., status of condition - active/present, inactive, resolved, in remission)"
+                        ), //description
+                        setOf<FullQualifiedName>(), //schemas
+                        EdmPrimitiveTypeKind.String, //dataType
+                        Optional.empty(), //enumValues
+                        Optional.of(false), //piiField
+                        Optional.of(true), //multiValued
+                        Optional.of(Analyzer.STANDARD), //analyzer
+                        Optional.of(IndexType.NONE) //postgresIndexType
+                ),
+                PropertyType(
+                        Optional.empty<UUID>(), //id
+                        FullQualifiedName(REQUEST_PRINCIPAL_ID), //fqn
+                        "Request Principal Id", //title
+                        Optional.of("Principal of user requesting access"), //description
+                        setOf<FullQualifiedName>(), //schemas
+                        EdmPrimitiveTypeKind.String, //dataType
+                        Optional.empty(), //enumValues
+                        Optional.of(false), //piiField
+                        Optional.of(true), //multiValued
+                        Optional.of(Analyzer.STANDARD), //analyzer
+                        Optional.of(IndexType.NONE) //postgresIndexType
+                ),
+                PropertyType(
+                        Optional.empty<UUID>(), //id
+                        FullQualifiedName(RESPONSE_PRINCIPAL_ID), //fqn
+                        "Response Principal Id", //title
+                        Optional.of("Response of user requesting access"), //description
+                        setOf<FullQualifiedName>(), //schemas
+                        EdmPrimitiveTypeKind.String, //dataType
+                        Optional.empty(), //enumValues
+                        Optional.of(false), //piiField
+                        Optional.of(true), //multiValued
+                        Optional.of(Analyzer.STANDARD), //analyzer
+                        Optional.of(IndexType.NONE) //postgresIndexType
+                ),
+                PropertyType(
+                        Optional.empty<UUID>(), //id
+                        FullQualifiedName(REQUEST_DATETIME), //fqn
+                        "Request Timestamp", //title
+                        Optional.of("Date and time request was submitted."), //description
+                        setOf<FullQualifiedName>(), //schemas
+                        EdmPrimitiveTypeKind.DateTimeOffset, //dataType
+                        Optional.empty(), //enumValues
+                        Optional.of(false), //piiField
+                        Optional.of(true), //multiValued
+                        Optional.of(Analyzer.STANDARD), //analyzer
+                        Optional.of(IndexType.BTREE) //postgresIndexType
+                ),
+                PropertyType(
+                        Optional.empty<UUID>(), //id
+                        FullQualifiedName(RESPONSE_DATETIME), //fqn
+                        "Response Timestamp", //title
+                        Optional.of("Date and time response was submitted."), //description
+                        setOf<FullQualifiedName>(), //schemas
+                        EdmPrimitiveTypeKind.DateTimeOffset, //dataType
+                        Optional.empty(), //enumValues
+                        Optional.of(false), //piiField
+                        Optional.of(true), //multiValued
+                        Optional.of(Analyzer.STANDARD), //analyzer
+                        Optional.of(IndexType.BTREE) //postgresIndexType
                 )
         )
 
@@ -558,6 +832,71 @@ class OrganizationEntitySetsService(
                 EntityType(
                         Optional.empty<UUID>(), //id
                         ORGANIZATION_METADATA_ET, //type
+                        "", //title
+                        Optional.of(""), //description
+                        setOf<FullQualifiedName>(), //schemas
+                        linkedSetOf<UUID>(), //key
+                        linkedSetOf<UUID>(), //properties
+                        Optional.empty<LinkedHashMap<UUID, LinkedHashSet<String>>>(), //propertyTags
+                        Optional.empty<UUID>(), //baseType
+                        Optional.empty<SecurableObjectType>(), //category
+                        Optional.empty<Int>() //shards
+                ),
+                EntityType(
+                        Optional.empty<UUID>(), //id
+                        DATASETS_ET, //type
+                        "", //title
+                        Optional.of(""), //description
+                        setOf<FullQualifiedName>(), //schemas
+                        linkedSetOf<UUID>(), //key
+                        linkedSetOf<UUID>(), //properties
+                        Optional.empty<LinkedHashMap<UUID, LinkedHashSet<String>>>(), //propertyTags
+                        Optional.empty<UUID>(), //baseType
+                        Optional.empty<SecurableObjectType>(), //category
+                        Optional.empty<Int>() //shards
+                ),
+                EntityType(
+                        Optional.empty<UUID>(), //id
+                        COLUMNS_ET, //type
+                        "", //title
+                        Optional.of(""), //description
+                        setOf<FullQualifiedName>(), //schemas
+                        linkedSetOf<UUID>(), //key
+                        linkedSetOf<UUID>(), //properties
+                        Optional.empty<LinkedHashMap<UUID, LinkedHashSet<String>>>(), //propertyTags
+                        Optional.empty<UUID>(), //baseType
+                        Optional.empty<SecurableObjectType>(), //category
+                        Optional.empty<Int>() //shards
+                ),
+                EntityType(
+                        Optional.empty<UUID>(), //id
+                        SCHEMAS_ET, //type
+                        "", //title
+                        Optional.of(""), //description
+                        setOf<FullQualifiedName>(), //schemas
+                        linkedSetOf<UUID>(), //key
+                        linkedSetOf<UUID>(), //properties
+                        Optional.empty<LinkedHashMap<UUID, LinkedHashSet<String>>>(), //propertyTags
+                        Optional.empty<UUID>(), //baseType
+                        Optional.empty<SecurableObjectType>(), //category
+                        Optional.empty<Int>() //shards
+                ),
+                EntityType(
+                        Optional.empty<UUID>(), //id
+                        VIEWS_ET, //type
+                        "", //title
+                        Optional.of(""), //description
+                        setOf<FullQualifiedName>(), //schemas
+                        linkedSetOf<UUID>(), //key
+                        linkedSetOf<UUID>(), //properties
+                        Optional.empty<LinkedHashMap<UUID, LinkedHashSet<String>>>(), //propertyTags
+                        Optional.empty<UUID>(), //baseType
+                        Optional.empty<SecurableObjectType>(), //category
+                        Optional.empty<Int>() //shards
+                ),
+                EntityType(
+                        Optional.empty<UUID>(), //id
+                        ACCESS_REQUEST_ET, //type
                         "", //title
                         Optional.of(""), //description
                         setOf<FullQualifiedName>(), //schemas
