@@ -66,11 +66,13 @@ class OrganizationsInitializationTask : HazelcastInitializationTask<Organization
                     organizationService.updateRoleGrant(orgPrincipal.id, roleId, grant)
                 }
             }
+
             logger.info(
                     "Expected id = {}, Actual id = {}",
                     GLOBAL_ORGANIZATION_ID.id,
                     orgPrincipal.id
             )
+
             require(GLOBAL_ORGANIZATION_ID.id == orgPrincipal.id) {
                 "Mistmatch in expected global org id and read global org id"
             }
