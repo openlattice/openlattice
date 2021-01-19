@@ -204,7 +204,7 @@ class OrganizationEntitySetsService(
         }
 
         val schemaEntitySetId = if (organizationMetadataEntitySetIds.schemas == UNINITIALIZED_METADATA_ENTITY_SET_ID) {
-            val schemasEntitySet = buildColumnEntitySet(organizationId)
+            val schemasEntitySet = buildSchemaEntitySet(organizationId)
             val id = entitySetsManager.createEntitySet(adminRole.principal, schemasEntitySet)
             createdEntitySets.add(id)
             id
@@ -587,7 +587,7 @@ class OrganizationEntitySetsService(
         private val DATASETS_ET = FullQualifiedName("ol.dataset")
         private val COLUMNS_ET = FullQualifiedName("ol.column")
         private val SCHEMAS_ET = FullQualifiedName("ol.dbschema")
-        private val VIEWS_ET = FullQualifiedName("ol.views")
+        private val VIEWS_ET = FullQualifiedName("ol.view")
         private val ACCESS_REQUEST_ET = FullQualifiedName("ol.accessrequest")
 
         private const val EXTERNAL_ID = "ol.externalid"
