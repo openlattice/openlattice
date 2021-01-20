@@ -537,8 +537,8 @@ class OrganizationEntitySetsService(
             organizationId = organizationId,
             entityTypeId = columnsEntityTypeId,
             name = buildColumnEntitySetName(organizationId),
-            _title = "Datasets for $organizationId",
-            _description = "Datasets for $organizationId",
+            _title = "Columns for $organizationId",
+            _description = "Columns for $organizationId",
             contacts = mutableSetOf(),
             flags = EnumSet.of(EntitySetFlag.METADATA)
     )
