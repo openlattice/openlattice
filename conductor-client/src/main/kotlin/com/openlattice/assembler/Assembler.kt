@@ -29,7 +29,6 @@ import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.hazelcast.query.QueryConstants
-import com.openlattice.assembler.PostgresRoles.Companion.buildExternalPrincipalId
 import com.openlattice.assembler.events.MaterializePermissionChangeEvent
 import com.openlattice.assembler.events.MaterializedEntitySetDataChangeEvent
 import com.openlattice.assembler.events.MaterializedEntitySetEdmChangeEvent
@@ -342,8 +341,8 @@ class Assembler(
         return OrganizationIntegrationAccount(account.username, account.credential)
     }
 
-    fun rollIntegrationAccount(aclKey: AclKey, principalType: PrincipalType): MaterializedViewAccount {
-        val externalDatabaseId = buildExternalPrincipalId(aclKey, principalType)
+    fun rollIntegrationAccount(aclKey: AclKey): MaterializedViewAccount {
+        val externalDatabaseId = dbCredentialService.getDbUsername(aclKey)
         val credential = dbCredentialService.rollCredential(aclKey)
         acm.updateCredentialInDatabase(externalDatabaseId, credential)
         return MaterializedViewAccount(externalDatabaseId, credential)
