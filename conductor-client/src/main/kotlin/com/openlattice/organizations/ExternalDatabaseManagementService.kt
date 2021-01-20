@@ -472,27 +472,31 @@ class ExternalDatabaseManagementService(
             externalDbManager.connectToOrg(orgId).connection.use { conn ->
                 conn.autoCommit = false
 
-                columnAclsByTableId.mapNotNull { e -> tables[e.key]?.let { it to e.value } }.forEach { (table, columnAcls) ->
+                columnAclsByTableId
+                        .mapNotNull { (tableId, columnAcls) -> tables[tableId]?.let { it to columnAcls } }
+                        .forEach { (table, columnAcls) ->
 
-                    columnAcls.mapNotNull { acl -> columnsById[acl.aclKey[1]]?.let { it.name to acl.aces } }.forEach { (columnName, aces) ->
+                            columnAcls
+                                    .mapNotNull { acl -> columnsById[acl.aclKey[1]]?.let { it.name to acl.aces } }
+                                    .forEach { (columnName, aces) ->
 
-                        conn.createStatement().use { stmt ->
-                            aces.mapNotNull { ace -> usernamesByPrincipal[ace.principal]?.let { it to ace.permissions } }.forEach { (dbUser, permissions) ->
+                                        val updateStatements = getUdpateStatementsForAces(
+                                                action,
+                                                table,
+                                                columnName,
+                                                aces,
+                                                usernamesByPrincipal
+                                        )
 
-                                //revoke any previous privileges before setting specified ones
-                                if (action == Action.SET) {
-                                    val revokeSql = createPrivilegesUpdateSql(Action.REMOVE, listOf("ALL"), table, columnName, dbUser)
-                                    stmt.addBatch(revokeSql)
-                                }
+                                        conn.createStatement().use { stmt ->
+                                            updateStatements.forEach { stmt.addBatch(it) }
 
-                                val grantSql = createPrivilegesUpdateSql(action, getPrivilegesFromPermissions(permissions), table, columnName, dbUser)
-                                stmt.addBatch(grantSql)
-                            }
-                            stmt.executeBatch()
-                            conn.commit()
+                                            stmt.executeBatch()
+                                            conn.commit()
+                                        }
+
+                                    }
                         }
-                    }
-                }
             }
         }
     }
@@ -582,16 +586,59 @@ class ExternalDatabaseManagementService(
         return columnNames.joinToString(", ") { "DROP COLUMN ${quote(it)}" }
     }
 
-    private fun createPrivilegesUpdateSql(action: Action, privileges: List<String>, table: OrganizationExternalDatabaseTable, columnName: String, dbUser: String): String {
-        val privilegesAsString = privileges.joinToString(separator = ", ")
+    private fun getUdpateStatementsForAces(
+            action: Action,
+            table: OrganizationExternalDatabaseTable,
+            columnName: String,
+            aces: Iterable<Ace>,
+            usernamesByPrincipal: Map<Principal, String>
+    ): List<String> {
+        val statements = mutableListOf<String>()
+
+        aces
+                .mapNotNull { ace -> usernamesByPrincipal[ace.principal]?.let { it to ace.permissions } }
+                .forEach { (username, permissions) ->
+
+                    //revoke any previous privileges before setting specified ones
+                    if (action == Action.SET) {
+                        statements.add(
+                                createPrivilegesUpdateSql(
+                                        Action.REMOVE,
+                                        "ALL",
+                                        table,
+                                        columnName,
+                                        username
+                                )
+                        )
+                    }
+
+                    statements.add(
+                            createPrivilegesUpdateSql(
+                                    action,
+                                    getPrivilegesFromPermissions(permissions).joinToString(),
+                                    table,
+                                    columnName,
+                                    username
+                            )
+                    )
+                }
+
+        return statements
+    }
+
+    private fun createPrivilegesUpdateSql(action: Action, privileges: String, table: OrganizationExternalDatabaseTable, columnName: String, dbUser: String): String {
         checkState(action == Action.REMOVE || action == Action.ADD || action == Action.SET,
                 "Invalid action $action specified")
+
         val tableInSchema = "${table.schema}.${quote(table.name)}"
-        return if (action == Action.REMOVE) {
-            "REVOKE $privilegesAsString (${quote(columnName)}) ON $tableInSchema FROM $dbUser"
+
+        val (grantType, toOrFrom) = if (action == Action.REMOVE) {
+            "REVOKE" to "FROM"
         } else {
-            "GRANT $privilegesAsString (${quote(columnName)}) ON $tableInSchema TO $dbUser"
+            "GRANT" to "TO"
         }
+
+        return "$grantType $privileges (${quote(columnName)}) ON $tableInSchema $toOrFrom $dbUser"
     }
 
     private fun getDbUsers(principals: Collection<Principal>): Map<Principal, String> {
