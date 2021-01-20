@@ -386,7 +386,12 @@ public class IndexerServicesPod {
 
     @Bean
     public OrganizationEntitySetsService organizationMetadataEntitySetsService() {
-        return new OrganizationEntitySetsService( dataModelService(), authorizationManager() );
+        return new OrganizationEntitySetsService(
+                hazelcastInstance,
+                dataModelService(),
+                principalService(),
+                authorizationManager()
+        );
     }
 
     @PostConstruct

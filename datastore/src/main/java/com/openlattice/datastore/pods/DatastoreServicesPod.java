@@ -69,6 +69,7 @@ import com.openlattice.edm.PostgresEdmManager;
 import com.openlattice.edm.properties.PostgresTypeManager;
 import com.openlattice.edm.schemas.SchemaQueryService;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
+import com.openlattice.external.ExternalSqlDatabasesManagementService;
 import com.openlattice.graph.Graph;
 import com.openlattice.graph.GraphQueryService;
 import com.openlattice.graph.PostgresGraphQueryService;
@@ -607,6 +608,19 @@ public class DatastoreServicesPod {
                 transporterDatastore,
                 dcs(),
                 hikariDataSource );
+    }
+
+    @Bean
+    public ExternalSqlDatabasesManagementService externalSqlDatabasesManagementService() {
+        return new ExternalSqlDatabasesManagementService(
+                hazelcastInstance,
+                principalService(),
+                aclKeyReservationService(),
+                authorizationManager(),
+                organizationMetadataEntitySetsService(),
+                dcs(),
+                hikariDataSource
+        );
     }
 
     @Bean
