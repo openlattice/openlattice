@@ -577,7 +577,7 @@ class OrganizationEntitySetsService(
     )
 
     private fun buildDatasetsEntitySetName(organizationId: UUID): String = quote("datasets-$organizationId")
-    private fun buildColumnEntitySetName(organizationId: UUID): String = quote("column-$organizationId")
+    private fun buildColumnEntitySetName(organizationId: UUID): String = quote("columns-$organizationId")
     private fun buildSchemasEntitySetName(organizationId: UUID): String = quote("schemas-$organizationId")
     private fun buildViewsEntitySetName(organizationId: UUID): String = quote("views-$organizationId")
     private fun buildAccessRequestsEntitySetName(organizationId: UUID): String = quote("access-requests-$organizationId")
