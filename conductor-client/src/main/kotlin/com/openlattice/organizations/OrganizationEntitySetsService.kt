@@ -222,7 +222,7 @@ class OrganizationEntitySetsService(
         }
 
         val accessRequestsEntitySetId = if (organizationMetadataEntitySetIds.accessRequests == UNINITIALIZED_METADATA_ENTITY_SET_ID) {
-            val accessRequestsEntitySet = buildViewsEntitySet(organizationId)
+            val accessRequestsEntitySet = buildAccessRequestEntitySet(organizationId)
             val id = entitySetsManager.createEntitySet(adminRole.principal, accessRequestsEntitySet)
             createdEntitySets.add(id)
             id
