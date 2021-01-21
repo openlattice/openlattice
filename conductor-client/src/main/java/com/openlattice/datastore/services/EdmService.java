@@ -184,15 +184,20 @@ public class EdmService implements EdmManager {
             Set<UUID> currSrc = Sets.newHashSet();
             Set<UUID> currDst = Sets.newHashSet();
 
-            Sets.intersection( associationType.getSrc(), entityTypeIds ).forEach( srcEntityTypeId -> {
-                currSrc.add( srcEntityTypeId );
-                currDst.addAll( associationType.getDst() );
-            } );
-
-            Sets.intersection( associationType.getDst(), entityTypeIds ).forEach( dstEntityTypeId -> {
+            if ( entityTypeIds.contains( associationType.getAssociationEntityType().getId() ) ) {
                 currSrc.addAll( associationType.getSrc() );
-                currDst.add( dstEntityTypeId );
-            } );
+                currDst.addAll( associationType.getDst() );
+            } else {
+                Sets.intersection( associationType.getSrc(), entityTypeIds ).forEach( srcEntityTypeId -> {
+                    currSrc.add( srcEntityTypeId );
+                    currDst.addAll( associationType.getDst() );
+                } );
+
+                Sets.intersection( associationType.getDst(), entityTypeIds ).forEach( dstEntityTypeId -> {
+                    currSrc.addAll( associationType.getSrc() );
+                    currDst.add( dstEntityTypeId );
+                } );
+            }
 
             src.addAll( currSrc );
             dst.addAll( currDst );
