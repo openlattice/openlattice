@@ -58,9 +58,11 @@ import com.openlattice.edm.type.PropertyType;
 import com.openlattice.edm.types.processors.*;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.hazelcast.HazelcastUtils;
+import com.openlattice.postgres.mapstores.AssociationTypeMapstore;
 import com.openlattice.postgres.mapstores.EntitySetMapstore;
 import com.openlattice.postgres.mapstores.EntityTypeMapstore;
 import com.openlattice.postgres.mapstores.EntityTypePropertyMetadataMapstore;
+import kotlin.Triple;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
@@ -153,17 +155,55 @@ public class EdmService implements EdmManager {
 
     public void ensureEntityTypeExists( UUID entityTypeId ) {
         Preconditions.checkState(
-                entityTypes.containsKey(entityTypeId),
+                entityTypes.containsKey( entityTypeId ),
                 "Entity type " + entityTypeId.toString() + " does not exist."
         );
     }
 
-
     public void ensurePropertyTypeExists( UUID propertyTypeId ) {
         Preconditions.checkState(
-                propertyTypes.containsKey(propertyTypeId),
+                propertyTypes.containsKey( propertyTypeId ),
                 "Property type " + propertyTypeId.toString() + " does not exist."
         );
+    }
+
+    @Override
+    public Triple<Set<UUID>, Set<UUID>, Set<UUID>> getSrcAssocDstInvolvingEntityTypes( Set<UUID> entityTypeIds ) {
+        Set<UUID> src = Sets.newHashSet();
+        Set<UUID> assoc = Sets.newHashSet();
+        Set<UUID> dst = Sets.newHashSet();
+
+        UUID[] entityTypeIdsArr = entityTypeIds.toArray( new UUID[] {} );
+        associationTypes.values( Predicates.or(
+                Predicates.in( AssociationTypeMapstore.ID_INDEX, entityTypeIdsArr ),
+                Predicates.in( AssociationTypeMapstore.SRC_INDEX, entityTypeIdsArr ),
+                Predicates.in( AssociationTypeMapstore.DST_INDEX, entityTypeIdsArr )
+        ) ).forEach( associationType -> {
+            assoc.add( associationType.getAssociationEntityType().getId() );
+
+            Set<UUID> currSrc = Sets.newHashSet();
+            Set<UUID> currDst = Sets.newHashSet();
+
+            Sets.intersection( associationType.getSrc(), entityTypeIds ).forEach( srcEntityTypeId -> {
+                currSrc.add( srcEntityTypeId );
+                currDst.addAll( associationType.getDst() );
+            } );
+
+            Sets.intersection( associationType.getDst(), entityTypeIds ).forEach( dstEntityTypeId -> {
+                currSrc.addAll( associationType.getSrc() );
+                currDst.add( dstEntityTypeId );
+            } );
+
+            src.addAll( currSrc );
+            dst.addAll( currDst );
+
+            if ( associationType.isBidirectional() ) {
+                src.addAll( currDst );
+                dst.addAll( currSrc );
+            }
+        } );
+
+        return new Triple<>( src, assoc, dst );
     }
 
     @Override
@@ -193,7 +233,7 @@ public class EdmService implements EdmManager {
 
     @Override
     public void deletePropertyType( UUID propertyTypeId ) {
-        Collection<EntityType> entityTypes = getEntityTypesContainPropertyType(propertyTypeId);
+        Collection<EntityType> entityTypes = getEntityTypesContainPropertyType( propertyTypeId );
         if ( entityTypes.stream().allMatch( et -> Iterables.isEmpty( getEntitySetIdsOfType( et.getId() ) ) ) ) {
             forceDeletePropertyType( propertyTypeId );
         } else {
@@ -692,7 +732,7 @@ public class EdmService implements EdmManager {
         propertyTypes.executeOnKey( propertyTypeId, new UpdatePropertyTypeMetadataProcessor( update ) );
         // get all entity sets containing the property type, and re-index them.
 
-        getEntityTypesContainPropertyType(propertyTypeId ).stream().forEach( et -> {
+        getEntityTypesContainPropertyType( propertyTypeId ).stream().forEach( et -> {
             List<PropertyType> properties = Lists
                     .newArrayList( propertyTypes.getAll( et.getProperties() ).values() );
             getEntitySetIdsOfType( et.getId() ).forEach( entitySetId -> {
