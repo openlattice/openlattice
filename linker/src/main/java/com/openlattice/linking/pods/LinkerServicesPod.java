@@ -212,7 +212,7 @@ public class LinkerServicesPod {
 
     @Bean
     public PostgresTypeManager entityTypeManager() {
-        return new PostgresTypeManager( hikariDataSource , hazelcastInstance );
+        return new PostgresTypeManager( hikariDataSource, hazelcastInstance );
     }
 
     @Bean
@@ -272,7 +272,10 @@ public class LinkerServicesPod {
 
     @Bean
     public OrganizationEntitySetsService organizationMetadataEntitySetsService() {
-        return new OrganizationEntitySetsService( dataModelService(), authorizationManager() );
+        return new OrganizationEntitySetsService( hazelcastInstance,
+                dataModelService(),
+                principalService(),
+                authorizationManager() );
     }
 
     @Bean
