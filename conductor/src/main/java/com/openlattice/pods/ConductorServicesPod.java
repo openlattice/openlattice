@@ -163,6 +163,9 @@ public class ConductorServicesPod {
     @Inject
     private ExternalDatabaseConnectionManager externalDbConnMan;
 
+    @Inject
+    public SecurePrincipalsManager principalService;
+
     @Bean
     public ObjectMapper defaultObjectMapper() {
         return ObjectMappers.getJsonMapper();
@@ -194,14 +197,6 @@ public class ConductorServicesPod {
     }
 
     @Bean
-    public SecurePrincipalsManager principalService() {
-        return new HazelcastPrincipalService( hazelcastInstance,
-                aclKeyReservationService(),
-                authorizationManager(),
-                eventBus );
-    }
-
-    @Bean
     public AuthorizationManager authorizationManager() {
         return new HazelcastAuthorizationService( hazelcastInstance, eventBus );
     }
@@ -230,7 +225,7 @@ public class ConductorServicesPod {
                 dbCredService(),
                 hikariDataSource,
                 authorizationManager(),
-                principalService(),
+                principalService,
                 metricRegistry,
                 hazelcastInstance,
                 eventBus
@@ -240,14 +235,14 @@ public class ConductorServicesPod {
     @Bean
     public OrganizationsInitializationDependencies organizationBootstrapDependencies() {
         return new OrganizationsInitializationDependencies( organizationsManager(),
-                principalService(),
+                principalService,
                 partitionManager(),
                 conductorConfiguration() );
     }
 
     @Bean
     public AuthorizationInitializationDependencies authorizationBootstrapDependencies() {
-        return new AuthorizationInitializationDependencies( principalService() );
+        return new AuthorizationInitializationDependencies( principalService );
     }
 
     @Bean
@@ -293,7 +288,7 @@ public class ConductorServicesPod {
     @Bean
     public AuditTaskDependencies auditTaskDependencies() {
         return new AuditTaskDependencies(
-                principalService(),
+                principalService,
                 entitySetManager(),
                 authorizationManager(),
                 partitionManager(),
@@ -306,7 +301,7 @@ public class ConductorServicesPod {
         return new AssemblerConnectionManager( assemblerConfiguration,
                 externalDbConnMan,
                 hikariDataSource,
-                principalService(),
+                principalService,
                 organizationsManager(),
                 dbCredService(),
                 eventBus,
@@ -324,7 +319,7 @@ public class ConductorServicesPod {
                 hazelcastInstance,
                 aclKeyReservationService(),
                 authorizationManager(),
-                principalService(),
+                principalService,
                 phoneNumberService(),
                 partitionManager(),
                 assembler(),
@@ -343,7 +338,7 @@ public class ConductorServicesPod {
 
     @Bean
     public Auth0SyncService auth0SyncService() {
-        return new Auth0SyncService( hazelcastInstance, principalService(), organizationsManager() );
+        return new Auth0SyncService( hazelcastInstance, principalService, organizationsManager() );
     }
 
     @Bean
@@ -562,7 +557,7 @@ public class ConductorServicesPod {
     @Bean
     public SubscriptionNotificationDependencies subscriptionNotificationDependencies() {
         return new SubscriptionNotificationDependencies( hikariDataSource,
-                principalService(),
+                principalService,
                 authorizationManager(),
                 authorizingComponent(),
                 mailServiceClient(),
@@ -617,7 +612,7 @@ public class ConductorServicesPod {
 
     @PostConstruct
     void initPrincipals() {
-        Principals.init( principalService(), hazelcastInstance );
+        Principals.init( principalService, hazelcastInstance );
         organizationMetadataEntitySetsService().dataGraphManager = dataGraphService();
     }
 }

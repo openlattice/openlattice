@@ -179,6 +179,9 @@ public class DatastoreServicesPod {
     @Inject
     private TransporterDatastore transporterDatastore;
 
+    @Inject
+    public SecurePrincipalsManager principalService;
+
     @Bean
     public PostgresUserApi pgUserApi() {
         return jdbi.onDemand( PostgresUserApi.class );
@@ -199,7 +202,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public Auth0SyncService auth0SyncService() {
-        return new Auth0SyncService( hazelcastInstance, principalService(), organizationsManager() );
+        return new Auth0SyncService( hazelcastInstance, principalService, organizationsManager() );
     }
 
     @Bean
@@ -307,7 +310,7 @@ public class DatastoreServicesPod {
                 dcs(),
                 hikariDataSource,
                 authorizationManager(),
-                principalService(),
+                principalService,
                 metricRegistry,
                 hazelcastInstance,
                 eventBus
@@ -325,14 +328,6 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    public SecurePrincipalsManager principalService() {
-        return new HazelcastPrincipalService( hazelcastInstance,
-                aclKeyReservationService(),
-                authorizationManager(),
-                eventBus );
-    }
-
-    @Bean
     public PhoneNumberService phoneNumberService() {
         return new PhoneNumberService( hazelcastInstance );
     }
@@ -343,7 +338,7 @@ public class DatastoreServicesPod {
                 hazelcastInstance,
                 aclKeyReservationService(),
                 authorizationManager(),
-                principalService(),
+                principalService,
                 phoneNumberService(),
                 partitionManager(),
                 assembler(),
@@ -430,7 +425,7 @@ public class DatastoreServicesPod {
                         dataModelService(),
                         organizationsManager(),
                         authorizationManager(),
-                        principalService(),
+                        principalService,
                         aclKeyReservationService(),
                         collectionsManager(),
                         entitySetManager()
@@ -502,7 +497,7 @@ public class DatastoreServicesPod {
                 assemblerConfiguration,
                 externalDbConnMan,
                 hikariDataSource,
-                principalService(),
+                principalService,
                 organizationsManager(),
                 dcs(),
                 eventBus,
@@ -511,7 +506,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public PersistentSearchService persistentSearchService() {
-        return new PersistentSearchService( hikariDataSource, principalService() );
+        return new PersistentSearchService( hikariDataSource, principalService );
     }
 
     @Bean AwsDataSinkService awsDataSinkService() {
@@ -597,7 +592,7 @@ public class DatastoreServicesPod {
         return new ExternalDatabaseManagementService(
                 hazelcastInstance,
                 externalDbConnMan,
-                principalService(),
+                principalService,
                 aclKeyReservationService(),
                 authorizationManager(),
                 organizationExternalDatabaseConfiguration,
@@ -615,7 +610,7 @@ public class DatastoreServicesPod {
                 dataModelService(),
                 dataGraphService(),
                 idService(),
-                principalService(),
+                principalService,
                 organizationsManager(),
                 collectionsManager(),
                 executor,
@@ -639,7 +634,7 @@ public class DatastoreServicesPod {
 
     @PostConstruct
     void initPrincipals() {
-        Principals.init( principalService(), hazelcastInstance );
+        Principals.init( principalService, hazelcastInstance );
         organizationMetadataEntitySetsService().dataGraphManager = dataGraphService();
     }
 }

@@ -133,6 +133,9 @@ public class IndexerServicesPod {
     @Inject
     private TransporterDatastore transporterDatastore;
 
+    @Inject
+    public SecurePrincipalsManager principalService;
+
     @Bean
     public ConductorElasticsearchApi elasticsearchApi() {
         return new ConductorElasticsearchImpl( indexerConfiguration.getSearchConfiguration() );
@@ -154,14 +157,6 @@ public class IndexerServicesPod {
     }
 
     @Bean
-    public SecurePrincipalsManager principalService() {
-        return new HazelcastPrincipalService( hazelcastInstance,
-                aclKeyReservationService(),
-                authorizationManager(),
-                eventBus );
-    }
-
-    @Bean
     public AuthorizationManager authorizationManager() {
         return new HazelcastAuthorizationService( hazelcastInstance, eventBus );
     }
@@ -172,7 +167,7 @@ public class IndexerServicesPod {
                 dbcs(),
                 hikariDataSource,
                 authorizationManager(),
-                principalService(),
+                principalService,
                 metricRegistry,
                 hazelcastInstance,
                 eventBus
@@ -185,7 +180,7 @@ public class IndexerServicesPod {
                 assemblerConfiguration,
                 externalDbConnMan,
                 hikariDataSource,
-                principalService(),
+                principalService,
                 organizationsManager(),
                 dbcs(),
                 eventBus,
@@ -209,7 +204,7 @@ public class IndexerServicesPod {
                 hazelcastInstance,
                 aclKeyReservationService(),
                 authorizationManager(),
-                principalService(),
+                principalService,
                 phoneNumberService(),
                 partitionManager(),
                 assembler(),
@@ -339,7 +334,7 @@ public class IndexerServicesPod {
         return new ExternalDatabaseManagementService(
                 hazelcastInstance,
                 externalDbConnMan,
-                principalService(),
+                principalService,
                 aclKeyReservationService(),
                 authorizationManager(),
                 organizationExternalDatabaseConfiguration,
@@ -391,6 +386,6 @@ public class IndexerServicesPod {
 
     @PostConstruct
     void initPrincipals() {
-        Principals.init( principalService(), hazelcastInstance );
+        Principals.init( principalService, hazelcastInstance );
     }
 }

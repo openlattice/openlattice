@@ -562,7 +562,7 @@ class ExternalDatabaseManagementService(
                 if (privileges.contains(PostgresPrivileges.INSERT) || privileges.contains(PostgresPrivileges.UPDATE))
                     permissions.add(Permission.WRITE)
             }
-            aces.executeOnKey(aceKey, PermissionMerger(permissions, objectType, OffsetDateTime.MAX))
+            authorizationManager.addPermission(aclKey, principal, permissions, objectType, OffsetDateTime.MAX)
             return@map Acl(aclKeyUUIDs, setOf(Ace(principal, permissions, Optional.empty())))
         }
     }

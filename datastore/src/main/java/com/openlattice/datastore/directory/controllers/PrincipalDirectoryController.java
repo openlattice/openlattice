@@ -268,7 +268,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
 
         //First remove from all organizations
         organizationService.removeMemberFromAllOrganizations( new Principal( PrincipalType.USER, userId ) );
-        SecurablePrincipal securablePrincipal = spm.getPrincipal( userId );
+        SecurablePrincipal securablePrincipal = spm.getSecurablePrincipal( userId );
         spm.deletePrincipal( securablePrincipal.getAclKey() );
 
         //Remove from materialized view account
