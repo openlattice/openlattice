@@ -2445,6 +2445,44 @@ paths:
       responses:
         "200":
           description: "Success"
+  /datastore/data/set/{entitySetId}/filtered:
+    post:
+      summary: Loads data in multiple pages
+      operationId: loadFilteredEntitySetData
+      parameters:
+        - name: entitySetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              items:
+                $ref: "#/components/schemas/FilteredDataPageDefinition"
+      tags:
+        - data
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: "A data search result object, containing the search results"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  additionalProperties:
+                    type: array
+                    items:
+                      type: string
+
 
   ############################
   ## DATA INTEGRATIONS APIs ##
@@ -2505,44 +2543,6 @@ paths:
                 items:
                   type: string
                   format: uuid
-  /datastore/data/set/{entitySetId}/filtered:
-    post:
-      summary: Loads data in multiple pages
-      operationId: loadFilteredEntitySetData
-      parameters:
-        - name: entitySetId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: array
-              items:
-                $ref: "#/components/schemas/FilteredDataPageDefinition"
-      tags:
-        - data
-      security:
-        - openlattice_auth: []
-        - http_auth: []
-      responses:
-        "200":
-          description: "A data search result object, containing the search results"
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  additionalProperties:
-                    type: array
-                    items:
-                      type: string
-
 
 
   #################
