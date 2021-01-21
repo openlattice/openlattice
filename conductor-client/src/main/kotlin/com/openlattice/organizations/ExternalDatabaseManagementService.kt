@@ -596,7 +596,7 @@ class ExternalDatabaseManagementService(
     }
 
     private fun getDBUser(principalId: String): String {
-        val securePrincipal = securePrincipalsManager.getPrincipal(principalId)
+        val securePrincipal = securePrincipalsManager.getSecurablePrincipal(principalId)
         checkState(securePrincipal.principalType == PrincipalType.USER, "Principal must be of type USER")
         return dbCredentialService.getDbUsername(securePrincipal)
     }

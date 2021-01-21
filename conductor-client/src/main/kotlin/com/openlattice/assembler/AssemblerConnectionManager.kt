@@ -266,7 +266,7 @@ class AssemblerConnectionManager(
 
     private fun createOrganizationDatabase(organizationId: UUID, dbName: String) {
         val db = quote(dbName)
-        val dbRole = buildOrganizationRoleName(dbName)
+        val dbRole = buildOrganizationRoleName(organizationId)
 
         val unquotedDbAdminUser = buildOrganizationUserId(organizationId)
 
@@ -300,7 +300,7 @@ class AssemblerConnectionManager(
     fun dropOrganizationDatabase(organizationId: UUID) {
         val dbName = extDbManager.getOrganizationDatabaseName(organizationId)
         val db = quote(dbName)
-        val dbRole = quote(buildOrganizationRoleName(dbName))
+        val dbRole = quote(buildOrganizationRoleName(organizationId))
         val dbAdminUser = quote(dbCredentialService.getDbUsername(AclKey(organizationId)))
 
         val dropDb = " DROP DATABASE $db"
@@ -324,115 +324,10 @@ class AssemblerConnectionManager(
         }
     }
 
-    fun materializeEntitySets(
-            organizationId: UUID,
-            authorizedPropertyTypesByEntitySet: Map<EntitySet, Map<UUID, PropertyType>>,
-            authorizedPropertyTypesOfPrincipalsByEntitySetId: Map<UUID, Map<Principal, Set<PropertyType>>>
-    ): Map<UUID, Set<OrganizationEntitySetFlag>> {
-        logger.info(
-                "Materializing entity sets ${authorizedPropertyTypesByEntitySet.keys.map { it.id }} in " +
-                        "organization $organizationId database."
-        )
-
-        materializeAllTimer.time().use {
-            extDbManager.connectToOrg(organizationId).let { datasource ->
-                materializeEntitySets(
-                        datasource,
-                        authorizedPropertyTypesByEntitySet,
-                        authorizedPropertyTypesOfPrincipalsByEntitySetId
-                )
-            }
-            return authorizedPropertyTypesByEntitySet
-                    .map { it.key.id to EnumSet.of(OrganizationEntitySetFlag.MATERIALIZED) }
-                    .toMap()
-        }
-    }
-
-
-    private fun materializeEntitySets(
-            dataSource: HikariDataSource,
-            materializablePropertyTypesByEntitySet: Map<EntitySet, Map<UUID, PropertyType>>,
-            authorizedPropertyTypesOfPrincipalsByEntitySetId: Map<UUID, Map<Principal, Set<PropertyType>>>
-    ) {
-        materializablePropertyTypesByEntitySet.forEach { (entitySet, _) ->
-            materialize(
-                    dataSource,
-                    entitySet,
-                    authorizedPropertyTypesOfPrincipalsByEntitySetId.getValue(entitySet.id)
-            )
-        }
-    }
-
-    /**
-     * Materializes an entity set on atlas.
-     */
-    private fun materialize(
-            dataSource: HikariDataSource,
-            entitySet: EntitySet,
-            authorizedPropertyTypesOfPrincipals: Map<Principal, Set<PropertyType>>
-    ) {
-        materializeEntitySetsTimer.time().use {
-            val tableName = entitySetNameTableName(entitySet.name)
-
-            dataSource.connection.use { connection ->
-                // first drop and create materialized view
-                logger.info("Materialized entity set ${entitySet.id}")
-
-                //Next we need to grant select on materialize view to everyone who has permission.
-                val selectGrantedResults = grantSelectForEntitySet(
-                        connection,
-                        tableName,
-                        entitySet.id,
-                        authorizedPropertyTypesOfPrincipals
-                )
-                logger.info(
-                        "Granted select for ${selectGrantedResults.filter { it >= 0 }.size} users/roles " +
-                                "on materialized view $tableName"
-                )
-            }
-        }
-    }
-
     private fun getSelectColumnsForMaterializedView(propertyTypes: Collection<PropertyType>): List<String> {
         return listOf(ENTITY_SET_ID.name, ID_VALUE.name, ENTITY_KEY_IDS_COL.name) + propertyTypes.map {
             quote(it.type.fullQualifiedNameAsString)
         }
-    }
-
-    private fun grantSelectForEntitySet(
-            connection: Connection,
-            tableName: String,
-            entitySetId: UUID,
-            authorizedPropertyTypesOfPrincipals: Map<Principal, Set<PropertyType>>
-    ): IntArray {
-        // prepare batch queries
-        return connection.createStatement().use { stmt ->
-            authorizedPropertyTypesOfPrincipals.forEach { (principal, propertyTypes) ->
-                val columns = getSelectColumnsForMaterializedView(propertyTypes)
-                try {
-                    val grantSelectSql = grantSelectSql(tableName, principal, columns)
-                    stmt.addBatch(grantSelectSql)
-                } catch (e: NoSuchElementException) {
-                    logger.error("Principal $principal does not exists but has permission on entity set $entitySetId")
-                }
-            }
-            stmt.executeBatch()
-        }
-    }
-
-    fun grantSelectForEdges(
-            stmt: Statement, tableName: String, entitySetIds: Set<UUID>, authorizedPrincipals: Set<Principal>
-    ): IntArray {
-        authorizedPrincipals.forEach {
-            try {
-                val grantSelectSql = grantSelectSql(tableName, it, listOf())
-                stmt.addBatch(grantSelectSql)
-            } catch (e: NoSuchElementException) {
-                logger.error("Principal $it does not exists but has permission on one of the entity sets $entitySetIds")
-            }
-        }
-
-        return stmt.executeBatch()
     }
 
     private fun grantSelectForNewMembers(
@@ -462,28 +357,6 @@ class AssemblerConnectionManager(
                     }
             stmt.executeBatch()
         }
-    }
-
-    /**
-     * Build grant select sql statement for a given table and principal with column level security.
-     * If properties (columns) are left empty, it will grant select on whole table.
-     */
-    @Throws(NoSuchElementException::class)
-    private fun grantSelectSql(
-            entitySetTableName: String,
-            principal: Principal,
-            columns: List<String>
-    ): String {
-        val postgresUserName = when (principal.type) {
-            PrincipalType.USER -> dbCredentialService.getDbUsername(securePrincipalsManager.getPrincipal(principal.id))
-            PrincipalType.ROLE -> buildPostgresRoleName(securePrincipalsManager.lookupRole(principal))
-            else -> throw IllegalArgumentException(
-                    "Only ${PrincipalType.USER} and ${PrincipalType.ROLE} principal " +
-                            "types can be granted select."
-            )
-        }
-
-        return grantSelectSql(entitySetTableName, quote(postgresUserName), columns)
     }
 
     /**
@@ -556,7 +429,7 @@ class AssemblerConnectionManager(
         val roles = getAllRoles()
 
         if (roles.isNotEmpty()) {
-            val roleIds = roles.map { buildPostgresRoleName(it) }
+            val roleIds = roles.map { buildPostgresRoleName(it.id) }
             val roleIdsSql = roleIds.joinToString { quote(it) }
 
             dataSource.connection.use { connection ->
@@ -586,7 +459,7 @@ class AssemblerConnectionManager(
     }
 
     fun createRole(role: Role) {
-        val dbRole = buildPostgresRoleName(role)
+        val dbRole = buildPostgresRoleName(role.id)
 
         atlas.connection.use { connection ->
             connection.createStatement().use { statement ->

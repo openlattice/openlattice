@@ -1,9 +1,9 @@
 package com.openlattice.assembler
 
 import com.openlattice.authorization.AclKey
+import com.openlattice.authorization.Permission
 import com.openlattice.authorization.PrincipalType
-import com.openlattice.organization.roles.Role
-import java.util.*
+import java.util.UUID
 
 private const val INTERNAL_PREFIX = "ol-internal"
 
@@ -13,14 +13,21 @@ private const val INTERNAL_PREFIX = "ol-internal"
  */
 class PostgresRoles private constructor() {
     companion object {
+
+        @JvmStatic
+        fun buildPermissionRoleName(tableId: UUID, columnId: UUID, permission: Permission): String {
+            return "permission_${tableId}_${columnId}_${permission.name.toLowerCase()}"
+//            return "$INTERNAL_PREFIX|permission|${role.id}"
+        }
+
         @JvmStatic
         fun buildOrganizationUserId(organizationId: UUID): String {
             return "$INTERNAL_PREFIX|organization|$organizationId"
         }
 
         @JvmStatic
-        fun buildPostgresRoleName(role: Role): String {
-            return "$INTERNAL_PREFIX|role|${role.id}"
+        fun buildPostgresRoleName(roleId: UUID): String {
+            return "$INTERNAL_PREFIX|role|$roleId"
         }
 
         @JvmStatic
@@ -29,8 +36,8 @@ class PostgresRoles private constructor() {
         }
 
         @JvmStatic
-        fun buildOrganizationRoleName(organizationDbName: String): String {
-            return "${organizationDbName}_role"
+        fun buildOrganizationRoleName(orgId: UUID): String {
+            return buildPostgresRoleName(orgId)
         }
 
     }

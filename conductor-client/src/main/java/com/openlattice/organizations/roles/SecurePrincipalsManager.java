@@ -53,8 +53,6 @@ public interface SecurePrincipalsManager {
      */
     SecurablePrincipal getSecurablePrincipal( AclKey aclKey );
 
-    @Nonnull SecurablePrincipal getPrincipal( String principalId );
-
     Collection<SecurablePrincipal> getAllRolesInOrganization( UUID organizationId );
 
     Map<UUID, Collection<SecurablePrincipal>> getAllRolesInOrganizations( Collection<UUID> organizationIds );
@@ -72,6 +70,11 @@ public interface SecurePrincipalsManager {
 
     void deleteAllRolesInOrganization( UUID organizationId );
 
+    /**
+     * This does not reflect principal changes in any external databases
+     */
+    void addInternalPrincipalToPrincipal( AclKey source, AclKey target);
+
     void addPrincipalToPrincipal( AclKey source, AclKey target );
 
     /**
@@ -87,6 +90,18 @@ public interface SecurePrincipalsManager {
 
     void removePrincipalsFromPrincipals( Set<AclKey> sources, Set<AclKey> target );
 
+    /**
+     * Reads
+     */
+
+    @Nonnull SecurablePrincipal getSecurablePrincipal( String principalId );
+
+    /**
+     * Retrieves a securable principal by acl key lookup.
+     *
+     * @param aclKey The acl key for the securable principal.
+     * @return The securable principal identified by acl key.
+     */
     Collection<SecurablePrincipal> getAllPrincipalsWithPrincipal( AclKey aclKey );
 
     Collection<SecurablePrincipal> getParentPrincipalsOfPrincipal( AclKey aclKey );
