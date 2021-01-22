@@ -742,15 +742,5 @@ class HazelcastOrganizationService(
                     Optional.of("Administrators of this organization")
             )
         }
-
-        private fun getOrganizationPredicate(organizationId: UUID): Predicate<AclKey, SecurablePrincipal> {
-            return Predicates.and(
-                    Predicates.equal<UUID, Organization>(
-                            PrincipalMapstore.PRINCIPAL_TYPE_INDEX,
-                            PrincipalType.ORGANIZATION
-                    ),
-                    Predicates.equal<UUID, Organization>(PrincipalMapstore.ACL_KEY_ROOT_INDEX, organizationId)
-            )
-        }
     }
 }
