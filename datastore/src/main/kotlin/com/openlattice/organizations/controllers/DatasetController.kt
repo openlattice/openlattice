@@ -141,7 +141,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
             @PathVariable(TABLE_ID) tableId: UUID
     ): String? {
         ensureReadAccess(AclKey(tableId))
-        return edms.getExternalDatabaseTableSchema(organizationId, tableId)
+        return edms.getOrganizationExternalDatabaseTable(tableId).schema
     }
 
     @Timed
