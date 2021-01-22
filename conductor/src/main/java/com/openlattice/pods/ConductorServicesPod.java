@@ -97,6 +97,7 @@ import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.organizations.tasks.OrganizationsInitializationDependencies;
 import com.openlattice.organizations.tasks.OrganizationsInitializationTask;
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
+import com.openlattice.postgres.external.ExternalDatabasePermissioningService;
 import com.openlattice.postgres.tasks.PostgresMetaDataPropertiesInitializationDependency;
 import com.openlattice.postgres.tasks.PostgresMetaDataPropertiesInitializationTask;
 import com.openlattice.scheduling.ScheduledTaskService;
@@ -165,6 +166,9 @@ public class ConductorServicesPod {
 
     @Inject
     public SecurePrincipalsManager principalService;
+
+    @Inject
+    private ExternalDatabasePermissioningService extDatabasePermsManager;
 
     @Bean
     public ObjectMapper defaultObjectMapper() {
@@ -304,6 +308,7 @@ public class ConductorServicesPod {
                 principalService,
                 organizationsManager(),
                 dbCredService(),
+                extDatabasePermsManager,
                 eventBus,
                 metricRegistry );
     }

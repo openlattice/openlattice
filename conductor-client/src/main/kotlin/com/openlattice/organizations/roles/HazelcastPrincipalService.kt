@@ -192,7 +192,7 @@ class HazelcastPrincipalService(
     override fun addPrincipalToPrincipals(source: AclKey, targets: Set<AclKey>): Set<AclKey> {
         ensurePrincipalsExist(targets + setOf(source))
 
-        logger.info("about to add principal $source to each of ${targets.joinToString()}")
+        logger.debug("about to add principal $source to each of ${targets.joinToString()}")
         val updatedKeys = principalTrees
                 .executeOnKeys(targets, AddPrincipalToPrincipalEntryProcessor(source))
                 .values

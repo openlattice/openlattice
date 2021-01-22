@@ -78,6 +78,7 @@ import com.openlattice.organizations.pods.OrganizationExternalDatabaseConfigurat
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
+import com.openlattice.postgres.external.ExternalDatabasePermissioningService;
 import com.openlattice.scrunchie.search.ConductorElasticsearchImpl;
 import com.openlattice.transporter.types.TransporterDatastore;
 import com.zaxxer.hikari.HikariDataSource;
@@ -136,6 +137,9 @@ public class IndexerServicesPod {
     @Inject
     public SecurePrincipalsManager principalService;
 
+    @Inject
+    private ExternalDatabasePermissioningService extDatabasePermsManager;
+
     @Bean
     public ConductorElasticsearchApi elasticsearchApi() {
         return new ConductorElasticsearchImpl( indexerConfiguration.getSearchConfiguration() );
@@ -183,6 +187,7 @@ public class IndexerServicesPod {
                 principalService,
                 organizationsManager(),
                 dbcs(),
+                extDatabasePermsManager,
                 eventBus,
                 metricRegistry
         );

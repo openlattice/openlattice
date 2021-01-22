@@ -88,6 +88,7 @@ import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.PostgresTableManager;
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
+import com.openlattice.postgres.external.ExternalDatabasePermissioningService;
 import com.openlattice.requests.HazelcastRequestsManager;
 import com.openlattice.requests.RequestQueryService;
 import com.openlattice.search.PersistentSearchService;
@@ -181,6 +182,9 @@ public class DatastoreServicesPod {
 
     @Inject
     public SecurePrincipalsManager principalService;
+
+    @Inject
+    private ExternalDatabasePermissioningService extDatabasePermsManager;
 
     @Bean
     public PostgresUserApi pgUserApi() {
@@ -500,6 +504,7 @@ public class DatastoreServicesPod {
                 principalService,
                 organizationsManager(),
                 dcs(),
+                extDatabasePermsManager,
                 eventBus,
                 metricRegistry );
     }

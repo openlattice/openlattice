@@ -42,6 +42,8 @@ import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.E
 import com.openlattice.postgres.PostgresTable.PRINCIPALS
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
+import com.openlattice.postgres.external.ExternalDatabasePermissioner
+import com.openlattice.postgres.external.ExternalDatabasePermissioningService
 import com.openlattice.principals.RoleCreatedEvent
 import com.openlattice.principals.UserCreatedEvent
 import com.openlattice.transporter.types.TransporterDatastore.Companion.ORG_FOREIGN_TABLES_SCHEMA
@@ -68,15 +70,12 @@ class AssemblerConnectionManager(
         private val securePrincipalsManager: SecurePrincipalsManager,
         private val organizations: HazelcastOrganizationService,
         private val dbCredentialService: DbCredentialService,
+        val extDbPermissioner: ExternalDatabasePermissioningService,
         eventBus: EventBus,
         metricRegistry: MetricRegistry
 ) {
 
     private val atlas: HikariDataSource = extDbManager.connect("postgres")
-    private val materializeAllTimer: Timer =
-            metricRegistry.timer(name(AssemblerConnectionManager::class.java, "materializeAll"))
-    private val materializeEntitySetsTimer: Timer =
-            metricRegistry.timer(name(AssemblerConnectionManager::class.java, "materializeEntitySets"))
 
     init {
         eventBus.register(this)
@@ -129,12 +128,12 @@ class AssemblerConnectionManager(
 
     @Subscribe
     fun handleUserCreated(userCreatedEvent: UserCreatedEvent) {
-        createUnprivilegedUser(userCreatedEvent.user)
+        extDbPermissioner.createUnprivilegedUser(userCreatedEvent.user)
     }
 
     @Subscribe
     fun handleRoleCreated(roleCreatedEvent: RoleCreatedEvent) {
-        createRole(roleCreatedEvent.role)
+        extDbPermissioner.createRole(roleCreatedEvent.role)
     }
 
     /**
@@ -265,31 +264,22 @@ class AssemblerConnectionManager(
     }
 
     private fun createOrganizationDatabase(organizationId: UUID, dbName: String) {
+        val (dbOrgRole, dbAdminUserPassword) = dbCredentialService.getOrCreateOrganizationAccount(AclKey(organizationId))
+        val createOrgDbUser = createUserIfNotExistsSql(dbOrgRole, dbAdminUserPassword)
+
         val db = quote(dbName)
-        val dbRole = buildOrganizationRoleName(organizationId)
-
-        val unquotedDbAdminUser = buildOrganizationUserId(organizationId)
-
-        val (dbOrgUser, dbAdminUserPassword) = dbCredentialService.getOrCreateDbAccount(AclKey(organizationId), true)
-
-        val createOrgDbRole = createRoleIfNotExistsSql(dbRole)
-        val createOrgDbUser = createUserIfNotExistsSql(unquotedDbAdminUser, dbAdminUserPassword)
-
-        val grantRole = "GRANT ${quote(dbRole)} TO ${quote(dbOrgUser)}"
         val createDb = "CREATE DATABASE $db"
         val revokeAll = "REVOKE ALL ON DATABASE $db FROM $PUBLIC_ROLE"
 
-        //We connect to default db in order to do initial db setup
+//        We connect to default db in order to do initial db setup
         atlas.connection.use { connection ->
             connection.createStatement().use { statement ->
-                statement.execute(createOrgDbRole)
                 statement.execute(createOrgDbUser)
-                statement.execute(grantRole)
                 if (!exists(dbName)) {
                     statement.execute(createDb)
                     statement.execute(
                             "GRANT ${MEMBER_ORG_DATABASE_PERMISSIONS.joinToString(", ")} " +
-                                    "ON DATABASE $db TO ${quote(dbOrgUser)}"
+                                    "ON DATABASE $db TO ${quote(dbOrgRole)}"
                     )
                 }
                 statement.execute(revokeAll)
@@ -454,44 +444,6 @@ class AssemblerConnectionManager(
                 dbCredentialService.deletePrincipalDbAccount(user)
                 //Don't allow users to access public schema which will contain foreign data wrapper tables.
                 logger.info("Revoking $PUBLIC_SCHEMA schema right from user {}", user)
-            }
-        }
-    }
-
-    fun createRole(role: Role) {
-        val dbRole = buildPostgresRoleName(role.id)
-
-        atlas.connection.use { connection ->
-            connection.createStatement().use { statement ->
-                statement.execute(createRoleIfNotExistsSql(dbRole))
-                //Don't allow users to access public schema which will contain foreign data wrapper tables.
-                logger.info("Revoking $PUBLIC_SCHEMA schema right from role: {}", role)
-                statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM ${quote(dbRole)}")
-            }
-        }
-    }
-
-    fun createUnprivilegedUser(user: SecurablePrincipal) {
-        /**
-         * To simplify work-around for ESRI username limitations, we are only introducing one additional
-         * field into the dbcreds table. We keep the results of calling [buildPostgresUsername] as the lookup
-         * key, but instead use the username and password returned from the db credential service.
-         */
-        val (dbUser, dbUserPassword) = dbCredentialService.getOrCreateDbAccount(user)
-
-        atlas.connection.use { connection ->
-            connection.createStatement().use { statement ->
-                //TODO: Go through every database and for old users clean them out.
-//                    logger.info("Attempting to drop owned by old name {}", user.name)
-//                    statement.execute(dropOwnedIfExistsSql(user.name))
-//                    logger.info("Attempting to drop user {}", user.name)
-//                    statement.execute(dropUserIfExistsSql(user.name)) //Clean out the old users.
-//                    logger.info("Creating new user {}", dbUser)
-                logger.info("Creating user if not exists {}", dbUser)
-                statement.execute(createUserIfNotExistsSql(dbUser, dbUserPassword))
-                //Don't allow users to access public schema which will contain foreign data wrapper tables.
-                logger.info("Revoking $PUBLIC_SCHEMA schema right from user {}", user)
-                statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM ${quote(dbUser)}")
             }
         }
     }

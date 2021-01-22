@@ -65,12 +65,14 @@ class ExternalDatabasePermissioner(
     }
 
     override fun createRole(role: Role) {
-        val dbRole = PostgresRoles.buildPostgresRoleName(role.id)
+        val (dbRole, _) = dbCredentialService.getOrCreateRoleAccount(role)
+
+        logger.debug("Creating role if not exists {}", dbRole)
         atlas.connection.use { connection ->
             connection.createStatement().use { statement ->
                 statement.execute(createRoleIfNotExistsSql(dbRole))
                 //Don't allow users to access public schema which will contain foreign data wrapper tables.
-                logger.info("Revoking ${Schemas.PUBLIC_SCHEMA} schema right from role: {}", role)
+                logger.debug("Revoking ${Schemas.PUBLIC_SCHEMA} schema right from role: {}", role)
                 statement.execute("REVOKE USAGE ON SCHEMA ${Schemas.PUBLIC_SCHEMA} FROM ${DataTables.quote(dbRole)}")
             }
         }
@@ -84,6 +86,7 @@ class ExternalDatabasePermissioner(
          */
         val (dbUser, dbUserPassword) = dbCredentialService.getOrCreateDbAccount(principal)
 
+        logger.debug("Creating user if not exists {}", dbUser)
         atlas.connection.use { connection ->
             connection.createStatement().use { statement ->
                 //TODO: Go through every database and for old users clean them out.
@@ -92,10 +95,9 @@ class ExternalDatabasePermissioner(
 //                    logger.info("Attempting to drop user {}", user.name)
 //                    statement.execute(dropUserIfExistsSql(user.name)) //Clean out the old users.
 //                    logger.info("Creating new user {}", dbUser)
-                logger.info("Creating user if not exists {}", dbUser)
                 statement.execute(createUserIfNotExistsSql(dbUser, dbUserPassword))
                 //Don't allow users to access public schema which will contain foreign data wrapper tables.
-                logger.info("Revoking ${Schemas.PUBLIC_SCHEMA} schema right from user {}", principal)
+                logger.debug("Revoking ${Schemas.PUBLIC_SCHEMA} schema right from user {}", principal)
                 statement.execute("REVOKE USAGE ON SCHEMA ${Schemas.PUBLIC_SCHEMA} FROM ${DataTables.quote(dbUser)}")
             }
         }
@@ -110,8 +112,7 @@ class ExternalDatabasePermissioner(
 
         val sourceRole = dbCredentialService.getDbUsername(sourcePrincipalAclKey)
 
-        logger.info("attempting to grant $sourceRole to ${targetPrincipalAclKeys.joinToString()}")
-        logger.info("attempting to grant $sourceRole to $grantTargets")
+        logger.debug("attempting to grant $sourceRole to $grantTargets")
         atlas.connection.use { connection ->
             connection.createStatement().use { stmt ->
                 stmt.execute(grantRoleToRole(sourceRole, grantTargets))
@@ -133,9 +134,7 @@ class ExternalDatabasePermissioner(
     }
 
     private fun principalsToPostgresRoleNames(principals: Set<AclKey>): String {
-        return principals.joinToString { aclKey ->
-            PostgresRoles.buildPostgresRoleName( principalsMapManager.getSecurablePrincipal(aclKey)!!.id )
-        }
+        return dbCredentialService.getDbUsernames(principals).joinToString()
     }
 
     /**

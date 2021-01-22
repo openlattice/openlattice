@@ -56,6 +56,7 @@ import com.openlattice.organizations.OrganizationMetadataEntitySetsService;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
+import com.openlattice.postgres.external.ExternalDatabasePermissioningService;
 import com.openlattice.scrunchie.search.ConductorElasticsearchImpl;
 import com.zaxxer.hikari.HikariDataSource;
 import org.deeplearning4j.nn.modelimport.keras.KerasModelImport;
@@ -109,6 +110,9 @@ public class LinkerServicesPod {
 
     @Inject
     public SecurePrincipalsManager principalService;
+
+    @Inject
+    private ExternalDatabasePermissioningService extDatabasePermsManager;
 
     @Bean
     public PartitionManager partitionManager() {
@@ -167,6 +171,7 @@ public class LinkerServicesPod {
                 principalService,
                 organizationsManager(),
                 dbcs(),
+                extDatabasePermsManager,
                 eventBus,
                 metricRegistry
         );
