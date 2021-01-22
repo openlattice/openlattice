@@ -7,11 +7,6 @@ import java.util.*
 
 private val logger = LoggerFactory.getLogger(ExternalDatabaseTableEntryProcessor::class.java)
 
-/**
- *
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
- */
-
 class ExternalDatabaseTableEntryProcessor(
         val update: (OrganizationExternalDatabaseTable) -> Result
 ) : AbstractRhizomeEntryProcessor<UUID, OrganizationExternalDatabaseTable, Any?>() {
