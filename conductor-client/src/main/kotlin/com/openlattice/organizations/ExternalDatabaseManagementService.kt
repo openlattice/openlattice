@@ -15,6 +15,7 @@ import com.openlattice.edm.processors.GetEntityTypeFromEntitySetEntryProcessor
 import com.openlattice.edm.processors.GetFqnFromPropertyTypeEntryProcessor
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.hazelcast.processors.organizations.ExternalDatabaseTableEntryProcessor
 import com.openlattice.hazelcast.processors.organizations.UpdateOrganizationExternalDatabaseColumnEntryProcessor
 import com.openlattice.hazelcast.processors.organizations.UpdateOrganizationExternalDatabaseTableEntryProcessor
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
@@ -39,7 +40,6 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.io.BufferedOutputStream
 import java.io.IOException
-import java.lang.IllegalArgumentException
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
@@ -743,11 +743,11 @@ class ExternalDatabaseManagementService(
             }
         }
 
-        organizationExternalDatabaseTables.executeOnKey(singletonTableSet.first()) {
-            val table = it.value
-            table.schema = OPENLATTICE_SCHEMA
-            it.setValue(table)
-        }
+        val table = singletonTableSet.first()
+        organizationExternalDatabaseTables.executeOnKey(table, ExternalDatabaseTableEntryProcessor {
+            it.schema = OPENLATTICE_SCHEMA
+            ExternalDatabaseTableEntryProcessor.Result()
+        })
     }
 
     /*INTERNAL SQL QUERIES*/
@@ -865,7 +865,7 @@ class ExternalDatabaseManagementService(
     }
 
     private fun publishStagingTableSql(tableName: String): String {
-        return "ALTER TABLE ${quote(tableName)} SET SCHEMA $OPENLATTICE_SCHEMA"
+        return "ALTER TABLE $STAGING_SCHEMA.${quote(tableName)} SET SCHEMA $OPENLATTICE_SCHEMA"
     }
 
 }
