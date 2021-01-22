@@ -431,19 +431,20 @@ class ExternalDatabaseManagementService(
     /**
      * Sets privileges for a user on an organization's column
      */
-    fun executePrivilegesUpdate(action: Action, ungroupedColumnAcls: List<Acl>) {
-        ensurePermissionsAreValid(ungroupedColumnAcls)
+    fun executePrivilegesUpdate(action: Action, columnAclList: List<Acl>) {
+        ensurePermissionsAreValid(columnAclList)
 
-        val columnIds = ungroupedColumnAcls.map { it.aclKey[1] }.toSet()
-        val columnsById = organizationExternalDatabaseColumns.getAll(columnIds)
-        val columnAclsByOrg = ungroupedColumnAcls.groupBy {
+        val columnsById = organizationExternalDatabaseColumns.getAll(
+                columnAclList.map { it.aclKey[1] }.toSet()
+        )
+        val columnAclsByOrg = columnAclList.groupBy {
             columnsById.getValue(it.aclKey[1]).organizationId
         }
 
-        val usernamesByPrincipal = getDbUsers(ungroupedColumnAcls.flatMap { it.aces.map { ace -> ace.principal } })
+        val usernamesByPrincipal = getDbUsers(columnAclList.flatMap { it.aces.map { ace -> ace.principal } })
 
-        columnAclsByOrg.forEach { (orgId, columnAclsByTable) ->
-            val columnAclsByTableId = columnAclsByTable.groupBy { it.aclKey.first() }
+        columnAclsByOrg.forEach { (orgId, orgColumnAclsList) ->
+            val columnAclsByTableId = orgColumnAclsList.groupBy { it.aclKey.first() }
 
             val tables = organizationExternalDatabaseTables.getAll(columnAclsByTableId.keys)
 
