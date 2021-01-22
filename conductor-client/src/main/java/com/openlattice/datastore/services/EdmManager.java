@@ -31,6 +31,7 @@ import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.EntityTypePropertyMetadata;
 import com.openlattice.edm.type.PropertyType;
+import kotlin.Triple;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 import javax.annotation.Nullable;
@@ -183,4 +184,6 @@ public interface EdmManager {
     void ensureEntityTypeExists( UUID entityTypeId );
 
     void ensurePropertyTypeExists( UUID propertyTypeId );
+
+    Triple<Set<UUID>, Set<UUID>, Set<UUID>> getSrcAssocDstInvolvingEntityTypes( Set<UUID> entityTypeIds );
 }
