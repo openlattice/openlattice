@@ -22,6 +22,7 @@ import static com.openlattice.postgres.PostgresTable.ASSOCIATION_TYPES;
 
 public class AssociationTypeMapstore extends AbstractBasePostgresMapstore<UUID, AssociationType> {
 
+    public static final String ID_INDEX = "__key";
     public static final String SRC_INDEX = "src[any]";
     public static final String DST_INDEX = "dst[any]";
 
@@ -61,6 +62,7 @@ public class AssociationTypeMapstore extends AbstractBasePostgresMapstore<UUID, 
 
     @Override public MapConfig getMapConfig() {
         return super.getMapConfig()
+                .addIndexConfig( new IndexConfig( IndexType.HASH, ID_INDEX) )
                 .addIndexConfig( new IndexConfig( IndexType.HASH, SRC_INDEX) )
                 .addIndexConfig( new IndexConfig( IndexType.HASH, DST_INDEX) );
     }
