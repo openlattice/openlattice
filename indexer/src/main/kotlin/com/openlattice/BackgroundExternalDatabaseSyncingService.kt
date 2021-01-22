@@ -161,11 +161,15 @@ class BackgroundExternalDatabaseSyncingService(
 
         val existingColumnIdsByName = reservationService.getIdsByFqn(tableColNames)
 
-        return tableCols.groupBy { existingColumnIdsByName.contains(it.getUniqueName()) }.flatMap { (shouldCreate, cols) ->
-            if (shouldCreate) {
-                createColumns(table, cols, ownerAclKeys)
-            } else {
+        return tableCols.groupBy { existingColumnIdsByName.contains(it.getUniqueName()) }.flatMap { (shouldUpdate, cols) ->
+            if (cols.isEmpty()) {
+                return@flatMap listOf<OrganizationExternalDatabaseColumn>()
+            }
+
+            if (shouldUpdate) {
                 updateColumns(cols, existingColumnIdsByName)
+            } else {
+                createColumns(table, cols, ownerAclKeys)
             }
         }.map { it.id }.toSet()
     }
