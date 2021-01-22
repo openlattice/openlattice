@@ -647,7 +647,7 @@ public final class ResultSetAdapters {
         FullQualifiedName fqn = fqn( rs );
         EdmPrimitiveTypeKind datatype = datatype( rs );
         String title = title( rs );
-        Optional<String> description = Optional.ofNullable( description( rs ) );
+        Optional<String> description = Optional.of( description( rs ) );
         Optional<Set<String>> enumValues = Optional.ofNullable( enumValues( rs ) );
         Set<FullQualifiedName> schemas = schemas( rs );
         Optional<Boolean> pii = Optional.ofNullable( pii( rs ) );
@@ -681,7 +681,7 @@ public final class ResultSetAdapters {
         UUID id = id( rs );
         FullQualifiedName fqn = fqn( rs );
         String title = title( rs );
-        Optional<String> description = Optional.ofNullable( description( rs ) );
+        Optional<String> description = Optional.of( description( rs ) );
         Set<FullQualifiedName> schemas = schemas( rs );
         LinkedHashSet<UUID> key = key( rs );
         LinkedHashSet<UUID> properties = properties( rs );
@@ -869,7 +869,7 @@ public final class ResultSetAdapters {
         UUID id = id( rs );
         String name = name( rs );
         String title = title( rs );
-        Optional<String> description = Optional.ofNullable( description( rs ) );
+        Optional<String> description = Optional.of( description( rs ) );
         UUID entityTypeCollectionId = entityTypeCollectionId( rs );
         String url = url( rs );
         Set<AppRole> appRoles = appRoles( rs );
@@ -1051,7 +1051,7 @@ public final class ResultSetAdapters {
         UUID id = id( rs );
         FullQualifiedName type = fqn( rs );
         String title = title( rs );
-        Optional<String> description = Optional.ofNullable( description( rs ) );
+        Optional<String> description = Optional.of( description( rs ) );
         Set<FullQualifiedName> schemas = schemas( rs );
         LinkedHashSet<CollectionTemplateType> template = template( rs );
 
@@ -1062,7 +1062,7 @@ public final class ResultSetAdapters {
         UUID id = id( rs );
         String name = name( rs );
         String title = title( rs );
-        Optional<String> description = Optional.ofNullable( description( rs ) );
+        Optional<String> description = Optional.of( description( rs ) );
         UUID entityTypeCollectionId = entityTypeCollectionId( rs );
         Set<String> contacts = contacts( rs );
         UUID organizationId = organizationId( rs );
@@ -1089,7 +1089,7 @@ public final class ResultSetAdapters {
         UUID id = id( rs );
         String name = name( rs );
         String title = title( rs );
-        Optional<String> description = Optional.ofNullable( description( ( rs ) ) );
+        Optional<String> description = Optional.of( description( ( rs ) ) );
         String externalId = externalId( rs );
         UUID organizationId = organizationId( rs );
         UUID dataSourceId = dataSourceId( rs );
@@ -1108,7 +1108,7 @@ public final class ResultSetAdapters {
         UUID id = id( rs );
         String name = name( rs );
         String title = title( rs );
-        Optional<String> description = Optional.ofNullable( description( ( rs ) ) );
+        Optional<String> description = Optional.of( description( ( rs ) ) );
         String externalId = externalId( rs );
         UUID organizationId = organizationId( rs );
         UUID dataSourceId = dataSourceId( rs );
@@ -1127,7 +1127,7 @@ public final class ResultSetAdapters {
         UUID id = id( rs );
         String name = name( rs );
         String title = title( rs );
-        Optional<String> description = Optional.ofNullable( description( ( rs ) ) );
+        Optional<String> description = Optional.of( description( ( rs ) ) );
         String externalId = externalId( rs );
         UUID organizationId = organizationId( rs );
         UUID dataSourceId = dataSourceId( rs );
@@ -1146,7 +1146,7 @@ public final class ResultSetAdapters {
         UUID id = id( rs );
         String name = name( rs );
         String title = title( rs );
-        Optional<String> description = Optional.ofNullable( description( ( rs ) ) );
+        Optional<String> description = Optional.of( description( ( rs ) ) );
         String externalId = externalId( rs );
         UUID tableId = tableId( rs );
         UUID organizationId = organizationId( rs );

@@ -7,6 +7,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.openlattice.authorization.securable.AbstractSecurableObject
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.client.serialization.SerializationConstants
+import java.io.Serializable
 import java.util.*
 
 /**
@@ -21,6 +22,7 @@ class JdbcConnection
  *
  * @param roleManagementEnabled Flags whether this connection be used for managing users and roles in the database.
  */
+@JvmOverloads
 constructor(
         @JsonProperty(SerializationConstants.ID_FIELD) id: Optional<UUID>,
         @JsonProperty(SerializationConstants.TITLE_FIELD) title: String,
@@ -32,7 +34,14 @@ constructor(
         @JsonProperty(SerializationConstants.ROLE_MANAGEMENT_ENABLED) val roleManagementEnabled: Boolean = false,
         @JsonProperty(SerializationConstants.PROPERTIES_FIELD) val properties: Properties = Properties(),
         @JsonProperty(SerializationConstants.DESCRIPTION_FIELD) description: Optional<String> = Optional.empty()
-) : AbstractSecurableObject(id, title, description) {
+) : AbstractSecurableObject(id, title, description), Serializable {
+
+    constructor() : this(Optional.empty(), "", "", "")
+
+    init {
+        require(properties.keys.all { it is String }) { "All properties must have string keys." }
+        require(properties.keys.all { it is String }) { "All values must have string keys." }
+    }
 
     @JsonIgnore
     override fun getCategory(): SecurableObjectType {

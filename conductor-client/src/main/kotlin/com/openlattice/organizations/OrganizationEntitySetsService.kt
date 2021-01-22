@@ -34,6 +34,7 @@ import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.hazelcast.processors.EpResult
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.organization.OrganizationExternalDatabaseTable
 import com.openlattice.organization.roles.Role
@@ -453,7 +454,7 @@ class OrganizationEntitySetsService(
 
     fun getOrganizationMetadataEntitySetIds(organizationId: UUID): OrganizationMetadataEntitySetIds {
         return organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
-            OrganizationEntryProcessor.Result(it.organizationMetadataEntitySetIds, false)
+            EpResult(it.organizationMetadataEntitySetIds, false)
         }) as OrganizationMetadataEntitySetIds? ?: throw ResourceNotFoundException(
                 "Unable able to resolve organization $organizationId"
         )
@@ -465,7 +466,7 @@ class OrganizationEntitySetsService(
     ) {
         organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
             it.organizationMetadataEntitySetIds = organizationMetadataEntitySetIds
-            OrganizationEntryProcessor.Result(null, true)
+            EpResult(null, true)
         })
     }
 

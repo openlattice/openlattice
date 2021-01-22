@@ -861,7 +861,7 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
             value = [OrganizationsApi.ID_PATH + OrganizationsApi.DATASOURCE],
             consumes = [MediaType.APPLICATION_JSON_VALUE]
     )
-    override fun listDataSources(organizationId: UUID): Map<UUID, JdbcConnection> {
+    override fun listDataSources(@PathVariable(OrganizationsApi.ID) organizationId: UUID): Map<UUID, JdbcConnection> {
         return externalSqlDatabasesManagementService.listDataSources(organizationId)
     }
 
