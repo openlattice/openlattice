@@ -12,7 +12,7 @@ interface ExternalSqlDatabaseManager {
     fun getDriverName() : String
     //These aren't paged for now, since even if warehouse has a 1M tables with each entry taking 1kb to describe it would
     //only be 1 GB of metadata from API call.
-    fun getTables(): Map<String, TableMetadata>
+    fun getTables(): Map<TableKey, TableMetadata>
     fun getSchemas(): Map<String, SchemaMetadata>
     fun getViews(): Map<String, ViewMetadata>
 

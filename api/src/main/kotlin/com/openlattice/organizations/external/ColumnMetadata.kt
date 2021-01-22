@@ -10,6 +10,7 @@ data class ColumnMetadata(
         val schema: String,
         val sqlDataType: String,
         val isPrimaryKey: Boolean,
+        val isNullable: Boolean,
         val ordinalPosition: Int,
         val privileges: Map<String, Set<ColumnPrivilege>>,
         val maskingPolicy: String

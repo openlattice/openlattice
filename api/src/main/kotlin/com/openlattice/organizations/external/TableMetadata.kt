@@ -12,10 +12,18 @@ data class TableMetadata
  */
 constructor(
         val name: String,
-        val externalId: String = name,
         val schema: String,
+        val externalId: String = "$schema.$name",
         val comment: String,
-        val columns: List<ColumnMetadata>,
-        val privileges: Map<String,Set<TablePrivilege>>,
+        val columns: MutableList<ColumnMetadata>,
+        val privileges: MutableMap<String, Set<TablePrivilege>>,
         val lastUpdated: OffsetDateTime
+) {
+    val tableKey = TableKey(name, schema, externalId)
+}
+
+data class TableKey(
+        val name: String,
+        val schema: String,
+        val externalId: String = "$schema.$name"
 )

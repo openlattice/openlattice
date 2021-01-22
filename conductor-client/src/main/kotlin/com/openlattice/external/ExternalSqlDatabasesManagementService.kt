@@ -39,7 +39,7 @@ class ExternalSqlDatabasesManagementService(
          */
         @JvmField
         val DEFAULT_DATA_SOURCE_ID = UUID(0, 0)
-
+        const val EXTERNAL = "EXTERNAL"
         private val logger = LoggerFactory.getLogger(ExternalSqlDatabasesManagementService::class.java)
     }
 
@@ -62,6 +62,13 @@ class ExternalSqlDatabasesManagementService(
     )
 
 
+    /**
+     * Retrieves the registered jdbc connections for an organization.
+     *
+     * @param organizationId The organization id for which to retrieve jdbc connections.
+     *
+     * @return A map of jdbc connections by id
+     */
     fun getExternalSqlDatabases(organizationId: UUID): JdbcConnections = externalSqlDatabases.getValue(organizationId)
 
     /**
@@ -95,17 +102,25 @@ class ExternalSqlDatabasesManagementService(
      * run it on conductor-- but that suggests that API call
      */
 
-    fun syncExternalDatabases(organizationId: UUID) {
+    fun syncExternalDatasources(organizationId: UUID) {
         getExternalSqlDatabaseManagers(organizationId).forEach { (dataSourceId, externalSqlDatabaseManager) ->
-            externalSqlDatabaseManager.getTables().forEach { (_, tableMetadata) ->
-                syncTable(organizationId, dataSourceId, tableMetadata)
-            }
-            externalSqlDatabaseManager.getSchemas().forEach { (_, schemaMetadata) ->
-                syncSchema(organizationId, dataSourceId, schemaMetadata)
-            }
-            externalSqlDatabaseManager.getViews().forEach { (_, viewMetadata) ->
-                syncView(organizationId, dataSourceId, viewMetadata)
-            }
+            syncExternalDatasource(organizationId, dataSourceId, externalSqlDatabaseManager)
+        }
+    }
+
+    fun syncExternalDatasource(
+            organizationId: UUID,
+            dataSourceId: UUID,
+            externalSqlDatabaseManager: ExternalSqlDatabaseManager
+    ) {
+        externalSqlDatabaseManager.getTables().forEach { (_, tableMetadata) ->
+            syncTable(organizationId, dataSourceId, tableMetadata)
+        }
+        externalSqlDatabaseManager.getSchemas().forEach { (_, schemaMetadata) ->
+            syncSchema(organizationId, dataSourceId, schemaMetadata)
+        }
+        externalSqlDatabaseManager.getViews().forEach { (_, viewMetadata) ->
+            syncView(organizationId, dataSourceId, viewMetadata)
         }
     }
 
@@ -118,15 +133,15 @@ class ExternalSqlDatabasesManagementService(
     }
 
     fun buildSchemaFqn(organizationId: UUID, schemaMetadata: SchemaMetadata): String {
-        return "$organizationId.${schemaMetadata.externalId}"
+        return "$organizationId.$EXTERNAL.${schemaMetadata.externalId}"
     }
 
     fun buildViewFqn(organizationId: UUID, viewMetadata: ViewMetadata): String {
-        return "$organizationId.${viewMetadata.schema}.${viewMetadata.externalId}"
+        return "$organizationId.$EXTERNAL.${viewMetadata.schema}.${viewMetadata.externalId}"
     }
 
     fun buildTableFqn(organizationId: UUID, tableMetadata: TableMetadata): String {
-        return "$organizationId.${tableMetadata.schema}.${tableMetadata.externalId}"
+        return "$organizationId.$EXTERNAL.${tableMetadata.schema}.${tableMetadata.externalId}"
     }
 
     fun buildColumnFqn(organizationId: UUID, tableMetadata: TableMetadata, columnMetadata: ColumnMetadata): String {
@@ -230,25 +245,33 @@ class ExternalSqlDatabasesManagementService(
     }
 
     fun listDataSources(organizationId: UUID): Map<UUID, JdbcConnection> {
-        return externalSqlDatabases.getValue( organizationId )
+        return externalSqlDatabases.getValue(organizationId)
     }
 
     fun updateDataSource(organizationId: UUID, dataSourceId: UUID, dataSource: JdbcConnection) {
-        require( dataSourceId== dataSource.id ) { "Path id and object id do not match."}
+        require(dataSourceId == dataSource.id) { "Path id and object id do not match." }
         externalSqlDatabases.executeOnKey(organizationId) { entry: MutableMap.MutableEntry<UUID, JdbcConnections> ->
             val dataSources = entry.value
-            dataSources[dataSourceId]= dataSource
+            dataSources[dataSourceId] = dataSource
             entry.setValue(dataSources)
         }
     }
 
     fun registerDataSource(organizationId: UUID, dataSource: JdbcConnection): UUID {
-        val dataSourceWithReservedId = aclKeyReservations.reserveAnonymousId( dataSource )
-        return externalSqlDatabases.executeOnKey( organizationId ) { entry ->
+        val dataSourceWithReservedId = aclKeyReservations.reserveAnonymousId(dataSource)
+        val dataSourceId = externalSqlDatabases.executeOnKey(organizationId) { entry ->
             val dataSources = entry.value
             dataSources[dataSourceWithReservedId.id] = dataSourceWithReservedId
             return@executeOnKey dataSourceWithReservedId.id
-        }
+        } as UUID
+
+        syncExternalDatasource(
+                organizationId,
+                dataSourceId,
+                getExternalSqlDatabaseManager(organizationId, dataSourceId)
+        )
+
+        return dataSourceId
     }
 
     private fun mapColumn(

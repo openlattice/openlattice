@@ -1,22 +1,87 @@
 package com.openlattice.external
 
+import com.google.common.base.Suppliers
 import com.openlattice.authorization.SecurablePrincipal
 import com.openlattice.organization.roles.Role
 import com.openlattice.organizations.JdbcConnection
 import com.openlattice.organizations.external.*
+import com.openlattice.postgres.streams.BasePostgresIterable
+import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
+import java.sql.ResultSet
+import java.time.OffsetDateTime
+import java.util.concurrent.TimeUnit
 
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class SnowflakeExternalSqlDatabaseManager(jdbcConnection: JdbcConnection) : ExternalSqlDatabaseManager {
-    override fun getDriverName(): String {
-        TODO("Not yet implemented")
+class SnowflakeExternalSqlDatabaseManager(private val jdbcConnection: JdbcConnection) : ExternalSqlDatabaseManager {
+    override fun getDriverName(): String = "net.snowflake.client.jdbc.SnowflakeDriver"
+
+    private val hdsSupplier = Suppliers.memoizeWithExpiration(
+            { connect(jdbcConnection) },
+            5,
+            TimeUnit.MINUTES
+    )
+
+    private val hds: HikariDataSource
+        get() = hdsSupplier.get()
+
+    private fun connect(jdbcConnection: JdbcConnection): HikariDataSource {
+        val config = HikariConfig()
+
+        config.driverClassName = getDriverName()
+        config.dataSourceProperties = jdbcConnection.properties
+        config.jdbcUrl = jdbcConnection.url
+
+        return HikariDataSource(config)
     }
 
-    override fun getTables(): Map<String, TableMetadata> {
-        TODO("Not yet implemented")
+    override fun getTables(): Map<TableKey, TableMetadata> {
+        val tables = BasePostgresIterable(PreparedStatementHolderSupplier(hds, SELECT_TABLES) {}) { rs ->
+            readTableMetadata(rs)
+        }.toMap()
+
+        getColumns().forEach { (tableKey, columns) ->
+            tables.getValue(tableKey).columns.addAll( columns )
+        }
+
+        return tables
     }
+
+    private fun getColumns(): Map<TableKey, List<ColumnMetadata>> {
+        return BasePostgresIterable(PreparedStatementHolderSupplier(hds, SELECT_COLUMNS) {}) { rs ->
+            readColumnMetadata(rs)
+        }.groupBy { TableKey(it.name, it.schema, it.externalId) }
+    }
+
+    private fun readColumnMetadata(rs: ResultSet): ColumnMetadata {
+        return ColumnMetadata(
+                name = rs.getString("TABLE_NAME"),
+                schema = rs.getString("TABLE_SCHEMA"),
+                sqlDataType = rs.getString("DATA_TYPE"),
+                ordinalPosition = rs.getInt("ORDINAL_POSTITION"),
+                isPrimaryKey = false, // rs.getBoolean("IS_PRIMARY_KEY"), //SNOWFLAKE DOES NOT EXPOSE THIS YET https://community.snowflake.com/s/question/0D50Z00007XY2UMSA1/how-to-get-list-of-my-primary-key
+                isNullable = rs.getBoolean("IS_NULLABLE"),
+                privileges = mutableMapOf(),
+                maskingPolicy = ""//Will have to pull later with SHOW MASKING POLICY;
+        )
+    }
+
+    private fun readTableMetadata(rs: ResultSet): Pair<TableKey, TableMetadata> {
+        val tableMetadata = TableMetadata(
+                name = rs.getString("TABLE_NAME"),
+                schema = rs.getString("TABLE_SCHEMA"),
+                comment = rs.getString("COMMENT") ?: "",
+                privileges = mutableMapOf(),
+                columns = mutableListOf(),
+                lastUpdated = OffsetDateTime.now()
+        )
+        return tableMetadata.tableKey to tableMetadata
+    }
+
 
     override fun getSchemas(): Map<String, SchemaMetadata> {
         TODO("Not yet implemented")
@@ -89,4 +154,10 @@ class SnowflakeExternalSqlDatabaseManager(jdbcConnection: JdbcConnection) : Exte
     override fun deleteRole(role: SecurablePrincipal) {
         TODO("Not yet implemented")
     }
+
+    companion object {
+        private const val SELECT_TABLES = "SELECT * from information_schema.tables where table_schema != 'INFORMATION_SCHEMA'"
+        private const val SELECT_COLUMNS = "SELECT * from information_schema.columns where table_schema != 'INFORMATION_SCHEMA' ORDER BY (TABLE_SCHEMA, TABLE_NAME, ORDINAL_POSITION)"
+    }
 }
+
