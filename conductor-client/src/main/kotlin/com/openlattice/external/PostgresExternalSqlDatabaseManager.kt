@@ -14,7 +14,7 @@ class PostgresExternalSqlDatabaseManager(jdbcConnection: JdbcConnection): Extern
         TODO("Not yet implemented")
     }
 
-    override fun getTables(): Map<String, TableMetadata> {
+    override fun getTables(): Map<TableKey, TableMetadata> {
         TODO("Not yet implemented")
     }
 
