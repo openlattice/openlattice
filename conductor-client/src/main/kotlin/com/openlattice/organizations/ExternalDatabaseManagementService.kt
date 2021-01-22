@@ -789,10 +789,11 @@ class ExternalDatabaseManagementService(
         return selectExpression + ", information_schema.columns.data_type AS datatype, " +
                 "information_schema.columns.ordinal_position, " +
                 "information_schema.table_constraints.constraint_type " +
-                fromExpression + leftJoinColumnsExpression + leftJoinPgClass +
+                fromExpression + leftJoinColumnsExpression +
                 "LEFT OUTER JOIN information_schema.constraint_column_usage ON " +
                 "information_schema.columns.column_name = information_schema.constraint_column_usage.column_name " +
                 "AND information_schema.columns.table_name = information_schema.constraint_column_usage.table_name " +
+                "AND information_schema.columns.table_schema = information_schema.constraint_column_usage.table_schema " +
                 "LEFT OUTER JOIN information_schema.table_constraints " +
                 "ON information_schema.constraint_column_usage.constraint_name = " +
                 "information_schema.table_constraints.constraint_name " +
@@ -814,11 +815,10 @@ class ExternalDatabaseManagementService(
         return "SELECT pg_reload_conf()"
     }
 
-    private val selectExpression = "SELECT oid, information_schema.tables.table_name AS name, information_schema.columns.column_name "
+    private val selectExpression = "SELECT $oidFromPgTables, information_schema.tables.table_name AS name, information_schema.columns.column_name "
 
     private val fromExpression = "FROM information_schema.tables "
 
-    private val leftJoinPgClass = " LEFT JOIN pg_class ON relname = information_schema.tables.table_name "
     private val leftJoinColumnsExpression = """
         LEFT JOIN information_schema.columns
           ON information_schema.tables.table_name = information_schema.columns.table_name
