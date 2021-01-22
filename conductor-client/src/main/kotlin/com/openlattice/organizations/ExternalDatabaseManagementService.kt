@@ -134,7 +134,7 @@ class ExternalDatabaseManagementService(
                         isPrimaryKey,
                         position)
             } catch (e: Exception) {
-                logger.error("Unable to map column to OrganizationExternalDatabaseColumn object for table {} in organization {}", table.name, table.organizationId, e)
+                logger.error("Unable to map column to OrganizationExternalDatabaseColumn object for table {}.{} in organization {}", table.schema, table.name, table.organizationId, e)
                 null
             }
         }.filterNotNull()
