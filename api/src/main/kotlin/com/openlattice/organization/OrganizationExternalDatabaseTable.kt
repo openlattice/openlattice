@@ -18,7 +18,6 @@ import java.util.*
  */
 
 class OrganizationExternalDatabaseTable
-
 constructor(
         @JsonProperty(SerializationConstants.ID_FIELD) id: Optional<UUID>,
         @JsonProperty(SerializationConstants.NAME_FIELD) var name: String,
@@ -50,7 +49,7 @@ constructor(
     // be replaced with something better.
     @JsonIgnore
     fun getUniqueName(): String {
-        return "$organizationId.$schema.$name"
+        return "$organizationId.$oid"
     }
 
     override fun equals(other: Any?): Boolean {
