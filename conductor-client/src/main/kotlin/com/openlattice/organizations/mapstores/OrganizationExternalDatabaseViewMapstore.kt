@@ -31,6 +31,7 @@ class OrganizationExternalDatabaseViewMapstore(
         ps.setString(index++, value.title)
         ps.setString(index++, value.description)
         ps.setObject(index++, value.organizationId)
+        ps.setObject(index++, value.dataSourceId)
         ps.setString(index++, value.externalId)
 
         //update
@@ -38,6 +39,7 @@ class OrganizationExternalDatabaseViewMapstore(
         ps.setString(index++, value.title)
         ps.setString(index++, value.description)
         ps.setObject(index++, value.organizationId)
+        ps.setObject(index++, value.dataSourceId)
         ps.setString(index++, value.externalId)
     }
 
