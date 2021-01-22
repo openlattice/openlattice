@@ -15,7 +15,7 @@ import java.util.*
  */
 @Component
 class JdbcConnectionStreamSerializer:SelfRegisteringStreamSerializer<JdbcConnection> {
-    override fun getTypeId(): Int = StreamSerializerTypeIds.JDBC_CONNECTIONS.ordinal
+    override fun getTypeId(): Int = StreamSerializerTypeIds.JDBC_CONNECTION.ordinal
 
     override fun getClazz(): Class<out JdbcConnection> = JdbcConnection::class.java
 

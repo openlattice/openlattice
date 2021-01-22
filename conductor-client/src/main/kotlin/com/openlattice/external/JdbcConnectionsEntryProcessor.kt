@@ -16,13 +16,13 @@ private val logger = LoggerFactory.getLogger(JdbcConnectionsEntryProcessor::clas
 class JdbcConnectionsEntryProcessor(
         @Transient
         val jdbcConnections: JdbcConnections,
-        val update: (JdbcConnections) -> EpResult
+        val update: (JdbcConnections,JdbcConnections) -> EpResult
 ) : AbstractRhizomeEntryProcessor<UUID, JdbcConnections, Any?>(), Offloadable {
 
     override fun process(entry: MutableMap.MutableEntry<UUID, JdbcConnections?>): Any? {
         val currentConnections = entry.value
         if (currentConnections != null) {
-            val (value, modified) = update(currentConnections)
+            val (value, modified) = update(currentConnections, jdbcConnections)
             if (modified) {
                 entry.setValue(currentConnections)
             }

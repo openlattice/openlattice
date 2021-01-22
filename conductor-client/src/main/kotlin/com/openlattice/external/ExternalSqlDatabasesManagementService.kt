@@ -4,6 +4,7 @@ import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.map.IMap
 import com.openlattice.authorization.*
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.hazelcast.processors.EpResult
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.organization.OrganizationExternalDatabaseSchema
 import com.openlattice.organization.OrganizationExternalDatabaseTable
@@ -250,20 +251,26 @@ class ExternalSqlDatabasesManagementService(
 
     fun updateDataSource(organizationId: UUID, dataSourceId: UUID, dataSource: JdbcConnection) {
         require(dataSourceId == dataSource.id) { "Path id and object id do not match." }
-        externalSqlDatabases.executeOnKey(organizationId) { entry: MutableMap.MutableEntry<UUID, JdbcConnections> ->
-            val dataSources = entry.value
-            dataSources[dataSourceId] = dataSource
-            entry.setValue(dataSources)
-        }
+        externalSqlDatabases.executeOnKey(
+                organizationId,
+                JdbcConnectionsEntryProcessor(
+                        JdbcConnections(mutableMapOf(dataSourceId to dataSource))
+                ) { currentConnections, newConnections ->
+                    currentConnections.putAll(newConnections)
+                    EpResult(null, true)
+                })
     }
 
     fun registerDataSource(organizationId: UUID, dataSource: JdbcConnection): UUID {
         val dataSourceWithReservedId = aclKeyReservations.reserveAnonymousId(dataSource)
-        val dataSourceId = externalSqlDatabases.executeOnKey(organizationId) { entry ->
-            val dataSources = entry.value
-            dataSources[dataSourceWithReservedId.id] = dataSourceWithReservedId
-            return@executeOnKey dataSourceWithReservedId.id
-        } as UUID
+        val dataSourceId = externalSqlDatabases.executeOnKey(
+                organizationId,
+                JdbcConnectionsEntryProcessor(
+                        JdbcConnections(mutableMapOf(dataSourceWithReservedId.id to dataSourceWithReservedId))
+                ) { currentConnections, newConnections ->
+                    currentConnections.putAll(newConnections)
+                    EpResult(dataSourceWithReservedId.id, true)
+                }) as UUID
 
         syncExternalDatasource(
                 organizationId,
