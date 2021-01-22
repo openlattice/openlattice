@@ -5,6 +5,8 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.util.UUID
 
 /**
+ * Simple pair of property type id with its fqn
+ *
  * @author Drew Bailey (drew@openlattice.com)
  */
 data class PropertyTypeIdFqn(val id: UUID, val fqn: FullQualifiedName) {

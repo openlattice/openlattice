@@ -183,7 +183,7 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
         organizations.ensureOrganizationExists(organizationId)
         ensureRead(organizationId)
         ensureTransportAccess(AclKey(entitySetId))
-        edms.destroyTransportedEntitySet(entitySetId)
+        edms.destroyTransportedEntitySet(organizationId, entitySetId)
         return null
     }
 

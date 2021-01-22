@@ -22,18 +22,14 @@
 package com.openlattice.assembler
 
 import com.codahale.metrics.MetricRegistry
-import com.codahale.metrics.MetricRegistry.name
-import com.codahale.metrics.Timer
 import com.google.common.eventbus.EventBus
 import com.google.common.eventbus.Subscribe
 import com.openlattice.ApiHelpers
 import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationRoleName
-import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationUserId
 import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresRoleName
 import com.openlattice.authorization.*
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
-import com.openlattice.organization.OrganizationEntitySetFlag
 import com.openlattice.organization.roles.Role
 import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.organizations.roles.SecurePrincipalsManager
@@ -42,19 +38,15 @@ import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.E
 import com.openlattice.postgres.PostgresTable.PRINCIPALS
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
-import com.openlattice.postgres.external.ExternalDatabasePermissioner
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService
+import com.openlattice.postgres.external.Schemas
 import com.openlattice.principals.RoleCreatedEvent
 import com.openlattice.principals.UserCreatedEvent
-import com.openlattice.transporter.types.TransporterDatastore.Companion.ORG_FOREIGN_TABLES_SCHEMA
-import com.openlattice.transporter.types.TransporterDatastore.Companion.ORG_VIEWS_SCHEMA
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.sql.Connection
-import java.sql.Statement
 import java.util.*
-import kotlin.NoSuchElementException
 
 private val logger = LoggerFactory.getLogger(AssemblerConnectionManager::class.java)
 
@@ -85,19 +77,19 @@ class AssemblerConnectionManager(
         const val PUBLIC_ROLE = "public"
 
         @JvmStatic
-        val INTEGRATIONS_SCHEMA = "integrations"
+        val INTEGRATIONS_SCHEMA = Schemas.INTEGRATIONS_SCHEMA.label
 
         @JvmStatic
-        val OPENLATTICE_SCHEMA = "openlattice"
+        val OPENLATTICE_SCHEMA = Schemas.OPENLATTICE_SCHEMA.label
 
         @JvmStatic
-        val TRANSPORTED_VIEWS_SCHEMA = "ol"
+        private val TRANSPORTED_VIEWS_SCHEMA = Schemas.ENTERPRISE_FDW_SCHEMA.label
 
         @JvmStatic
-        val PUBLIC_SCHEMA = "public"
+        val PUBLIC_SCHEMA = Schemas.PUBLIC_SCHEMA.label
 
         @JvmStatic
-        val STAGING_SCHEMA = "staging"
+        val STAGING_SCHEMA = Schemas.STAGING_SCHEMA.label
 
         @JvmStatic
         fun entitySetNameTableName(entitySetName: String): String {
@@ -126,16 +118,6 @@ class AssemblerConnectionManager(
         }
     }
 
-    @Subscribe
-    fun handleUserCreated(userCreatedEvent: UserCreatedEvent) {
-        extDbPermissioner.createUnprivilegedUser(userCreatedEvent.user)
-    }
-
-    @Subscribe
-    fun handleRoleCreated(roleCreatedEvent: RoleCreatedEvent) {
-        extDbPermissioner.createRole(roleCreatedEvent.role)
-    }
-
     /**
      * Creates a private organization database that can be used for uploading data using launchpad.
      * Also sets up foreign data wrapper using assembler in assembler so that materialized views of data can be
@@ -147,21 +129,21 @@ class AssemblerConnectionManager(
 
         extDbManager.connect(dbName).let { dataSource ->
             configureRolesInDatabase(dataSource)
-            createSchema(dataSource, OPENLATTICE_SCHEMA)
-            createSchema(dataSource, INTEGRATIONS_SCHEMA)
-            createSchema(dataSource, STAGING_SCHEMA)
-            createSchema(dataSource, ORG_FOREIGN_TABLES_SCHEMA)
-            createSchema(dataSource, ORG_VIEWS_SCHEMA)
+            createSchema(dataSource, Schemas.OPENLATTICE_SCHEMA)
+            createSchema(dataSource, Schemas.INTEGRATIONS_SCHEMA)
+            createSchema(dataSource, Schemas.STAGING_SCHEMA)
+            createSchema(dataSource, Schemas.TRANSPORTER_SCHEMA)
+            createSchema(dataSource, Schemas.ASSEMBLED_ENTITY_SETS)
             configureOrganizationUser(organizationId, dataSource)
             addMembersToOrganization(organizationId, dataSource, organizations.getMembers(organizationId))
             configureServerUser(dataSource)
         }
     }
 
-    internal fun createSchema(dataSource: HikariDataSource, schemaName: String) {
+    internal fun createSchema(dataSource: HikariDataSource, schema: Schemas) {
         dataSource.connection.use { connection ->
             connection.createStatement().use { statement ->
-                statement.execute("CREATE SCHEMA IF NOT EXISTS $schemaName")
+                statement.execute("CREATE SCHEMA IF NOT EXISTS ${schema.label}")
             }
         }
     }
@@ -565,8 +547,6 @@ class AssemblerConnectionManager(
 
 val MEMBER_ORG_DATABASE_PERMISSIONS = setOf("CREATE", "CONNECT", "TEMPORARY", "TEMP")
 
-private val PRINCIPALS_SQL = "SELECT ${ACL_KEY.name} FROM ${PRINCIPALS.name} WHERE ${PRINCIPAL_TYPE.name} = ?"
-
 internal fun grantOrgUserPrivilegesOnSchemaSql(schemaName: String, orgUserId: String): String {
     return "GRANT USAGE, CREATE ON SCHEMA $schemaName TO $orgUserId"
 }
@@ -597,21 +577,6 @@ private fun revokePrivilegesOnTablesInSchemaSql(schemaName: String, usersSql: St
     return "REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA $schemaName FROM $usersSql"
 }
 
-internal fun createRoleIfNotExistsSql(dbRole: String): String {
-    return "DO\n" +
-            "\$do\$\n" +
-            "BEGIN\n" +
-            "   IF NOT EXISTS (\n" +
-            "      SELECT\n" +
-            "      FROM   pg_catalog.pg_roles\n" +
-            "      WHERE  rolname = '$dbRole') THEN\n" +
-            "\n" +
-            "      CREATE ROLE ${ApiHelpers.dbQuote(dbRole)} NOSUPERUSER NOCREATEDB NOCREATEROLE INHERIT NOLOGIN;\n" +
-            "   END IF;\n" +
-            "END\n" +
-            "\$do\$;"
-}
-
 internal fun createUserIfNotExistsSql(dbUser: String, dbUserPassword: String): String {
     return "DO\n" +
             "\$do\$\n" +
@@ -622,21 +587,6 @@ internal fun createUserIfNotExistsSql(dbUser: String, dbUserPassword: String): S
             "      WHERE  rolname = '$dbUser') THEN\n" +
             "\n" +
             "      CREATE ROLE ${ApiHelpers.dbQuote(dbUser)} NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT LOGIN ENCRYPTED PASSWORD '$dbUserPassword';\n" +
-            "   END IF;\n" +
-            "END\n" +
-            "\$do\$;"
-}
-
-internal fun dropOwnedIfExistsSql(dbUser: String): String {
-    return "DO\n" +
-            "\$do\$\n" +
-            "BEGIN\n" +
-            "   IF EXISTS (\n" +
-            "      SELECT\n" +
-            "      FROM   pg_catalog.pg_roles\n" +
-            "      WHERE  rolname = '$dbUser') THEN\n" +
-            "\n" +
-            "      DROP OWNED BY ${ApiHelpers.dbQuote(dbUser)} ;\n" +
             "   END IF;\n" +
             "END\n" +
             "\$do\$;"

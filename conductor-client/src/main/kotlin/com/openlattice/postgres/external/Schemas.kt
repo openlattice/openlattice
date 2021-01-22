@@ -2,6 +2,14 @@ package com.openlattice.postgres.external
 
 /**
  * @author Drew Bailey (drew@openlattice.com)
+ *
+ * Schemas:
+ * - "entitysets"
+ *      schema in org_* database where views are assembled
+ * - "transporter"
+ *      schema in org_* database where foreign et tables are accessible
+ * - "ol"
+ *      schema in atlas transporterd database where production tables are accessible
  */
 enum class Schemas(val label: String) {
     INTEGRATIONS_SCHEMA("integrations"),
