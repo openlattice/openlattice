@@ -127,7 +127,7 @@ class BackgroundExternalDatabaseSyncingService(
 
         val tablesToCols = edms.getColumnNamesByTableName(dbName).associate { (oid, tableName, schemaName, columnNames) ->
 
-            val table = getOrCreateTable(orgId, oid, tableName, schemaName)
+            val table = getOrCreateTable(orgId, oid, tableName, schemaName, orgOwnerAclKeys)
             val columnIds = syncTableColumns(table, orgOwnerAclKeys)
 
             table.id to columnIds
@@ -137,7 +137,7 @@ class BackgroundExternalDatabaseSyncingService(
 
     }
 
-    private fun getOrCreateTable(orgId: UUID, oid: Int, tableName: String, schemaName: String): OrganizationExternalDatabaseTable {
+    private fun getOrCreateTable(orgId: UUID, oid: Int, tableName: String, schemaName: String, orgOwnerAclKeys: List<AclKey>): OrganizationExternalDatabaseTable {
         val table = OrganizationExternalDatabaseTable(
                 Optional.empty(),
                 tableName,
@@ -152,7 +152,29 @@ class BackgroundExternalDatabaseSyncingService(
             return organizationExternalDatabaseTables.getValue(reservationService.getId(table.getUniqueName()))
         }
 
+        createSecurableTableObject(orgOwnerAclKeys, orgId, table)
+
         return table
+    }
+
+    private fun createSecurableTableObject(
+            orgOwnerAclKeys: List<AclKey>,
+            orgId: UUID,
+            table: OrganizationExternalDatabaseTable
+    ): UUID {
+        val newTableId = edms.createOrganizationExternalDatabaseTable(orgId, table)
+
+        //add table-level permissions
+        val acls = edms.syncPermissions(orgOwnerAclKeys, table)
+
+        organizationMetadataEntitySetsService.addDataset(orgId, table)
+
+        //create audit entity set and audit permissions
+        ares.createAuditEntitySetForExternalDBTable(table)
+        val events = createAuditableEvents(acls, AuditEventType.ADD_PERMISSION)
+        auditingManager.recordEvents(events)
+
+        return newTableId
     }
 
     private fun syncTableColumns(table: OrganizationExternalDatabaseTable, ownerAclKeys: List<AclKey>): Set<UUID> {
@@ -284,8 +306,8 @@ class BackgroundExternalDatabaseSyncingService(
         val acls = edms.syncPermissions(
                 orgOwnerAclKeys,
                 table,
-                Optional.of(newColumnId),
-                Optional.of(column.name)
+                newColumnId,
+                column.name
         )
 
 

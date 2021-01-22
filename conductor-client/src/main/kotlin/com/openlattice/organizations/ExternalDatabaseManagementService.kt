@@ -499,16 +499,16 @@ class ExternalDatabaseManagementService(
     fun syncPermissions(
             orgOwnerAclKeys: List<AclKey>,
             table: OrganizationExternalDatabaseTable,
-            maybeColumnId: Optional<UUID>,
-            maybeColumnName: Optional<String>
+            maybeColumnId: UUID? = null,
+            maybeColumnName: String? = null
     ): List<Acl> {
         val privilegesByUser = mutableMapOf<AclKey, MutableSet<PostgresPrivileges>>()
 
-        val aclKey = if (maybeColumnId.isPresent) AclKey(table.id, maybeColumnId.get()) else AclKey(table.id)
+        val aclKey = if (maybeColumnId == null) AclKey(table.id) else AclKey(table.id, maybeColumnId)
         val (sql, objectType) = getPrivilegesFields(table.schema, table.name, maybeColumnName)
 
         //if column objects, sync postgres privileges
-        if (maybeColumnId.isPresent) {
+        if (maybeColumnId != null) {
 
             val usernamesToPrivileges = BasePostgresIterable(
                     StatementHolderSupplier(externalDbManager.connectToOrg(table.organizationId), sql)
@@ -664,13 +664,12 @@ class ExternalDatabaseManagementService(
         return permissions
     }
 
-    private fun getPrivilegesFields(tableSchema: String, tableName: String, maybeColumnName: Optional<String>): Pair<String, SecurableObjectType> {
+    private fun getPrivilegesFields(tableSchema: String, tableName: String, maybeColumnName: String?): Pair<String, SecurableObjectType> {
         var columnCondition = ""
         var grantsTableName = "information_schema.role_table_grants"
         var objectType = SecurableObjectType.OrganizationExternalDatabaseTable
-        if (maybeColumnName.isPresent) {
-            val columnName = maybeColumnName.get()
-            columnCondition = "AND column_name = '$columnName'"
+        if (maybeColumnName != null) {
+            columnCondition = "AND column_name = '$maybeColumnName'"
             grantsTableName = "information_schema.role_column_grants"
             objectType = SecurableObjectType.OrganizationExternalDatabaseColumn
         }
