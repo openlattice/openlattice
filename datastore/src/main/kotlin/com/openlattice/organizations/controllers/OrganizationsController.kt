@@ -208,7 +208,7 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
             @PathVariable(OrganizationsApi.ID) organizationId: UUID
     ): OrganizationIntegrationAccount {
         ensureOwner(organizationId)
-        val account = assembler.rollIntegrationAccount(AclKey(organizationId), PrincipalType.ORGANIZATION)
+        val account = assembler.rollIntegrationAccount(AclKey(organizationId))
         return OrganizationIntegrationAccount(account.username, account.credential)
     }
 
