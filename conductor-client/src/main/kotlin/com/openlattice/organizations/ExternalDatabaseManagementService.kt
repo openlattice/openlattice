@@ -20,8 +20,7 @@ import com.openlattice.hazelcast.processors.organizations.UpdateOrganizationExte
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.organization.OrganizationExternalDatabaseTable
 import com.openlattice.organization.OrganizationExternalDatabaseTableColumnsPair
-import com.openlattice.organizations.mapstores.ORGANIZATION_ID_INDEX
-import com.openlattice.organizations.mapstores.TABLE_ID_INDEX
+import com.openlattice.organizations.mapstores.*
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.*
 import com.openlattice.postgres.DataTables.quote
@@ -40,14 +39,13 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.io.BufferedOutputStream
 import java.io.IOException
+import java.lang.IllegalArgumentException
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import java.time.OffsetDateTime
 import java.util.*
-import java.util.function.Consumer
-import kotlin.collections.HashMap
 import kotlin.streams.toList
 
 @Service
@@ -730,12 +728,30 @@ class ExternalDatabaseManagementService(
      * Moves a table from the [STAGING_SCHEMA] schema to the [OPENLATTICE_SCHEMA] schema
      */
     fun promoteStagingTable(organizationId: UUID, tableName: String) {
+        val singletonTableList = organizationExternalDatabaseTables.keySet(
+                Predicates.and(
+                        Predicates.equal<UUID, OrganizationExternalDatabaseTable>(ORGANIZATION_ID_INDEX, organizationId),
+                        Predicates.equal<UUID, OrganizationExternalDatabaseTable>(NAME_INDEX, tableName),
+                        Predicates.equal<UUID, OrganizationExternalDatabaseTable>(SCHEMA_INDEX, STAGING_SCHEMA)
+                )
+        )
+
+        if (singletonTableList.isEmpty()) {
+            throw IllegalArgumentException("Cannot promote table -- there is no table named $tableName in the staging schema of org $organizationId")
+        }
+
         externalDbManager.connectToOrg(organizationId).use { hds ->
             hds.connection.use { conn ->
                 conn.createStatement().use { stmt ->
                     stmt.execute(publishStagingTableSql(tableName))
                 }
             }
+        }
+
+        organizationExternalDatabaseTables.executeOnKey(singletonTableList.first()) {
+            val table = it.value
+            table.schema = OPENLATTICE_SCHEMA
+            it.setValue(table)
         }
     }
 

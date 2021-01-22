@@ -15,6 +15,9 @@ import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.util.*
 
+const val NAME_INDEX = "name"
+const val SCHEMA_INDEX = "schema"
+
 open class OrganizationExternalDatabaseTableMapstore(
         hds: HikariDataSource
 ) : AbstractBasePostgresMapstore<UUID, OrganizationExternalDatabaseTable>

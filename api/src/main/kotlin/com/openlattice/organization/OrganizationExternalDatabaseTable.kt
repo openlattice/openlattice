@@ -25,7 +25,7 @@ constructor(
         @JsonProperty(SerializationConstants.DESCRIPTION_FIELD) description: Optional<String>,
         @JsonProperty(SerializationConstants.ORGANIZATION_ID) var organizationId: UUID,
         @JsonProperty(SerializationConstants.OID) val oid: Int,
-        @JsonProperty(SerializationConstants.SCHEMA) val schema: String
+        @JsonProperty(SerializationConstants.SCHEMA) var schema: String
 ) : AbstractSecurableObject(id, title, description) {
 
     constructor(
