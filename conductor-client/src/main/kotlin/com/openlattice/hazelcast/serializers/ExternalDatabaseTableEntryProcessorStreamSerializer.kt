@@ -48,7 +48,7 @@ class ExternalDatabaseTableEntryProcessorStreamSerializer : SelfRegisteringStrea
             logger.error("Unable to deserialize object because class not found. ", e)
             ExternalDatabaseTableEntryProcessor {
                 LoggerFactory.getLogger(ExternalDatabaseTableEntryProcessor::class.java)
-                        .error("This entry processor didn't de-serialize correctly.")
+                        .error("This entry processor didn't deserialize correctly.")
                 ExternalDatabaseTableEntryProcessor.Result(null, false)
             }
         }
