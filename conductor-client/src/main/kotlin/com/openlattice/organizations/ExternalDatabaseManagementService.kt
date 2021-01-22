@@ -728,7 +728,7 @@ class ExternalDatabaseManagementService(
      * Moves a table from the [STAGING_SCHEMA] schema to the [OPENLATTICE_SCHEMA] schema
      */
     fun promoteStagingTable(organizationId: UUID, tableName: String) {
-        val singletonTableList = organizationExternalDatabaseTables.keySet(
+        val singletonTableSet = organizationExternalDatabaseTables.keySet(
                 Predicates.and(
                         Predicates.equal<UUID, OrganizationExternalDatabaseTable>(ORGANIZATION_ID_INDEX, organizationId),
                         Predicates.equal<UUID, OrganizationExternalDatabaseTable>(NAME_INDEX, tableName),
@@ -736,7 +736,7 @@ class ExternalDatabaseManagementService(
                 )
         )
 
-        if (singletonTableList.isEmpty()) {
+        if (singletonTableSet.isEmpty()) {
             throw IllegalArgumentException("Cannot promote table -- there is no table named $tableName in the staging schema of org $organizationId")
         }
 
@@ -748,7 +748,7 @@ class ExternalDatabaseManagementService(
             }
         }
 
-        organizationExternalDatabaseTables.executeOnKey(singletonTableList.first()) {
+        organizationExternalDatabaseTables.executeOnKey(singletonTableSet.first()) {
             val table = it.value
             table.schema = OPENLATTICE_SCHEMA
             it.setValue(table)
