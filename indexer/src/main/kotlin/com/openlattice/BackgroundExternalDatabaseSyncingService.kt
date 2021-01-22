@@ -178,7 +178,7 @@ class BackgroundExternalDatabaseSyncingService(
     }
 
     private fun syncTableColumns(table: OrganizationExternalDatabaseTable, ownerAclKeys: List<AclKey>): Set<UUID> {
-        val tableCols = edms.getColumnMetadata(table.name, table.id, table.organizationId)
+        val tableCols = edms.getColumnMetadata(table)
         val tableColNames = tableCols.map { it.getUniqueName() }.toSet()
 
         val existingColumnIdsByName = reservationService.getIdsByFqn(tableColNames)

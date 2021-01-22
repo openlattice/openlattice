@@ -110,17 +110,13 @@ class ExternalDatabaseManagementService(
     }
 
     fun getColumnMetadata(
-            tableName: String,
-            tableId: UUID,
-            orgId: UUID,
-            columnName: Optional<String> = Optional.empty()
+            table: OrganizationExternalDatabaseTable
     ): List<OrganizationExternalDatabaseColumn> {
-        var columnCondition = ""
-        columnName.ifPresent { columnCondition = "AND information_schema.columns.column_name = '$it'" }
 
-        val sql = getColumnMetadataSql(tableName, columnCondition)
+        val sql = getColumnMetadataSql(table.schema, table.name)
+
         return BasePostgresIterable(
-                StatementHolderSupplier(externalDbManager.connectToOrg(orgId), sql)
+                StatementHolderSupplier(externalDbManager.connectToOrg(table.organizationId), sql)
         ) { rs ->
             try {
                 val storedColumnName = columnName(rs)
@@ -132,13 +128,13 @@ class ExternalDatabaseManagementService(
                         storedColumnName,
                         storedColumnName,
                         Optional.empty(),
-                        tableId,
-                        orgId,
+                        table.id,
+                        table.organizationId,
                         dataType,
                         isPrimaryKey,
                         position)
             } catch (e: Exception) {
-                logger.error("Unable to map column to OrganizationExternalDatabaseColumn object for table {} in organization {}", tableName, orgId, e)
+                logger.error("Unable to map column to OrganizationExternalDatabaseColumn object for table {} in organization {}", table.name, table.organizationId, e)
                 null
             }
         }.filterNotNull()
@@ -785,22 +781,24 @@ class ExternalDatabaseManagementService(
 
     private val oidFromPgTables = "(information_schema.tables.table_schema || '.' || quote_ident(information_schema.tables.table_name))::regclass::oid AS ${OID.name}"
 
-    private fun getColumnMetadataSql(tableName: String, columnCondition: String): String {
-        return selectExpression + ", information_schema.columns.data_type AS datatype, " +
-                "information_schema.columns.ordinal_position, " +
-                "information_schema.table_constraints.constraint_type " +
-                fromExpression + leftJoinColumnsExpression +
-                "LEFT OUTER JOIN information_schema.constraint_column_usage ON " +
-                "information_schema.columns.column_name = information_schema.constraint_column_usage.column_name " +
-                "AND information_schema.columns.table_name = information_schema.constraint_column_usage.table_name " +
-                "AND information_schema.columns.table_schema = information_schema.constraint_column_usage.table_schema " +
-                "LEFT OUTER JOIN information_schema.table_constraints " +
-                "ON information_schema.constraint_column_usage.constraint_name = " +
-                "information_schema.table_constraints.constraint_name " +
-                "WHERE information_schema.columns.table_name = '$tableName' " +
-                "AND (information_schema.table_constraints.constraint_type = 'PRIMARY KEY' " +
-                "OR information_schema.table_constraints.constraint_type IS NULL)" +
-                columnCondition
+    private fun getColumnMetadataSql(tableSchema: String, tableName: String): String {
+        return """
+            $selectExpression
+            $fromExpression
+            $leftJoinColumnsExpression
+            LEFT OUTER JOIN information_schema.constraint_column_usage
+              ON information_schema.columns.column_name = information_schema.constraint_column_usage.column_name
+              AND information_schema.columns.table_name = information_schema.constraint_column_usage.table_name
+              AND information_schema.columns.table_schema = information_schema.constraint_column_usage.table_schema
+            LEFT OUTER JOIN information_schema.table_constraints
+              ON information_schema.constraint_column_usage.constraint_name = information_schema.table_constraints.constraint_name
+              WHERE information_schema.columns.table_name = '$tableName'
+              AND information_schema.columns.table_schema = '$tableSchema'
+              AND (
+                information_schema.table_constraints.constraint_type = 'PRIMARY KEY'
+                OR information_schema.table_constraints.constraint_type IS NULL
+              )
+        """.trimIndent()
     }
 
     private fun getCurrentUsersPrivilegesSql(tableSchema: String, tableName: String, grantsTableName: String, columnCondition: String): String {
@@ -815,7 +813,15 @@ class ExternalDatabaseManagementService(
         return "SELECT pg_reload_conf()"
     }
 
-    private val selectExpression = "SELECT $oidFromPgTables, information_schema.tables.table_name AS name, information_schema.columns.column_name "
+    private val selectExpression = """
+        SELECT
+          $oidFromPgTables,
+          information_schema.tables.table_name AS name,
+          information_schema.columns.column_name,
+          information_schema.columns.data_type AS datatype,
+          information_schema.columns.ordinal_position,
+          information_schema.table_constraints.constraint_type
+    """.trimIndent()
 
     private val fromExpression = "FROM information_schema.tables "
 
