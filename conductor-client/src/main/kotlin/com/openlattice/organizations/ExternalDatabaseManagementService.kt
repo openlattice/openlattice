@@ -46,6 +46,7 @@ import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import java.time.OffsetDateTime
 import java.util.*
+import java.util.function.Consumer
 import kotlin.collections.HashMap
 import kotlin.streams.toList
 
@@ -78,6 +79,10 @@ class ExternalDatabaseManagementService(
     private val propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap(hazelcastInstance)
     private val organizations = HazelcastMap.ORGANIZATIONS.getMap(hazelcastInstance)
     private val transporterState = HazelcastMap.TRANSPORTER_DB_COLUMNS.getMap(hazelcastInstance)
+
+    companion object {
+        private val OWNER_PRIVILEGES = PostgresPrivileges.values().toSet() - PostgresPrivileges.ALL
+    }
 
     /*CREATE*/
     fun createOrganizationExternalDatabaseTable(orgId: UUID, table: OrganizationExternalDatabaseTable): UUID {
@@ -495,29 +500,20 @@ class ExternalDatabaseManagementService(
 
     fun syncPermissions(
             orgOwnerAclKeys: List<AclKey>,
-            orgId: UUID,
-            tableId: UUID,
-            tableName: String,
+            table: OrganizationExternalDatabaseTable,
             maybeColumnId: Optional<UUID>,
             maybeColumnName: Optional<String>
     ): List<Acl> {
-        val privilegesByUser = HashMap<AclKey, MutableSet<PostgresPrivileges>>()
-        val aclKeyUUIDs = mutableListOf(tableId)
-        var objectType = SecurableObjectType.OrganizationExternalDatabaseTable
-        var aclKey = AclKey(aclKeyUUIDs)
-        val ownerPrivileges = PostgresPrivileges.values().toMutableSet()
-        ownerPrivileges.remove(PostgresPrivileges.ALL)
+        val privilegesByUser = mutableMapOf<AclKey, MutableSet<PostgresPrivileges>>()
+
+        val aclKey = if (maybeColumnId.isPresent) AclKey(table.id, maybeColumnId.get()) else AclKey(table.id)
+        val (sql, objectType) = getPrivilegesFields(table.schema, table.name, maybeColumnName)
 
         //if column objects, sync postgres privileges
-        maybeColumnId.ifPresent { columnId ->
-            aclKeyUUIDs.add(columnId)
-            aclKey = AclKey(aclKeyUUIDs)
-            val privilegesFields = getPrivilegesFields(tableName, maybeColumnName)
-            val sql = privilegesFields.first
-            objectType = privilegesFields.second
+        if (maybeColumnId.isPresent) {
 
             val usernamesToPrivileges = BasePostgresIterable(
-                    StatementHolderSupplier(externalDbManager.connectToOrg(orgId), sql)
+                    StatementHolderSupplier(externalDbManager.connectToOrg(table.organizationId), sql)
             ) { rs ->
                 user(rs) to PostgresPrivileges.valueOf(privilegeType(rs).toUpperCase())
             }.toMap()
@@ -534,25 +530,16 @@ class ExternalDatabaseManagementService(
 
         //give organization owners all privileges
         orgOwnerAclKeys.forEach { orgOwnerAclKey ->
-            privilegesByUser.getOrPut(orgOwnerAclKey) { mutableSetOf() }.addAll(ownerPrivileges)
+            privilegesByUser.getOrPut(orgOwnerAclKey) { mutableSetOf() }.addAll(OWNER_PRIVILEGES)
         }
 
         return privilegesByUser.map { (securablePrincipalAclKey, privileges) ->
             val principal = securePrincipalsManager.getSecurablePrincipal(securablePrincipalAclKey).principal
             val aceKey = AceKey(aclKey, principal)
-            val permissions = EnumSet.noneOf(Permission::class.java)
+            val permissions = getPermissionsFromPrivileges(privileges)
 
-            if (privileges == ownerPrivileges) {
-                permissions.addAll(setOf(Permission.OWNER, Permission.READ, Permission.WRITE))
-            } else {
-                if (privileges.contains(PostgresPrivileges.SELECT)) {
-                    permissions.add(Permission.READ)
-                }
-                if (privileges.contains(PostgresPrivileges.INSERT) || privileges.contains(PostgresPrivileges.UPDATE))
-                    permissions.add(Permission.WRITE)
-            }
             aces.executeOnKey(aceKey, PermissionMerger(permissions, objectType, OffsetDateTime.MAX))
-            return@map Acl(aclKeyUUIDs, setOf(Ace(principal, permissions, Optional.empty())))
+            return@map Acl(aclKey, setOf(Ace(principal, permissions, Optional.empty())))
         }
     }
 
@@ -663,7 +650,23 @@ class ExternalDatabaseManagementService(
         return privileges
     }
 
-    private fun getPrivilegesFields(tableName: String, maybeColumnName: Optional<String>): Pair<String, SecurableObjectType> {
+    private fun getPermissionsFromPrivileges(privileges: Set<PostgresPrivileges>): EnumSet<Permission> {
+        if (OWNER_PRIVILEGES.containsAll(privileges)) {
+            return EnumSet.of(Permission.OWNER, Permission.READ, Permission.WRITE)
+        }
+
+        val permissions = EnumSet.noneOf(Permission::class.java)
+
+        if (privileges.contains(PostgresPrivileges.SELECT)) {
+            permissions.add(Permission.READ)
+        }
+        if (privileges.contains(PostgresPrivileges.INSERT) || privileges.contains(PostgresPrivileges.UPDATE))
+            permissions.add(Permission.WRITE)
+
+        return permissions
+    }
+
+    private fun getPrivilegesFields(tableSchema: String, tableName: String, maybeColumnName: Optional<String>): Pair<String, SecurableObjectType> {
         var columnCondition = ""
         var grantsTableName = "information_schema.role_table_grants"
         var objectType = SecurableObjectType.OrganizationExternalDatabaseTable
@@ -673,7 +676,7 @@ class ExternalDatabaseManagementService(
             grantsTableName = "information_schema.role_column_grants"
             objectType = SecurableObjectType.OrganizationExternalDatabaseColumn
         }
-        val sql = getCurrentUsersPrivilegesSql(tableName, grantsTableName, columnCondition)
+        val sql = getCurrentUsersPrivilegesSql(tableSchema, tableName, grantsTableName, columnCondition)
         return Pair(sql, objectType)
     }
 
@@ -784,10 +787,11 @@ class ExternalDatabaseManagementService(
                 columnCondition
     }
 
-    private fun getCurrentUsersPrivilegesSql(tableName: String, grantsTableName: String, columnCondition: String): String {
+    private fun getCurrentUsersPrivilegesSql(tableSchema: String, tableName: String, grantsTableName: String, columnCondition: String): String {
         return "SELECT grantee AS user, privilege_type " +
                 "FROM $grantsTableName " +
                 "WHERE table_name = '$tableName' " +
+                "AND table_schema = '$tableSchema' " +
                 columnCondition
     }
 
