@@ -9,12 +9,14 @@ import com.openlattice.assembler.AssemblerConnectionManager.Companion.OPENLATTIC
 import com.openlattice.assembler.AssemblerConnectionManager.Companion.STAGING_SCHEMA
 import com.openlattice.assembler.dropAllConnectionsToDatabaseSql
 import com.openlattice.authorization.*
+import com.openlattice.authorization.mapstores.PermissionMapstore
 import com.openlattice.authorization.processors.PermissionMerger
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.edm.PropertyTypeIdFqn
 import com.openlattice.edm.processors.GetEntityTypeFromEntitySetEntryProcessor
 import com.openlattice.edm.processors.GetFqnFromPropertyTypeEntryProcessor
 import com.openlattice.edm.requests.MetadataUpdate
+import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.processors.organizations.UpdateOrganizationExternalDatabaseColumnEntryProcessor
 import com.openlattice.hazelcast.processors.organizations.UpdateOrganizationExternalDatabaseTableEntryProcessor
@@ -68,10 +70,12 @@ class ExternalDatabaseManagementService(
         private val hds: HikariDataSource
 ) {
 
+    private val logger = LoggerFactory.getLogger(ExternalDatabaseManagementService::class.java)
+
     private val organizationExternalDatabaseColumns = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_COLUMN.getMap(hazelcastInstance)
     private val organizationExternalDatabaseTables = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE.getMap(hazelcastInstance)
     private val securableObjectTypes = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap(hazelcastInstance)
-    private val logger = LoggerFactory.getLogger(ExternalDatabaseManagementService::class.java)
+
     private val primaryKeyConstraint = "PRIMARY KEY"
     private val FETCH_SIZE = 100_000
 
@@ -79,9 +83,9 @@ class ExternalDatabaseManagementService(
      * Only needed for materialize entity set, which should move elsewhere eventually
      */
     private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
-    private val entityTypes = HazelcastMap.ENTITY_TYPES.getMap(hazelcastInstance)
     private val propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap(hazelcastInstance)
     private val transporterState = HazelcastMap.TRANSPORTER_DB_COLUMNS.getMap(hazelcastInstance)
+    private val permissions = HazelcastMap.PERMISSIONS.getMap(hazelcastInstance)
 
     /*CREATE*/
     fun createOrganizationExternalDatabaseTable(orgId: UUID, table: OrganizationExternalDatabaseTable): UUID {
@@ -147,65 +151,48 @@ class ExternalDatabaseManagementService(
     }
 
     fun destroyTransportedEntitySet(organizationId: UUID, entitySetId: UUID) {
-        transporterService.destroyTransportedEntitySet(organizationId, entitySetId)
+//        transporterService.destroyTransportedEntitySet(organizationId, entitySetId)
         entitySets.executeOnKey(entitySetId, DestroyTransportedEntitySetEntryProcessor())
     }
 
     fun transportEntitySet(organizationId: UUID, entitySetId: UUID) {
-        val memberPrincipals = securePrincipalsManager.getOrganizationMembers(setOf(organizationId)).getValue(organizationId)
-
-        val userToPrincipals = securePrincipalsManager.bulkGetUnderlyingPrincipals(memberPrincipals).mapKeys {
-            dbCredentialService.getDbUsername(it.key)
-        }
-
-        val entityTypeId = entitySets.submitToKey(
+        val ptIds = entitySets.submitToKey(
                 entitySetId,
                 GetEntityTypeFromEntitySetEntryProcessor()
-        )
-
-        val accessCheckCompletion = entityTypeId.thenCompose { etid ->
-            entityTypes.getAsync(etid!!)
-        }.thenApplyAsync { entityType ->
-            entityType.properties.mapTo(mutableSetOf()) { ptid ->
-                AccessCheck(AclKey(entitySetId, ptid), EnumSet.of(Permission.READ))
-            }
-        }
-
-        val transporterColumnsCompletion = entityTypeId.thenCompose { etid ->
+        ).thenCompose { etid ->
             requireNotNull(etid) {
                 "Entity set $entitySetId has no entity type"
             }
             transporterState.submitToKey(etid, GetPropertyTypesFromTransporterColumnSetEntryProcessor())
-        }.thenCompose { transporterPtIds ->
+        }
+
+        val ptIdsToFqns = ptIds.thenCompose { transporterPtIds ->
             propertyTypes.submitToKeys(transporterPtIds, GetFqnFromPropertyTypeEntryProcessor())
+        }.thenApply { ptIdToFqn ->
+            ptIdToFqn.mapTo( mutableSetOf() ) { PropertyTypeIdFqn(it.key, it.value) }
         }
 
-        val userToPermissionsCompletion = accessCheckCompletion.thenApply { accessChecks ->
-            userToPrincipals.mapValues { (_, principals) ->
-                authorizationManager.accessChecksForPrincipals(accessChecks, principals).filter {
-                    it.permissions[Permission.READ]!!
-                }.map {
-                    it.aclKey[1]
-                }.toList()
-            }
+        val columnsById = ptIds.thenApply { transporterPtIds ->
+            organizationExternalDatabaseColumns.getAll(transporterPtIds)
         }
 
-        userToPermissionsCompletion.thenCombine(transporterColumnsCompletion) { userToPtCols, transporterColumns ->
-            val userToEntitySetColumnNames = userToPtCols.mapValues { (_, columns) ->
-                columns.map {
-                    transporterColumns[it].toString()
-                }
-            }
-            val asPtFqns = transporterColumns.mapTo(mutableSetOf()) { PropertyTypeIdFqn(it.key, it.value) }
+        val acls = permissions.entrySet(Predicates.equal(PermissionMapstore.ROOT_OBJECT_INDEX, entitySetId)).map { (key, valu) ->
+            Acl(key.aclKey, listOf(Ace(key.principal, valu as Set<Permission>, Optional.of(valu.expirationDate))))
+        }
+
+        ptIdsToFqns.thenCombine( columnsById ) { asPtFqns, colsById ->
             entitySets.lock(entitySetId, 10, TimeUnit.SECONDS)
             val es = entitySets.getValue(entitySetId)
             transporterService.transportEntitySet(
                     organizationId,
                     es,
                     asPtFqns,
-                    userToEntitySetColumnNames
+                    acls,
+                    colsById
             )
+            es.flags.add(EntitySetFlag.TRANSPORTED)
             entitySets.unlock(entitySetId)
+
         }.toCompletableFuture().get()
     }
 

@@ -409,7 +409,3 @@ internal fun grantSelectOnColumnsToRoles(schema: Schemas, entitySetName: String,
 internal fun edgeViewName(entitySetName: String): String {
     return "${entitySetName}_edges"
 }
-
-internal fun viewRoleName(entitySetName: String, columnName: String): String {
-    return "${entitySetName}_$columnName"
-}

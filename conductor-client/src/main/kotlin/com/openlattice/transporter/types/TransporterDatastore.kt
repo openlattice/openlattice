@@ -4,10 +4,14 @@ import com.geekbeast.configuration.postgres.PostgresConfiguration
 import com.kryptnostic.rhizome.configuration.RhizomeConfiguration
 import com.openlattice.ApiHelpers
 import com.openlattice.assembler.AssemblerConfiguration
+import com.openlattice.assembler.PostgresRoles
+import com.openlattice.authorization.Acl
 import com.openlattice.authorization.Action
+import com.openlattice.authorization.Permission
 import com.openlattice.edm.EdmConstants
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.PropertyTypeIdFqn
+import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService
@@ -65,7 +69,8 @@ class TransporterDatastore(
             organizationId: UUID,
             es: EntitySet,
             ptIdToFqnColumns: Set<PropertyTypeIdFqn>,
-            usersToColumnPermissions: Map<String, List<String>>
+            columnAcls: List<Acl>,
+            columnsById: Map<UUID, OrganizationExternalDatabaseColumn>
     ) {
         val esName = es.name
         val orgHds = exConnMan.connectToOrg(organizationId)
@@ -111,8 +116,9 @@ class TransporterDatastore(
                 orgHds,
                 es.id,
                 esName,
-                usersToColumnPermissions,
-                ptIdToFqnColumns
+                ptIdToFqnColumns,
+                columnAcls,
+                columnsById
         )
     }
 
@@ -344,8 +350,9 @@ class TransporterDatastore(
             orgDatasource: HikariDataSource,
             entitySetId: UUID,
             entitySetName: String,
-            usersToColumnPermissions: Map<String, List<String>>,
-            ptIdToFqnColumns: Set<PropertyTypeIdFqn>
+            ptIdToFqnColumns: Set<PropertyTypeIdFqn>,
+            columnAcls: List<Acl>,
+            columnsById: Map<UUID, OrganizationExternalDatabaseColumn>
     ) {
         exDbPermMan.initializeAssemblyPermissions(
                 orgDatasource,
@@ -359,45 +366,6 @@ class TransporterDatastore(
                 listOf(), // Hmmm
                 mapOf() // larger hmmmm
         )
-
-        orgDatasource.connection.use { conn ->
-            conn.createStatement().use { stmt ->
-                usersToColumnPermissions.forEach { (username, _) ->
-                    stmt.execute(setUserInhertRolePrivileges(username))
-                    stmt.execute(grantUsageOnschemaSql(Schemas.ASSEMBLED_ENTITY_SETS, username))
-                }
-
-                val allPermissions = mutableSetOf<String>()
-                usersToColumnPermissions.forEach { (username, allowedCols) ->
-                    logger.debug("user {} has columns {}", username, allowedCols)
-                    stmt.execute(setUserInhertRolePrivileges(username))
-                    stmt.execute(grantUsageOnschemaSql(Schemas.ASSEMBLED_ENTITY_SETS, username))
-                    stmt.execute(revokeTablePermissionsForRole(Schemas.ASSEMBLED_ENTITY_SETS, entitySetName, username))
-
-                    allPermissions.addAll(allowedCols)
-                }
-
-                allPermissions.forEach { columnName ->
-                    val roleName = viewRoleName(entitySetName, columnName)
-//                    stmt.execute(exDbPermMan.c)
-                    stmt.execute(revokeTablePermissionsForRole(Schemas.ASSEMBLED_ENTITY_SETS, entitySetName, roleName))
-                    stmt.execute(grantUsageOnschemaSql(Schemas.ASSEMBLED_ENTITY_SETS, roleName))
-                    // grant openlattice.@id cølumn explicitly
-                    stmt.execute(grantSelectOnColumnsToRoles(Schemas.ASSEMBLED_ENTITY_SETS, entitySetName, roleName, listOf(columnName, OPENLATTICE_ID_AS_STRING)))
-                    stmt.execute(grantSelectOnColumnsToRoles(Schemas.ASSEMBLED_ENTITY_SETS, edgeViewName(entitySetName), roleName, MAT_EDGES_COLUMNS_LIST))
-                }
-            }
-
-            conn.createStatement().use { batch ->
-                // TODO: invalidate/update this when pt types and permissions are changed
-                usersToColumnPermissions.forEach { (username, allowedCols) ->
-                    allowedCols.forEach { column ->
-                        batch.addBatch(grantRoleToUser(viewRoleName(entitySetName, column), username))
-                    }
-                }
-                batch.executeBatch()
-            }
-        }
     }
 
     private fun transportTableToOrg(

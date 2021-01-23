@@ -153,10 +153,14 @@ class ExternalDatabasePermissioner(
                 ApiHelpers.dbQuote(fqnToColumnName(it))
             }
             val permissions = olToPostgres[Permission.READ]!!.joinToString()
+            // roleName to listOf(
+            //   createRoleIfNotExistsSql(roleName),
+            //   grantPermissionsOnColumnsOnTableToRoleSql()
             createRoleIfNotExistsSql(roleName) to grantPermissionsOnColumnsOnTableToRoleSql(
                     permissions,
                     quotedColumns,
-                    "${Schemas.ASSEMBLED_ENTITY_SETS}.${ApiHelpers.dbQuote(entitySetName)}",
+                    Schemas.ASSEMBLED_ENTITY_SETS,
+                    entitySetName,
                     roleName
             )
         }
@@ -199,6 +203,7 @@ class ExternalDatabasePermissioner(
                 createRoleIfNotExistsSql(roleName) to grantPermissionsOnColumnsOnTableToRoleSql(
                         pgPermissionString,
                         quotedColumn,
+                        null,
                         table.name,
                         roleName
                 )
@@ -314,10 +319,16 @@ class ExternalDatabasePermissioner(
         }
     }
 
-    private fun grantPermissionsOnColumnsOnTableToRoleSql(permissions: String, columns: String, tableName: String, roleName: String): String {
+    private fun grantPermissionsOnColumnsOnTableToRoleSql(
+            permissions: String,
+            columns: String,
+            schemaName: Schemas?,
+            tableName: String,
+            roleName: String): String {
+        val schema = schemaName ?: ""
         return """
             GRANT $permissions ( $columns )
-            ON ${ApiHelpers.dbQuote(tableName)}
+            ON $schema.${ApiHelpers.dbQuote(tableName)}
             TO ${ApiHelpers.dbQuote(roleName)}
         """.trimIndent()
     }

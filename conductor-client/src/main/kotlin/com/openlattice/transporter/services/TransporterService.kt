@@ -4,6 +4,7 @@ import com.google.common.eventbus.EventBus
 import com.google.common.eventbus.Subscribe
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
+import com.openlattice.authorization.Acl
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
@@ -17,6 +18,7 @@ import com.openlattice.edm.events.PropertyTypesRemovedFromEntityTypeEvent
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.edm.type.EntityType
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.transporter.MAT_EDGES_TABLE
 import com.openlattice.transporter.processors.TransporterPropagateDataEntryProcessor
 import com.openlattice.transporter.processors.TransporterSynchronizeTableDefinitionEntryProcessor
@@ -167,21 +169,19 @@ final class TransporterService(
                 .toSet()
     }
 
-    fun destroyTransportedEntitySet(organizationId: UUID, entitySetId: UUID) {
-
-    }
-
     fun transportEntitySet(
             organizationId: UUID,
             es: EntitySet,
             ptIdToFqnColumns: Set<PropertyTypeIdFqn>,
-            usersToColumnPermissions: Map<String, List<String>>
+            columnAcls: List<Acl>,
+            columnsById: Map<UUID, OrganizationExternalDatabaseColumn>
     ) {
         transporter.transportEntitySet(
                 organizationId,
                 es,
                 ptIdToFqnColumns,
-                usersToColumnPermissions
+                columnAcls,
+                columnsById
         )
     }
 

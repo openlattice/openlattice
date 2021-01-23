@@ -41,12 +41,6 @@ data class TransportEntitySetEntryProcessor(
         }
 
         try {
-            data.transportEntitySet(
-                    organizationId,
-                    es,
-                    ptIdToFqnColumns,
-                    usersToColumnPermissions
-            )
             es.flags.add(EntitySetFlag.TRANSPORTED)
         } catch (ex: Exception) {
             logger.error("Marking entity set id as not materialized {}", entry.key, ex)
