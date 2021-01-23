@@ -1,7 +1,6 @@
 package com.openlattice.organizations.processors
 
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
-import com.openlattice.external.JdbcConnectionsEntryProcessor
 import com.openlattice.hazelcast.processors.EpResult
 import com.openlattice.organizations.Organization
 import org.slf4j.LoggerFactory

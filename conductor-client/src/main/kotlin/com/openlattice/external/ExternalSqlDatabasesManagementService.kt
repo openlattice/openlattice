@@ -253,24 +253,19 @@ class ExternalSqlDatabasesManagementService(
         require(dataSourceId == dataSource.id) { "Path id and object id do not match." }
         externalSqlDatabases.executeOnKey(
                 organizationId,
-                JdbcConnectionsEntryProcessor(
+                AddJdbcConnectionsEntryProcessor(
                         JdbcConnections(mutableMapOf(dataSourceId to dataSource))
-                ) { currentConnections, newConnections ->
-                    currentConnections.putAll(newConnections)
-                    EpResult(null, true)
-                })
+                )
+        )
     }
 
     fun registerDataSource(organizationId: UUID, dataSource: JdbcConnection): UUID {
         val dataSourceWithReservedId = aclKeyReservations.reserveAnonymousId(dataSource)
-        val dataSourceId = externalSqlDatabases.executeOnKey(
+        val dataSourceId = dataSourceWithReservedId.id
+        externalSqlDatabases.executeOnKey(
                 organizationId,
-                JdbcConnectionsEntryProcessor(
-                        JdbcConnections(mutableMapOf(dataSourceWithReservedId.id to dataSourceWithReservedId))
-                ) { currentConnections, newConnections ->
-                    currentConnections.putAll(newConnections)
-                    EpResult(dataSourceWithReservedId.id, true)
-                }) as UUID
+                AddJdbcConnectionsEntryProcessor(JdbcConnections(mutableMapOf(dataSourceId to dataSource)))
+        )
 
         syncExternalDatasource(
                 organizationId,
