@@ -91,7 +91,7 @@ class ExternalSqlDatabasesManagementService(
     private fun connect(jdbcConnection: JdbcConnection): ExternalSqlDatabaseManager {
         return when (jdbcConnection.driver) {
             "org.postgresql.Driver" -> PostgresExternalSqlDatabaseManager(jdbcConnection)
-            "com.snowflake.client.jdbc.SnowflakeDriver" -> SnowflakeExternalSqlDatabaseManager(jdbcConnection)
+            "net.snowflake.client.jdbc.SnowflakeDriver" -> SnowflakeExternalSqlDatabaseManager(jdbcConnection)
             else -> throw InvalidParameterException(
                     "${jdbcConnection.driver} is not yet supported by OpenLattice platform. "
             )

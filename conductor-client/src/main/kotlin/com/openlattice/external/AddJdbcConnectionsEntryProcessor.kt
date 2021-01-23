@@ -20,9 +20,9 @@ class AddJdbcConnectionsEntryProcessor(
         val currentConnections = entry.value
         if (currentConnections != null) {
             currentConnections.putAll(jdbcConnections)
-
+            entry.setValue(currentConnections)
         } else {
-            entry.setValue( jdbcConnections)
+            entry.setValue(jdbcConnections)
         }
         return null
     }
