@@ -19,6 +19,7 @@ import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.edm.type.EntityType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
+import com.openlattice.postgres.TableColumn
 import com.openlattice.transporter.MAT_EDGES_TABLE
 import com.openlattice.transporter.processors.TransporterPropagateDataEntryProcessor
 import com.openlattice.transporter.processors.TransporterSynchronizeTableDefinitionEntryProcessor
@@ -174,7 +175,7 @@ final class TransporterService(
             es: EntitySet,
             ptIdToFqnColumns: Set<PropertyTypeIdFqn>,
             columnAcls: List<Acl>,
-            columnsById: Map<UUID, OrganizationExternalDatabaseColumn>
+            columnsById: Map<UUID, TableColumn>
     ) {
         transporter.transportEntitySet(
                 organizationId,

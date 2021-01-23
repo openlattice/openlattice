@@ -10,6 +10,7 @@ import com.openlattice.organization.OrganizationExternalDatabaseTable
 import com.openlattice.organization.roles.Role
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.PostgresPrivileges
+import com.openlattice.postgres.TableColumn
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
@@ -180,11 +181,12 @@ class ExternalDatabasePermissioner(
      * Updates permissions on [propertyTypes] for [entitySet] in org database for [organizationId]
      */
     override fun updateAssemblyPermissions(
+            organizationId: UUID,
             action: Action,
             columnAcls: List<Acl>,
-            columnsById: Map<UUID, OrganizationExternalDatabaseColumn>
+            columnsById: Map<UUID, TableColumn>
     ) {
-        updateTablePermissions(action, columnAcls, columnsById, TableType.VIEW)
+        updateTablePermissions(organizationId, action, columnAcls, columnsById, TableType.VIEW)
     }
 
     /**
@@ -227,6 +229,7 @@ class ExternalDatabasePermissioner(
      * Updates permissions on [columns] for [table] in org database for [organizationId]
      */
     override fun updateExternalTablePermissions(
+            organizationId: UUID,
             action: Action,
             columnAcls: List<Acl>,
             columnsById: Map<UUID, OrganizationExternalDatabaseColumn>
@@ -235,9 +238,10 @@ class ExternalDatabasePermissioner(
     }
 
     private fun updateTablePermissions(
+            organizationId: UUID,
             action: Action,
             columnAcls: List<Acl>,
-            columnsById: Map<UUID, OrganizationExternalDatabaseColumn>,
+            columnsById: Map<UUID, TableColumn>,
             tableType: TableType
     ) {
         if (action != Action.ADD && action != Action.REMOVE && action != Action.SET) {
@@ -245,68 +249,62 @@ class ExternalDatabasePermissioner(
             return
         }
 
-        val columnAclsByOrg = columnAcls.groupBy {
-            columnsById.getValue(it.aclKey[1]).organizationId
-        }
-
-        columnAclsByOrg.forEach { (orgId, columnAcls) ->
-            val removes = mutableSetOf<String>()
-            val adds = mutableSetOf<String>()
-            columnAcls.forEach { columnAcl ->
-                val column = columnsById.getValue(columnAcl.aclKey.last())
-                columnAcl.aces.forEach { ace ->
-                    when (action) {
-                        Action.ADD -> {
-                            adds.addAll(updatePermissionsOnColumnSql(
-                                    ace,
-                                    TableColumn.fromOrgExternalDbColumn(column),
-                                    PgPermAction.GRANT
-                            ))
-                        }
-                        Action.REMOVE -> {
-                            removes.addAll(updatePermissionsOnColumnSql(
-                                    ace,
-                                    TableColumn.fromOrgExternalDbColumn(column),
-                                    PgPermAction.REVOKE
-                            ))
-                        }
-                        Action.SET -> {
-                            removes.addAll(removeAllPermissionsForPrincipalOnColumn(ace.principal, column, tableType))
-                            adds.addAll(updatePermissionsOnColumnSql(
-                                    ace,
-                                    TableColumn.fromOrgExternalDbColumn(column),
-                                    PgPermAction.GRANT
-                            ))
-                        }
+        val removes = mutableSetOf<String>()
+        val adds = mutableSetOf<String>()
+        columnAcls.forEach { columnAcl ->
+            val column = columnsById.getValue(columnAcl.aclKey.last())
+            columnAcl.aces.forEach { ace ->
+                when (action) {
+                    Action.ADD -> {
+                        adds.addAll(updatePermissionsOnColumnSql(
+                                ace,
+                                column,
+                                PgPermAction.GRANT
+                        ))
+                    }
+                    Action.REMOVE -> {
+                        removes.addAll(updatePermissionsOnColumnSql(
+                                ace,
+                                column,
+                                PgPermAction.REVOKE
+                        ))
+                    }
+                    Action.SET -> {
+                        removes.addAll(removeAllPermissionsForPrincipalOnColumn(ace.principal, column, tableType))
+                        adds.addAll(updatePermissionsOnColumnSql(
+                                ace,
+                                column,
+                                PgPermAction.GRANT
+                        ))
                     }
                 }
             }
+        }
 
-            extDbManager.connectToOrg(orgId).connection.use { conn ->
-                conn.autoCommit = false
-                val stmt: Statement = conn.createStatement()
-                try {
-                    removes.forEach {
-                        stmt.execute(it)
-                    }
-                    adds.forEach { sql ->
-                        stmt.addBatch(sql)
-                    }
-                    stmt.executeBatch()
-                    conn.commit()
-                } catch (ex: Exception) {
-                    logger.error("Exception occurred during external permissions update, rolling back", ex)
-                } finally {
-                    conn.rollback()
-                    stmt.close()
+        extDbManager.connectToOrg(organizationId).connection.use { conn ->
+            conn.autoCommit = false
+            val stmt: Statement = conn.createStatement()
+            try {
+                removes.forEach {
+                    stmt.execute(it)
                 }
+                adds.forEach { sql ->
+                    stmt.addBatch(sql)
+                }
+                stmt.executeBatch()
+                conn.commit()
+            } catch (ex: Exception) {
+                logger.error("Exception occurred during external permissions update, rolling back", ex)
+            } finally {
+                conn.rollback()
+                stmt.close()
             }
         }
     }
 
     private fun removeAllPermissionsForPrincipalOnColumn(
             principal: Principal,
-            column: OrganizationExternalDatabaseColumn,
+            column: TableColumn,
             viewOrTable: TableType
     ): List<String> {
         val securablePrincipal = principalsMapManager.getSecurablePrincipal(principal.id)
@@ -385,15 +383,6 @@ class ExternalDatabasePermissioner(
                 "   END IF;\n" +
                 "END\n" +
                 "\$do\$;"
-    }
-
-    private data class TableColumn(val id: UUID, val tableId: UUID) {
-        companion object {
-            @JvmStatic
-            fun fromOrgExternalDbColumn(column: OrganizationExternalDatabaseColumn): TableColumn {
-                return TableColumn(column.id, column.tableId)
-            }
-        }
     }
 
     private enum class PgPermAction {

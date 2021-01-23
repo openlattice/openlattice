@@ -8,6 +8,7 @@ import com.openlattice.edm.PropertyTypeIdFqn
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.organization.OrganizationExternalDatabaseTable
 import com.openlattice.organization.roles.Role
+import com.openlattice.postgres.TableColumn
 import com.zaxxer.hikari.HikariDataSource
 import java.util.*
 
@@ -50,9 +51,10 @@ interface ExternalDatabasePermissioningService {
      * Updates permissions on [propertyTypes] for [entitySet] in org database for [organizationId]
      */
     fun updateAssemblyPermissions(
+            organizationId: UUID,
             action: Action,
             columnAcls: List<Acl>,
-            columnsById: Map<UUID, OrganizationExternalDatabaseColumn>
+            columnsById: Map<UUID, TableColumn>
     )
 
     /**
@@ -68,6 +70,7 @@ interface ExternalDatabasePermissioningService {
      * Updates permissions on [columns] for [table] in org database for [organizationId]
      */
     fun updateExternalTablePermissions(
+            organizationId: UUID,
             action: Action,
             columnAcls: List<Acl>,
             columnsById: Map<UUID, OrganizationExternalDatabaseColumn>

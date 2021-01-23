@@ -13,6 +13,7 @@ import com.openlattice.edm.EntitySet
 import com.openlattice.edm.PropertyTypeIdFqn
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.postgres.PostgresTable
+import com.openlattice.postgres.TableColumn
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService
 import com.openlattice.postgres.external.Schemas
@@ -70,7 +71,7 @@ class TransporterDatastore(
             es: EntitySet,
             ptIdToFqnColumns: Set<PropertyTypeIdFqn>,
             columnAcls: List<Acl>,
-            columnsById: Map<UUID, OrganizationExternalDatabaseColumn>
+            columnsById: Map<UUID, TableColumn>
     ) {
         val esName = es.name
         val orgHds = exConnMan.connectToOrg(organizationId)
@@ -113,6 +114,7 @@ class TransporterDatastore(
 
         // create roles, apply permissions
         applyViewAndEdgePermissions(
+                organizationId,
                 orgHds,
                 es.id,
                 esName,
@@ -347,12 +349,13 @@ class TransporterDatastore(
     }
 
     private fun applyViewAndEdgePermissions(
+            organizationId: UUID,
             orgDatasource: HikariDataSource,
             entitySetId: UUID,
             entitySetName: String,
             ptIdToFqnColumns: Set<PropertyTypeIdFqn>,
             columnAcls: List<Acl>,
-            columnsById: Map<UUID, OrganizationExternalDatabaseColumn>
+            columnsById: Map<UUID, TableColumn>
     ) {
         exDbPermMan.initializeAssemblyPermissions(
                 orgDatasource,
@@ -362,9 +365,10 @@ class TransporterDatastore(
         )
 
         exDbPermMan.updateAssemblyPermissions(
+                organizationId,
                 Action.SET,
-                listOf(), // Hmmm
-                mapOf() // larger hmmmm
+                columnAcls,
+                columnsById
         )
     }
 

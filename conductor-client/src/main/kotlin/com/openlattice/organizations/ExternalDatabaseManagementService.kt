@@ -17,6 +17,7 @@ import com.openlattice.edm.processors.GetEntityTypeFromEntitySetEntryProcessor
 import com.openlattice.edm.processors.GetFqnFromPropertyTypeEntryProcessor
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.edm.set.EntitySetFlag
+import com.openlattice.edm.type.EntityType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.processors.organizations.UpdateOrganizationExternalDatabaseColumnEntryProcessor
 import com.openlattice.hazelcast.processors.organizations.UpdateOrganizationExternalDatabaseTableEntryProcessor
@@ -172,15 +173,20 @@ class ExternalDatabaseManagementService(
             ptIdToFqn.mapTo( mutableSetOf() ) { PropertyTypeIdFqn(it.key, it.value) }
         }
 
-        val columnsById = ptIds.thenApply { transporterPtIds ->
-            organizationExternalDatabaseColumns.getAll(transporterPtIds)
+        val tableCols = ptIds.thenApply { transporterPtIds ->
+            transporterPtIds.associateWith {
+                TableColumn(it, entitySetId)
+            }
         }
 
-        val acls = permissions.entrySet(Predicates.equal(PermissionMapstore.ROOT_OBJECT_INDEX, entitySetId)).map { (key, valu) ->
+        val acls = permissions.entrySet(Predicates.and(
+                Predicates.equal<AceKey, AceValue>(PermissionMapstore.ROOT_OBJECT_INDEX, entitySetId),
+                Predicates.equal<AceKey, AceValue>(PermissionMapstore.SECURABLE_OBJECT_TYPE_INDEX, SecurableObjectType.PropertyTypeInEntitySet))
+        ).map { (key, valu) ->
             Acl(key.aclKey, listOf(Ace(key.principal, valu as Set<Permission>, Optional.of(valu.expirationDate))))
         }
 
-        ptIdsToFqns.thenCombine( columnsById ) { asPtFqns, colsById ->
+        ptIdsToFqns.thenCombine( tableCols ) { asPtFqns, colsById ->
             entitySets.lock(entitySetId, 10, TimeUnit.SECONDS)
             val es = entitySets.getValue(entitySetId)
             transporterService.transportEntitySet(
