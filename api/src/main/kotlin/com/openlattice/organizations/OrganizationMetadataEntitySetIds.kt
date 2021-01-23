@@ -37,4 +37,14 @@ data class OrganizationMetadataEntitySetIds(
         val schemas: UUID = UNINITIALIZED_METADATA_ENTITY_SET_ID,
         val views: UUID = UNINITIALIZED_METADATA_ENTITY_SET_ID,
         val accessRequests: UUID = UNINITIALIZED_METADATA_ENTITY_SET_ID
-) : Serializable
+) : Serializable {
+    val initialized: Boolean
+        get() = listOf(
+                columns,
+                datasets,
+                organization,
+                schemas,
+                views,
+                accessRequests
+        ).any { it == UNINITIALIZED_METADATA_ENTITY_SET_ID }
+}

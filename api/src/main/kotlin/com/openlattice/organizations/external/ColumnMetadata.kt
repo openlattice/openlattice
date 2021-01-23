@@ -6,8 +6,8 @@ package com.openlattice.organizations.external
  */
 data class ColumnMetadata(
         val name: String,
-        val externalId: String = name,
         val schema: String,
+        val externalId: String = "$schema.$name",
         val sqlDataType: String,
         val isPrimaryKey: Boolean,
         val isNullable: Boolean,

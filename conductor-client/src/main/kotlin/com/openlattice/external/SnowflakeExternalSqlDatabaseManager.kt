@@ -9,6 +9,7 @@ import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
+import java.security.InvalidParameterException
 import java.sql.ResultSet
 import java.time.OffsetDateTime
 import java.util.concurrent.TimeUnit
@@ -35,6 +36,8 @@ class SnowflakeExternalSqlDatabaseManager(private val jdbcConnection: JdbcConnec
         config.driverClassName = getDriverName()
         config.dataSourceProperties = jdbcConnection.properties
         config.jdbcUrl = jdbcConnection.url
+        config.username = jdbcConnection.username
+        config.password = jdbcConnection.password
 
         return HikariDataSource(config)
     }
@@ -45,7 +48,7 @@ class SnowflakeExternalSqlDatabaseManager(private val jdbcConnection: JdbcConnec
         }.toMap()
 
         getColumns().forEach { (tableKey, columns) ->
-            tables.getValue(tableKey).columns.addAll( columns )
+            tables.getValue(tableKey).columns.addAll(columns)
         }
 
         return tables
@@ -62,9 +65,13 @@ class SnowflakeExternalSqlDatabaseManager(private val jdbcConnection: JdbcConnec
                 name = rs.getString("TABLE_NAME"),
                 schema = rs.getString("TABLE_SCHEMA"),
                 sqlDataType = rs.getString("DATA_TYPE"),
-                ordinalPosition = rs.getInt("ORDINAL_POSTITION"),
+                ordinalPosition = rs.getInt("ORDINAL_POSITION"),
                 isPrimaryKey = false, // rs.getBoolean("IS_PRIMARY_KEY"), //SNOWFLAKE DOES NOT EXPOSE THIS YET https://community.snowflake.com/s/question/0D50Z00007XY2UMSA1/how-to-get-list-of-my-primary-key
-                isNullable = rs.getBoolean("IS_NULLABLE"),
+                isNullable = when(val nullable = rs.getString("IS_NULLABLE")) {
+                    "YES" -> true
+                    "NO" -> false
+                    else -> throw InvalidParameterException("Unrecognized IS_NULLABLE column value: $nullable")
+                },
                 privileges = mutableMapOf(),
                 maskingPolicy = ""//Will have to pull later with SHOW MASKING POLICY;
         )
@@ -84,11 +91,11 @@ class SnowflakeExternalSqlDatabaseManager(private val jdbcConnection: JdbcConnec
 
 
     override fun getSchemas(): Map<String, SchemaMetadata> {
-        TODO("Not yet implemented")
+        return mutableMapOf()
     }
 
     override fun getViews(): Map<String, ViewMetadata> {
-        TODO("Not yet implemented")
+        return mutableMapOf()
     }
 
     override fun grantPrivilegeOnSchemaToRole(privilege: SchemaPrivilege, role: Role) {

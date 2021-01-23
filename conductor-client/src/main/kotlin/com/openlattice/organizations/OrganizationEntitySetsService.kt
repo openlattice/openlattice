@@ -148,20 +148,11 @@ class OrganizationEntitySetsService(
     }
 
     fun ensureOrganizationMetadataEntitySetIdsFullyInitialized(organizationId: UUID) {
-        val fullyInitialized = organizations
-                .executeOnKey(organizationId, OrganizationReadEntryProcessor { org ->
-                    with(org.organizationMetadataEntitySetIds) {
-                        listOf(
-                                columns,
-                                datasets,
-                                organization,
-                                schemas,
-                                views,
-                                accessRequests
-                        ).any { it == UNINITIALIZED_METADATA_ENTITY_SET_ID }
-                    }
-                }) as Boolean
-        if( !fullyInitialized ) {
+        val fullyInitialized = organizations.executeOnKey(
+                organizationId,
+                OrganizationReadEntryProcessor { it.organizationMetadataEntitySetIds.initialized }) as Boolean
+
+        if (!fullyInitialized) {
             initializeOrganizationMetadataEntitySets(organizationId)
         }
     }
@@ -573,6 +564,7 @@ class OrganizationEntitySetsService(
             contacts = mutableSetOf(),
             flags = EnumSet.of(EntitySetFlag.METADATA)
     )
+
     private fun buildOrganizationMetadataEntitySetName(organizationId: UUID): String = quote(
             "org-metadata-$organizationId"
     )
@@ -581,7 +573,9 @@ class OrganizationEntitySetsService(
     private fun buildColumnEntitySetName(organizationId: UUID): String = quote("columns-$organizationId")
     private fun buildSchemasEntitySetName(organizationId: UUID): String = quote("schemas-$organizationId")
     private fun buildViewsEntitySetName(organizationId: UUID): String = quote("views-$organizationId")
-    private fun buildAccessRequestsEntitySetName(organizationId: UUID): String = quote("access-requests-$organizationId")
+    private fun buildAccessRequestsEntitySetName(organizationId: UUID): String = quote(
+            "access-requests-$organizationId"
+    )
 
     companion object {
         private val ORGANIZATION_METADATA_ET = FullQualifiedName("ol.organization_metadata")
