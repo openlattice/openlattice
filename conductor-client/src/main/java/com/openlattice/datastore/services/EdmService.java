@@ -180,7 +180,7 @@ public class EdmService implements EdmManager {
                 Predicates.in( AssociationTypeMapstore.DST_INDEX, entityTypeIdsArr )
         ) ).forEach( entry -> {
             UUID id = entry.getKey();
-            AssociationType associationType = entry.getValue()
+            AssociationType associationType = entry.getValue();
 
             assoc.add( id );
 
