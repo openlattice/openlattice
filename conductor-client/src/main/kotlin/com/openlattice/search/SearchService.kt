@@ -507,10 +507,21 @@ class SearchService(
         val dstEntitySetIds = mutableSetOf<UUID>()
         val associationEntitySetIds = mutableSetOf<UUID>()
 
-        graphService.getNeighborEntitySets(entitySetIds).forEach { neighborSet ->
-            srcEntitySetIds.add(neighborSet.srcEntitySetId)
-            dstEntitySetIds.add(neighborSet.dstEntitySetId)
-            associationEntitySetIds.add(neighborSet.edgeEntitySetId)
+        val entityTypeIds = entitySetService.getEntityTypeIdsByEntitySetIds(entitySetIds).values.toSet()
+        val (srcEntityTypeIds, assocEntityTypeIds, dstEntityTypeIds) = dataModelService.getSrcAssocDstInvolvingEntityTypes(entityTypeIds)
+
+        entitySetService.getEntitySetsOfType(srcEntityTypeIds + assocEntityTypeIds + dstEntityTypeIds).forEach {
+            if (srcEntityTypeIds.contains(it.entityTypeId)) {
+                srcEntitySetIds.add(it.id)
+            }
+
+            if (dstEntityTypeIds.contains(it.entityTypeId)) {
+                dstEntitySetIds.add(it.id)
+            }
+
+            if (assocEntityTypeIds.contains(it.entityTypeId)) {
+                associationEntitySetIds.add(it.id)
+            }
         }
 
         val authorizedEntitySetIds = authorizations
