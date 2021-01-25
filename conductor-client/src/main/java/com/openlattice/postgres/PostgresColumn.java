@@ -383,6 +383,9 @@ public final class PostgresColumn {
     public static final String                   ORGANIZATION_ID_FIELD             = "organization_id";
     public static final PostgresColumnDefinition ORGANIZATION_ID                   =
             new PostgresColumnDefinition( ORGANIZATION_ID_FIELD, UUID ).notNull();
+    public static final String                   ORGANIZATION_IDS_FIELD             = "organization_ids";
+    public static final PostgresColumnDefinition ORGANIZATION_IDS                   =
+            new PostgresColumnDefinition( ORGANIZATION_ID_FIELD, UUID_ARRAY ).notNull();
     public static final String                   ORIGIN_ID_FIELD                   = "origin_id";
     public static final PostgresColumnDefinition ORIGIN_ID                         =
             new PostgresColumnDefinition( ORIGIN_ID_FIELD, UUID )

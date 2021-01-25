@@ -107,6 +107,7 @@ import static com.openlattice.postgres.PostgresColumn.OID;
 import static com.openlattice.postgres.PostgresColumn.ORDINAL_POSITION;
 import static com.openlattice.postgres.PostgresColumn.ORGANIZATION;
 import static com.openlattice.postgres.PostgresColumn.ORGANIZATION_ID;
+import static com.openlattice.postgres.PostgresColumn.ORGANIZATION_IDS;
 import static com.openlattice.postgres.PostgresColumn.PARTITION;
 import static com.openlattice.postgres.PostgresColumn.PARTITIONS;
 import static com.openlattice.postgres.PostgresColumn.PARTITION_INDEX;
@@ -182,16 +183,25 @@ public final class PostgresTable {
                             PostgresColumn.AUDIT_RECORD_ENTITY_SET_IDS,
                             AUDIT_EDGE_ENTITY_SET_IDS )
                     .primaryKey( ACL_KEY );
-    public static final PostgresTableDefinition BASE_LONG_IDS =
+    public static final PostgresTableDefinition BASE_LONG_IDS                 =
             new PostgresTableDefinition( "base_long_ids" )
                     .addColumns( SCOPE, BASE )
                     .primaryKey( SCOPE );
-    public static final PostgresTableDefinition COLLISIONS    = new CitusDistributedTableDefinition(
+    public static final PostgresTableDefinition COLLABORATIONS                = new PostgresTableDefinition(
+            "collaborations" )
+            .addColumns(
+                    ID,
+                    NAME,
+                    TITLE,
+                    DESCRIPTION,
+                    ORGANIZATION_IDS
+            ).setUnique( NAME );
+    public static final PostgresTableDefinition COLLISIONS                    = new CitusDistributedTableDefinition(
             "collisions" )
             .addColumns( ID_VALUE, ENTITY_SET_ID, ENTITY_ID )
             .primaryKey( ID_VALUE, ENTITY_SET_ID, ENTITY_ID )
             .distributionColumn( ID_VALUE );
-    public static final PostgresTableDefinition DATA          = PostgresDataTables
+    public static final PostgresTableDefinition DATA                          = PostgresDataTables
             .buildDataTableDefinition();
     public static final PostgresTableDefinition DB_CREDS                      =
             new PostgresTableDefinition( "db_creds" )
@@ -467,7 +477,7 @@ public final class PostgresTable {
             "propagation_graph" )
             .addColumns( SRC_ENTITY_SET_ID, SRC_PROPERTY_TYPE_ID, DST_ENTITY_SET_ID, DST_PROPERTY_TYPE_ID )
             .primaryKey( SRC_ENTITY_SET_ID, SRC_PROPERTY_TYPE_ID, DST_ENTITY_SET_ID, DST_PROPERTY_TYPE_ID );
-    public static final PostgresTableDefinition PROPERTY_TYPES    =
+    public static final PostgresTableDefinition PROPERTY_TYPES      =
 
             new PostgresTableDefinition( "property_types" )
                     .addColumns( ID,
@@ -496,14 +506,14 @@ public final class PostgresTable {
             new PostgresTableDefinition( "requests" )
                     .addColumns( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID, PostgresColumn.PERMISSIONS, REASON, STATUS )
                     .primaryKey( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID );
-    public static final PostgresTableDefinition SCHEDULED_TASKS   =
+    public static final PostgresTableDefinition SCHEDULED_TASKS     =
             new PostgresTableDefinition( "scheduled_tasks" )
                     .addColumns( ID, SCHEDULED_DATE, CLASS_NAME, CLASS_PROPERTIES );
-    public static final PostgresTableDefinition SCHEMAS           =
+    public static final PostgresTableDefinition SCHEMAS             =
             new PostgresTableDefinition( "schemas" )
                     .addColumns( NAMESPACE, NAME_SET )
                     .primaryKey( NAMESPACE );
-    public static final PostgresTableDefinition SECURABLE_OBJECTS =
+    public static final PostgresTableDefinition SECURABLE_OBJECTS   =
             new PostgresTableDefinition( "securable_objects" )
                     .addColumns( ACL_KEY, SECURABLE_OBJECT_TYPE )
                     .primaryKey( ACL_KEY );
