@@ -417,7 +417,7 @@ class HazelcastAuthorizationService(
     @Timed
     override fun getAllSecurableObjectPermissions(key: AclKey): Acl {
         val acesWithPermissions = aces.entrySet(hasAclKey(key))
-                .filterNot { it.value.isEmpty() }
+                .filter { it.value.isNotEmpty() }
                 .map { Ace(it.key.principal, it.value.permissions) }
                 .toSet()
 
@@ -427,7 +427,7 @@ class HazelcastAuthorizationService(
     @Timed
     override fun getAllSecurableObjectPermissions(keys: Set<AclKey>): Set<Acl> {
         return aces.entrySet(hasAnyAclKeys(keys))
-                .filterNot { it.value.isEmpty() }
+                .filter { it.value.isNotEmpty() }
                 .groupBy { it.key.aclKey }
                 .mapTo(mutableSetOf()) { entry ->
                     Acl(entry.key, entry.value.mapTo(mutableSetOf()) { Ace(it.key.principal, it.value.permissions) })
