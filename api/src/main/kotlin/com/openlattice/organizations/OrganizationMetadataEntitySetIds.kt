@@ -21,6 +21,7 @@
 
 package com.openlattice.organizations
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import java.io.Serializable
 import java.util.*
 
@@ -38,7 +39,9 @@ data class OrganizationMetadataEntitySetIds(
         val views: UUID = UNINITIALIZED_METADATA_ENTITY_SET_ID,
         val accessRequests: UUID = UNINITIALIZED_METADATA_ENTITY_SET_ID
 ) : Serializable {
+
     val initialized: Boolean
+        @JsonIgnore
         get() = listOf(
                 columns,
                 datasets,

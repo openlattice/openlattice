@@ -1,5 +1,6 @@
 package com.openlattice.scheduling
 
+import com.codahale.metrics.annotation.Timed
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.map.IMap
 import com.hazelcast.query.Predicates
@@ -8,6 +9,8 @@ import com.openlattice.scheduling.mapstores.ScheduledTasksMapstore
 import com.openlattice.tasks.HazelcastFixedRateTask
 import com.openlattice.tasks.Task
 import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Component
+import org.springframework.stereotype.Service
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.util.*
@@ -16,7 +19,12 @@ import java.util.concurrent.TimeUnit
 private val logger = LoggerFactory.getLogger(ScheduledTaskService::class.java)
 private const val RETRY_INTERVAL = 1_000L * 60 * 60 // 1 hour
 
+@Service
 class ScheduledTaskService : HazelcastFixedRateTask<ScheduledTaskServiceDependencies> {
+    //Ignore funky kotlin compile issue
+    override fun getDependency(): ScheduledTaskServiceDependencies {
+        return super.getDependency()
+    }
 
     override fun getInitialDelay(): Long {
         return 1_000
