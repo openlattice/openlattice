@@ -26,8 +26,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.*;
 import com.google.common.eventbus.EventBus;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.map.IMap;
 import com.hazelcast.map.EntryProcessor;
+import com.hazelcast.map.IMap;
 import com.hazelcast.query.Predicates;
 import com.openlattice.assembler.events.MaterializedEntitySetEdmChangeEvent;
 import com.openlattice.authorization.AclKey;
@@ -174,17 +174,20 @@ public class EdmService implements EdmManager {
         Set<UUID> dst = Sets.newHashSet();
 
         UUID[] entityTypeIdsArr = entityTypeIds.toArray( new UUID[] {} );
-        associationTypes.values( Predicates.or(
+        associationTypes.entrySet( Predicates.or(
                 Predicates.in( AssociationTypeMapstore.ID_INDEX, entityTypeIdsArr ),
                 Predicates.in( AssociationTypeMapstore.SRC_INDEX, entityTypeIdsArr ),
                 Predicates.in( AssociationTypeMapstore.DST_INDEX, entityTypeIdsArr )
-        ) ).forEach( associationType -> {
-            assoc.add( associationType.getAssociationEntityType().getId() );
+        ) ).forEach( entry -> {
+            UUID id = entry.getKey();
+            AssociationType associationType = entry.getValue();
+
+            assoc.add( id );
 
             Set<UUID> currSrc = Sets.newHashSet();
             Set<UUID> currDst = Sets.newHashSet();
 
-            if ( entityTypeIds.contains( associationType.getAssociationEntityType().getId() ) ) {
+            if ( entityTypeIds.contains( id ) ) {
                 currSrc.addAll( associationType.getSrc() );
                 currDst.addAll( associationType.getDst() );
             } else {
