@@ -43,6 +43,7 @@ import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.PrincipalType;
 import com.openlattice.authorization.SecurablePrincipal;
 import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.collaborations.Collaboration;
 import com.openlattice.collections.CollectionTemplateKey;
 import com.openlattice.collections.CollectionTemplateType;
 import com.openlattice.collections.EntitySetCollection;
@@ -187,6 +188,7 @@ import static com.openlattice.postgres.PostgresColumn.NULLABLE_TITLE;
 import static com.openlattice.postgres.PostgresColumn.OID;
 import static com.openlattice.postgres.PostgresColumn.ORDINAL_POSITION;
 import static com.openlattice.postgres.PostgresColumn.ORGANIZATION_ID;
+import static com.openlattice.postgres.PostgresColumn.ORGANIZATION_IDS;
 import static com.openlattice.postgres.PostgresColumn.ORGANIZATION_ID_FIELD;
 import static com.openlattice.postgres.PostgresColumn.ORIGIN_ID;
 import static com.openlattice.postgres.PostgresColumn.PARTITION;
@@ -1209,5 +1211,25 @@ public final class ResultSetAdapters {
         String name = name( rs );
 
         return new OrganizationDatabase( oid, name );
+    }
+
+    public static Set<UUID> organizationIds( ResultSet rs ) throws SQLException {
+        final UUID[] organizationIds = PostgresArrays.getUuidArray( rs, ORGANIZATION_IDS.getName() );
+
+        if ( organizationIds == null ) {
+            return new LinkedHashSet<>();
+        }
+
+        return new LinkedHashSet<>( Arrays.asList( organizationIds ) );
+    }
+
+    public static Collaboration collaboration( ResultSet rs ) throws SQLException {
+        UUID id = id( rs );
+        String name = name( rs );
+        String title = title( rs );
+        String description = description( rs );
+        Set<UUID> organizationIds = organizationIds( rs );
+
+        return new Collaboration( id, name, title, description, organizationIds );
     }
 }
