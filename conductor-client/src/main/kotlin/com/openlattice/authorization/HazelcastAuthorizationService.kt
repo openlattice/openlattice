@@ -327,7 +327,8 @@ class HazelcastAuthorizationService(
 
     @Timed
     override fun accessChecksForPrincipals(
-            accessChecks: Set<AccessCheck>, principals: Set<Principal>
+            accessChecks: Set<AccessCheck>,
+            principals: Set<Principal>
     ): Stream<Authorization> {
         val requests: MutableMap<AclKey, EnumSet<Permission>> = Maps.newLinkedHashMapWithExpectedSize(accessChecks.size)
 
