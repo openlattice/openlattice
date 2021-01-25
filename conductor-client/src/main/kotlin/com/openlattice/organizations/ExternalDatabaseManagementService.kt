@@ -10,14 +10,12 @@ import com.openlattice.assembler.AssemblerConnectionManager.Companion.STAGING_SC
 import com.openlattice.assembler.dropAllConnectionsToDatabaseSql
 import com.openlattice.authorization.*
 import com.openlattice.authorization.mapstores.PermissionMapstore
-import com.openlattice.authorization.processors.PermissionMerger
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.edm.PropertyTypeIdFqn
 import com.openlattice.edm.processors.GetEntityTypeFromEntitySetEntryProcessor
 import com.openlattice.edm.processors.GetFqnFromPropertyTypeEntryProcessor
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.edm.set.EntitySetFlag
-import com.openlattice.edm.type.EntityType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.processors.organizations.UpdateOrganizationExternalDatabaseColumnEntryProcessor
 import com.openlattice.hazelcast.processors.organizations.UpdateOrganizationExternalDatabaseTableEntryProcessor
@@ -36,11 +34,8 @@ import com.openlattice.postgres.external.ExternalDatabasePermissioningService
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.openlattice.postgres.streams.StatementHolderSupplier
-import com.openlattice.transporter.processors.DestroyTransportedEntitySetEntryProcessor
 import com.openlattice.transporter.processors.GetPropertyTypesFromTransporterColumnSetEntryProcessor
-import com.openlattice.transporter.processors.TransportEntitySetEntryProcessor
 import com.openlattice.transporter.services.TransporterService
-import com.openlattice.transporter.types.TransporterDatastore
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
@@ -55,7 +50,6 @@ import java.time.OffsetDateTime
 import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.collections.HashMap
-import kotlin.streams.toList
 
 @Service
 class ExternalDatabaseManagementService(
@@ -152,8 +146,17 @@ class ExternalDatabaseManagementService(
     }
 
     fun destroyTransportedEntitySet(organizationId: UUID, entitySetId: UUID) {
-//        transporterService.destroyTransportedEntitySet(organizationId, entitySetId)
-        entitySets.executeOnKey(entitySetId, DestroyTransportedEntitySetEntryProcessor())
+        try {
+            entitySets.lock(entitySetId, 10, TimeUnit.SECONDS)
+            val es = entitySets.getValue(entitySetId)
+
+            transporterService.disassembleEntitySet(organizationId, es.entityTypeId, es.name)
+
+            es.flags.remove(EntitySetFlag.TRANSPORTED)
+            entitySets.set(entitySetId, es)
+        } finally {
+            entitySets.unlock(entitySetId)
+        }
     }
 
     fun transportEntitySet(organizationId: UUID, entitySetId: UUID) {
@@ -187,18 +190,20 @@ class ExternalDatabaseManagementService(
         }
 
         ptIdsToFqns.thenCombine( tableCols ) { asPtFqns, colsById ->
-            entitySets.lock(entitySetId, 10, TimeUnit.SECONDS)
-            val es = entitySets.getValue(entitySetId)
-            transporterService.transportEntitySet(
-                    organizationId,
-                    es,
-                    asPtFqns,
-                    acls,
-                    colsById
-            )
-            es.flags.add(EntitySetFlag.TRANSPORTED)
-            entitySets.unlock(entitySetId)
-
+            try {
+                entitySets.lock(entitySetId, 10, TimeUnit.SECONDS)
+                val es = entitySets.getValue(entitySetId)
+                transporterService.assembleEntitySet(
+                        organizationId,
+                        es,
+                        asPtFqns,
+                        acls,
+                        colsById
+                )
+                es.flags.add(EntitySetFlag.TRANSPORTED)
+            } finally {
+                entitySets.unlock(entitySetId)
+            }
         }.toCompletableFuture().get()
     }
 

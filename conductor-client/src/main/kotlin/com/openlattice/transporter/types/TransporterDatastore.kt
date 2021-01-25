@@ -126,9 +126,9 @@ class TransporterDatastore(
 
     fun destroyTransportedEntitySet(
             organizationId: UUID,
-            orgHds: HikariDataSource = exConnMan.connectToOrg(organizationId),
             entityTypeId: UUID,
-            name: String
+            name: String,
+            orgHds: HikariDataSource = exConnMan.connectToOrg(organizationId)
     ) {
         destroyEdgeViewInOrgDb(orgHds, name)
 

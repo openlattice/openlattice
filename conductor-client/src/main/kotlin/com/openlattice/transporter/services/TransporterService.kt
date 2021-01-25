@@ -15,12 +15,15 @@ import com.openlattice.edm.events.EntityTypeCreatedEvent
 import com.openlattice.edm.events.EntityTypeDeletedEvent
 import com.openlattice.edm.events.PropertyTypesAddedToEntityTypeEvent
 import com.openlattice.edm.events.PropertyTypesRemovedFromEntityTypeEvent
+import com.openlattice.edm.processors.GetEntityTypeFromEntitySetEntryProcessor
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.edm.type.EntityType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.postgres.TableColumn
 import com.openlattice.transporter.MAT_EDGES_TABLE
+import com.openlattice.transporter.processors.MarkEntitySetNotTransportedEntryProcessor
+import com.openlattice.transporter.processors.MarkEntitySetTransportedEntryProcessor
 import com.openlattice.transporter.processors.TransporterPropagateDataEntryProcessor
 import com.openlattice.transporter.processors.TransporterSynchronizeTableDefinitionEntryProcessor
 import com.openlattice.transporter.tableName
@@ -170,7 +173,15 @@ final class TransporterService(
                 .toSet()
     }
 
-    fun transportEntitySet(
+    fun disassembleEntitySet(
+            organizationId: UUID,
+            entityTypeId: UUID,
+            entitySetName: String
+    ) {
+        transporter.destroyTransportedEntitySet(organizationId, entityTypeId, entitySetName)
+    }
+
+    fun assembleEntitySet(
             organizationId: UUID,
             es: EntitySet,
             ptIdToFqnColumns: Set<PropertyTypeIdFqn>,
