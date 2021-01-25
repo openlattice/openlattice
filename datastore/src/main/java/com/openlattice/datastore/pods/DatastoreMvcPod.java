@@ -72,7 +72,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurationSupp
                 RequestsController.class, AppController.class, GraphController.class,
                 PersistentSearchController.class, AdminController.class,
                 SubscriptionController.class, FeedsController.class, CodexController.class, CollectionsController.class,
-                DatasetController.class, AnalysisController.class
+                DatasetController.class, AnalysisController.class, CollectionsController.class
         },
         includeFilters = @ComponentScan.Filter(
                 value = { org.springframework.stereotype.Controller.class,
