@@ -31,8 +31,8 @@ interface CollaborationsApi {
     fun deleteCollaboration(@Path(ID) id: UUID)
 
     @POST(BASE + ID_PATH + ORGANIZATIONS_PATH)
-    fun addOrganizationIdsToCollaboration(@Path(ID) id: UUID, @Body organizationIds: Iterable<UUID>)
+    fun addOrganizationIdsToCollaboration(@Path(ID) id: UUID, @Body organizationIds: Set<UUID>)
 
     @DELETE(BASE + ID_PATH + ORGANIZATIONS_PATH)
-    fun removeOrganizationIdsFromCollaboration(@Path(ID) id: UUID, @Body organizationIds: Iterable<UUID>)
+    fun removeOrganizationIdsFromCollaboration(@Path(ID) id: UUID, @Body organizationIds: Set<UUID>)
 }
