@@ -53,6 +53,8 @@ public interface SecurePrincipalsManager {
      */
     SecurablePrincipal getSecurablePrincipal( AclKey aclKey );
 
+    Map<AclKey, SecurablePrincipal> getSecurablePrincipals( Set<AclKey> aclKeys );
+
     @Nonnull SecurablePrincipal getPrincipal( String principalId );
 
     Collection<SecurablePrincipal> getAllRolesInOrganization( UUID organizationId );

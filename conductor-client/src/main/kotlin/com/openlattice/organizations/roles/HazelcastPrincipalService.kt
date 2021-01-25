@@ -134,6 +134,10 @@ class HazelcastPrincipalService(
         return principals[aclKey]
     }
 
+    override fun getSecurablePrincipals(aclKeys: MutableSet<AclKey>): MutableMap<AclKey, SecurablePrincipal> {
+        return principals.getAll(aclKeys)
+    }
+
     override fun lookup(p: Principal): AclKey {
         return getFirstSecurablePrincipal(findPrincipal(p)).aclKey
     }
