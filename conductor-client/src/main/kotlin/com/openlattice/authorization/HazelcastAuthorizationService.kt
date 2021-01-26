@@ -304,24 +304,19 @@ class HazelcastAuthorizationService(
 
         val permissionMap = requests.mapValues { noAccess(it.value) }.toMutableMap()
 
-        requests.keys
+        val aceKeys = requests.keys
                 .flatMap { aclKey -> principals.map { principal -> AceKey(aclKey, principal) } }
-                .forEach { aceKey ->
-                    aces
-                            .submitToKey(aceKey, AuthorizationEntryProcessor())
-                            .handle { permissions, ex ->
-                                //TODO: Make this more legible
-                                if (ex != null)
-                                    throw ex
+                .toSet()
 
-                                val aclKeyPermissions = permissionMap.getValue(aceKey.aclKey)
-                                synchronized(aclKeyPermissions) {
-                                    permissions
-                                            .filter { aclKeyPermissions.contains(it) }
-                                            .forEach { aclKeyPermissions[it] = true }
-                                }
-                            }
+        aces
+                .getAll(aceKeys)
+                .forEach { (aceKey, aceValue) ->
+                    val permissions = aceValue.permissions
+                    val aclKeyPermissions = permissionMap.getValue(aceKey.aclKey)
+
+                    permissions.forEach { permission -> aclKeyPermissions.computeIfPresent(permission) { _,_ -> true } }
                 }
+
         return permissionMap
     }
 
