@@ -303,7 +303,7 @@ class OrganizationEntitySetsService(
                         propertyTypes.getValue(CONTACT).id to entitySet.contacts,
                         propertyTypes.getValue(DATASET_NAME).id to setOf(entitySet.name),
                         propertyTypes.getValue(DESCRIPTION).id to setOf(entitySet.description),
-                        propertyTypes.getValue(FLAGS).id to entitySet.flags.toSet(),
+                        propertyTypes.getValue(FLAGS).id to entitySet.flags.map { flag -> flag.name }.toSet(),
                         propertyTypes.getValue(ID).id to setOf(entitySet.id.toString()),
                         propertyTypes.getValue(ORG_ID).id to setOf(organizationId),
                         propertyTypes.getValue(STANDARDIZED).id to setOf(true),
