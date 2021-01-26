@@ -1,6 +1,7 @@
 package com.openlattice.hazelcast.serializers
 
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest
+import com.openlattice.hazelcast.processors.EpResult
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.organizations.Organization
 import com.openlattice.organizations.processors.OrganizationEntryProcessor
@@ -36,7 +37,7 @@ class OrganizationEntryProcessorStreamSerializerTest : AbstractStreamSerializerT
         return OrganizationEntryProcessor {
             it.emailDomains.add(t)
             it.grants.getOrPut(UUID.randomUUID()) { mutableMapOf() }[grant.grantType] = grant
-            OrganizationEntryProcessor.Result(null)
+            EpResult(null)
         }
     }
 
