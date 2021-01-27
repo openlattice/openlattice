@@ -108,10 +108,6 @@ public interface EdmManager {
 
     boolean checkEntityTypesExist( Set<UUID> entityTypeIds );
 
-    boolean checkEntityTypeExists( FullQualifiedName fqn );
-
-    boolean checkEntityTypeExists( UUID entityTypeId );
-
     Collection<PropertyType> getPropertyTypes( Set<UUID> properties );
 
     Map<String, UUID> getAclKeyIds( Set<String> aclNames );

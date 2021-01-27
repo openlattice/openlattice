@@ -571,19 +571,6 @@ class EdmService(
         return entityTypeIds.all { entityTypes.containsKey(it) }
     }
 
-    override fun checkEntityTypeExists(fqn: FullQualifiedName): Boolean {
-        val typeId = getTypeAclKey(fqn)
-        return if (typeId == null) {
-            false
-        } else {
-            entityTypes.containsKey(typeId)
-        }
-    }
-
-    override fun checkEntityTypeExists(entityTypeId: UUID): Boolean {
-        return entityTypes.containsKey(entityTypeId)
-    }
-
     override fun getPropertyTypes(propertyIds: Set<UUID>): Collection<PropertyType> {
         return propertyTypes.getAll(propertyIds).values
     }
