@@ -5,7 +5,7 @@ import java.util.*
 
 interface CollaborationDatabaseManager {
 
-    fun createCollaborationDatabase(collaboration: Collaboration)
+    fun createCollaborationDatabase(collaborationId: UUID)
 
     fun deleteCollaborationDatabase(collaborationId: UUID)
 

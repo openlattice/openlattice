@@ -13,9 +13,9 @@ class PostgresCollaborationDatabaseService(
 
     private val organizationDatabases = HazelcastMap.ORGANIZATION_DATABASES.getMap(hazelcast)
 
-    override fun createCollaborationDatabase(collaboration: Collaboration) {
-        val databaseInfo = assembler.createCollaborationDatabaseAndReturnOid(collaboration.id)
-        organizationDatabases[collaboration.id] = databaseInfo
+    override fun createCollaborationDatabase(collaborationId: UUID) {
+        val databaseInfo = assembler.createCollaborationDatabaseAndReturnOid(collaborationId)
+        organizationDatabases[collaborationId] = databaseInfo
     }
 
     override fun deleteCollaborationDatabase(collaborationId: UUID) {

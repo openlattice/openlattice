@@ -43,9 +43,9 @@ class CollaborationService(
 
         authorizationManager.setSecurableObjectType(aclKey, SecurableObjectType.EntitySet)
         authorizationManager.addPermission(aclKey, ownerPrincipal, EnumSet.allOf(Permission::class.java))
-        grantReadOnCollaborationToOrganizations(collaboration.id, collaboration.organizationIds)
 
-        collaborationDatabaseManager.createCollaborationDatabase(collaboration)
+        collaborationDatabaseManager.createCollaborationDatabase(collaboration.id)
+        grantReadOnCollaborationToOrganizations(collaboration.id, collaboration.organizationIds)
 
         return collaboration.id
     }
@@ -62,18 +62,13 @@ class CollaborationService(
 
     fun addOrganizationIdsToCollaboration(id: UUID, organizationIds: Set<UUID>) {
         ensureValidCollaborationId(id)
-
         grantReadOnCollaborationToOrganizations(id, organizationIds)
-
-        collaborationDatabaseManager.addOrganizationsToCollaboration(id, organizationIds)
     }
 
     fun removeOrganizationIdsFromCollaboration(id: UUID, organizationIds: Set<UUID>) {
         ensureValidCollaborationId(id)
 
         removeReadOnCollaborationFromOrganizations(id, organizationIds)
-
-        collaborationDatabaseManager.removeOrganizationsFromCollaboration(id, organizationIds)
     }
 
     fun getDatabaseInfo(id: UUID): OrganizationDatabase {
@@ -119,7 +114,7 @@ class CollaborationService(
             CollaborationEntryProcessor.Result()
         })
 
-        // TODO: updates in db
+        collaborationDatabaseManager.addOrganizationsToCollaboration(id, organizationIds)
     }
 
     private fun removeReadOnCollaborationFromOrganizations(id: UUID, organizationIds: Set<UUID>) {
@@ -133,7 +128,7 @@ class CollaborationService(
             CollaborationEntryProcessor.Result()
         })
 
-        // TODO: updates in db
+        collaborationDatabaseManager.removeOrganizationsFromCollaboration(id, organizationIds)
     }
 
     private fun getOrgAcls(id: UUID, organizationIds: Set<UUID>): List<Acl> {
