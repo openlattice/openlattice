@@ -2,9 +2,11 @@ package com.openlattice.collaborations
 
 import com.google.common.base.Preconditions
 import com.hazelcast.core.HazelcastInstance
+import com.openlattice.assembler.Assembler
 import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.organizations.OrganizationDatabase
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import org.slf4j.LoggerFactory
 import java.util.*
@@ -13,7 +15,8 @@ class CollaborationService(
         hazelcast: HazelcastInstance,
         private val aclKeyReservationService: HazelcastAclKeyReservationService,
         private val authorizationManager: AuthorizationManager,
-        private val principalsManager: SecurePrincipalsManager
+        private val principalsManager: SecurePrincipalsManager,
+        private val collaborationDatabaseManager: CollaborationDatabaseManager
 ) {
 
     private val collaborations = HazelcastMap.COLLABORATIONS.getMap(hazelcast)
@@ -42,7 +45,7 @@ class CollaborationService(
         authorizationManager.addPermission(aclKey, ownerPrincipal, EnumSet.allOf(Permission::class.java))
         grantReadOnCollaborationToOrganizations(collaboration.id, collaboration.organizationIds)
 
-        // TODO: create db, instantiate stuff there
+        collaborationDatabaseManager.createCollaborationDatabase(collaboration)
 
         return collaboration.id
     }
@@ -53,7 +56,8 @@ class CollaborationService(
         authorizationManager.deletePermissions(AclKey(id))
         collaborations.delete(id)
         aclKeyReservationService.release(id)
-        // TODO: delete db, do cleanup there
+
+        collaborationDatabaseManager.deleteCollaborationDatabase(id)
     }
 
     fun addOrganizationIdsToCollaboration(id: UUID, organizationIds: Set<UUID>) {
@@ -61,6 +65,7 @@ class CollaborationService(
 
         grantReadOnCollaborationToOrganizations(id, organizationIds)
 
+        collaborationDatabaseManager.addOrganizationsToCollaboration(id, organizationIds)
     }
 
     fun removeOrganizationIdsFromCollaboration(id: UUID, organizationIds: Set<UUID>) {
@@ -68,6 +73,15 @@ class CollaborationService(
 
         removeReadOnCollaborationFromOrganizations(id, organizationIds)
 
+        collaborationDatabaseManager.removeOrganizationsFromCollaboration(id, organizationIds)
+    }
+
+    fun getDatabaseInfo(id: UUID): OrganizationDatabase {
+        return collaborationDatabaseManager.getDatabaseInfo(id)
+    }
+
+    fun renameDatabase(id: UUID, newName: String) {
+        collaborationDatabaseManager.renameCollaborationDatabase(id, newName)
     }
 
     private fun reserveCollaborationIfNotExists(collaboration: Collaboration): AclKey {

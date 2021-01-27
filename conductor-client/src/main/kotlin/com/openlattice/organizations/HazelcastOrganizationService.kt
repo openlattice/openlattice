@@ -642,7 +642,7 @@ class HazelcastOrganizationService(
         val currentDatabaseName = getOrganizationDatabaseName(organizationId)
 
         try {
-            assembler.renameOrganizationDatabase(currentDatabaseName, newDatabaseName)
+            assembler.renameDatabase(currentDatabaseName, newDatabaseName)
             executeDatabaseNameUpdate(organizationId, newDatabaseName)
         } catch (e: Exception) {
             throw IllegalStateException(

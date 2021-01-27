@@ -1,5 +1,6 @@
 package com.openlattice.collaborations
 
+import com.openlattice.organizations.OrganizationDatabase
 import retrofit2.http.*
 import java.util.*
 
@@ -12,6 +13,7 @@ interface CollaborationsApi {
         const val  BASE = SERVICE + CONTROLLER
         // @formatter:on
 
+        const val DATABASE_PATH = "/database"
         const val ORGANIZATIONS_PATH = "/organizations"
 
         const val ID = "id"
@@ -35,4 +37,10 @@ interface CollaborationsApi {
 
     @DELETE(BASE + ID_PATH + ORGANIZATIONS_PATH)
     fun removeOrganizationIdsFromCollaboration(@Path(ID) id: UUID, @Body organizationIds: Set<UUID>)
+
+    @GET(BASE + ID_PATH + DATABASE_PATH)
+    fun getCollaborationDatabaseInfo(@Path(ID) id: UUID): OrganizationDatabase
+
+    @PATCH(BASE + ID_PATH + DATABASE_PATH)
+    fun renameDatabase(@Path(ID) id: UUID, @Body newDatabaseName: String)
 }

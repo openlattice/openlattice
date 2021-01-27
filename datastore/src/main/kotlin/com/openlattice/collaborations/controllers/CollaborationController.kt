@@ -7,9 +7,11 @@ import com.openlattice.collaborations.Collaboration
 import com.openlattice.collaborations.CollaborationService
 import com.openlattice.collaborations.CollaborationsApi
 import com.openlattice.collaborations.CollaborationsApi.Companion.CONTROLLER
+import com.openlattice.collaborations.CollaborationsApi.Companion.DATABASE_PATH
 import com.openlattice.collaborations.CollaborationsApi.Companion.ID
 import com.openlattice.collaborations.CollaborationsApi.Companion.ID_PATH
 import com.openlattice.collaborations.CollaborationsApi.Companion.ORGANIZATIONS_PATH
+import com.openlattice.organizations.OrganizationDatabase
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
@@ -74,6 +76,21 @@ class CollaborationController : AuthorizingComponent, CollaborationsApi {
     override fun removeOrganizationIdsFromCollaboration(@PathVariable(ID) id: UUID, @RequestBody organizationIds: Set<UUID>) {
         ensureOwnerAccess(AclKey(id))
         collaborationService.removeOrganizationIdsFromCollaboration(id, organizationIds)
+    }
+
+    @Timed
+    @GetMapping(value = [ID_PATH + DATABASE_PATH], produces = [MediaType.APPLICATION_JSON_VALUE])
+    override fun getCollaborationDatabaseInfo(@PathVariable(ID) id: UUID): OrganizationDatabase {
+        ensureReadAccess(AclKey(id))
+        return collaborationService.getDatabaseInfo(id)
+    }
+
+    @Timed
+    @PatchMapping(value = [ID_PATH, DATABASE_PATH], consumes = [MediaType.APPLICATION_JSON_VALUE])
+    override fun renameDatabase(@PathVariable(ID) id: UUID, @RequestBody newDatabaseName: String) {
+        ensureOwnerAccess(AclKey(id))
+        collaborationService.renameDatabase(id, newDatabaseName)
+
     }
 
     override fun getAuthorizationManager(): AuthorizationManager {
