@@ -40,6 +40,7 @@ import java.util.function.Function
 import javax.inject.Inject
 import kotlin.collections.LinkedHashSet
 
+@Suppress("UnstableApiUsage")
 class EdmService(
         hazelcastInstance: HazelcastInstance,
         private val aclKeyReservations: HazelcastAclKeyReservationService,
@@ -243,19 +244,21 @@ class EdmService(
 
     private fun setUpDefaultEntityTypePropertyMetadata(entityTypeId: UUID) {
         val et = getEntityType(entityTypeId)
-        val propertyTags = et.getPropertyTags()
-        val propertyTypeMap = getPropertyTypesAsMap(et.getProperties())
-        et.getProperties().forEach { propertyTypeId ->
+        val propertyTags = et.propertyTags
+
+        val espm = getPropertyTypesAsMap(et.properties).entries.associate { (propertyTypeId, property) ->
             val key = EntityTypePropertyKey(entityTypeId, propertyTypeId)
-            val property = propertyTypeMap[propertyTypeId]
             val metadata = EntityTypePropertyMetadata(
-                    property!!.title,
-                    property!!.description,
+                    property.title,
+                    property.description,
                     propertyTags.getOrDefault(propertyTypeId, linkedSetOf()),
                     true
             )
-            entityTypePropertyMetadata.put(key, metadata)
+
+            key to metadata
         }
+
+        entityTypePropertyMetadata.putAll(espm)
     }
 
     override fun getAclKeyIds(aclNames: Set<String>): Map<String, UUID> {
