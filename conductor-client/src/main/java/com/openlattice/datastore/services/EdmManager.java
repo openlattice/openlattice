@@ -137,6 +137,7 @@ public interface EdmManager {
 
     Map<UUID, PropertyType> getPropertyTypesOfEntityType( UUID entityTypeId );
 
+    @Deprecated
     Set<EntityType> getEntityTypeHierarchy( UUID entityTypeId );
 
     UUID createAssociationType( AssociationType associationType, UUID entityTypeId );

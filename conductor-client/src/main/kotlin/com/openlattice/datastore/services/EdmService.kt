@@ -274,32 +274,12 @@ class EdmService(
     }
 
     override fun getEntityTypeHierarchy(entityTypeId: UUID): Set<EntityType> {
-        return getTypeHierarchy(entityTypeId, HazelcastUtils.getter(entityTypes), Function { obj: EntityType -> obj.baseType })
-    }
-
-    private fun <T> getTypeHierarchy(
-            enumTypeId: UUID,
-            typeGetter: Function<UUID, T>,
-            baseTypeSupplier: Function<T, Optional<UUID>>): Set<T> {
-        val typeHierarchy: MutableSet<T> = java.util.LinkedHashSet()
-        var entityType: T?
-        var baseType = Optional.of(enumTypeId)
-        do {
-            entityType = typeGetter.apply(baseType.get())
-            if (entityType == null) {
-                throw TypeNotFoundException("Unable to find type " + baseType.get())
-            }
-            baseType = baseTypeSupplier.apply(entityType)
-            typeHierarchy.add(entityType)
-        } while (baseType.isPresent)
-        return typeHierarchy
+        return setOf(getEntityType(entityTypeId))
     }
 
     override fun getAssociationType(typeFqn: FullQualifiedName): AssociationType {
         val entityTypeId = getTypeAclKey(typeFqn)
-        Preconditions.checkNotNull(entityTypeId,
-                "Entity type %s does not exist.",
-                typeFqn.fullQualifiedNameAsString)
+        checkNotNull(entityTypeId) { "Entity type $typeFqn does not exist." }
         return getAssociationType(entityTypeId)
     }
 
@@ -321,8 +301,8 @@ class EdmService(
         }
     }
 
-    override fun getEntityTypeSafe(entityTypeId: UUID): EntityType {
-        return Util.getSafely(entityTypes, entityTypeId)
+    override fun getEntityTypeSafe(entityTypeId: UUID): EntityType? {
+        return entityTypes[entityTypeId]
     }
 
     override fun getEntityTypes(): Iterable<EntityType> {
@@ -345,11 +325,8 @@ class EdmService(
         return getEntityType(FullQualifiedName(namespace, name))
     }
 
-    override fun getPropertyType(propertyType: FullQualifiedName): PropertyType {
-        return Preconditions.checkNotNull(
-                Util.getSafely(propertyTypes, Util.getSafely(aclKeys, Util.fqnToString(propertyType))),
-                "Property type %s does not exists",
-                propertyType.fullQualifiedNameAsString)
+    override fun getPropertyType(fqn: FullQualifiedName): PropertyType {
+        return checkNotNull(propertyTypes[aclKeys[fqn.toString()]]) { "Property type $fqn does not exist" }
     }
 
     override fun getPropertyTypesInNamespace(namespace: String): Iterable<PropertyType> {
@@ -361,7 +338,7 @@ class EdmService(
     }
 
     override fun addPropertyTypesToEntityType(entityTypeId: UUID, propertyTypeIds: Set<UUID>) {
-        Preconditions.checkArgument(checkPropertyTypesExist(propertyTypeIds), "Some properties do not exist.")
+        checkArgument(checkPropertyTypesExist(propertyTypeIds), "Some properties do not exist.")
         val newPropertyTypesById = propertyTypes.getAll(propertyTypeIds)
         val newPropertyTypes = newPropertyTypesById.values.toList()
 
@@ -424,7 +401,7 @@ class EdmService(
     }
 
     override fun removePropertyTypesFromEntityType(entityTypeId: UUID, propertyTypeIds: Set<UUID>) {
-        Preconditions.checkArgument(checkPropertyTypesExist(propertyTypeIds), "Some properties do not exist.")
+        checkArgument(checkPropertyTypesExist(propertyTypeIds), "Some properties do not exist.")
 
         checkArgument((getEntityType(entityTypeId).key - propertyTypeIds).isNotEmpty(),
                 "Key property types cannot be removed.")
@@ -434,7 +411,7 @@ class EdmService(
     }
 
     override fun forceRemovePropertyTypesFromEntityType(entityTypeId: UUID, propertyTypeIds: Set<UUID>) {
-        Preconditions.checkArgument(checkPropertyTypesExist(propertyTypeIds), "Some properties do not exist.")
+        checkArgument(checkPropertyTypesExist(propertyTypeIds), "Some properties do not exist.")
         val entityType = getEntityType(entityTypeId)
         val id = entityType.id
 
@@ -452,7 +429,7 @@ class EdmService(
 
     }
 
-    override fun reorderPropertyTypesInEntityType(entityTypeId: UUID, propertyTypeIds: java.util.LinkedHashSet<UUID>) {
+    override fun reorderPropertyTypesInEntityType(entityTypeId: UUID, propertyTypeIds: LinkedHashSet<UUID>) {
         entityTypes.executeOnKey(entityTypeId, ReorderPropertyTypesInEntityTypeProcessor(propertyTypeIds))
         val entityType = getEntityType(entityTypeId)
         if (entityType.category == SecurableObjectType.AssociationType) {
@@ -463,14 +440,18 @@ class EdmService(
     }
 
     override fun addPrimaryKeysToEntityType(entityTypeId: UUID, propertyTypeIds: Set<UUID>) {
-        Preconditions.checkArgument(checkPropertyTypesExist(propertyTypeIds), "Some properties do not exist.")
+        checkArgument(checkPropertyTypesExist(propertyTypeIds), "Some properties do not exist.")
+
         var entityType = entityTypes[entityTypeId]
-        Preconditions.checkNotNull(entityType, "No entity type with id {}", entityTypeId)
-        Preconditions.checkArgument(entityType!!.properties.containsAll(propertyTypeIds),
-                "Entity type does not contain all the requested primary key property types.")
+
+        checkNotNull(entityType) { "No entity type with id $entityTypeId" }
+        checkArgument(entityType.properties.containsAll(propertyTypeIds),
+                "Entity type $entityTypeId does not contain all the requested primary key property types.")
+
         entityTypes.executeOnKey(entityTypeId, AddPrimaryKeysToEntityTypeProcessor(propertyTypeIds))
-        entityType = entityTypes[entityTypeId]
-        if (entityType!!.category == SecurableObjectType.AssociationType) {
+
+        entityType = entityTypes[entityTypeId]!!
+        if (entityType.category == SecurableObjectType.AssociationType) {
             eventBus.post(AssociationTypeCreatedEvent(getAssociationType(entityTypeId)))
         } else {
             eventBus.post(EntityTypeCreatedEvent(entityType))
@@ -478,14 +459,16 @@ class EdmService(
     }
 
     override fun removePrimaryKeysFromEntityType(entityTypeId: UUID, propertyTypeIds: Set<UUID>) {
-        Preconditions.checkArgument(checkPropertyTypesExist(propertyTypeIds), "Some properties do not exist.")
+        checkArgument(checkPropertyTypesExist(propertyTypeIds), "Some properties do not exist.")
         var entityType = entityTypes[entityTypeId]
-        Preconditions.checkNotNull(entityType, "No entity type with id {}", entityTypeId)
-        Preconditions.checkArgument(entityType!!.properties.containsAll(propertyTypeIds),
-                "Entity type does not contain all the requested primary key property types.")
+        checkNotNull(entityType) { "No entity type with id $entityTypeId" }
+        checkArgument(entityType.properties.containsAll(propertyTypeIds),
+                "Entity type $entityTypeId does not contain all the requested primary key property types.")
+
         entityTypes.executeOnKey(entityTypeId, RemovePrimaryKeysFromEntityTypeProcessor(propertyTypeIds))
-        entityType = entityTypes[entityTypeId]
-        if (entityType!!.category == SecurableObjectType.AssociationType) {
+
+        entityType = entityTypes[entityTypeId]!!
+        if (entityType.category == SecurableObjectType.AssociationType) {
             eventBus.post(AssociationTypeCreatedEvent(getAssociationType(entityTypeId)))
         } else {
             eventBus.post(EntityTypeCreatedEvent(entityType))
@@ -493,28 +476,28 @@ class EdmService(
     }
 
     override fun addSrcEntityTypesToAssociationType(associationTypeId: UUID, entityTypeIds: Set<UUID>) {
-        Preconditions.checkArgument(checkEntityTypesExist(entityTypeIds))
+        checkArgument(checkEntityTypesExist(entityTypeIds))
         associationTypes.executeOnKey(associationTypeId,
                 AddSrcEntityTypesToAssociationTypeProcessor(entityTypeIds))
         eventBus.post(AssociationTypeCreatedEvent(getAssociationType(associationTypeId)))
     }
 
     override fun addDstEntityTypesToAssociationType(associationTypeId: UUID, entityTypeIds: Set<UUID>) {
-        Preconditions.checkArgument(checkEntityTypesExist(entityTypeIds))
+        checkArgument(checkEntityTypesExist(entityTypeIds))
         associationTypes.executeOnKey(associationTypeId,
                 AddDstEntityTypesToAssociationTypeProcessor(entityTypeIds))
         eventBus.post(AssociationTypeCreatedEvent(getAssociationType(associationTypeId)))
     }
 
     override fun removeSrcEntityTypesFromAssociationType(associationTypeId: UUID, entityTypeIds: Set<UUID>) {
-        Preconditions.checkArgument(checkEntityTypesExist(entityTypeIds))
+        checkArgument(checkEntityTypesExist(entityTypeIds))
         associationTypes.executeOnKey(associationTypeId,
                 RemoveSrcEntityTypesFromAssociationTypeProcessor(entityTypeIds))
         eventBus.post(AssociationTypeCreatedEvent(getAssociationType(associationTypeId)))
     }
 
     override fun removeDstEntityTypesFromAssociationType(associationTypeId: UUID, entityTypeIds: Set<UUID>) {
-        Preconditions.checkArgument(checkEntityTypesExist(entityTypeIds))
+        checkArgument(checkEntityTypesExist(entityTypeIds))
         associationTypes.executeOnKey(associationTypeId,
                 RemoveDstEntityTypesFromAssociationTypeProcessor(entityTypeIds))
         eventBus.post(AssociationTypeCreatedEvent(getAssociationType(associationTypeId)))
@@ -578,20 +561,20 @@ class EdmService(
         return propertyTypes.getAll(propertyIds).values
     }
 
-    override fun getTypeAclKey(type: FullQualifiedName): UUID {
-        return Util.getSafely(aclKeys, Util.fqnToString(type))
+    override fun getTypeAclKey(type: FullQualifiedName): UUID? {
+        return aclKeys[type.toString()]
     }
 
-    override fun getPropertyType(propertyTypeId: UUID): PropertyType {
-        return Util.getSafely(propertyTypes, propertyTypeId)
+    override fun getPropertyType(propertyTypeId: UUID): PropertyType? {
+        return propertyTypes[propertyTypeId]
     }
 
     override fun getPropertyTypeFqn(propertyTypeId: UUID): FullQualifiedName {
-        return Util.stringToFqn(Util.getSafely(names, propertyTypeId))
+        return FullQualifiedName(Util.getSafely(names, propertyTypeId))
     }
 
     override fun getEntityTypeFqn(entityTypeId: UUID): FullQualifiedName {
-        return Util.stringToFqn(Util.getSafely(names, entityTypeId))
+        return FullQualifiedName(Util.getSafely(names, entityTypeId))
     }
 
     override fun getFqnToIdMap(propertyTypeFqns: Set<FullQualifiedName>): Map<FullQualifiedName, UUID> {
@@ -622,7 +605,7 @@ class EdmService(
         return entityTypeId
     }
 
-    fun getAssociationTypes(ids: Set<UUID>): Map<UUID, AssociationType> {
+    private fun getAssociationTypes(ids: Set<UUID>): Map<UUID, AssociationType> {
         val baseAssociationTypes = associationTypes.getAll(ids)
         val aEntityTypes = entityTypes.getAll(ids)
 
@@ -638,8 +621,7 @@ class EdmService(
 
     override fun getAssociationType(associationTypeId: UUID): AssociationType {
         val associationDetails = getAssociationTypeDetails(associationTypeId)
-        val entityType = Optional.ofNullable(
-                Util.getSafely(entityTypes, associationTypeId))
+        val entityType = Optional.ofNullable(entityTypes[associationTypeId])
         return AssociationType(
                 entityType,
                 associationDetails.src,
@@ -647,25 +629,20 @@ class EdmService(
                 associationDetails.isBidirectional)
     }
 
-    private fun getAssociationTypeDetails(associationTypeId: UUID): AssociationType {
-        return Preconditions.checkNotNull(
-                Util.getSafely(associationTypes, associationTypeId),
-                "Association type of id %s does not exists.",
-                associationTypeId.toString())
+    private fun getAssociationTypeDetails(id: UUID): AssociationType {
+        return checkNotNull(associationTypes[id]) { "Association type of id $id does not exist." }
     }
 
     override fun getAssociationTypeSafe(associationTypeId: UUID): AssociationType? {
-        val associationDetails = Optional
-                .ofNullable(Util.getSafely(associationTypes, associationTypeId))
-        val entityType = Optional.ofNullable(
-                Util.getSafely(entityTypes, associationTypeId))
-        return if (associationDetails.isEmpty || entityType.isEmpty) {
+        val associationDetails =associationTypes[associationTypeId]
+        val entityType = entityTypes[associationTypeId]
+        return if (associationDetails == null || entityType == null) {
             null
         } else AssociationType(
-                entityType,
-                associationDetails.get().src,
-                associationDetails.get().dst,
-                associationDetails.get().isBidirectional)
+                Optional.of(entityType),
+                associationDetails.src,
+                associationDetails.dst,
+                associationDetails.isBidirectional)
     }
 
     override fun deleteAssociationType(associationTypeId: UUID) {
@@ -761,7 +738,7 @@ class EdmService(
         val existing = getAssociationTypeSafe(et.id)
         if (existing == null) {
             createOrUpdateEntityTypeWithFqn(et, fqn)
-            createAssociationType(at, getTypeAclKey(et.type))
+            createAssociationType(at, getTypeAclKey(et.type)!!)
         } else {
             if (existing.src != at.src) {
                 addSrcEntityTypesToAssociationType(existing.associationEntityType.id, at.src)
@@ -797,17 +774,17 @@ class EdmService(
 
     private fun getEntityDataModelDiffAndFqnLists(edm: EntityDataModel): Pair<EntityDataModelDiff, Set<List<UUID?>>> {
         val conflictingPropertyTypes = ConcurrentSkipListSet(Comparator
-                .comparing(Function<PropertyType, String> { propertyType: PropertyType -> propertyType.type.toString() }))
+                .comparing { propertyType: PropertyType -> propertyType.type.toString() })
         val conflictingEntityTypes = ConcurrentSkipListSet(Comparator
-                .comparing(Function<EntityType, String> { entityType: EntityType -> entityType.type.toString() }))
+                .comparing { entityType: EntityType -> entityType.type.toString() })
         val conflictingAssociationTypes = ConcurrentSkipListSet(Comparator
-                .comparing(Function<AssociationType, String> { associationType: AssociationType -> associationType.associationEntityType.type.toString() }))
+                .comparing { associationType: AssociationType -> associationType.associationEntityType.type.toString() })
         val updatedPropertyTypes = ConcurrentSkipListSet(Comparator
-                .comparing(Function<PropertyType, String> { propertyType: PropertyType -> propertyType.type.toString() }))
+                .comparing { propertyType: PropertyType -> propertyType.type.toString() })
         val updatedEntityTypes = ConcurrentSkipListSet(Comparator
-                .comparing(Function<EntityType, String> { entityType: EntityType -> entityType.type.toString() }))
+                .comparing { entityType: EntityType -> entityType.type.toString() })
         val updatedAssociationTypes = ConcurrentSkipListSet(Comparator
-                .comparing(Function<AssociationType, String> { associationType: AssociationType -> associationType.associationEntityType.type.toString() }))
+                .comparing { associationType: AssociationType -> associationType.associationEntityType.type.toString() })
         val updatedSchemas = ConcurrentSkipListSet(Comparator
                 .comparing { schema: Schema -> schema.fqn.toString() })
         val idsToFqns: MutableMap<UUID, FullQualifiedName> = Maps.newHashMap()
