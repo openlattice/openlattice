@@ -191,7 +191,7 @@ class EntitySetService(
 
     }
 
-    override fun getAuthorizedNeighborEntitySetsToEntityTypes(
+    override fun getAuthorizedNeighborEntitySets(
             principals: Set<Principal>,
             entitySetIds: Set<UUID>,
             filter: EntityNeighborsFilter

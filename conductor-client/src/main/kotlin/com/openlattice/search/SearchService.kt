@@ -503,7 +503,7 @@ class SearchService(
             principals: Set<Principal>
     ): Pair<EntityNeighborsFilter, Map<UUID, Map<UUID, PropertyType>>> {
 
-        val filter = entitySetService.getAuthorizedNeighborEntitySetsToEntityTypes(principals, entitySetIds, requestedFilter)
+        val filter = entitySetService.getAuthorizedNeighborEntitySets(principals, entitySetIds, requestedFilter)
 
         val authorizedEntitySetIds = filter.srcEntitySetIds.get() + filter.dstEntitySetIds.get() + filter.associationEntitySetIds.get()
 

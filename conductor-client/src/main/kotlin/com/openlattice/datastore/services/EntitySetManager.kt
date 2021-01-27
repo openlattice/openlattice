@@ -109,7 +109,7 @@ interface EntitySetManager {
 
     fun setupOrganizationMetadataAndAuditEntitySets(entitySet: EntitySet)
 
-    fun getAuthorizedNeighborEntitySetsToEntityTypes(
+    fun getAuthorizedNeighborEntitySets(
             principals: Set<Principal>,
             entitySetIds: Set<UUID>,
             filter: EntityNeighborsFilter
