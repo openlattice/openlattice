@@ -497,21 +497,6 @@ class SearchService(
         )
     }
 
-    private fun getAuthorizedFilterEntitySetOptions(
-            entitySetIds: Set<UUID>,
-            requestedFilter: EntityNeighborsFilter,
-            principals: Set<Principal>
-    ): Pair<EntityNeighborsFilter, Map<UUID, Map<UUID, PropertyType>>> {
-
-        val filter = entitySetService.getAuthorizedNeighborEntitySets(principals, entitySetIds, requestedFilter)
-
-        val authorizedEntitySetIds = filter.srcEntitySetIds.get() + filter.dstEntitySetIds.get() + filter.associationEntitySetIds.get()
-
-        val authorizedPropertyTypesByEntitySet = getAuthorizedPropertyTypesOfEntitySets(authorizedEntitySetIds, principals)
-
-        return filter to authorizedPropertyTypesByEntitySet
-    }
-
     private fun getAuthorizedPropertyTypesOfEntitySets(
             entitySetIds: Set<UUID>,
             principals: Set<Principal>
@@ -634,11 +619,8 @@ class SearchService(
 
         /* Load all possible association/neighbor entity set combos and perform auth checks **/
 
-        val (filter, entitySetsIdsToAuthorizedProps) = getAuthorizedFilterEntitySetOptions(
-                entitySetIds,
-                pagedNeighborRequest.filter,
-                principals
-        )
+        val filter = entitySetService.getAuthorizedNeighborEntitySets(principals, entitySetIds, pagedNeighborRequest.filter)
+
         val authorizedPagedNeighborRequest = PagedNeighborRequest(filter, pagedNeighborRequest.bookmark, pagedNeighborRequest.pageSize)
 
         val allEntitySets = filter.srcEntitySetIds.get() + filter.dstEntitySetIds.get() + filter.associationEntitySetIds.get()
@@ -665,6 +647,8 @@ class SearchService(
         val edges = graphService.getEdgesAndNeighborsForVertices(allBaseEntitySetIds, authorizedPagedNeighborRequest).toList()
 
         val entitySetIdToEntityKeyId = getNeighborEntitySetIdToEntityKeyIdForEdges(edges, entityKeyIds)
+
+        val entitySetsIdsToAuthorizedProps = getAuthorizedPropertyTypesOfEntitySets(entitySetIdToEntityKeyId.keySet(), principals)
 
         val entitiesByEntitySetId = dataManager
                 .getEntitiesAcrossEntitySets(entitySetIdToEntityKeyId, entitySetsIdsToAuthorizedProps)
@@ -803,11 +787,7 @@ class SearchService(
             principals: Set<Principal>
     ): Map<UUID, Map<UUID, SetMultimap<UUID, NeighborEntityIds>>> {
 
-        val (filter, _) = getAuthorizedFilterEntitySetOptions(
-                entitySetIds,
-                requestedFilter,
-                principals
-        )
+        val filter = entitySetService.getAuthorizedNeighborEntitySets(principals, entitySetIds, requestedFilter)
 
         if (filter.associationEntitySetIds.isPresent && filter.associationEntitySetIds.get().isEmpty()) {
             logger.info("Missing association entity set ids. Returning empty result.")
