@@ -339,7 +339,6 @@ class EdmService(
         val newPropertyTypes = newPropertyTypesById.values.toList()
 
         val propertyTags = getEntityType(entityTypeId).propertyTags
-        entityTypes.executeOnKey(entityTypeId, AddPropertyTypesToEntityTypeProcessor(propertyTypeIds))
 
         val allPropertyTypes = propertyTypes.getAll(getEntityType(entityTypeId).properties).values.toList()
 
@@ -380,6 +379,8 @@ class EdmService(
                     newPropertyTypes,
                     if (entitySet.isLinking) Optional.of<Set<UUID>>(entitySet.linkedEntitySets) else Optional.empty()))
         }
+
+        entityTypes.executeOnKey(entityTypeId, AddPropertyTypesToEntityTypeProcessor(propertyTypeIds))
 
         authorizations.setSecurableObjectTypes(aclKeysForSecurableObjectTypes, SecurableObjectType.PropertyTypeInEntitySet)
         authorizations.addPermissions(acls)
