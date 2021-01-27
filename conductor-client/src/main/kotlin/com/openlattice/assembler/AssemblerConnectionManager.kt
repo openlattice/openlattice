@@ -299,15 +299,29 @@ class AssemblerConnectionManager(
 
     fun dropOrganizationDatabase(organizationId: UUID) {
         val dbName = extDbManager.getOrganizationDatabaseName(organizationId)
-        val db = quote(dbName)
+        dropDatabase(dbName)
+
         val dbRole = quote(buildOrganizationRoleName(dbName))
         val dbAdminUser = quote(dbCredentialService.getDbUsername(AclKey(organizationId)))
 
-        val dropDb = " DROP DATABASE $db"
         val dropDbUser = "DROP ROLE $dbAdminUser"
         //TODO: If we grant this role to other users, we need to make sure we drop it
         val dropDbRole = "DROP ROLE $dbRole"
 
+
+        // Drop organization-specific database roles
+
+        atlas.connection.use { connection ->
+            connection.createStatement().use { statement ->
+                statement.execute(dropDbUser)
+                statement.execute(dropDbRole)
+            }
+        }
+    }
+
+
+    fun dropDatabase(dbName: String) {
+        val dropDbSql = " DROP DATABASE ${quote(dbName)}"
 
         //We connect to default db in order to do initial db setup
 
@@ -317,9 +331,7 @@ class AssemblerConnectionManager(
             }
 
             connection.createStatement().use { statement ->
-                statement.execute(dropDb)
-                statement.execute(dropDbUser)
-                statement.execute(dropDbRole)
+                statement.execute(dropDbSql)
             }
         }
     }

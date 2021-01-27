@@ -279,10 +279,6 @@ class Assembler(
         }
     }
 
-    fun createCollaboration(collaborationId: UUID, dbName: String) {
-
-    }
-
     fun renameDatabase(currentDatabaseName: String, newDatabaseName: String) {
         acm.renameOrganizationDatabase(currentDatabaseName, newDatabaseName)
     }

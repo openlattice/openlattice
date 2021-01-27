@@ -2,16 +2,22 @@ package com.openlattice.collaborations
 
 import com.hazelcast.core.HazelcastInstance
 import com.openlattice.assembler.Assembler
+import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organizations.OrganizationDatabase
 import java.util.*
 
 class PostgresCollaborationDatabaseService(
         hazelcast: HazelcastInstance,
-        val assembler: Assembler
+        val assembler: Assembler,
+        val acm: AssemblerConnectionManager
 ) : CollaborationDatabaseManager {
 
     private val organizationDatabases = HazelcastMap.ORGANIZATION_DATABASES.getMap(hazelcast)
+
+    override fun getDatabaseInfo(collaborationId: UUID): OrganizationDatabase {
+        return organizationDatabases[collaborationId]!!
+    }
 
     override fun createCollaborationDatabase(collaborationId: UUID) {
         val databaseInfo = assembler.createCollaborationDatabaseAndReturnOid(collaborationId)
@@ -19,7 +25,7 @@ class PostgresCollaborationDatabaseService(
     }
 
     override fun deleteCollaborationDatabase(collaborationId: UUID) {
-        TODO("Not yet implemented")
+        acm.dropDatabase(getDatabaseInfo(collaborationId).name)
     }
 
     override fun renameCollaborationDatabase(collaborationId: UUID, newName: String) {
@@ -29,10 +35,6 @@ class PostgresCollaborationDatabaseService(
 
     override fun addOrganizationsToCollaboration(collaborationId: UUID, organizationIds: Set<UUID>) {
         TODO("Not yet implemented")
-    }
-
-    override fun getDatabaseInfo(collaborationId: UUID): OrganizationDatabase {
-        return organizationDatabases[collaborationId]!!
     }
 
     override fun removeOrganizationsFromCollaboration(collaborationId: UUID, organizationIds: Set<UUID>) {
