@@ -69,7 +69,7 @@ public interface EdmManager {
 
     Iterable<EntityType> getAssociationEntityTypes();
 
-    Iterable<AssociationType> getAssociationTypes();
+    Iterable<AssociationType> getAllAssociationTypes();
 
     void deleteEntityType( UUID entityTypeId );
 
@@ -104,8 +104,6 @@ public interface EdmManager {
     // Helper methods to check existence
     boolean checkPropertyTypesExist( Set<UUID> properties );
 
-    boolean checkPropertyTypeExists( FullQualifiedName fqn );
-
     boolean checkPropertyTypeExists( UUID propertyTypeId );
 
     boolean checkEntityTypesExist( Set<UUID> entityTypeIds );
@@ -116,8 +114,6 @@ public interface EdmManager {
 
     Collection<PropertyType> getPropertyTypes( Set<UUID> properties );
 
-    Set<UUID> getAclKeys( Set<?> fqnsOrNames );
-
     Map<String, UUID> getAclKeyIds( Set<String> aclNames );
 
     UUID getTypeAclKey( FullQualifiedName fqns );
@@ -125,8 +121,6 @@ public interface EdmManager {
     Set<UUID> getEntityTypeUuids( Set<FullQualifiedName> fqns );
 
     UUID getPropertyTypeId( FullQualifiedName fqn );
-
-    Set<UUID> getPropertyTypeUuids( Set<FullQualifiedName> fqns );
 
     AssociationType getAssociationType( FullQualifiedName typeFqn );
 
@@ -145,13 +139,7 @@ public interface EdmManager {
 
     Map<UUID, EntityType> getEntityTypesAsMap( Set<UUID> entityTypeIds );
 
-    <V> Map<UUID, V> fromPropertyTypes( Set<UUID> propertyTypeIds, EntryProcessor<UUID, PropertyType, V> ep );
-
-    Set<UUID> getPropertyTypeIdsOfEntityType( UUID entityTypeId );
-
     Map<UUID, PropertyType> getPropertyTypesOfEntityType( UUID entityTypeId );
-
-    Set<UUID> getPropertyTypeIdsOfEntityTypeWithPIIField( UUID entityTypeId );
 
     Set<EntityType> getEntityTypeHierarchy( UUID entityTypeId );
 
