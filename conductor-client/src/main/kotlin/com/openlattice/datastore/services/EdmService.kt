@@ -10,7 +10,6 @@ import com.openlattice.assembler.events.MaterializedEntitySetEdmChangeEvent
 import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.controllers.exceptions.TypeExistsException
-import com.openlattice.controllers.exceptions.TypeNotFoundException
 import com.openlattice.datastore.util.Util
 import com.openlattice.edm.EntityDataModel
 import com.openlattice.edm.EntityDataModelDiff
@@ -25,7 +24,6 @@ import com.openlattice.edm.set.EntitySetPropertyMetadata
 import com.openlattice.edm.type.*
 import com.openlattice.edm.types.processors.*
 import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.hazelcast.HazelcastUtils
 import com.openlattice.postgres.mapstores.AssociationTypeMapstore
 import com.openlattice.postgres.mapstores.EntitySetMapstore
 import com.openlattice.postgres.mapstores.EntityTypeMapstore
@@ -36,7 +34,6 @@ import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.ConcurrentSkipListSet
 import java.util.function.Consumer
-import java.util.function.Function
 import javax.inject.Inject
 import kotlin.collections.LinkedHashSet
 
@@ -634,7 +631,7 @@ class EdmService(
     }
 
     override fun getAssociationTypeSafe(associationTypeId: UUID): AssociationType? {
-        val associationDetails =associationTypes[associationTypeId]
+        val associationDetails = associationTypes[associationTypeId]
         val entityType = entityTypes[associationTypeId]
         return if (associationDetails == null || entityType == null) {
             null
