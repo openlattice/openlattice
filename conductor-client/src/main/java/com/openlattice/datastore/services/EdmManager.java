@@ -127,8 +127,6 @@ public interface EdmManager {
 
     FullQualifiedName getPropertyTypeFqn( UUID propertyTypeId );
 
-    FullQualifiedName getEntityTypeFqn( UUID entityTypeId );
-
     Map<FullQualifiedName, UUID> getFqnToIdMap( Set<FullQualifiedName> propertyTypeFqns );
 
     Map<UUID, PropertyType> getPropertyTypesAsMap( Set<UUID> propertyTypeIds );

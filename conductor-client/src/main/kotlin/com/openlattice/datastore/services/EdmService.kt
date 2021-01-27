@@ -10,7 +10,6 @@ import com.openlattice.assembler.events.MaterializedEntitySetEdmChangeEvent
 import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.controllers.exceptions.TypeExistsException
-import com.openlattice.datastore.util.Util
 import com.openlattice.edm.EntityDataModel
 import com.openlattice.edm.EntityDataModelDiff
 import com.openlattice.edm.EntitySet
@@ -567,11 +566,7 @@ class EdmService(
     }
 
     override fun getPropertyTypeFqn(propertyTypeId: UUID): FullQualifiedName {
-        return FullQualifiedName(Util.getSafely(names, propertyTypeId))
-    }
-
-    override fun getEntityTypeFqn(entityTypeId: UUID): FullQualifiedName {
-        return FullQualifiedName(Util.getSafely(names, entityTypeId))
+        return FullQualifiedName(names[propertyTypeId])
     }
 
     override fun getFqnToIdMap(propertyTypeFqns: Set<FullQualifiedName>): Map<FullQualifiedName, UUID> {
