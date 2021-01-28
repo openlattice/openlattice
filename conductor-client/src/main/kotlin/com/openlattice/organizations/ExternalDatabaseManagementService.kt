@@ -199,6 +199,7 @@ class ExternalDatabaseManagementService(
                         colsById
                 )
                 es.flags.add(EntitySetFlag.TRANSPORTED)
+                entitySets.put(entitySetId, es)
             } finally {
                 entitySets.unlock(entitySetId)
             }
