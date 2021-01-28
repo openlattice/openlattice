@@ -22,54 +22,19 @@
 
 package com.openlattice.datastore.util;
 
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.hazelcast.map.IMap;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 public final class Util {
-    private static final Logger logger = LoggerFactory.getLogger( Util.class );
 
-    private Util() {}
-
+    private Util() {
+    }
 
     public static <K, V> V getSafely( IMap<K, V> m, K key ) {
         return m.get( key );
     }
 
-    public static <K, V> Map<K,V> getSafely( IMap<K, V> m, Set<K> keys ) {
-        return m.getAll( keys );
-    }
-
-    public static <K, V> V getSafely( Map<K, V> m, K key ) {
-        return m.get( key );
-    }
-
-    public static <K, V> void deleteSafely( IMap<K, V> m, K key ) {
-        m.delete( key );
-    }
-
-    public static <K, V> Function<K, V> getSafeMapper( IMap<K, V> m ) {
-        return m::get;
-    }
-
-    public static <K, V> V removeSafely( IMap<K, V> fqns, K organizationId ) {
-        return fqns.remove( organizationId );
-    }
-    
-    public static String fqnToString( FullQualifiedName fqn ){
+    public static String fqnToString( FullQualifiedName fqn ) {
         return fqn.getFullQualifiedNameAsString();
-    }
-
-    public static <T> T returnAndLog( T obj, String msg, Object... args ) {
-        logger.info( msg, args );
-        return obj;
     }
 }

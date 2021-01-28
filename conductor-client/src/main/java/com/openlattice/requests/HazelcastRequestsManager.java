@@ -99,6 +99,6 @@ public class HazelcastRequestsManager {
     }
 
     public Stream<Status> getStatuses( Stream<AceKey> requestKeys ) {
-        return requestKeys.map( Util.getSafeMapper( requests ) );
+        return requestKeys.map( requests::get );
     }
 }
