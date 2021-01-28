@@ -60,7 +60,13 @@ import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.DataGraphService;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
-import com.openlattice.data.storage.*;
+import com.openlattice.data.storage.ByteBlobDataManager;
+import com.openlattice.data.storage.EntityDatastore;
+import com.openlattice.data.storage.IndexingMetadataManager;
+import com.openlattice.data.storage.PostgresEntityDataQueryService;
+import com.openlattice.data.storage.PostgresEntityDatastore;
+import com.openlattice.data.storage.PostgresEntitySetSizesInitializationTask;
+import com.openlattice.data.storage.PostgresEntitySetSizesTaskDependency;
 import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
@@ -97,6 +103,7 @@ import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.organizations.tasks.OrganizationsInitializationDependencies;
 import com.openlattice.organizations.tasks.OrganizationsInitializationTask;
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
+import com.openlattice.postgres.external.ExternalDatabasePermissioner;
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService;
 import com.openlattice.postgres.tasks.PostgresMetaDataPropertiesInitializationDependency;
 import com.openlattice.postgres.tasks.PostgresMetaDataPropertiesInitializationTask;
@@ -108,7 +115,15 @@ import com.openlattice.subscriptions.SubscriptionNotificationTask;
 import com.openlattice.subscriptions.SubscriptionService;
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies;
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask;
-import com.openlattice.users.*;
+import com.openlattice.transporter.pods.TransporterPod;
+import com.openlattice.transporter.services.TransporterService;
+import com.openlattice.users.Auth0SyncInitializationTask;
+import com.openlattice.users.Auth0SyncService;
+import com.openlattice.users.Auth0SyncTask;
+import com.openlattice.users.Auth0SyncTaskDependencies;
+import com.openlattice.users.Auth0UserListingService;
+import com.openlattice.users.LocalUserListingService;
+import com.openlattice.users.UserListingService;
 import com.openlattice.users.export.Auth0ApiExtension;
 import com.zaxxer.hikari.HikariDataSource;
 import org.springframework.context.annotation.Bean;
@@ -119,7 +134,7 @@ import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 
 @Configuration
-@Import( { ByteBlobServicePod.class, AuditingConfigurationPod.class, AssemblerConfigurationPod.class } )
+@Import( { ByteBlobServicePod.class, AuditingConfigurationPod.class, AssemblerConfigurationPod.class, TransporterPod.class  } )
 public class ConductorServicesPod {
 
     @Inject
@@ -165,10 +180,10 @@ public class ConductorServicesPod {
     private ExternalDatabaseConnectionManager externalDbConnMan;
 
     @Inject
-    public SecurePrincipalsManager principalService;
+    private ExternalDatabasePermissioningService extDatabasePermsManager;
 
     @Inject
-    private ExternalDatabasePermissioningService extDatabasePermsManager;
+    private TransporterService transporterService;
 
     @Bean
     public ObjectMapper defaultObjectMapper() {
@@ -186,18 +201,48 @@ public class ConductorServicesPod {
     }
 
     @Bean
-    public HazelcastLongIdService longIdService() {
-        return new HazelcastLongIdService( hazelcastClientProvider );
-    }
-
-    @Bean
     public DbCredentialService dbCredService() {
         return new DbCredentialService( hazelcastInstance, longIdService() );
     }
 
     @Bean
+    public PrincipalsMapManager principalsMapManager() {
+        return new HazelcastPrincipalsMapManager(hazelcastInstance, aclKeyReservationService());
+    }
+
+    @Bean
     public HazelcastAclKeyReservationService aclKeyReservationService() {
-        return new HazelcastAclKeyReservationService( hazelcastInstance );
+        return new HazelcastAclKeyReservationService(hazelcastInstance);
+    }
+
+    @Bean
+    public HazelcastLongIdService longIdService() {
+        return new HazelcastLongIdService(hazelcastClientProvider);
+    }
+
+    @Bean
+    public HazelcastIdGenerationService idGenerationService() {
+        return new HazelcastIdGenerationService(hazelcastClientProvider);
+    }
+
+    @Bean
+    public SecurePrincipalsManager securePrincipalsManager() {
+        return new HazelcastPrincipalService(
+                hazelcastInstance,
+                aclKeyReservationService(),
+                authorizationManager(),
+                principalsMapManager(),
+                externalDatabasePermissionsManager()
+        );
+    }
+
+    @Bean
+    public ExternalDatabasePermissioningService externalDatabasePermissionsManager() {
+        return new ExternalDatabasePermissioner(
+                externalDbConnMan,
+                dbCredService(),
+                principalsMapManager()
+        );
     }
 
     @Bean
@@ -229,7 +274,7 @@ public class ConductorServicesPod {
                 dbCredService(),
                 hikariDataSource,
                 authorizationManager(),
-                principalService,
+                securePrincipalsManager(),
                 metricRegistry,
                 hazelcastInstance,
                 eventBus
@@ -239,14 +284,14 @@ public class ConductorServicesPod {
     @Bean
     public OrganizationsInitializationDependencies organizationBootstrapDependencies() {
         return new OrganizationsInitializationDependencies( organizationsManager(),
-                principalService,
+                securePrincipalsManager(),
                 partitionManager(),
                 conductorConfiguration() );
     }
 
     @Bean
     public AuthorizationInitializationDependencies authorizationBootstrapDependencies() {
-        return new AuthorizationInitializationDependencies( principalService );
+        return new AuthorizationInitializationDependencies( securePrincipalsManager());
     }
 
     @Bean
@@ -292,7 +337,7 @@ public class ConductorServicesPod {
     @Bean
     public AuditTaskDependencies auditTaskDependencies() {
         return new AuditTaskDependencies(
-                principalService,
+                securePrincipalsManager(),
                 entitySetManager(),
                 authorizationManager(),
                 partitionManager(),
@@ -305,7 +350,7 @@ public class ConductorServicesPod {
         return new AssemblerConnectionManager( assemblerConfiguration,
                 externalDbConnMan,
                 hikariDataSource,
-                principalService,
+                securePrincipalsManager(),
                 organizationsManager(),
                 dbCredService(),
                 extDatabasePermsManager,
@@ -324,7 +369,7 @@ public class ConductorServicesPod {
                 hazelcastInstance,
                 aclKeyReservationService(),
                 authorizationManager(),
-                principalService,
+                securePrincipalsManager(),
                 phoneNumberService(),
                 partitionManager(),
                 assembler(),
@@ -343,7 +388,7 @@ public class ConductorServicesPod {
 
     @Bean
     public Auth0SyncService auth0SyncService() {
-        return new Auth0SyncService( hazelcastInstance, principalService, organizationsManager() );
+        return new Auth0SyncService( hazelcastInstance, securePrincipalsManager(), organizationsManager() );
     }
 
     @Bean
@@ -480,11 +525,6 @@ public class ConductorServicesPod {
     }
 
     @Bean
-    public HazelcastIdGenerationService idGenerationService() {
-        return new HazelcastIdGenerationService( hazelcastClientProvider );
-    }
-
-    @Bean
     public EntityKeyIdService idService() {
         return new PostgresEntityKeyIdService(
                 hikariDataSource,
@@ -562,7 +602,7 @@ public class ConductorServicesPod {
     @Bean
     public SubscriptionNotificationDependencies subscriptionNotificationDependencies() {
         return new SubscriptionNotificationDependencies( hikariDataSource,
-                principalService,
+                securePrincipalsManager(),
                 authorizationManager(),
                 authorizingComponent(),
                 mailServiceClient(),
@@ -617,7 +657,7 @@ public class ConductorServicesPod {
 
     @PostConstruct
     void initPrincipals() {
-        Principals.init( principalService, hazelcastInstance );
+        Principals.init( securePrincipalsManager(), hazelcastInstance );
         organizationMetadataEntitySetsService().dataGraphManager = dataGraphService();
     }
 }

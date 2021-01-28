@@ -11,6 +11,7 @@ import com.openlattice.organization.roles.Role
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.PostgresPrivileges
 import com.openlattice.postgres.TableColumn
+import com.openlattice.transporter.grantUsageOnschemaSql
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
@@ -108,8 +109,7 @@ class ExternalDatabasePermissioner(
         if ( targetPrincipalAclKeys.isEmpty()) {
             return
         }
-
-        val grantTargets = principalsToPostgresRoleNames(targetPrincipalAclKeys)
+        val grantTargets = dbCredentialService.getDbUsernames(targetPrincipalAclKeys)
 
         val sourceRole = dbCredentialService.getDbUsername(sourcePrincipalAclKey)
 
@@ -134,8 +134,8 @@ class ExternalDatabasePermissioner(
         }
     }
 
-    private fun principalsToPostgresRoleNames(principals: Set<AclKey>): String {
-        return dbCredentialService.getDbUsernames(principals).joinToString()
+    private fun principalsToPostgresRoleNames(principals: Set<AclKey>): Set<String> {
+        return dbCredentialService.getDbUsernames(principals)
     }
 
     /**
@@ -157,20 +157,24 @@ class ExternalDatabasePermissioner(
             // roleName to listOf(
             //   createRoleIfNotExistsSql(roleName),
             //   grantPermissionsOnColumnsOnTableToRoleSql()
-            createRoleIfNotExistsSql(roleName) to grantPermissionsOnColumnsOnTableToRoleSql(
-                    permissions,
-                    quotedColumns,
-                    Schemas.ASSEMBLED_ENTITY_SETS,
-                    entitySetName,
-                    roleName
+            Triple(
+                    createRoleIfNotExistsSql(roleName),
+                    grantUsageOnschemaSql(Schemas.ASSEMBLED_ENTITY_SETS, roleName),
+                    grantPermissionsOnColumnsOnTableToRoleSql(
+                            permissions,
+                            quotedColumns,
+                            Schemas.ASSEMBLED_ENTITY_SETS,
+                            entitySetName,
+                            roleName)
             )
         }
 
         orgDatasource.connection.use { conn ->
             conn.createStatement().use { stmt ->
-                ptToSqls.forEach { (createRoleSql, grantSql) ->
+                ptToSqls.forEach { (createRoleSql, grantSchemaSql, grantViewSql) ->
                     stmt.addBatch(createRoleSql)
-                    stmt.addBatch(grantSql)
+                    stmt.addBatch(grantSchemaSql)
+                    stmt.addBatch(grantViewSql)
                 }
                 stmt.executeBatch()
             }
@@ -234,7 +238,7 @@ class ExternalDatabasePermissioner(
             columnAcls: List<Acl>,
             columnsById: Map<UUID, OrganizationExternalDatabaseColumn>
     ) {
-        updateTablePermissions(action, columnAcls, columnsById, TableType.TABLE)
+//        updateTablePermissions(organizationId, action, columnAcls, columnsById, TableType.TABLE)
     }
 
     private fun updateTablePermissions(
@@ -313,7 +317,7 @@ class ExternalDatabasePermissioner(
             TableType.VIEW -> allViewPermissions
             TableType.TABLE -> allTablePermissions
         }.map {
-            revokeRoleSql(PostgresRoles.buildPermissionRoleName(column.tableId, column.id, it), userRole)
+            revokeRoleSql(PostgresRoles.buildPermissionRoleName(column.tableId, column.id, it), setOf(userRole))
         }
     }
 
@@ -337,18 +341,25 @@ class ExternalDatabasePermissioner(
         return filteredAcePermissions(ace.permissions).map { perm ->
             val permissionsRole = PostgresRoles.buildPermissionRoleName(column.tableId, column.id, perm)
             when (action) {
-                PgPermAction.GRANT -> grantRoleToRole(permissionsRole, userRole)
-                PgPermAction.REVOKE -> revokeRoleSql(permissionsRole, userRole)
+                PgPermAction.GRANT -> grantRoleToRole(permissionsRole, setOf(userRole))
+                PgPermAction.REVOKE -> revokeRoleSql(permissionsRole, setOf(userRole))
             }
         }
     }
 
-    private fun revokeRoleSql(roleName: String, targetRoleName: String): String {
-        return "REVOKE ${ApiHelpers.dbQuote(roleName)} FROM ${ApiHelpers.dbQuote(targetRoleName)}"
+    private fun revokeRoleSql(roleName: String, targetRoles: Set<String>): String {
+        return applyRoleOperation(roleName, targetRoles, PgPermAction.REVOKE)
     }
 
-    private fun grantRoleToRole(roleName: String, targetRoleName: String): String {
-        return "GRANT ${ApiHelpers.dbQuote(roleName)} TO ${ApiHelpers.dbQuote(targetRoleName)}"
+    private fun grantRoleToRole(roleName: String, targetRoles: Set<String>): String {
+        return applyRoleOperation(roleName, targetRoles, PgPermAction.GRANT)
+    }
+
+    private fun applyRoleOperation(roleName: String, targetRoles: Set<String>, action: PgPermAction ): String {
+        val targets = targetRoles.joinToString {
+            ApiHelpers.dbQuote(it)
+        }
+        return "${action.name} ${ApiHelpers.dbQuote(roleName)} ${action.verb} $targets"
     }
 
     private fun filteredAcePermissions(permissions: Set<Permission>): Set<Permission> {
@@ -385,8 +396,8 @@ class ExternalDatabasePermissioner(
                 "\$do\$;"
     }
 
-    private enum class PgPermAction {
-        GRANT, REVOKE
+    private enum class PgPermAction(val verb: String) {
+        GRANT("TO"), REVOKE("FROM")
     }
 
     private enum class TableType {

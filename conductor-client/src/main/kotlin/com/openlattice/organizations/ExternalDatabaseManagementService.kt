@@ -30,7 +30,6 @@ import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.ResultSetAdapters.*
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
-import com.openlattice.postgres.external.ExternalDatabasePermissioningService
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.openlattice.postgres.streams.StatementHolderSupplier
@@ -61,7 +60,6 @@ class ExternalDatabaseManagementService(
         private val organizationExternalDatabaseConfiguration: OrganizationExternalDatabaseConfiguration,
         private val transporterService: TransporterService,
         private val dbCredentialService: DbCredentialService,
-        private val externalDbPermsService: ExternalDatabasePermissioningService,
         private val hds: HikariDataSource
 ) {
 

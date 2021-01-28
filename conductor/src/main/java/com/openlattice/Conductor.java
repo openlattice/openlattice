@@ -37,9 +37,6 @@ import com.openlattice.pods.ConductorServicesPod;
 import com.openlattice.postgres.PostgresPod;
 import com.openlattice.postgres.PostgresTablesPod;
 import com.openlattice.postgres.pods.ExternalDatabaseConnectionManagerPod;
-import com.openlattice.postgres.pods.ExternalDatabasePermissionsManagerPod;
-import com.openlattice.principals.AclKeyReservationPod;
-import com.openlattice.principals.PermissionsManagerPod;
 import com.openlattice.tasks.pods.TaskSchedulerPod;
 import com.openlattice.transporter.TransporterConfigurationPod;
 import com.openlattice.transporter.pods.TransporterPod;
@@ -49,7 +46,6 @@ import com.openlattice.transporter.pods.TransporterPod;
  */
 public class Conductor extends RhizomeApplicationServer {
     static final Class<?>[] conductorPods = new Class<?>[] {
-            AclKeyReservationPod.class,
             Auth0Pod.class,
             AwsS3Pod.class,
             ByteBlobServicePod.class,
@@ -57,12 +53,10 @@ public class Conductor extends RhizomeApplicationServer {
             ConductorServicesPod.class,
             ConductorEdmSyncPod.class,
             ExternalDatabaseConnectionManagerPod.class,
-            ExternalDatabasePermissionsManagerPod.class,
             HazelcastQueuePod.class,
             JdbcPod.class,
             MailServicePod.class,
             MapstoresPod.class,
-            PermissionsManagerPod.class,
             PlasmaCoupling.class,
             PostgresPod.class,
             PostgresTablesPod.class,

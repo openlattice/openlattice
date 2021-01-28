@@ -78,10 +78,11 @@ import com.openlattice.organizations.pods.OrganizationExternalDatabaseConfigurat
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
+import com.openlattice.postgres.external.ExternalDatabasePermissioner;
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService;
 import com.openlattice.scrunchie.search.ConductorElasticsearchImpl;
+import com.openlattice.transporter.pods.TransporterPod;
 import com.openlattice.transporter.services.TransporterService;
-import com.openlattice.transporter.types.TransporterDatastore;
 import com.zaxxer.hikari.HikariDataSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -93,7 +94,7 @@ import javax.inject.Inject;
 
 @Configuration
 @Import( { IndexerConfigurationPod.class, AuditingConfigurationPod.class, AssemblerConfigurationPod.class,
-        ByteBlobServicePod.class, OrganizationExternalDatabaseConfigurationPod.class } )
+        ByteBlobServicePod.class, OrganizationExternalDatabaseConfigurationPod.class, TransporterPod.class } )
 public class IndexerServicesPod {
 
     @Inject
@@ -133,12 +134,6 @@ public class IndexerServicesPod {
     private ExternalDatabaseConnectionManager externalDbConnMan;
 
     @Inject
-    public SecurePrincipalsManager principalService;
-
-    @Inject
-    private ExternalDatabasePermissioningService extDatabasePermsManager;
-
-    @Inject
     private TransporterService transporterService;
 
     @Bean
@@ -167,12 +162,37 @@ public class IndexerServicesPod {
     }
 
     @Bean
+    public PrincipalsMapManager principalsMapManager() {
+        return new HazelcastPrincipalsMapManager(hazelcastInstance, aclKeyReservationService());
+    }
+
+    @Bean
+    public SecurePrincipalsManager securePrincipalsManager() {
+        return new HazelcastPrincipalService(
+                hazelcastInstance,
+                aclKeyReservationService(),
+                authorizationManager(),
+                principalsMapManager(),
+                externalDatabasePermissionsManager()
+        );
+    }
+
+    @Bean
+    public ExternalDatabasePermissioningService externalDatabasePermissionsManager() {
+        return new ExternalDatabasePermissioner(
+                externalDbConnMan,
+                dbcs(),
+                principalsMapManager()
+        );
+    }
+
+    @Bean
     public Assembler assembler() {
         return new Assembler(
                 dbcs(),
                 hikariDataSource,
                 authorizationManager(),
-                principalService,
+                securePrincipalsManager(),
                 metricRegistry,
                 hazelcastInstance,
                 eventBus
@@ -185,10 +205,10 @@ public class IndexerServicesPod {
                 assemblerConfiguration,
                 externalDbConnMan,
                 hikariDataSource,
-                principalService,
+                securePrincipalsManager(),
                 organizationsManager(),
                 dbcs(),
-                extDatabasePermsManager,
+                externalDatabasePermissionsManager(),
                 eventBus,
                 metricRegistry
         );
@@ -210,7 +230,7 @@ public class IndexerServicesPod {
                 hazelcastInstance,
                 aclKeyReservationService(),
                 authorizationManager(),
-                principalService,
+                securePrincipalsManager(),
                 phoneNumberService(),
                 partitionManager(),
                 assembler(),
@@ -340,13 +360,12 @@ public class IndexerServicesPod {
         return new ExternalDatabaseManagementService(
                 hazelcastInstance,
                 externalDbConnMan,
-                principalService,
+                securePrincipalsManager(),
                 aclKeyReservationService(),
                 authorizationManager(),
                 organizationExternalDatabaseConfiguration,
                 transporterService,
                 dbcs(),
-                extDatabasePermsManager,
                 hikariDataSource );
     }
 
@@ -393,6 +412,6 @@ public class IndexerServicesPod {
 
     @PostConstruct
     void initPrincipals() {
-        Principals.init( principalService, hazelcastInstance );
+        Principals.init( securePrincipalsManager(), hazelcastInstance );
     }
 }

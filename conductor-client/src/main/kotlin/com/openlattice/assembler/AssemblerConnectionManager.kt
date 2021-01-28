@@ -23,7 +23,6 @@ package com.openlattice.assembler
 
 import com.codahale.metrics.MetricRegistry
 import com.google.common.eventbus.EventBus
-import com.google.common.eventbus.Subscribe
 import com.openlattice.ApiHelpers
 import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationRoleName
 import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresRoleName
@@ -36,12 +35,9 @@ import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.E
-import com.openlattice.postgres.PostgresTable.PRINCIPALS
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService
 import com.openlattice.postgres.external.Schemas
-import com.openlattice.principals.RoleCreatedEvent
-import com.openlattice.principals.UserCreatedEvent
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
