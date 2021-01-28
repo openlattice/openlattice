@@ -14,11 +14,7 @@ import com.hazelcast.query.Predicates
 import com.openlattice.assembler.events.MaterializePermissionChangeEvent
 import com.openlattice.authorization.aggregators.AuthorizationSetAggregator
 import com.openlattice.authorization.aggregators.PrincipalAggregator
-import com.openlattice.authorization.mapstores.PermissionMapstore.ACL_KEY_INDEX
-import com.openlattice.authorization.mapstores.PermissionMapstore.PERMISSIONS_INDEX
-import com.openlattice.authorization.mapstores.PermissionMapstore.PRINCIPAL_INDEX
-import com.openlattice.authorization.mapstores.PermissionMapstore.PRINCIPAL_TYPE_INDEX
-import com.openlattice.authorization.mapstores.PermissionMapstore.SECURABLE_OBJECT_TYPE_INDEX
+import com.openlattice.authorization.mapstores.PermissionMapstore.*
 import com.openlattice.authorization.processors.AuthorizationEntryProcessor
 import com.openlattice.authorization.processors.PermissionMerger
 import com.openlattice.authorization.processors.PermissionRemover
@@ -30,9 +26,7 @@ import com.openlattice.organizations.PrincipalSet
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.time.OffsetDateTime
-import java.util.EnumMap
-import java.util.EnumSet
-import java.util.HashMap
+import java.util.*
 import java.util.function.Function
 import java.util.stream.Collectors
 import java.util.stream.Stream
@@ -43,7 +37,9 @@ class HazelcastAuthorizationService(
         val eventBus: EventBus
 ) : AuthorizationManager {
 
-    private val securableObjectTypes: IMap<AclKey, SecurableObjectType> = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap(hazelcastInstance)
+    private val securableObjectTypes: IMap<AclKey, SecurableObjectType> = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap(
+            hazelcastInstance
+    )
     private val aces: IMap<AceKey, AceValue> = HazelcastMap.PERMISSIONS.getMap(hazelcastInstance)
 
     companion object {
@@ -312,25 +308,27 @@ class HazelcastAuthorizationService(
 
         val permissionMap = requests.mapValues { noAccess(it.value) }.toMutableMap()
 
-        val aceKeys = requests.keys.flatMap { aclKey ->
-            principals.map { principal -> AceKey(aclKey, principal) }
-        }.toSet()
+        val aceKeys = requests.keys
+                .flatMap { aclKey -> principals.map { principal -> AceKey(aclKey, principal) } }
+                .toSet()
 
-        aces.executeOnKeys(aceKeys, AuthorizationEntryProcessor()).forEach { (aceKey: AceKey, permissions: Any) ->
+        aces
+                .getAll(aceKeys)
+                .forEach { (aceKey, aceValue) ->
+                    val permissions = aceValue.permissions
+                    val aclKeyPermissions = permissionMap.getValue(aceKey.aclKey)
 
-            val aclKeyPermissions = permissionMap.getValue(aceKey.aclKey)
+                    permissions.forEach { permission -> aclKeyPermissions.computeIfPresent(permission) { _,_ -> true } }
+                }
 
-            (permissions as DelegatedPermissionEnumSet).filter { aclKeyPermissions.contains(it) }.forEach {
-                aclKeyPermissions[it] = true
-            }
-
-            permissionMap[aceKey.aclKey] = aclKeyPermissions
-        }
         return permissionMap
     }
 
     @Timed
-    override fun accessChecksForPrincipals(accessChecks: Set<AccessCheck>, principals: Set<Principal>): Stream<Authorization> {
+    override fun accessChecksForPrincipals(
+            accessChecks: Set<AccessCheck>,
+            principals: Set<Principal>
+    ): Stream<Authorization> {
         val requests: MutableMap<AclKey, EnumSet<Permission>> = Maps.newLinkedHashMapWithExpectedSize(accessChecks.size)
 
         accessChecks.forEach {
@@ -397,8 +395,11 @@ class HazelcastAuthorizationService(
     override fun getAuthorizedObjectsOfType(
             principals: Set<Principal>,
             objectType: SecurableObjectType,
-            permissions: EnumSet<Permission>): Stream<AclKey> {
-        val principalPredicate = if (principals.size == 1) hasPrincipal(principals.first()) else hasAnyPrincipals(principals)
+            permissions: EnumSet<Permission>
+    ): Stream<AclKey> {
+        val principalPredicate = if (principals.size == 1) hasPrincipal(principals.first()) else hasAnyPrincipals(
+                principals
+        )
         val p = Predicates.and<AceKey, AceValue>(
                 principalPredicate,
                 hasType(objectType),
@@ -416,12 +417,14 @@ class HazelcastAuthorizationService(
             principals: Set<Principal>,
             objectType: SecurableObjectType,
             permissions: EnumSet<Permission>,
-            additionalFilter: Predicate<*, *>): Stream<AclKey> {
+            additionalFilter: Predicate<*, *>
+    ): Stream<AclKey> {
         val p = Predicates.and<AceKey, AceValue>(
                 hasAnyPrincipals(principals),
                 hasType(objectType),
                 hasExactPermissions(permissions),
-                additionalFilter)
+                additionalFilter
+        )
         return aces.keySet(p)
                 .stream()
                 .map { obj: AceKey -> obj.aclKey }
@@ -431,6 +434,7 @@ class HazelcastAuthorizationService(
     @Timed
     override fun getAllSecurableObjectPermissions(key: AclKey): Acl {
         val acesWithPermissions = aces.entrySet(hasAclKey(key))
+                .filter { it.value.isNotEmpty() }
                 .map { Ace(it.key.principal, it.value.permissions) }
                 .toSet()
 
@@ -440,13 +444,16 @@ class HazelcastAuthorizationService(
     @Timed
     override fun getAllSecurableObjectPermissions(keys: Set<AclKey>): Set<Acl> {
         return aces.entrySet(hasAnyAclKeys(keys))
+                .filter { it.value.isNotEmpty() }
                 .groupBy { it.key.aclKey }
                 .mapTo(mutableSetOf()) { entry ->
                     Acl(entry.key, entry.value.mapTo(mutableSetOf()) { Ace(it.key.principal, it.value.permissions) })
                 }
     }
 
-    override fun getAuthorizedPrincipalsOnSecurableObject(key: AclKey, permissions: EnumSet<Permission>): Set<Principal> {
+    override fun getAuthorizedPrincipalsOnSecurableObject(
+            key: AclKey, permissions: EnumSet<Permission>
+    ): Set<Principal> {
         val principalMap = mutableMapOf(key to PrincipalSet(mutableSetOf()))
 
         return aces.aggregate(PrincipalAggregator(principalMap), matches(key, permissions))
@@ -485,7 +492,9 @@ class HazelcastAuthorizationService(
                     hasPrincipalType(PrincipalType.USER)
             )
 
-            val allOtherUserOwnersCount: Long = aces.aggregate(Aggregators.count<Map.Entry<AceKey, AceValue>>(), allOtherUserOwnersPredicate)
+            val allOtherUserOwnersCount: Long = aces.aggregate(
+                    Aggregators.count<Map.Entry<AceKey, AceValue>>(), allOtherUserOwnersPredicate
+            )
             check(allOtherUserOwnersCount != 0L) {
                 "Unable to remove owner permissions as a securable object will be left without an owner of " +
                         "type USER"

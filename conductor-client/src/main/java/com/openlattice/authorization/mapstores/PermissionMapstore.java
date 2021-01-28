@@ -24,12 +24,16 @@ import com.codahale.metrics.annotation.Timed;
 import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
 import com.hazelcast.config.EntryListenerConfig;
+import com.hazelcast.config.EvictionConfig;
+import com.hazelcast.config.EvictionPolicy;
 import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.config.IndexConfig;
 import com.hazelcast.config.IndexType;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapStoreConfig;
 import com.hazelcast.config.MapStoreConfig.InitialLoadMode;
+import com.hazelcast.config.MaxSizePolicy;
+import com.hazelcast.config.NearCacheConfig;
 import com.openlattice.authorization.AceKey;
 import com.openlattice.authorization.AceValue;
 import com.openlattice.authorization.AclKey;
@@ -73,6 +77,8 @@ public class PermissionMapstore extends AbstractBasePostgresMapstore<AceKey, Ace
     public static final String PRINCIPAL_TYPE_INDEX        = "__key.principal.type";
     public static final String ROOT_OBJECT_INDEX           = "__key.aclKey[0]";
     public static final String SECURABLE_OBJECT_TYPE_INDEX = "securableObjectType";
+
+    public static final int NEAR_CACHE_TTL_SECONDS = 300;
 
     private final EventBus eventBus;
 
@@ -143,9 +149,23 @@ public class PermissionMapstore extends AbstractBasePostgresMapstore<AceKey, Ace
         return selectInQuery( ImmutableList.of(), keyColumns(), batchSize );
     }
 
+    private NearCacheConfig getNearCacheConfig() {
+        final var evictionConfig = new EvictionConfig()
+                .setEvictionPolicy( EvictionPolicy.LRU )
+                .setMaxSizePolicy( MaxSizePolicy.ENTRY_COUNT )
+                .setSize( 8192 );
+
+        return new NearCacheConfig()
+                .setInMemoryFormat( InMemoryFormat.OBJECT )
+                .setInvalidateOnChange( true )
+                .setTimeToLiveSeconds( NEAR_CACHE_TTL_SECONDS )
+                .setEvictionConfig( evictionConfig );
+    }
+
     @Override public MapConfig getMapConfig() {
         return super
                 .getMapConfig()
+                .setNearCacheConfig(  getNearCacheConfig())
                 .setInMemoryFormat( InMemoryFormat.OBJECT )
                 .addIndexConfig( new IndexConfig( IndexType.HASH, ACL_KEY_INDEX ) )
                 .addIndexConfig( new IndexConfig( IndexType.HASH, PRINCIPAL_INDEX ) )

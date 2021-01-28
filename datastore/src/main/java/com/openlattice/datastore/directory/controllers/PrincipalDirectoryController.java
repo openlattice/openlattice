@@ -201,7 +201,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
             produces = MediaType.APPLICATION_JSON_VALUE )
     public MaterializedViewAccount regenerateCredential() {
         var sp = Principals.getCurrentSecurablePrincipal();
-        return assembler.rollIntegrationAccount( sp.getAclKey(), sp.getPrincipalType() );
+        return assembler.rollIntegrationAccount( sp.getAclKey() );
     }
 
     @Timed
