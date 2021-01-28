@@ -5,6 +5,7 @@ import com.openlattice.assembler.Assembler
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organizations.OrganizationDatabase
+import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
 import java.util.*
 
 class PostgresCollaborationDatabaseService(
@@ -20,8 +21,10 @@ class PostgresCollaborationDatabaseService(
     }
 
     override fun createCollaborationDatabase(collaborationId: UUID) {
-        val databaseInfo = assembler.createCollaborationDatabaseAndReturnOid(collaborationId)
-        organizationDatabases[collaborationId] = databaseInfo
+        val dbName = ExternalDatabaseConnectionManager.buildDefaultCollaborationDatabaseName(collaborationId)
+        val oid = acm.createAndInitializeCollaborationDatabase(collaborationId, dbName)
+
+        organizationDatabases[collaborationId] = OrganizationDatabase(oid, dbName)
     }
 
     override fun deleteCollaborationDatabase(collaborationId: UUID) {

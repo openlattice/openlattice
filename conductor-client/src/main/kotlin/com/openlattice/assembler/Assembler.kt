@@ -246,14 +246,6 @@ class Assembler(
         return OrganizationDatabase(oid, dbName)
     }
 
-    fun createCollaborationDatabaseAndReturnOid(collaborationId: UUID): OrganizationDatabase {
-        val dbName = ExternalDatabaseConnectionManager.buildDefaultCollaborationDatabaseName(collaborationId)
-        createCollaboration(collaborationId, dbName)
-
-        val oid = acm.getDatabaseOid(dbName)
-        return OrganizationDatabase(oid, dbName)
-    }
-
     fun createOrganization(organizationId: UUID, dbName: String) {
         createOrganizationTimer.time().use {
 

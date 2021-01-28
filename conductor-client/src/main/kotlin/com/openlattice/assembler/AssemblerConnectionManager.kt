@@ -159,6 +159,13 @@ class AssemblerConnectionManager(
         }
     }
 
+    fun createAndInitializeCollaborationDatabase(collaborationId: UUID, dbName: String): Int {
+
+        // TODO initialize
+
+        return getDatabaseOid(dbName)
+    }
+
     internal fun createSchema(dataSource: HikariDataSource, schemaName: String) {
         dataSource.connection.use { connection ->
             connection.createStatement().use { statement ->
