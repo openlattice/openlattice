@@ -120,7 +120,7 @@ final class TransporterService(
             val ft = transporterState.submitToKey(
                     entityTypeId,
                     TransporterPropagateDataEntryProcessor(relevantEntitySets, partitions).init(transporter)
-            ).toCompletableFuture()
+            )
 
             relevantEntitySets.size to ft
         }
@@ -129,14 +129,14 @@ final class TransporterService(
         val exception = MultiException()
         futures.forEach { (_, f) ->
             try {
-                f.get()
+                f.toCompletableFuture().get()
             } catch (e: Exception) {
                 errorCount.inc()
                 exception.add(e)
             }
         }
         val duration = timer.observeDuration()
-        logger.debug("Total poll duration time for {} entity sets in {} entity types: {} sec", setsPolled, futures.size, duration)
+        logger.info("Total poll duration time for {} entity sets in {} entity types: {} sec", setsPolled, futures.size, duration)
         exception.ifExceptionThrow()
     }
 

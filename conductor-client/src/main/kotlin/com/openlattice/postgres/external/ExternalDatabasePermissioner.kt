@@ -172,11 +172,10 @@ class ExternalDatabasePermissioner(
         orgDatasource.connection.use { conn ->
             conn.createStatement().use { stmt ->
                 ptToSqls.forEach { (createRoleSql, grantSchemaSql, grantViewSql) ->
-                    stmt.addBatch(createRoleSql)
-                    stmt.addBatch(grantSchemaSql)
-                    stmt.addBatch(grantViewSql)
+                    stmt.execute(createRoleSql)
+                    stmt.execute(grantSchemaSql)
+                    stmt.execute(grantViewSql)
                 }
-                stmt.executeBatch()
             }
         }
     }

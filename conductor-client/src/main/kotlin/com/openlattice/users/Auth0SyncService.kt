@@ -1,7 +1,6 @@
 package com.openlattice.users
 
 import com.auth0.json.mgmt.users.User
-import com.dataloom.mappers.ObjectMappers
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicates
 import com.openlattice.IdConstants
@@ -50,6 +49,11 @@ class Auth0SyncService(
         syncUserEnrollmentsAndAuthentication(user)
     }
 
+    fun syncUsers(allUsers: Sequence<User>) {
+        updateUsers(allUsers)
+        syncUserEnrollmentsAndAuthentications(allUsers)
+    }
+
     fun createOrUpdateUsers(usersToUpdate: Collection<User>) {
 
         val usersByPrincipal = usersToUpdate.associateBy { getPrincipal(it) }.toMutableMap()
@@ -78,12 +82,43 @@ class Auth0SyncService(
 
     }
 
+    private fun updateUsers(allUsers: Sequence<User>) {
+        logger.info("Updating users in bulk")
+        allUsers.chunked(1_000).forEach {
+            val chunk = it.map { user ->
+                ensureSecurablePrincipalExists(user)
+                //Update the user in the users table
+                user.id to user
+            }.toMap()
+            users.putAll( chunk )
+        }
+    }
+
     private fun updateUser(user: User) {
         logger.info("Updating user ${user.id}")
         ensureSecurablePrincipalExists(user)
 
         //Update the user in the users table
         users.set(user.id, user)
+    }
+
+    private fun syncUserEnrollmentsAndAuthentications(allUsers: Sequence<User>) {
+        //Figure out which users need to be added to which organizations.
+        //Since we don't want to do O( # organizations ) for each user, we need to lookup organizations on a per user
+        //basis and see if the user needs to be added.
+        val allUsersByPrincipal = allUsers.associateBy { user ->
+            getPrincipal(user)
+        }
+
+        logger.info("Synchronizing enrollments and authentication cache for all users")
+
+        processGlobalEnrollments(allUsersByPrincipal)
+
+        allUsersByPrincipal.forEach { principal, user ->
+            processOrganizationEnrollments(principal, user)
+
+            syncAuthenticationCache(principal.id)
+        }
     }
 
     private fun syncUserEnrollmentsAndAuthentication(user: User) {
@@ -204,7 +239,6 @@ class Auth0SyncService(
         missingOrgsForConnections.forEach { orgId ->
             orgService.addMembers(orgId, setOf(principal))
         }
-
     }
 
     private fun tryCreateNewUserPrincipal(user: User, principal: Principal): Boolean {
