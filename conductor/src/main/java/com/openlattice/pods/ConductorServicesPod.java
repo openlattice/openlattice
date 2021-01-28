@@ -31,6 +31,7 @@ import com.geekbeast.rhizome.jobs.ResumeJobsInitializationTask;
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
+import com.kryptnostic.rhizome.configuration.ConfigurationConstants;
 import com.kryptnostic.rhizome.pods.ConfigurationLoader;
 import com.openlattice.assembler.Assembler;
 import com.openlattice.assembler.Assembler.EntitySetViewsInitializerTask;
@@ -122,13 +123,17 @@ import com.openlattice.users.Auth0SyncService;
 import com.openlattice.users.Auth0SyncTask;
 import com.openlattice.users.Auth0SyncTaskDependencies;
 import com.openlattice.users.Auth0UserListingService;
+import com.openlattice.users.DefaultAuth0SyncTask;
+import com.openlattice.users.LocalAuth0SyncTask;
 import com.openlattice.users.LocalUserListingService;
 import com.openlattice.users.UserListingService;
 import com.openlattice.users.export.Auth0ApiExtension;
 import com.zaxxer.hikari.HikariDataSource;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Profile;
 
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
@@ -409,14 +414,38 @@ public class ConductorServicesPod {
         return new Auth0SyncTaskDependencies( auth0SyncService(), userListingService(), executor );
     }
 
-    @Bean
-    public Auth0SyncTask auth0SyncTask() {
-        return new Auth0SyncTask();
+    @Bean( name = "auth0SyncTask" )
+    @Profile( { ConfigurationConstants.Profiles.LOCAL_CONFIGURATION_PROFILE } )
+    public Auth0SyncTask localAuth0SyncTask() {
+        LoggerFactory.getLogger( ConductorServicesPod.class ).info("Constructing local auth0sync task");
+        return new LocalAuth0SyncTask();
     }
 
-    @Bean
-    public Auth0SyncInitializationTask auth0SyncInitializationTask() {
-        return new Auth0SyncInitializationTask();
+    @Bean( name = "auth0SyncTask" )
+    @Profile( {
+            ConfigurationConstants.Profiles.AWS_CONFIGURATION_PROFILE,
+            ConfigurationConstants.Profiles.AWS_TESTING_PROFILE,
+            ConfigurationConstants.Profiles.KUBERNETES_CONFIGURATION_PROFILE
+    } )
+    public Auth0SyncTask defaultAuth0SyncTask() {
+        LoggerFactory.getLogger( ConductorServicesPod.class ).info("Constructing DEFAULT auth0sync task");
+        return new DefaultAuth0SyncTask();
+    }
+
+    @Bean( name = "auth0SyncInitializationTask" )
+    @Profile( { ConfigurationConstants.Profiles.LOCAL_CONFIGURATION_PROFILE })
+    public Auth0SyncInitializationTask localAuth0SyncInitializationTask() {
+        return new Auth0SyncInitializationTask<LocalAuth0SyncTask>(LocalAuth0SyncTask.class);
+    }
+
+    @Bean( name = "auth0SyncInitializationTask" )
+    @Profile( {
+            ConfigurationConstants.Profiles.AWS_CONFIGURATION_PROFILE,
+            ConfigurationConstants.Profiles.AWS_TESTING_PROFILE,
+            ConfigurationConstants.Profiles.KUBERNETES_CONFIGURATION_PROFILE
+    } )
+    public Auth0SyncInitializationTask defaultAuth0SyncInitializationTask() {
+        return new Auth0SyncInitializationTask<DefaultAuth0SyncTask>(DefaultAuth0SyncTask.class);
     }
 
     @Bean
