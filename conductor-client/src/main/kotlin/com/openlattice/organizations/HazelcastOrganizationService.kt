@@ -406,7 +406,6 @@ class HazelcastOrganizationService(
             profiles: Map<Principal, Map<String, Set<String>>>
     ): Set<Principal> {
         require(orgAclKey.size == 1) { "Organization acl key should only be of length 1" }
-        val members = membersToAdd.keys.toSet()
         val organizationId = orgAclKey[0]
 
         //Always trigger as this won't cause a write to organizations table.

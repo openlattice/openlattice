@@ -10,20 +10,11 @@ import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.PropertyTypeIdFqn
-import com.openlattice.edm.events.AssociationTypeCreatedEvent
-import com.openlattice.edm.events.EntityTypeCreatedEvent
-import com.openlattice.edm.events.EntityTypeDeletedEvent
-import com.openlattice.edm.events.PropertyTypesAddedToEntityTypeEvent
-import com.openlattice.edm.events.PropertyTypesRemovedFromEntityTypeEvent
-import com.openlattice.edm.processors.GetEntityTypeFromEntitySetEntryProcessor
-import com.openlattice.edm.set.EntitySetFlag
+import com.openlattice.edm.events.*
 import com.openlattice.edm.type.EntityType
 import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.postgres.TableColumn
 import com.openlattice.transporter.MAT_EDGES_TABLE
-import com.openlattice.transporter.processors.MarkEntitySetNotTransportedEntryProcessor
-import com.openlattice.transporter.processors.MarkEntitySetTransportedEntryProcessor
 import com.openlattice.transporter.processors.TransporterPropagateDataEntryProcessor
 import com.openlattice.transporter.processors.TransporterSynchronizeTableDefinitionEntryProcessor
 import com.openlattice.transporter.tableName
@@ -75,7 +66,6 @@ final class TransporterService(
     }
 
     private val transporterState = HazelcastMap.TRANSPORTER_DB_COLUMNS.getMap(hazelcastInstance)
-    private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
 
     /**
      * Initialization called by [TransporterInitializeServiceTask]
@@ -126,14 +116,13 @@ final class TransporterService(
         val timer = pollTimer.startTimer()
         val futures = this.transporterState.keys.map { entityTypeId ->
             val relevantEntitySets = validEntitySets(entityTypeId)
-            val entitySetIds = relevantEntitySets.map { it.id }.toSet()
-            val partitions = partitions(entitySetIds)
+            val partitions = partitions(relevantEntitySets.map { it.id }.toSet())
             val ft = transporterState.submitToKey(
                     entityTypeId,
                     TransporterPropagateDataEntryProcessor(relevantEntitySets, partitions).init(transporter)
             ).toCompletableFuture()
 
-            entitySetIds.size to ft
+            relevantEntitySets.size to ft
         }
         val setsPolled = futures.map { it.first }.sum()
         // wait for all futures to complete.
@@ -151,26 +140,24 @@ final class TransporterService(
         exception.ifExceptionThrow()
     }
 
-    private fun refreshDataForEntitySet(entitySetId: UUID) {
-        val esCompletion = entitySets.getAsync(entitySetId)
-        val partitions = partitionManager.getEntitySetPartitions(entitySetId)
-        val refreshTimer = refreshTimer.startTimer()
-        esCompletion.thenCompose { es ->
-            transporterState.submitToKey(es.entityTypeId,
-                    TransporterPropagateDataEntryProcessor(setOf(es), partitions).init(transporter)
-            )
-        }.whenCompleteAsync { _, throwable ->
-            refreshTimer.observeDuration()
-            if (throwable != null) {
-                errorCount.inc()
-            }
-        }
-    }
+//    private fun refreshDataForEntitySet(entitySetId: UUID) {
+//        val esCompletion = entitySets.getAsync(entitySetId)
+//        val partitions = partitionManager.getEntitySetPartitions(entitySetId)
+//        val refreshTimer = refreshTimer.startTimer()
+//        esCompletion.thenCompose { es ->
+//            transporterState.submitToKey(es.entityTypeId,
+//                    TransporterPropagateDataEntryProcessor(setOf(es), partitions).init(transporter)
+//            )
+//        }.whenCompleteAsync { _, throwable ->
+//            refreshTimer.observeDuration()
+//            if (throwable != null) {
+//                errorCount.inc()
+//            }
+//        }
+//    }
 
     private fun validEntitySets(entityTypeId: UUID): Set<EntitySet> {
-        return entitySetService.getEntitySetsOfType(entityTypeId)
-                .filter { !it.isLinking && it.flags.contains(EntitySetFlag.TRANSPORTED) }
-                .toSet()
+        return entitySetService.getTransportedEntitySetsOfType(entityTypeId)
     }
 
     fun disassembleEntitySet(

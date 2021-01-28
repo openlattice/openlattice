@@ -183,6 +183,16 @@ class EntitySetService(
 
     }
 
+    override fun getTransportedEntitySetsOfType(entityTypeId: UUID): Set<EntitySet> {
+        return entitySets.values(
+                Predicates.and(
+                        Predicates.equal<UUID, EntitySet>(EntitySetMapstore.FLAGS_INDEX, EntitySetFlag.TRANSPORTED),
+                        Predicates.notEqual<UUID, EntitySet>(EntitySetMapstore.FLAGS_INDEX, EntitySetFlag.LINKING),
+                        Predicates.equal<UUID, EntitySet>(EntitySetMapstore.ENTITY_TYPE_ID_INDEX, entityTypeId)
+                )
+        ).toSet()
+    }
+
     private fun reserveEntitySetIfNotExists(entitySet: EntitySet): UUID {
         aclKeyReservations.reserveIdAndValidateType(entitySet)
 

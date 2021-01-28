@@ -26,7 +26,6 @@ import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.map.IMap
 import com.hazelcast.query.Predicates
 import com.openlattice.assembler.PostgresRoles.Companion.buildExternalPrincipalId
-import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresRoleName
 import com.openlattice.authorization.mapstores.PostgresCredentialMapstore
 import com.openlattice.authorization.processors.GetDbUsernameFromDbCredsEntryProcessor
 import com.openlattice.directory.MaterializedViewAccount

@@ -70,7 +70,6 @@ import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
 import com.openlattice.notifications.sms.PhoneNumberService;
-import com.openlattice.organizations.ExternalDatabaseManagementService;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.OrganizationExternalDatabaseConfiguration;
 import com.openlattice.organizations.OrganizationMetadataEntitySetsService;
@@ -82,7 +81,6 @@ import com.openlattice.postgres.external.ExternalDatabasePermissioner;
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService;
 import com.openlattice.scrunchie.search.ConductorElasticsearchImpl;
 import com.openlattice.transporter.pods.TransporterPod;
-import com.openlattice.transporter.services.TransporterService;
 import com.zaxxer.hikari.HikariDataSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -132,9 +130,6 @@ public class IndexerServicesPod {
 
     @Inject
     private ExternalDatabaseConnectionManager externalDbConnMan;
-
-    @Inject
-    private TransporterService transporterService;
 
     @Bean
     public ConductorElasticsearchApi elasticsearchApi() {
@@ -353,20 +348,6 @@ public class IndexerServicesPod {
     @Bean
     public DataGraphManager dataGraphService() {
         return new DataGraphService( graphApi(), idService(), entityDatastore(), jobService() );
-    }
-
-    @Bean
-    public ExternalDatabaseManagementService edms() {
-        return new ExternalDatabaseManagementService(
-                hazelcastInstance,
-                externalDbConnMan,
-                securePrincipalsManager(),
-                aclKeyReservationService(),
-                authorizationManager(),
-                organizationExternalDatabaseConfiguration,
-                transporterService,
-                dbcs(),
-                hikariDataSource );
     }
 
     @Bean( name = "auditingManager" )

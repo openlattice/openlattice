@@ -69,6 +69,8 @@ interface EntitySetManager {
 
     fun getAssociationTypeDetailsByEntitySetIds(entitySetIds: Set<UUID>): Map<UUID, AssociationType>
 
+    fun getTransportedEntitySetsOfType(entityTypeId: UUID): Set<EntitySet>
+
     fun isAssociationEntitySet(entitySetId: UUID): Boolean
 
     @Timed
