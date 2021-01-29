@@ -46,18 +46,14 @@ class Auth0UserDirectoryService(
         logger.info("Searching auth0 users with query: $searchQuery")
 
         var page = 0
-        var pageOfUsers = auth0ManagementApi.searchAllUsers(searchQuery, page++,
-                                                            DEFAULT_PAGE_SIZE, "v3"
-        )
+        var pageOfUsers = auth0ManagementApi.searchAllUsers(searchQuery, page++, DEFAULT_PAGE_SIZE, "v3")
         val users = mutableSetOf<Auth0UserBasic>()
 
         while (pageOfUsers != null) {
             users.addAll(pageOfUsers)
 
             if (pageOfUsers.size == DEFAULT_PAGE_SIZE) {
-                pageOfUsers = auth0ManagementApi.searchAllUsers(searchQuery, page++,
-                                                                DEFAULT_PAGE_SIZE, "v3"
-                )
+                pageOfUsers = auth0ManagementApi.searchAllUsers(searchQuery, page++, DEFAULT_PAGE_SIZE, "v3")
             } else {
                 break
             }
