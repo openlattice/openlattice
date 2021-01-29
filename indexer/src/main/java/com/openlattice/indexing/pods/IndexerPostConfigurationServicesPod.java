@@ -46,6 +46,7 @@ import com.openlattice.organizations.OrganizationExternalDatabaseConfiguration;
 import com.openlattice.organizations.OrganizationMetadataEntitySetsService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
+import com.openlattice.postgres.external.ExternalDatabasePermissioningService;
 import com.openlattice.transporter.services.TransporterService;
 import com.zaxxer.hikari.HikariDataSource;
 import org.springframework.context.annotation.Bean;
@@ -95,6 +96,9 @@ public class IndexerPostConfigurationServicesPod {
 
     @Inject
     private HazelcastAclKeyReservationService aclKeyReservationService;
+
+    @Inject
+    private ExternalDatabasePermissioningService externalDatabasePermissioningService;
 
     @Inject
     private ExternalDatabaseConnectionManager externalDbConnMan;
@@ -176,6 +180,7 @@ public class IndexerPostConfigurationServicesPod {
                 aclKeyReservationService,
                 authorizationManager,
                 organizationExternalDatabaseConfiguration,
+                externalDatabasePermissioningService,
                 transporterService,
                 dbcs,
                 hikariDataSource );

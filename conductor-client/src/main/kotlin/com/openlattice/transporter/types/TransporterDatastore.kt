@@ -4,14 +4,11 @@ import com.geekbeast.configuration.postgres.PostgresConfiguration
 import com.kryptnostic.rhizome.configuration.RhizomeConfiguration
 import com.openlattice.ApiHelpers
 import com.openlattice.assembler.AssemblerConfiguration
-import com.openlattice.assembler.PostgresRoles
 import com.openlattice.authorization.Acl
+import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.Action
-import com.openlattice.authorization.Permission
-import com.openlattice.edm.EdmConstants
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.PropertyTypeIdFqn
-import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.TableColumn
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
@@ -45,8 +42,6 @@ class TransporterDatastore(
 
         // fdw name for atlas <-> production fdw
         const val ENTERPRISE_FDW_NAME = "enterprise"
-
-        private val OPENLATTICE_ID_AS_STRING = EdmConstants.ID_FQN.toString()
     }
 
     private var transporterHds: HikariDataSource = exConnMan.createDataSource(
@@ -71,7 +66,7 @@ class TransporterDatastore(
             es: EntitySet,
             ptIdToFqnColumns: Set<PropertyTypeIdFqn>,
             columnAcls: List<Acl>,
-            columnsById: Map<UUID, TableColumn>
+            columnsById: Map<AclKey, TableColumn>
     ) {
         val esName = es.name
         val orgHds = exConnMan.connectToOrg(organizationId)
@@ -114,7 +109,6 @@ class TransporterDatastore(
 
         // create roles, apply permissions
         applyViewAndEdgePermissions(
-                organizationId,
                 orgHds,
                 es.id,
                 esName,
@@ -349,13 +343,12 @@ class TransporterDatastore(
     }
 
     private fun applyViewAndEdgePermissions(
-            organizationId: UUID,
             orgDatasource: HikariDataSource,
             entitySetId: UUID,
             entitySetName: String,
             ptIdToFqnColumns: Set<PropertyTypeIdFqn>,
             columnAcls: List<Acl>,
-            columnsById: Map<UUID, TableColumn>
+            columnsById: Map<AclKey, TableColumn>
     ) {
         exDbPermMan.initializeAssemblyPermissions(
                 orgDatasource,
@@ -365,7 +358,6 @@ class TransporterDatastore(
         )
 
         exDbPermMan.updateAssemblyPermissions(
-                organizationId,
                 Action.SET,
                 columnAcls,
                 columnsById

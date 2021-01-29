@@ -335,7 +335,7 @@ internal fun revokeTablePermissionsForRole(schema: Schemas, entitySetName: Strin
     return "REVOKE ALL PRIVILEGES ON $schema.${ApiHelpers.dbQuote(entitySetName)} FROM ${ApiHelpers.dbQuote(role)}"
 }
 
-internal fun grantUsageOnschemaSql(schema: Schemas, orgUserId: String): String {
+internal fun grantUsageOnSchemaSql(schema: Schemas, orgUserId: String): String {
     return "GRANT USAGE ON SCHEMA $schema TO ${ApiHelpers.dbQuote(orgUserId)}"
 }
 

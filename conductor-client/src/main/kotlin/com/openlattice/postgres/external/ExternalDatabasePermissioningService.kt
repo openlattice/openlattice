@@ -51,10 +51,9 @@ interface ExternalDatabasePermissioningService {
      * Updates permissions on [propertyTypes] for [entitySet] in org database for [organizationId]
      */
     fun updateAssemblyPermissions(
-            organizationId: UUID,
             action: Action,
             columnAcls: List<Acl>,
-            columnsById: Map<UUID, TableColumn>
+            columnsById: Map<AclKey, TableColumn>
     )
 
     /**
@@ -70,9 +69,8 @@ interface ExternalDatabasePermissioningService {
      * Updates permissions on [columns] for [table] in org database for [organizationId]
      */
     fun updateExternalTablePermissions(
-            organizationId: UUID,
             action: Action,
             columnAcls: List<Acl>,
-            columnsById: Map<UUID, OrganizationExternalDatabaseColumn>
+            columnsById: Map<AclKey, TableColumn>
     )
 }

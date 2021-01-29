@@ -14,6 +14,7 @@ import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.edm.PropertyTypeIdFqn
 import com.openlattice.edm.processors.GetEntityTypeFromEntitySetEntryProcessor
 import com.openlattice.edm.processors.GetFqnFromPropertyTypeEntryProcessor
+import com.openlattice.edm.processors.GetOrganizationIdFromEntitySetEntryProcessor
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.hazelcast.HazelcastMap
@@ -30,6 +31,8 @@ import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.ResultSetAdapters.*
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
+import com.openlattice.postgres.external.ExternalDatabasePermissioningService
+import com.openlattice.postgres.mapstores.SecurableObjectTypeMapstore
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.openlattice.postgres.streams.StatementHolderSupplier
@@ -58,6 +61,7 @@ class ExternalDatabaseManagementService(
         private val aclKeyReservations: HazelcastAclKeyReservationService,
         private val authorizationManager: AuthorizationManager,
         private val organizationExternalDatabaseConfiguration: OrganizationExternalDatabaseConfiguration,
+        private val extDbPermsManager: ExternalDatabasePermissioningService,
         private val transporterService: TransporterService,
         private val dbCredentialService: DbCredentialService,
         private val hds: HikariDataSource
@@ -175,8 +179,8 @@ class ExternalDatabaseManagementService(
         }
 
         val tableCols = ptIds.thenApply { transporterPtIds ->
-            transporterPtIds.associateWith {
-                TableColumn(it, entitySetId)
+            transporterPtIds.associate {
+                AclKey(entitySetId, it) to TableColumn(organizationId, entitySetId, it)
             }
         }
 
@@ -184,7 +188,7 @@ class ExternalDatabaseManagementService(
                 Predicates.equal<AceKey, AceValue>(PermissionMapstore.ROOT_OBJECT_INDEX, entitySetId),
                 Predicates.equal<AceKey, AceValue>(PermissionMapstore.SECURABLE_OBJECT_TYPE_INDEX, SecurableObjectType.PropertyTypeInEntitySet))
         ).map { (key, valu) ->
-            Acl(key.aclKey, listOf(Ace(key.principal, valu as Set<Permission>, Optional.of(valu.expirationDate))))
+            Acl( key.aclKey, listOf( Ace(key.principal, valu as Set<Permission>, Optional.of(valu.expirationDate))) )
         }
 
         ptIdsToFqns.thenCombine( tableCols ) { asPtFqns, colsById ->
@@ -461,10 +465,72 @@ class ExternalDatabaseManagementService(
     /**
      * Sets privileges for a user on an organization's column
      */
-    fun executePrivilegesUpdate(action: Action, columnAcls: List<Acl>) {
-        val columnIds = columnAcls.map { it.aclKey[1] }.toSet()
-        val columnsById = organizationExternalDatabaseColumns.getAll(columnIds)
-        externalDbPermsService.updateExternalTablePermissions(action, columnAcls, columnsById)
+
+    fun executePrivilegesUpdate(action: Action, acls: List<Acl>) {
+        val aclsByType = mapAclsToExternalVsAssemblyColumnAcls(acls)
+
+        // for entityset aclkeys:
+        val assemblyCols = aclsByType.getValue(SecurableObjectType.PropertyTypeInEntitySet)
+        executePrivilegesUpdateOnPropertyTypes(action, assemblyCols)
+
+        // for organizationexternalDatabaseColumns:
+        val externalTableColAcls = aclsByType.getValue(SecurableObjectType.OrganizationExternalDatabaseColumn)
+        executePrivilegesUpdateOnOrgExternalDbColumns(action, externalTableColAcls)
+    }
+
+    fun executePrivilegesUpdateOnOrgExternalDbColumns(action: Action, externalTableColAcls: List<Acl>) {
+        val extTableColIds = externalTableColAcls.aclKeysAsSet {
+            it.aclKey[1]
+        }
+        val columnsById = organizationExternalDatabaseColumns.getAll(extTableColIds).values.associate {
+            AclKey( it.tableId, it.id) to TableColumn(it.organizationId, it.tableId, it.id)
+        }
+        extDbPermsManager.updateExternalTablePermissions(action, externalTableColAcls, columnsById)
+    }
+
+    fun executePrivilegesUpdateOnPropertyTypes(action: Action, assemblyAcls: List<Acl> ){
+        val esids = assemblyAcls.aclKeysAsSet {
+            it.aclKey[0]
+        }
+        val aclKeyToTableCols = entitySets.submitToKeys(esids, GetOrganizationIdFromEntitySetEntryProcessor()).thenApplyAsync { esidToOrgId ->
+            assemblyAcls.associate {
+                it.aclKey to TableColumn(esidToOrgId.getValue(it.aclKey[0]), it.aclKey[0], it.aclKey[1])
+            }
+        }
+        extDbPermsManager.updateAssemblyPermissions(action, assemblyAcls, aclKeyToTableCols.toCompletableFuture().get())
+    }
+
+    private fun mapAclsToExternalVsAssemblyColumnAcls(acls: List<Acl>): Map<SecurableObjectType, List<Acl>>{
+        val aclKeyIndex = acls.aclKeysAsSet { it.aclKey.index }.toTypedArray()
+
+        val allOrgExternalDBAclKeys: Set<AclKey> = securableObjectTypes.keySet(
+                getAclKeysOfObjectTypePredicate( aclKeyIndex, SecurableObjectType.OrganizationExternalDatabaseColumn)
+        )
+        val allOrgExternalDbAcls = acls.filter { allOrgExternalDBAclKeys.contains(it.aclKey) }
+
+        val allAssemblyAclKeys: Set<AclKey> = securableObjectTypes.keySet(
+                getAclKeysOfObjectTypePredicate( aclKeyIndex, SecurableObjectType.PropertyTypeInEntitySet)
+        )
+        val allAssemblyAcls = acls.filter { allAssemblyAclKeys.contains(it.aclKey) }
+
+        return mapOf(
+                SecurableObjectType.OrganizationExternalDatabaseColumn to allOrgExternalDbAcls,
+                SecurableObjectType.PropertyTypeInEntitySet to allAssemblyAcls
+        )
+    }
+
+    private fun getAclKeysOfObjectTypePredicate(
+            aclKeysIndexForm: Array<String>,
+            objectType: SecurableObjectType
+    ): Predicate<AclKey, SecurableObjectType> {
+        return Predicates.and<AclKey, SecurableObjectType>(
+                Predicates.`in`<Any, Any>(SecurableObjectTypeMapstore.ACL_KEY_INDEX, *aclKeysIndexForm),
+                Predicates.equal<Any, Any>(SecurableObjectTypeMapstore.SECURABLE_OBJECT_TYPE_INDEX, objectType )
+        )
+    }
+
+    private fun <T> Collection<Acl>.aclKeysAsSet( extraction: ( Acl ) -> T ): Set<T> {
+        return this.mapTo( HashSet(this.size) ) { extraction(it) }
     }
 
     /**

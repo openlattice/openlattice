@@ -5,6 +5,7 @@ import com.google.common.eventbus.Subscribe
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
 import com.openlattice.authorization.Acl
+import com.openlattice.authorization.AclKey
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
@@ -173,7 +174,7 @@ final class TransporterService(
             es: EntitySet,
             ptIdToFqnColumns: Set<PropertyTypeIdFqn>,
             columnAcls: List<Acl>,
-            columnsById: Map<UUID, TableColumn>
+            columnsById: Map<AclKey, TableColumn>
     ) {
         transporter.transportEntitySet(
                 organizationId,

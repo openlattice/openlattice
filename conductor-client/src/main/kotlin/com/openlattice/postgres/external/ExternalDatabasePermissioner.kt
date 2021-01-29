@@ -11,7 +11,7 @@ import com.openlattice.organization.roles.Role
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.PostgresPrivileges
 import com.openlattice.postgres.TableColumn
-import com.openlattice.transporter.grantUsageOnschemaSql
+import com.openlattice.transporter.grantUsageOnSchemaSql
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
@@ -159,7 +159,7 @@ class ExternalDatabasePermissioner(
             //   grantPermissionsOnColumnsOnTableToRoleSql()
             Triple(
                     createRoleIfNotExistsSql(roleName),
-                    grantUsageOnschemaSql(Schemas.ASSEMBLED_ENTITY_SETS, roleName),
+                    grantUsageOnSchemaSql(Schemas.ASSEMBLED_ENTITY_SETS, roleName),
                     grantPermissionsOnColumnsOnTableToRoleSql(
                             permissions,
                             quotedColumns,
@@ -184,12 +184,11 @@ class ExternalDatabasePermissioner(
      * Updates permissions on [propertyTypes] for [entitySet] in org database for [organizationId]
      */
     override fun updateAssemblyPermissions(
-            organizationId: UUID,
             action: Action,
             columnAcls: List<Acl>,
-            columnsById: Map<UUID, TableColumn>
+            columnsById: Map<AclKey, TableColumn>
     ) {
-        updateTablePermissions(organizationId, action, columnAcls, columnsById, TableType.VIEW)
+        updateTablePermissions(action, columnAcls, columnsById, TableType.VIEW)
     }
 
     /**
@@ -232,19 +231,17 @@ class ExternalDatabasePermissioner(
      * Updates permissions on [columns] for [table] in org database for [organizationId]
      */
     override fun updateExternalTablePermissions(
-            organizationId: UUID,
             action: Action,
             columnAcls: List<Acl>,
-            columnsById: Map<UUID, OrganizationExternalDatabaseColumn>
+            columnsById: Map<AclKey, TableColumn>
     ) {
-//        updateTablePermissions(organizationId, action, columnAcls, columnsById, TableType.TABLE)
+        updateTablePermissions(action, columnAcls, columnsById, TableType.TABLE)
     }
 
     private fun updateTablePermissions(
-            organizationId: UUID,
             action: Action,
             columnAcls: List<Acl>,
-            columnsById: Map<UUID, TableColumn>,
+            columnsById: Map<AclKey, TableColumn>,
             tableType: TableType
     ) {
         if (action != Action.ADD && action != Action.REMOVE && action != Action.SET) {
@@ -252,55 +249,75 @@ class ExternalDatabasePermissioner(
             return
         }
 
-        val removes = mutableSetOf<String>()
-        val adds = mutableSetOf<String>()
+        val allOrgs = columnsById.values.map { it.organizationId }
+        val removes = mutableMapOf<UUID, MutableList<String>>()
+        val adds = mutableMapOf<UUID, MutableList<String>>()
         columnAcls.forEach { columnAcl ->
-            val column = columnsById.getValue(columnAcl.aclKey.last())
+            // Note - only handling propertyType aclKeys in here to add permissions to data
+            val column = columnsById.getValue(columnAcl.aclKey)
+            val orgId = column.organizationId
             columnAcl.aces.forEach { ace ->
                 when (action) {
                     Action.ADD -> {
-                        adds.addAll(updatePermissionsOnColumnSql(
+                        val sqls = adds.getOrDefault(orgId, mutableListOf())
+                        sqls.addAll( updatePermissionsOnColumnSql(
                                 ace,
                                 column,
                                 PgPermAction.GRANT
-                        ))
+                        ) )
+                        adds.set( orgId, sqls)
                     }
                     Action.REMOVE -> {
-                        removes.addAll(updatePermissionsOnColumnSql(
-                                ace,
-                                column,
-                                PgPermAction.REVOKE
-                        ))
+                        val sqls = removes.getOrDefault(orgId, mutableListOf())
+                        sqls.addAll(
+                                removeAllPermissionsForPrincipalOnColumn(
+                                        ace.principal, column, tableType
+                                )
+                        )
+                        removes.set( orgId, sqls)
                     }
                     Action.SET -> {
-                        removes.addAll(removeAllPermissionsForPrincipalOnColumn(ace.principal, column, tableType))
-                        adds.addAll(updatePermissionsOnColumnSql(
+                        val remSqls = removes.getOrDefault(orgId, mutableListOf())
+                        remSqls.addAll(
+                                removeAllPermissionsForPrincipalOnColumn(
+                                        ace.principal, column, tableType
+                                )
+                        )
+                        removes.set( orgId, remSqls)
+
+                        val addSqls = adds.getOrDefault(orgId, mutableListOf())
+                        addSqls.addAll(  updatePermissionsOnColumnSql(
                                 ace,
                                 column,
                                 PgPermAction.GRANT
                         ))
+                        adds.set( orgId, addSqls)
                     }
                 }
             }
         }
 
-        extDbManager.connectToOrg(organizationId).connection.use { conn ->
-            conn.autoCommit = false
-            val stmt: Statement = conn.createStatement()
-            try {
-                removes.forEach {
-                    stmt.execute(it)
+        allOrgs.forEach { organizationId ->
+            val rems = removes.getOrDefault(organizationId, listOf<String>())
+            val addz = adds.getOrDefault(organizationId, listOf<String>())
+            extDbManager.connectToOrg(organizationId).connection.use { conn ->
+                conn.autoCommit = false
+                val stmt: Statement = conn.createStatement()
+                try {
+                    rems.forEach {
+                        stmt.execute(it)
+                    }
+                    addz.forEach { sql ->
+                        stmt.addBatch(sql)
+                    }
+                    stmt.executeBatch()
+                    conn.commit()
+                } catch (ex: Exception) {
+                    logger.error("Exception occurred during external permissions update, rolling back", ex)
+                } finally {
+                    conn.rollback()
+                    stmt.close()
                 }
-                adds.forEach { sql ->
-                    stmt.addBatch(sql)
-                }
-                stmt.executeBatch()
-                conn.commit()
-            } catch (ex: Exception) {
-                logger.error("Exception occurred during external permissions update, rolling back", ex)
-            } finally {
-                conn.rollback()
-                stmt.close()
             }
         }
     }
@@ -316,7 +333,7 @@ class ExternalDatabasePermissioner(
             TableType.VIEW -> allViewPermissions
             TableType.TABLE -> allTablePermissions
         }.map {
-            revokeRoleSql(PostgresRoles.buildPermissionRoleName(column.tableId, column.id, it), setOf(userRole))
+            revokeRoleSql(PostgresRoles.buildPermissionRoleName(column, it), setOf(userRole))
         }
     }
 
@@ -338,7 +355,7 @@ class ExternalDatabasePermissioner(
         val securablePrincipal = principalsMapManager.getSecurablePrincipal(ace.principal.id)
         val userRole = dbCredentialService.getDbUsername(securablePrincipal)
         return filteredAcePermissions(ace.permissions).map { perm ->
-            val permissionsRole = PostgresRoles.buildPermissionRoleName(column.tableId, column.id, perm)
+            val permissionsRole = PostgresRoles.buildPermissionRoleName(column, perm)
             when (action) {
                 PgPermAction.GRANT -> grantRoleToRole(permissionsRole, setOf(userRole))
                 PgPermAction.REVOKE -> revokeRoleSql(permissionsRole, setOf(userRole))
