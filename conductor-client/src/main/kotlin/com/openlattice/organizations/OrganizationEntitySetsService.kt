@@ -133,10 +133,13 @@ class OrganizationEntitySetsService(
         }
     }
 
-    fun isFullyInitialized(): Boolean = this::organizationMetadataEntityTypeId.isInitialized &&
-            this::datasetEntityTypeId.isInitialized && this::columnsEntityTypeId.isInitialized &&
-            this::omAuthorizedPropertyTypes.isInitialized && this::datasetsAuthorizedPropertyTypes.isInitialized &&
-            this::columnAuthorizedPropertyTypes.isInitialized && this::propertyTypes.isInitialized
+    fun isFullyInitialized(): Boolean = this::organizationMetadataEntityTypeId.isInitialized
+            && this::datasetEntityTypeId.isInitialized
+            && this::columnsEntityTypeId.isInitialized
+            && this::omAuthorizedPropertyTypes.isInitialized
+            && this::datasetsAuthorizedPropertyTypes.isInitialized
+            && this::columnAuthorizedPropertyTypes.isInitialized
+            && this::propertyTypes.isInitialized
 
     fun initializeOrganizationMetadataEntitySets(organizationId: UUID) {
         val adminAclKey = organizations.executeOnKey(
@@ -275,29 +278,36 @@ class OrganizationEntitySetsService(
 
             orgEntitySets.forEach { entitySet ->
 
-                val entitySetPropertyTypeEntities = propertyTypesByEntitySet.getOrDefault(
-                        entitySet.id, listOf()
-                ).associate { propertyType ->
-                    columnEntityKeyIds.getValue(AclKey(entitySet.id, propertyType.id)) to mutableMapOf<UUID, Set<Any>>(
-                            propertyTypes.getValue(ID).id to setOf(propertyType.id.toString()),
+                val entitySetPropertyTypeEntities = propertyTypesByEntitySet.getOrDefault(entitySet.id, listOf())
+                    .withIndex()
+                    .associate { (index, propertyType) ->
+                        columnEntityKeyIds.getValue(
+                            AclKey(entitySet.id, propertyType.id)
+                        ) to mutableMapOf<UUID, Set<Any>>(
+                            propertyTypes.getValue(COL_NAME).id to setOf(propertyType.type.toString()),
+                            propertyTypes.getValue(DATASET_ID).id to setOf(entitySet.id),
                             propertyTypes.getValue(DATASET_NAME).id to setOf(entitySet.name),
-                            propertyTypes.getValue(COL_NAME).id to setOf(propertyType.type.fullQualifiedNameAsString),
-                            propertyTypes.getValue(ORG_ID).id to setOf(organizationId.toString()),
-                            propertyTypes.getValue(TYPE).id to setOf(propertyType.datatype.toString()),
-                            propertyTypes.getValue(DESCRIPTION).id to setOf(propertyType.description)
-                    )
-                }
+                            propertyTypes.getValue(DATA_TYPE).id to setOf(propertyType.datatype.toString()),
+                            propertyTypes.getValue(DESCRIPTION).id to setOf(propertyType.description),
+                            propertyTypes.getValue(ID).id to setOf(propertyType.id.toString()),
+                            propertyTypes.getValue(INDEX).id to setOf(index),
+                            propertyTypes.getValue(ORG_ID).id to setOf(organizationId),
+                            propertyTypes.getValue(TITLE).id to setOf(propertyType.title),
+                            propertyTypes.getValue(TYPE).id to setOf(propertyType.type.toString())
+                        )
+                    }
 
                 columnEntities.putAll(entitySetPropertyTypeEntities)
 
                 datasetEntities[datasetEntityKeyIds.getValue(entitySet.id)] = mutableMapOf(
-                        propertyTypes.getValue(ID).id to setOf(entitySet.id.toString()),
-                        propertyTypes.getValue(DATASET_NAME).id to setOf(entitySet.name),
                         propertyTypes.getValue(CONTACT).id to entitySet.contacts,
+                        propertyTypes.getValue(DATASET_NAME).id to setOf(entitySet.name),
+                        propertyTypes.getValue(DESCRIPTION).id to setOf(entitySet.description),
+                        propertyTypes.getValue(FLAGS).id to entitySet.flags.map { flag -> flag.name }.toSet(),
+                        propertyTypes.getValue(ID).id to setOf(entitySet.id.toString()),
+                        propertyTypes.getValue(ORG_ID).id to setOf(organizationId),
                         propertyTypes.getValue(STANDARDIZED).id to setOf(true),
-                        propertyTypes.getValue(COL_INFO).id to setOf(
-                                mapper.writeValueAsString(entitySetPropertyTypeEntities.values)
-                        )
+                        propertyTypes.getValue(TITLE).id to setOf(entitySet.title)
                 )
 
             }
@@ -341,23 +351,28 @@ class OrganizationEntitySetsService(
 
             val tableColumnEntities = columnsByTableId.getOrDefault(table.id, listOf()).associate { column ->
                 columnEntityKeyIds.getValue(AclKey(table.id, column.id)) to mutableMapOf<UUID, Set<Any>>(
-                        propertyTypes.getValue(ID).id to setOf(column.id.toString()),
-                        propertyTypes.getValue(DATASET_NAME).id to setOf(table.name),
-                        propertyTypes.getValue(COL_NAME).id to setOf(column.name),
-                        propertyTypes.getValue(ORG_ID).id to setOf(organizationId.toString()),
-                        propertyTypes.getValue(TYPE).id to setOf(column.dataType.toString()),
-                        propertyTypes.getValue(DESCRIPTION).id to setOf(column.description)
+                    propertyTypes.getValue(COL_NAME).id to setOf(column.name),
+                    propertyTypes.getValue(DATASET_ID).id to setOf(table.id),
+                    propertyTypes.getValue(DATASET_NAME).id to setOf(table.name),
+                    propertyTypes.getValue(DATA_TYPE).id to setOf(column.dataType),
+                    propertyTypes.getValue(DESCRIPTION).id to setOf(column.description),
+                    propertyTypes.getValue(ID).id to setOf(column.id.toString()),
+                    propertyTypes.getValue(INDEX).id to setOf(column.ordinalPosition),
+                    propertyTypes.getValue(ORG_ID).id to setOf(organizationId),
+                    propertyTypes.getValue(TITLE).id to setOf(column.title)
                 )
             }
 
             columnEntities.putAll(tableColumnEntities)
 
             datasetEntities[datasetEntityKeyIds.getValue(table.id)] = mutableMapOf(
-                    propertyTypes.getValue(EXTERNAL_ID).id to setOf(table.externalId),
-                    propertyTypes.getValue(ID).id to setOf(table.id.toString()),
-                    propertyTypes.getValue(DATASET_NAME).id to setOf(table.name),
-                    propertyTypes.getValue(STANDARDIZED).id to setOf(false),
-                    propertyTypes.getValue(COL_INFO).id to setOf(mapper.writeValueAsString(tableColumnEntities.values))
+                propertyTypes.getValue(DATASET_NAME).id to setOf(table.name),
+                propertyTypes.getValue(DESCRIPTION).id to setOf(table.description),
+                propertyTypes.getValue(EXTERNAL_ID).id to setOf(table.externalId),
+                propertyTypes.getValue(ID).id to setOf(table.id.toString()),
+                propertyTypes.getValue(ORG_ID).id to setOf(organizationId),
+                propertyTypes.getValue(STANDARDIZED).id to setOf(false),
+                propertyTypes.getValue(TITLE).id to setOf(table.title)
             )
 
         }
@@ -384,10 +399,13 @@ class OrganizationEntitySetsService(
         val organizationMetadataEntitySetIds = getOrganizationMetadataEntitySetIds(organizationId)
 
         val datasetEntity = mutableMapOf<UUID, Set<Any>>(
-                propertyTypes.getValue(EXTERNAL_ID).id to setOf(table.externalId),
-                propertyTypes.getValue(ID).id to setOf(table.id.toString()),
-                propertyTypes.getValue(DATASET_NAME).id to setOf(table.name),
-                propertyTypes.getValue(STANDARDIZED).id to setOf(false)
+            propertyTypes.getValue(DATASET_NAME).id to setOf(table.name),
+            propertyTypes.getValue(DESCRIPTION).id to setOf(table.description),
+            propertyTypes.getValue(EXTERNAL_ID).id to setOf(table.externalId),
+            propertyTypes.getValue(ID).id to setOf(table.id.toString()),
+            propertyTypes.getValue(ORG_ID).id to setOf(organizationId),
+            propertyTypes.getValue(STANDARDIZED).id to setOf(false),
+            propertyTypes.getValue(TITLE).id to setOf(table.title)
         )
 
         val datasetEntityKeyId = getDatasetEntityKeyId(organizationMetadataEntitySetIds, table.externalId)
@@ -414,14 +432,17 @@ class OrganizationEntitySetsService(
 
         val columnEntities = columns.associate { column ->
             getColumnEntityKeyId(
-                    organizationMetadataEntitySetIds, column.tableId, column
+                organizationMetadataEntitySetIds, column.tableId, column
             ) to mutableMapOf<UUID, Set<Any>>(
-                    propertyTypes.getValue(ID).id to setOf(column.id.toString()),
-                    propertyTypes.getValue(DATASET_NAME).id to setOf(table.name),
-                    propertyTypes.getValue(COL_NAME).id to setOf(column.name),
-                    propertyTypes.getValue(ORG_ID).id to setOf(organizationId.toString()),
-                    propertyTypes.getValue(TYPE).id to setOf(column.dataType.toString()),
-                    propertyTypes.getValue(DESCRIPTION).id to setOf(column.description)
+                propertyTypes.getValue(COL_NAME).id to setOf(column.name),
+                propertyTypes.getValue(DATASET_ID).id to setOf(table.id),
+                propertyTypes.getValue(DATASET_NAME).id to setOf(table.name),
+                propertyTypes.getValue(DATA_TYPE).id to setOf(column.dataType),
+                propertyTypes.getValue(DESCRIPTION).id to setOf(column.description),
+                propertyTypes.getValue(ID).id to setOf(column.id.toString()),
+                propertyTypes.getValue(INDEX).id to setOf(column.ordinalPosition),
+                propertyTypes.getValue(ORG_ID).id to setOf(organizationId),
+                propertyTypes.getValue(TITLE).id to setOf(column.title)
             )
         }
 
@@ -429,17 +450,6 @@ class OrganizationEntitySetsService(
                 organizationMetadataEntitySetIds.columns,
                 columnEntities,
                 columnAuthorizedPropertyTypes
-        )
-
-        val datasetEntityKeyId = getDatasetEntityKeyId(organizationMetadataEntitySetIds, table.id)
-        val datasetColumnEntity = mutableMapOf<UUID, Set<Any>>(
-                propertyTypes.getValue(COL_INFO).id to setOf(mapper.writeValueAsString(columnEntities))
-        )
-
-        dataGraphManager.partialReplaceEntities(
-                organizationMetadataEntitySetIds.datasets,
-                mapOf(datasetEntityKeyId to datasetColumnEntity),
-                datasetsAuthorizedPropertyTypes
         )
     }
 
@@ -585,27 +595,31 @@ class OrganizationEntitySetsService(
         private val VIEWS_ET = FullQualifiedName("ol.view")
         private val ACCESS_REQUEST_ET = FullQualifiedName("ol.accessrequest")
 
-        private const val EXTERNAL_ID = "ol.externalid"
-        private const val PGOID = "ol.pgoid"
-        private const val ID = "ol.id"
-        private const val COL_INFO = "ol.columninfo"
-        private const val DATASET_NAME = "ol.dataset_name"
-        private const val ORG_ID = "ol.organization_id"
-        private const val STANDARDIZED = "ol.standardized"
-        private const val TYPE = "ol.type"
+        private const val ACL_KEYS = "ol.aclkeys"
         private const val COL_NAME = "ol.column_name"
         private const val CONTACT = "contact.Email"
+        private const val DATASET_ID = "ol.datasetid"
+        private const val DATASET_NAME = "ol.dataset_name"
+        private const val DATA_TYPE = "ol.datatype"
         private const val DESCRIPTION = "ol.description"
-        private const val SQL = "ol.sql"
+        private const val EXTERNAL_ID = "ol.externalid"
+        private const val FLAGS = "ol.flags"
+        private const val ID = "ol.id"
+        private const val INDEX = "ol.index"
+        private const val ORG_ID = "ol.organization_id"
         private const val OWNER = "ol.owner" // TODO: figure out clean way of exposing owner of an object as owner may not be in OL system
-
-        private const val TEXT = "ol.text"
         private const val PERMISSIONS = "ol.permissions"
-        private const val ACLKEY = "ol.aclkey"
-        private const val STATUS = "ol.status"
-        private const val REQUEST_PRINCIPAL_ID = "ol.requestprincipalid"
-        private const val RESPONSE_PRINCIPAL_ID = "ol.responseprincipalid"
+        private const val PGOID = "ol.pgoid"
         private const val REQUEST_DATETIME = "ol.requestdatetime"
+        private const val REQUEST_PRINCIPAL_ID = "ol.requestprincipalid"
         private const val RESPONSE_DATETIME = "ol.responsedatetime"
+        private const val RESPONSE_PRINCIPAL_ID = "ol.responseprincipalid"
+        private const val SQL = "ol.sql"
+        private const val STANDARDIZED = "ol.standardized"
+        private const val STATUS = "ol.status"
+        private const val TAGS = "ol.tags"
+        private const val TEXT = "ol.text"
+        private const val TITLE = "ol.title"
+        private const val TYPE = "ol.type"
     }
 }
