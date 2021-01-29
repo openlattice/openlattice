@@ -15,6 +15,8 @@ import java.util.*
  * @param title A title for the object
  * @param description An optional description of this object
  * @param organizationId The id of the organization that owns this table
+ * @param dataSourceId The id of the data source to which this table belongs.
+ * @param externalId An datasource specific uniqued string identifier for a table.
  */
 
 class OrganizationExternalDatabaseSchema
@@ -41,7 +43,7 @@ constructor(
 
     @JsonIgnore
     override fun getCategory(): SecurableObjectType {
-        return SecurableObjectType.OrganizationExternalDatabaseView
+        return SecurableObjectType.OrganizationExternalDatabaseSchema
     }
 
     override fun equals(other: Any?): Boolean {

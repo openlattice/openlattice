@@ -17,7 +17,9 @@ import com.openlattice.postgres.PostgresDatatype
  * @param title A title for the object
  * @param description A description for the object
  * @param tableId The id of the table that contains this column
+ * @param externalId An datasource specific uniqued string identifier for a table.
  * @param organizationId The id of the organization that owns this column
+ * @param dataSourceId The id of the data source to which this table belongs.
  * @param dataType The sql data type of this column
  * @param primaryKey A boolean denoting if the column is a primary key of the containing table
  * @param ordinalPosition The index of the column within the containing table
