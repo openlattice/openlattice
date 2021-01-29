@@ -6,15 +6,21 @@ import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organizations.OrganizationDatabase
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
+import org.slf4j.LoggerFactory
 import java.util.*
 
 class PostgresCollaborationDatabaseService(
         hazelcast: HazelcastInstance,
         val assembler: Assembler,
-        val acm: AssemblerConnectionManager
+        val acm: AssemblerConnectionManager,
+        val externalDbConnMan: ExternalDatabaseConnectionManager
 ) : CollaborationDatabaseManager {
 
     private val organizationDatabases = HazelcastMap.ORGANIZATION_DATABASES.getMap(hazelcast)
+
+    companion object {
+        private val logger = LoggerFactory.getLogger(PostgresCollaborationDatabaseService::class.java)
+    }
 
     override fun getDatabaseInfo(collaborationId: UUID): OrganizationDatabase {
         return organizationDatabases[collaborationId]!!

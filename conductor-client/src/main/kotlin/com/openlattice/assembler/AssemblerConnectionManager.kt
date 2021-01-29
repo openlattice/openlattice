@@ -160,8 +160,12 @@ class AssemblerConnectionManager(
     }
 
     fun createAndInitializeCollaborationDatabase(collaborationId: UUID, dbName: String): Int {
+        logger.info("Creating collaboration database for collaboration with id $collaborationId")
+        createDatabase(dbName)
 
-        // TODO initialize
+        extDbManager.connect(dbName).let { hds ->
+            configureRolesInDatabase(hds)
+        }
 
         return getDatabaseOid(dbName)
     }
@@ -298,6 +302,23 @@ class AssemblerConnectionManager(
                             "GRANT ${MEMBER_ORG_DATABASE_PERMISSIONS.joinToString(", ")} " +
                                     "ON DATABASE $db TO ${quote(dbOrgUser)}"
                     )
+                }
+                statement.execute(revokeAll)
+            }
+        }
+    }
+
+    fun createDatabase(dbName: String) {
+        val db = quote(dbName)
+
+        val createDb = "CREATE DATABASE $db"
+        val revokeAll = "REVOKE ALL ON DATABASE $db FROM $PUBLIC_ROLE"
+
+        //We connect to default db in order to do initial db setup
+        atlas.connection.use { connection ->
+            connection.createStatement().use { statement ->
+                if (!exists(dbName)) {
+                    statement.execute(createDb)
                 }
                 statement.execute(revokeAll)
             }
