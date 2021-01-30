@@ -26,6 +26,7 @@ import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.openlattice.users.Auth0SyncTask;
+import com.openlattice.users.DefaultAuth0SyncTask;
 import com.openlattice.users.LocalAuth0SyncTask;
 import org.springframework.stereotype.Component;
 
@@ -42,10 +43,14 @@ public class Auth0SyncTaskStreamSerializer implements SelfRegisteringStreamSeria
     }
 
     @Override public void write( ObjectDataOutput out, Auth0SyncTask object ) throws IOException {
+        out.writeBoolean( object.isLocal() );
     }
 
     @Override public Auth0SyncTask read( ObjectDataInput in ) throws IOException {
-        return new LocalAuth0SyncTask();
+        if ( in.readBoolean() ) {
+            return new LocalAuth0SyncTask();
+        }
+        return new DefaultAuth0SyncTask();
     }
 
     @Override public int getTypeId() {

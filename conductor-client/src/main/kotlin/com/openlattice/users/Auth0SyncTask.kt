@@ -19,6 +19,8 @@ interface Auth0SyncTask: HazelcastFixedRateTask<Auth0SyncTaskDependencies>,
         HazelcastTaskDependencies,
         StatefulTask<String, Instant> {
 
+    val isLocal: Boolean
+
     val logger: Logger
 
     var lastSync: Instant

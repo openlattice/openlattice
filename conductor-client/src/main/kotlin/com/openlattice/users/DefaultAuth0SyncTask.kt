@@ -36,6 +36,8 @@ private const val MAX_JOBS = 8
  * syncDependencies be initialized within the same JVM in order to function properly.
  */
 class DefaultAuth0SyncTask: Auth0SyncTask {
+    override val isLocal: Boolean = false
+
     private val syncSemaphore = Semaphore(MAX_JOBS)
 
     override val logger: Logger = LoggerFactory.getLogger(DefaultAuth0SyncTask::class.java)

@@ -10,6 +10,8 @@ import java.util.concurrent.TimeUnit
  * @author Drew Bailey (drew@openlattice.com)
  */
 class LocalAuth0SyncTask: Auth0SyncTask {
+    override val isLocal: Boolean = true
+
     override val logger: Logger = LoggerFactory.getLogger(LocalAuth0SyncTask::class.java)
 
     override var lastSync: Instant = Instant.now()
