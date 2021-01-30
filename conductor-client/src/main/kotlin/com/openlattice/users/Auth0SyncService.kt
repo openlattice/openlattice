@@ -108,6 +108,8 @@ class Auth0SyncService(
         //basis and see if the user needs to be added.
         val allUsersByPrincipal = allUsers.associateBy { user ->
             getPrincipal(user)
+        }.filter {
+            it.value.appMetadata != null
         }
 
         logger.info("Synchronizing enrollments and authentication cache for all users")
