@@ -141,22 +141,6 @@ final class TransporterService(
         exception.ifExceptionThrow()
     }
 
-//    private fun refreshDataForEntitySet(entitySetId: UUID) {
-//        val esCompletion = entitySets.getAsync(entitySetId)
-//        val partitions = partitionManager.getEntitySetPartitions(entitySetId)
-//        val refreshTimer = refreshTimer.startTimer()
-//        esCompletion.thenCompose { es ->
-//            transporterState.submitToKey(es.entityTypeId,
-//                    TransporterPropagateDataEntryProcessor(setOf(es), partitions).init(transporter)
-//            )
-//        }.whenCompleteAsync { _, throwable ->
-//            refreshTimer.observeDuration()
-//            if (throwable != null) {
-//                errorCount.inc()
-//            }
-//        }
-//    }
-
     private fun validEntitySets(entityTypeId: UUID): Set<EntitySet> {
         return entitySetService.getTransportedEntitySetsOfType(entityTypeId)
     }

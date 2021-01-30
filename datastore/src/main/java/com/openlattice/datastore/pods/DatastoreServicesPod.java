@@ -218,6 +218,7 @@ public class DatastoreServicesPod {
     @Bean
     public ExternalDatabasePermissioningService externalDatabasePermissionsManager() {
         return new ExternalDatabasePermissioner(
+                hazelcastInstance,
                 externalDbConnMan,
                 dcs(),
                 principalsMapManager()

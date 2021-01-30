@@ -175,6 +175,7 @@ public class IndexerServicesPod {
     @Bean
     public ExternalDatabasePermissioningService externalDatabasePermissionsManager() {
         return new ExternalDatabasePermissioner(
+                hazelcastInstance,
                 externalDbConnMan,
                 dbcs(),
                 principalsMapManager()

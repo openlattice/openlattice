@@ -70,11 +70,6 @@ public interface SecurePrincipalsManager {
 
     void deleteAllRolesInOrganization( UUID organizationId );
 
-    /**
-     * This does not reflect principal changes in any external databases
-     */
-    void addInternalPrincipalToPrincipal( AclKey source, AclKey target);
-
     void addPrincipalToPrincipal( AclKey source, AclKey target );
 
     /**

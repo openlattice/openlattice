@@ -244,6 +244,7 @@ public class ConductorServicesPod {
     @Bean
     public ExternalDatabasePermissioningService externalDatabasePermissionsManager() {
         return new ExternalDatabasePermissioner(
+                hazelcastInstance,
                 externalDbConnMan,
                 dbCredService(),
                 principalsMapManager()

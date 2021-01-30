@@ -1,16 +1,23 @@
 package com.openlattice.postgres.external
 
+import com.hazelcast.core.HazelcastInstance
+import com.hazelcast.query.Predicate
+import com.hazelcast.query.Predicates
 import com.openlattice.ApiHelpers
 import com.openlattice.assembler.PostgresRoles
 import com.openlattice.authorization.*
+import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.edm.EdmConstants
 import com.openlattice.edm.PropertyTypeIdFqn
+import com.openlattice.edm.processors.GetOrganizationIdFromEntitySetEntryProcessor
+import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.organization.OrganizationExternalDatabaseTable
 import com.openlattice.organization.roles.Role
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.PostgresPrivileges
 import com.openlattice.postgres.TableColumn
+import com.openlattice.postgres.mapstores.SecurableObjectTypeMapstore
 import com.openlattice.transporter.grantUsageOnSchemaSql
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -24,11 +31,16 @@ import java.util.*
  */
 @Component
 class ExternalDatabasePermissioner(
+        hazelcastInstance: HazelcastInstance,
         private val extDbManager: ExternalDatabaseConnectionManager,
         private val dbCredentialService: DbCredentialService,
         private val principalsMapManager: PrincipalsMapManager
 ): ExternalDatabasePermissioningService {
     private val atlas: HikariDataSource = extDbManager.connect("postgres")
+
+    private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
+    private val securableObjectTypes = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap(hazelcastInstance)
+    private val organizationExternalDatabaseColumns = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_COLUMN.getMap(hazelcastInstance)
 
     companion object {
         private val logger = LoggerFactory.getLogger(ExternalDatabasePermissioner::class.java)
@@ -105,6 +117,73 @@ class ExternalDatabasePermissioner(
         }
     }
 
+    override fun executePrivilegesUpdate(action: Action, acls: List<Acl>) {
+        val aclsByType = mapAclsToExternalVsAssemblyColumnAcls(acls)
+
+        // for entityset aclkeys:
+        val assemblyCols = aclsByType.getValue(SecurableObjectType.PropertyTypeInEntitySet)
+        executePrivilegesUpdateOnPropertyTypes(action, assemblyCols)
+
+        // for organizationexternalDatabaseColumns:
+        val externalTableColAcls = aclsByType.getValue(SecurableObjectType.OrganizationExternalDatabaseColumn)
+        executePrivilegesUpdateOnOrgExternalDbColumns(action, externalTableColAcls)
+    }
+
+    fun executePrivilegesUpdateOnOrgExternalDbColumns(action: Action, externalTableColAcls: List<Acl>) {
+        val extTableColIds = externalTableColAcls.aclKeysAsSet {
+            it.aclKey[1]
+        }
+        val columnsById = organizationExternalDatabaseColumns.getAll(extTableColIds).values.associate {
+            AclKey( it.tableId, it.id) to TableColumn(it.organizationId, it.tableId, it.id)
+        }
+        updateExternalTablePermissions(action, externalTableColAcls, columnsById)
+    }
+
+    fun executePrivilegesUpdateOnPropertyTypes(action: Action, assemblyAcls: List<Acl> ){
+        val esids = assemblyAcls.aclKeysAsSet {
+            it.aclKey[0]
+        }
+        val aclKeyToTableCols = entitySets.submitToKeys(esids, GetOrganizationIdFromEntitySetEntryProcessor()).thenApplyAsync { esidToOrgId ->
+            assemblyAcls.associate {
+                it.aclKey to TableColumn(esidToOrgId.getValue(it.aclKey[0]), it.aclKey[0], it.aclKey[1])
+            }
+        }
+        updateAssemblyPermissions(action, assemblyAcls, aclKeyToTableCols.toCompletableFuture().get())
+    }
+
+    private fun mapAclsToExternalVsAssemblyColumnAcls(acls: List<Acl>): Map<SecurableObjectType, List<Acl>>{
+        val aclKeyIndex = acls.aclKeysAsSet { it.aclKey.index }.toTypedArray()
+
+        val allOrgExternalDBAclKeys: Set<AclKey> = securableObjectTypes.keySet(
+                getAclKeysOfObjectTypePredicate( aclKeyIndex, SecurableObjectType.OrganizationExternalDatabaseColumn)
+        )
+        val allOrgExternalDbAcls = acls.filter { allOrgExternalDBAclKeys.contains(it.aclKey) }
+
+        val allAssemblyAclKeys: Set<AclKey> = securableObjectTypes.keySet(
+                getAclKeysOfObjectTypePredicate( aclKeyIndex, SecurableObjectType.PropertyTypeInEntitySet)
+        )
+        val allAssemblyAcls = acls.filter { allAssemblyAclKeys.contains(it.aclKey) }
+
+        return mapOf(
+                SecurableObjectType.OrganizationExternalDatabaseColumn to allOrgExternalDbAcls,
+                SecurableObjectType.PropertyTypeInEntitySet to allAssemblyAcls
+        )
+    }
+
+    private fun getAclKeysOfObjectTypePredicate(
+            aclKeysIndexForm: Array<String>,
+            objectType: SecurableObjectType
+    ): Predicate<AclKey, SecurableObjectType> {
+        return Predicates.and<AclKey, SecurableObjectType>(
+                Predicates.`in`<Any, Any>(SecurableObjectTypeMapstore.ACL_KEY_INDEX, *aclKeysIndexForm),
+                Predicates.equal<Any, Any>(SecurableObjectTypeMapstore.SECURABLE_OBJECT_TYPE_INDEX, objectType )
+        )
+    }
+
+    private fun <T> Collection<Acl>.aclKeysAsSet( extraction: ( Acl ) -> T ): Set<T> {
+        return this.mapTo( HashSet(this.size) ) { extraction(it) }
+    }
+
     override fun addPrincipalToPrincipals(sourcePrincipalAclKey: AclKey, targetPrincipalAclKeys: Set<AclKey>) {
         if ( targetPrincipalAclKeys.isEmpty()) {
             return
@@ -154,9 +233,6 @@ class ExternalDatabasePermissioner(
                 ApiHelpers.dbQuote(fqnToColumnName(it))
             }
             val permissions = olToPostgres[Permission.READ]!!.joinToString()
-            // roleName to listOf(
-            //   createRoleIfNotExistsSql(roleName),
-            //   grantPermissionsOnColumnsOnTableToRoleSql()
             Triple(
                     createRoleIfNotExistsSql(roleName),
                     grantUsageOnSchemaSql(Schemas.ASSEMBLED_ENTITY_SETS, roleName),

@@ -180,15 +180,6 @@ class HazelcastPrincipalService(
         addPrincipalToPrincipals(source, setOf(target))
     }
 
-    /**
-     * This does not reflect principal changes in any external databases
-     */
-    override fun addInternalPrincipalToPrincipal(source: AclKey, target: AclKey) {
-        ensurePrincipalsExist(setOf(target, source))
-
-        principalTrees.executeOnKey(target, AddPrincipalToPrincipalEntryProcessor(source))
-    }
-
     override fun addPrincipalToPrincipals(source: AclKey, targets: Set<AclKey>): Set<AclKey> {
         ensurePrincipalsExist(targets + setOf(source))
 

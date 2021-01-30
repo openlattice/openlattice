@@ -28,6 +28,11 @@ interface ExternalDatabasePermissioningService {
     fun createUnprivilegedUser(principal: SecurablePrincipal)
 
     /**
+     * Sets privileges a user on an organization's columns
+     */
+    fun executePrivilegesUpdate(action: Action, acls: List<Acl>)
+
+    /**
      * Adds [sourcePrincipalAclKey] to [targetPrincipalAclKeys]
      */
     fun addPrincipalToPrincipals(sourcePrincipalAclKey: AclKey, targetPrincipalAclKeys: Set<AclKey>)
