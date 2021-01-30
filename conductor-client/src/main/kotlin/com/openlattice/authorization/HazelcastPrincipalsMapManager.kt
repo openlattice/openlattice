@@ -38,7 +38,9 @@ class HazelcastPrincipalsMapManager(
         val id = Preconditions.checkNotNull(reservations.getId(principalId),
                 "AclKey not found for Principal %s", principalId
         )
-        return principals.getValue(AclKey(id))
+        return principals.values(
+                Predicates.equal<AclKey, SecurablePrincipal>(PrincipalMapstore.PRINCIPAL_ID_INDEX, id)
+        ).first()
     }
 
     override fun getSecurablePrincipal(aclKey: AclKey): SecurablePrincipal? {

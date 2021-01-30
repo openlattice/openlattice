@@ -498,8 +498,7 @@ class HazelcastOrganizationService(
     @Timed
     fun createRoleIfNotExists(callingUser: Principal, role: Role) {
         val organizationId = role.organizationId
-        val orgPrincipal = securePrincipalsManager
-                .getSecurablePrincipal(AclKey(organizationId))
+        val orgPrincipal = securePrincipalsManager.getSecurablePrincipal(AclKey(organizationId))
 
         /*
          * We set the organization to be the owner of the principal and grant everyone in the organization read access
