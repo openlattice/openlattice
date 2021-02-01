@@ -52,6 +52,12 @@ class PostgresCollaborationDatabaseService(
     }
 
     override fun addOrganizationsToCollaboration(collaborationId: UUID, organizationIds: Set<UUID>) {
+        /* Identify members of added orgs to grant connect on the db to */
+        val orgMemberRoles = dbCreds.getDbAccounts(
+                spm.getOrganizationMembers(organizationIds).flatMap { it.value }.map { it.aclKey }.toSet()
+        ).map { it.value.username }
+
+        /* Identify schemas to create, and which pg roles should have permissions on those schemas */
         val schemaNames = organizationDatabases.getAll(organizationIds).mapValues { it.value.name }
 
         val orgIdToPrincipals = authorizations.getAllSecurableObjectPermissions(organizationIds.map { AclKey(it) }.toSet()).associate { acl ->
@@ -67,17 +73,13 @@ class PostgresCollaborationDatabaseService(
             schemaNames.getValue(orgId) to principals.mapNotNull { aclKeyToDbUsername[principalToAclKey[it]] }
         }
 
-        val orgMemberRoles = dbCreds.getDbAccounts(
-                spm.getOrganizationMembers(organizationIds).flatMap { it.value }.map { it.aclKey }.toSet()
-        ).map { it.value.username }
-
+        /* Perform updates on the database */
         acm.addMembersToCollaboration(collaborationId, orgMemberRoles)
         acm.createAndInitializeSchemas(collaborationId, schemaNameToPostgresRoles)
     }
 
     override fun removeOrganizationsFromCollaboration(collaborationId: UUID, organizationIds: Set<UUID>) {
-        val schemaNames = organizationDatabases.getAll(organizationIds).map { it.value.name }
-
+        /* Identify org members that should be removed */
         val allOrgIds = collaborations.getValue(collaborationId).organizationIds + organizationIds
 
         val allMembersByOrg = spm.getOrganizationMembers(allOrgIds)
@@ -94,6 +96,11 @@ class PostgresCollaborationDatabaseService(
 
         val rolesToRemove = dbCreds.getDbAccounts(membersOfRemovedOrgs - remainingMembers).map { it.value.username }
 
+
+        /* Identify schemas to drop */
+        val schemaNames = organizationDatabases.getAll(organizationIds).map { it.value.name }
+
+        /* Perform updates on the database */
         acm.removeMembersFromCollaboration(collaborationId, rolesToRemove)
         acm.dropSchemas(collaborationId, schemaNames)
     }
