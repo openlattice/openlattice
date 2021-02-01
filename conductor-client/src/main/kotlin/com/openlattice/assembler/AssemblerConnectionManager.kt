@@ -170,6 +170,10 @@ class AssemblerConnectionManager(
         return getDatabaseOid(dbName)
     }
 
+    fun createAndInitializeSchemas(collaborationId: UUID, schemaNameToAuthorizedPgRoles: Map<String, Set<String>>) {
+
+    }
+
     internal fun createSchema(dataSource: HikariDataSource, schemaName: String) {
         dataSource.connection.use { connection ->
             connection.createStatement().use { statement ->
