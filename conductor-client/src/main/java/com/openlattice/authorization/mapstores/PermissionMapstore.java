@@ -78,8 +78,6 @@ public class PermissionMapstore extends AbstractBasePostgresMapstore<AceKey, Ace
     public static final String ROOT_OBJECT_INDEX           = "__key.aclKey[0]";
     public static final String SECURABLE_OBJECT_TYPE_INDEX = "securableObjectType";
 
-    public static final int NEAR_CACHE_TTL_SECONDS = 300;
-
     private final EventBus eventBus;
 
     public PermissionMapstore( HikariDataSource hds, EventBus eventBus ) {
@@ -149,23 +147,9 @@ public class PermissionMapstore extends AbstractBasePostgresMapstore<AceKey, Ace
         return selectInQuery( ImmutableList.of(), keyColumns(), batchSize );
     }
 
-    private NearCacheConfig getNearCacheConfig() {
-        final var evictionConfig = new EvictionConfig()
-                .setEvictionPolicy( EvictionPolicy.LRU )
-                .setMaxSizePolicy( MaxSizePolicy.ENTRY_COUNT )
-                .setSize( 8192 );
-
-        return new NearCacheConfig()
-                .setInMemoryFormat( InMemoryFormat.OBJECT )
-                .setInvalidateOnChange( true )
-                .setTimeToLiveSeconds( NEAR_CACHE_TTL_SECONDS )
-                .setEvictionConfig( evictionConfig );
-    }
-
     @Override public MapConfig getMapConfig() {
         return super
                 .getMapConfig()
-                .setNearCacheConfig(  getNearCacheConfig())
                 .setInMemoryFormat( InMemoryFormat.OBJECT )
                 .addIndexConfig( new IndexConfig( IndexType.HASH, ACL_KEY_INDEX ) )
                 .addIndexConfig( new IndexConfig( IndexType.HASH, PRINCIPAL_INDEX ) )
