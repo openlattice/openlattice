@@ -170,15 +170,56 @@ class AssemblerConnectionManager(
         return getDatabaseOid(dbName)
     }
 
+    fun addMembersToCollaboration(collaborationId: UUID, memberRoles: Iterable<String>) {
+        val dbName = extDbManager.getOrganizationDatabaseName(collaborationId)
+        extDbManager.connect(dbName).connection.use { conn ->
+            conn.createStatement().use { stmt ->
+                stmt.execute(collaborationMemberGrantSql(dbName, memberRoles))
+            }
+        }
+    }
+
+    fun collaborationMemberGrantSql(dbName: String, memberRoles: Iterable<String>): String {
+        return """
+            GRANT ${MEMBER_COLLAB_DATABASE_PERMISSIONS.joinToString()}
+            ON DATABASE ${quote(dbName)}
+            TO ${memberRoles.joinToString()}
+        """.trimIndent()
+    }
+
+    fun removeMembersFromCollaboration(collaborationId: UUID, memberRoles: Iterable<String>) {
+        val dbName = extDbManager.getOrganizationDatabaseName(collaborationId)
+        extDbManager.connect(dbName).connection.use { conn ->
+            conn.createStatement().use { stmt ->
+                stmt.execute(collaborationMemberRevokeSql(dbName, memberRoles))
+            }
+        }
+    }
+
+    fun collaborationMemberRevokeSql(dbName: String, memberRoles: Iterable<String>): String {
+        return """
+            REVOKE ALL
+            ON DATABASE ${quote(dbName)}
+            FROM ${memberRoles.joinToString()}
+        """.trimIndent()
+    }
+
     fun createAndInitializeSchemas(collaborationId: UUID, schemaNameToAuthorizedPgRoles: Map<String, Iterable<String>>) {
         extDbManager.connectToOrg(collaborationId).connection.use { conn ->
             conn.createStatement().use { stmt ->
-
                 schemaNameToAuthorizedPgRoles.forEach { (schemaName, authorizedRoles) ->
                     stmt.execute(createSchemaSql(schemaName))
                     stmt.execute("GRANT USAGE ON SCHEMA $schemaName TO ${authorizedRoles.joinToString { quote(it) }}")
                 }
 
+            }
+        }
+    }
+
+    fun dropSchemas(collaborationId: UUID, schemasToDrop: Iterable<String>) {
+        extDbManager.connectToOrg(collaborationId).connection.use { conn ->
+            conn.createStatement().use { stmt ->
+                schemasToDrop.forEach { stmt.execute(dropSchemaSql(it)) }
             }
         }
     }
@@ -792,12 +833,17 @@ class AssemblerConnectionManager(
     }
 }
 
+val MEMBER_COLLAB_DATABASE_PERMISSIONS = setOf("CREATE", "TEMPORARY", "TEMP")
 val MEMBER_ORG_DATABASE_PERMISSIONS = setOf("CREATE", "CONNECT", "TEMPORARY", "TEMP")
 
 private val PRINCIPALS_SQL = "SELECT ${ACL_KEY.name} FROM ${PRINCIPALS.name} WHERE ${PRINCIPAL_TYPE.name} = ?"
 
 internal fun createSchemaSql(schemaName: String): String {
     return "CREATE SCHEMA IF NOT EXISTS $schemaName"
+}
+
+internal fun dropSchemaSql(schemaName: String): String {
+    return "DROP SCHEMA $schemaName CASCADE"
 }
 
 internal fun grantOrgUserPrivilegesOnSchemaSql(schemaName: String, orgUserId: String): String {

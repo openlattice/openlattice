@@ -24,6 +24,7 @@ class PostgresCollaborationDatabaseService(
         val dbCreds: DbCredentialService
 ) : CollaborationDatabaseManager {
 
+    private val collaborations = HazelcastMap.COLLABORATIONS.getMap(hazelcast)
     private val organizationDatabases = HazelcastMap.ORGANIZATION_DATABASES.getMap(hazelcast)
 
     companion object {
@@ -57,7 +58,6 @@ class PostgresCollaborationDatabaseService(
             acl.aclKey[0] to acl.aces.filter { it.permissions.contains(Permission.READ) }.map { it.principal }
         }
 
-
         val principalToAclKey = spm.getSecurablePrincipals(orgIdToPrincipals.flatMap { it.value }).associate {
             it.principal to it.aclKey
         }
@@ -67,12 +67,38 @@ class PostgresCollaborationDatabaseService(
             schemaNames.getValue(orgId) to principals.mapNotNull { aclKeyToDbUsername[principalToAclKey[it]] }
         }
 
-        acm.createAndInitializeSchemas(collaborationId, schemaNameToPostgresRoles)
+        val orgMemberRoles = dbCreds.getDbAccounts(
+                spm.getOrganizationMembers(organizationIds).flatMap { it.value }.map { it.aclKey }.toSet()
+        ).map { it.value.username }
 
-        TODO("Not yet implemented")
+        acm.addMembersToCollaboration(collaborationId, orgMemberRoles)
+        acm.createAndInitializeSchemas(collaborationId, schemaNameToPostgresRoles)
     }
 
     override fun removeOrganizationsFromCollaboration(collaborationId: UUID, organizationIds: Set<UUID>) {
+        val schemaNames = organizationDatabases.getAll(organizationIds).map { it.value.name }
+
+        val allOrgIds = collaborations.getValue(collaborationId).organizationIds + organizationIds
+
+        val allMembersByOrg = spm.getOrganizationMembers(allOrgIds)
+        val remainingMembers = allMembersByOrg
+                .filter { (orgId, _) -> !organizationIds.contains(orgId) }
+                .flatMap { (_, members) -> members }
+                .map { it.aclKey }
+                .toSet()
+        val membersOfRemovedOrgs = allMembersByOrg
+                .filter { (orgId, _) -> organizationIds.contains(orgId) }
+                .flatMap { (_, members) -> members }
+                .map { it.aclKey }
+                .toSet()
+
+        val rolesToRemove = dbCreds.getDbAccounts(membersOfRemovedOrgs - remainingMembers).map { it.value.username }
+
+        acm.removeMembersFromCollaboration(collaborationId, rolesToRemove)
+        acm.dropSchemas(collaborationId, schemaNames)
+    }
+
+    override fun handleOrganizationDatabaseRename(organizationId: UUID, oldName: String, newName: String) {
         TODO("Not yet implemented")
     }
 }
