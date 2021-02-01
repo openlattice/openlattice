@@ -299,6 +299,11 @@ public final class PostgresTable {
                             ANALYZER,
                             MULTI_VALUED,
                             INDEX_TYPE );
+    public static final PostgresTableDefinition EXTERNAL_ROLES =
+            new PostgresTableDefinition( "external_roles" )
+                    .addColumns( ACL_KEY, ROLE_NAME )
+                    .primaryKey( ACL_KEY );
+
     public static final PostgresTableDefinition GRAPH_QUERIES                 =
             new PostgresTableDefinition( "graph_queries" )
                     .addColumns( QUERY_ID, QUERY, STATE, START_TIME )

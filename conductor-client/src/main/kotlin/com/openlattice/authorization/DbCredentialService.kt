@@ -33,6 +33,7 @@ import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.ids.HazelcastLongIdService
 import org.slf4j.LoggerFactory
 import java.security.SecureRandom
+import java.util.concurrent.CompletionStage
 import kotlin.math.max
 
 const val USER_PREFIX = "user"
@@ -80,6 +81,8 @@ class DbCredentialService(
     fun getDbAccount(aclKey: AclKey): MaterializedViewAccount? = dbCreds[aclKey]
 
     fun getDbUsername(user: SecurablePrincipal): String = getDbAccount(user)!!.username
+
+    fun getDbUsernameAsync(user: SecurablePrincipal): CompletionStage<String> = dbCreds.getAsync(user.aclKey).thenApplyAsync { it.username }
 
     fun getDbUsername(aclKey: AclKey): String = getDbAccount(aclKey)!!.username
 

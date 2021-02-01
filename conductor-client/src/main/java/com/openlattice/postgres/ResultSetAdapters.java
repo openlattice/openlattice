@@ -24,7 +24,6 @@ import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.MoreObjects;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -36,6 +35,7 @@ import com.openlattice.apps.AppTypeSetting;
 import com.openlattice.assembler.EntitySetAssemblyKey;
 import com.openlattice.assembler.MaterializedEntitySet;
 import com.openlattice.auditing.AuditRecordEntitySetConfiguration;
+import com.openlattice.authorization.AccessTarget;
 import com.openlattice.authorization.AceKey;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.Permission;
@@ -95,7 +95,6 @@ import com.openlattice.subscriptions.SubscriptionContactType;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.jetbrains.annotations.NotNull;
-import org.postgresql.core.Oid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -311,6 +310,10 @@ public final class ResultSetAdapters {
         final UUID dstEntitySetId = (UUID) rs.getObject( DST_ENTITY_SET_ID_FIELD );
         final UUID dstEntityKeyId = (UUID) rs.getObject( DST_ENTITY_KEY_ID_FIELD );
         return new EntityDataKey( dstEntitySetId, dstEntityKeyId );
+    }
+
+    public static String externalRoleName(ResultSet rs ) throws SQLException {
+        return rs.getString( ROLE_NAME_FIELD );
     }
 
     public static Double score( ResultSet rs ) throws SQLException {
@@ -1203,5 +1206,17 @@ public final class ResultSetAdapters {
         String name = name( rs );
 
         return new OrganizationDatabase( oid, name );
+    }
+
+    @NotNull public static UUID roleName( @NotNull ResultSet rs ) throws SQLException {
+        return rs.getObject(ROLE_NAME.getName(), UUID.class);
+    }
+
+    @NotNull public static Permission permission( @NotNull ResultSet rs ) throws SQLException {
+        return Permission.valueOf(rs.getString(ROLE_NAME.getName()));
+    }
+
+    @NotNull public static AccessTarget accessTarget( @NotNull ResultSet rs ) throws SQLException {
+        return new AccessTarget(aclKey( rs ), permission(rs) );
     }
 }

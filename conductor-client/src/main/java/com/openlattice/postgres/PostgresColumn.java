@@ -23,18 +23,7 @@ package com.openlattice.postgres;
 import com.openlattice.IdConstants;
 import com.openlattice.edm.type.Analyzer;
 
-import static com.openlattice.postgres.PostgresDatatype.BIGINT;
-import static com.openlattice.postgres.PostgresDatatype.BIGINT_ARRAY;
-import static com.openlattice.postgres.PostgresDatatype.BOOLEAN;
-import static com.openlattice.postgres.PostgresDatatype.BYTEA;
-import static com.openlattice.postgres.PostgresDatatype.INTEGER;
-import static com.openlattice.postgres.PostgresDatatype.INTEGER_ARRAY;
-import static com.openlattice.postgres.PostgresDatatype.JSONB;
-import static com.openlattice.postgres.PostgresDatatype.TEXT;
-import static com.openlattice.postgres.PostgresDatatype.TEXT_ARRAY;
-import static com.openlattice.postgres.PostgresDatatype.TIMESTAMPTZ;
-import static com.openlattice.postgres.PostgresDatatype.UUID;
-import static com.openlattice.postgres.PostgresDatatype.UUID_ARRAY;
+import static com.openlattice.postgres.PostgresDatatype.*;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -431,10 +420,12 @@ public final class PostgresColumn {
             new PostgresColumnDefinition( PROPERTY_TYPE_ID_FIELD, UUID ).notNull();
     public static final PostgresColumnDefinition DST_PROPERTY_TYPE_ID              =
             new PostgresColumnDefinition( PROPERTY_TYPE_ID_FIELD, UUID ).notNull();
+    public static final String                   QUERY_FIELD                       = "query";
     public static final PostgresColumnDefinition QUERY                             =
-            new PostgresColumnDefinition( "query", TEXT ).notNull();
+            new PostgresColumnDefinition( QUERY_FIELD, TEXT ).notNull();
+    public static final String                   QUERY_ID_FIELD                    = "query_id";
     public static final PostgresColumnDefinition QUERY_ID                          =
-            new PostgresColumnDefinition( "query_id", UUID )
+            new PostgresColumnDefinition( QUERY_ID_FIELD, UUID )
                     .notNull();
     public static final String                   REASON_FIELD                      = "reason";
     public static final PostgresColumnDefinition REASON                            =
@@ -442,6 +433,9 @@ public final class PostgresColumn {
     public static final String                   REFRESH_RATE_FIELD                = "refresh_rate";
     public static final PostgresColumnDefinition REFRESH_RATE                      =
             new PostgresColumnDefinition( REFRESH_RATE_FIELD, BIGINT );
+    public static final String                   ROLE_NAME_FIELD                   = "role";
+    public static final PostgresColumnDefinition ROLE_NAME =
+            new PostgresColumnDefinition( ROLE_NAME_FIELD, UUID).notNull();
     public static final String                   ROLES_FIELD                       = "roles";
     public static final PostgresColumnDefinition ROLES                             =
             new PostgresColumnDefinition( ROLES_FIELD, JSONB ).notNull().withDefault( "'{}'" );

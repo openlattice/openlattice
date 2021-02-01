@@ -1,8 +1,11 @@
 package com.openlattice.assembler
 
+import com.hazelcast.map.IMap
+import com.openlattice.authorization.AccessTarget
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.Permission
 import com.openlattice.authorization.PrincipalType
+import com.openlattice.authorization.processors.GetOrCreateExternalRoleNameEntryProcessor
 import com.openlattice.postgres.TableColumn
 import java.util.*
 
@@ -16,13 +19,29 @@ class PostgresRoles private constructor() {
     companion object {
 
         @JvmStatic
-        fun buildPermissionRoleName(tableId: UUID, columnId: UUID, permission: Permission): String {
-            return "$INTERNAL_PREFIX|permission|${tableId}_${columnId}_${permission.name.toLowerCase()}"
+        fun getOrCreatePermissionRole(
+                externalRoleNames: IMap<AccessTarget, UUID>,
+                tableId: UUID,
+                columnId: UUID,
+                permission: Permission
+        ): String {
+            val roleAclKey = AclKey(tableId, columnId)
+            return externalRoleNames.executeOnKey(AccessTarget(roleAclKey, permission), GetOrCreateExternalRoleNameEntryProcessor())
+        }
+
+        fun getOrCreatePermissionRole( externalRoleNames: IMap<AccessTarget, UUID>, column: TableColumn, permission: Permission): String {
+            return getOrCreatePermissionRole(externalRoleNames, column.tableId, column.columnId, permission)
         }
 
         @JvmStatic
-        fun buildPermissionRoleName(column: TableColumn, permission: Permission): String {
-            return buildPermissionRoleName(column.tableId, column.columnId, permission)
+        fun getOrCreatePermissionRole( externalRoleNames: IMap<AccessTarget, UUID>, target: AccessTarget ): String {
+            return externalRoleNames.executeOnKey(target, GetOrCreateExternalRoleNameEntryProcessor())
+        }
+
+        @JvmStatic
+        fun getOrCreatePermissionRole( externalRoleNames: IMap<AccessTarget, UUID>, permission: Permission, vararg parts: UUID ): String {
+            val target = AccessTarget.forPermissionOnTarget(permission, *parts)
+            return externalRoleNames.executeOnKey(target, GetOrCreateExternalRoleNameEntryProcessor())
         }
 
         @JvmStatic
