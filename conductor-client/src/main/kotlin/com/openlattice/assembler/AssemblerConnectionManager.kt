@@ -170,14 +170,23 @@ class AssemblerConnectionManager(
         return getDatabaseOid(dbName)
     }
 
-    fun createAndInitializeSchemas(collaborationId: UUID, schemaNameToAuthorizedPgRoles: Map<String, Set<String>>) {
+    fun createAndInitializeSchemas(collaborationId: UUID, schemaNameToAuthorizedPgRoles: Map<String, Iterable<String>>) {
+        extDbManager.connectToOrg(collaborationId).connection.use { conn ->
+            conn.createStatement().use { stmt ->
 
+                schemaNameToAuthorizedPgRoles.forEach { (schemaName, authorizedRoles) ->
+                    stmt.execute(createSchemaSql(schemaName))
+                    stmt.execute("GRANT USAGE ON SCHEMA $schemaName TO ${authorizedRoles.joinToString { quote(it) }}")
+                }
+
+            }
+        }
     }
 
     internal fun createSchema(dataSource: HikariDataSource, schemaName: String) {
         dataSource.connection.use { connection ->
             connection.createStatement().use { statement ->
-                statement.execute("CREATE SCHEMA IF NOT EXISTS $schemaName")
+                statement.execute(createSchemaSql(schemaName))
             }
         }
     }
@@ -228,6 +237,7 @@ class AssemblerConnectionManager(
         val securablePrincipalsToAdd = securePrincipalsManager.getSecurablePrincipals(validUserPrincipals)
         if (securablePrincipalsToAdd.isNotEmpty()) {
             val userNames = securablePrincipalsToAdd.map { dbCredentialService.getDbUsername(it) }
+
             configureUsersInDatabase(dataSource, organizationId, userNames)
         }
     }
@@ -668,7 +678,7 @@ class AssemblerConnectionManager(
     }
 
     private fun configureUsersInDatabase(dataSource: HikariDataSource, organizationId: UUID, userIds: Collection<String>) {
-        val userIdsSql = userIds.joinToString(", ")
+        val userIdsSql = userIds.joinToString()
 
         val dbName = extDbManager.getOrganizationDatabaseName(organizationId)
         logger.info("Configuring users $userIds in database $dbName")
@@ -785,6 +795,10 @@ class AssemblerConnectionManager(
 val MEMBER_ORG_DATABASE_PERMISSIONS = setOf("CREATE", "CONNECT", "TEMPORARY", "TEMP")
 
 private val PRINCIPALS_SQL = "SELECT ${ACL_KEY.name} FROM ${PRINCIPALS.name} WHERE ${PRINCIPAL_TYPE.name} = ?"
+
+internal fun createSchemaSql(schemaName: String): String {
+    return "CREATE SCHEMA IF NOT EXISTS $schemaName"
+}
 
 internal fun grantOrgUserPrivilegesOnSchemaSql(schemaName: String, orgUserId: String): String {
     return "GRANT USAGE, CREATE ON SCHEMA $schemaName TO $orgUserId"
