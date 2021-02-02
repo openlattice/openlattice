@@ -82,9 +82,29 @@ class CollaborationService(
     }
 
     fun handleOrganizationDatabaseRename(organizationId: UUID, oldName: String, newName: String) {
-        collaborations.keySet(Predicates.equal(CollaborationMapstore.ORGANIZATION_ID_IDX, organizationId)).forEach {
+        getCollaborationsIncludingOrg(organizationId).forEach {
             collaborationDatabaseManager.handleOrganizationDatabaseRename(it, oldName, newName)
         }
+    }
+
+    fun handleMembersAdddedToOrg(organizationId: UUID, newMembers: Set<AclKey>) {
+        val collabIds = getCollaborationsIncludingOrg(organizationId)
+
+        if (collabIds.isNotEmpty()) {
+            collaborationDatabaseManager.addMembersToOrganizationInCollaborations(collabIds, organizationId, newMembers)
+        }
+    }
+
+    fun handleMembersRemovedFromOrg(organizationId: UUID, newMembers: Set<AclKey>) {
+        val collabIds = getCollaborationsIncludingOrg(organizationId)
+
+        if (collabIds.isNotEmpty()) {
+            collaborationDatabaseManager.removeMembersFromOrganizationInCollaborations(collabIds, organizationId, newMembers)
+        }
+    }
+
+    private fun getCollaborationsIncludingOrg(organizationId: UUID): Set<UUID> {
+        return collaborations.keySet(Predicates.equal(CollaborationMapstore.ORGANIZATION_ID_IDX, organizationId))
     }
 
     private fun reserveCollaborationIfNotExists(collaboration: Collaboration): AclKey {

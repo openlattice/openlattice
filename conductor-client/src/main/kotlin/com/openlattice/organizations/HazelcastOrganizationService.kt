@@ -387,6 +387,7 @@ class HazelcastOrganizationService(
 
         if (newMembers.isNotEmpty()) {
             val newMemberSecurablePrincipals = securePrincipalsManager.getSecurablePrincipals(newMembers)
+            collaborationService.handleMembersAdddedToOrg(organizationId, newMemberSecurablePrincipals.map { it.aclKey }.toSet())
             eventBus.post(
                     MembersAddedToOrganizationEvent(
                             organizationId, SecurablePrincipalList(newMemberSecurablePrincipals.toMutableList())
@@ -479,6 +480,7 @@ class HazelcastOrganizationService(
 
         val orgAclKey = AclKey(organizationId)
         removeOrganizationFromMembers(orgAclKey, userAclKeys)
+        collaborationService.handleMembersRemovedFromOrg(organizationId, userAclKeys)
         eventBus.post(
                 MembersRemovedFromOrganizationEvent(
                         organizationId,

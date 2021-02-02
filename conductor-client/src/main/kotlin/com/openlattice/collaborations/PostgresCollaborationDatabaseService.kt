@@ -108,4 +108,20 @@ class PostgresCollaborationDatabaseService(
     override fun handleOrganizationDatabaseRename(collaborationId: UUID, oldName: String, newName: String) {
         acm.renameSchema(collaborationId, oldName, newName)
     }
+
+    override fun addMembersToOrganizationInCollaborations(collaborationIds: Set<UUID>, organizationId: UUID, members: Set<AclKey>) {
+        val schemaName = organizationDatabases.getValue(organizationId).name
+        val usernames = dbCreds.getDbAccounts(members).values.map { it.username }
+        collaborationIds.forEach {
+            acm.addMembersToCollabInSchema(it, schemaName, usernames)
+        }
+    }
+
+    override fun removeMembersFromOrganizationInCollaborations(collaborationIds: Set<UUID>, organizationId: UUID, members: Set<AclKey>) {
+        val schemaName = organizationDatabases.getValue(organizationId).name
+        val usernames = dbCreds.getDbAccounts(members).values.map { it.username }
+        collaborationIds.forEach {
+            acm.removeMembersFromSchemaInCollab(it, schemaName, usernames)
+        }
+    }
 }

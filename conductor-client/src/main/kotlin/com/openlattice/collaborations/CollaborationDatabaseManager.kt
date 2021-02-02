@@ -1,5 +1,6 @@
 package com.openlattice.collaborations
 
+import com.openlattice.authorization.AclKey
 import com.openlattice.organizations.OrganizationDatabase
 import java.util.*
 
@@ -18,4 +19,8 @@ interface CollaborationDatabaseManager {
     fun removeOrganizationsFromCollaboration(collaborationId: UUID, organizationIds: Set<UUID>)
 
     fun handleOrganizationDatabaseRename(organizationId: UUID, oldName: String, newName: String)
+
+    fun addMembersToOrganizationInCollaborations(collaborationIds: Set<UUID>, organizationId: UUID, members: Set<AclKey>)
+
+    fun removeMembersFromOrganizationInCollaborations(collaborationIds: Set<UUID>, organizationId: UUID, members: Set<AclKey>)
 }

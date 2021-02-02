@@ -214,6 +214,20 @@ class AssemblerConnectionManager(
         }
     }
 
+    fun addMembersToCollabInSchema(collaborationId: UUID, schemaName: String, members: Iterable<String>) {
+        val dbName = extDbManager.getOrganizationDatabaseName(collaborationId)
+        extDbManager.connect(dbName).connection.use { conn ->
+            conn.createStatement().use { stmt ->
+                stmt.execute(collaborationMemberGrantSql(dbName, members))
+                stmt.execute(grantUsageOnSchemaToRolesSql(schemaName, members))
+            }
+        }
+    }
+
+    fun removeMembersFromSchemaInCollab(collaborationId: UUID, schemaName: String, members: Iterable<String>) {
+
+    }
+
     fun dropSchemas(collaborationId: UUID, schemasToDrop: Iterable<String>) {
         extDbManager.connectToOrg(collaborationId).connection.use { conn ->
             conn.createStatement().use { stmt ->
