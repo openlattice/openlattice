@@ -105,7 +105,7 @@ class PostgresCollaborationDatabaseService(
         acm.dropSchemas(collaborationId, schemaNames)
     }
 
-    override fun handleOrganizationDatabaseRename(organizationId: UUID, oldName: String, newName: String) {
-        TODO("Not yet implemented")
+    override fun handleOrganizationDatabaseRename(collaborationId: UUID, oldName: String, newName: String) {
+        acm.renameSchema(collaborationId, oldName, newName)
     }
 }

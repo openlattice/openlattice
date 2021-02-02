@@ -2,9 +2,11 @@ package com.openlattice.collaborations
 
 import com.google.common.base.Preconditions
 import com.hazelcast.core.HazelcastInstance
+import com.hazelcast.query.Predicates
 import com.openlattice.assembler.Assembler
 import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
+import com.openlattice.collaborations.mapstores.CollaborationMapstore
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organizations.OrganizationDatabase
 import com.openlattice.organizations.roles.SecurePrincipalsManager
@@ -80,7 +82,9 @@ class CollaborationService(
     }
 
     fun handleOrganizationDatabaseRename(organizationId: UUID, oldName: String, newName: String) {
-        collaborationDatabaseManager.handleOrganizationDatabaseRename(organizationId, oldName, newName)
+        collaborations.keySet(Predicates.equal(CollaborationMapstore.ORGANIZATION_ID_IDX, organizationId)).forEach {
+            collaborationDatabaseManager.handleOrganizationDatabaseRename(it, oldName, newName)
+        }
     }
 
     private fun reserveCollaborationIfNotExists(collaboration: Collaboration): AclKey {
