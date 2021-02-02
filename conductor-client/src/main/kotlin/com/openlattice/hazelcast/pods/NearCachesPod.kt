@@ -33,7 +33,7 @@ class NearCachesPod {
     }
 
     @Bean
-    fun permissionsNearcCacheConfig(): NearCacheConfig? {
+    fun permissionsNearCacheConfig(): NearCacheConfig? {
         val evictionConfig = EvictionConfig()
                 .setEvictionPolicy(EvictionPolicy.LRU)
                 .setMaxSizePolicy(MaxSizePolicy.ENTRY_COUNT)
