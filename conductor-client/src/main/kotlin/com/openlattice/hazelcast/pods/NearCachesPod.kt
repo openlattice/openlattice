@@ -38,7 +38,7 @@ class NearCachesPod {
                 .setEvictionPolicy(EvictionPolicy.LRU)
                 .setMaxSizePolicy(MaxSizePolicy.ENTRY_COUNT)
                 .setSize(8192)
-        return NearCacheConfig()
+        return NearCacheConfig(HazelcastMap.PERMISSIONS.name)
                 .setInMemoryFormat(InMemoryFormat.OBJECT)
                 .setInvalidateOnChange(true)
                 .setTimeToLiveSeconds(PERMISSIONS_NEAR_CACHE_TTL)
