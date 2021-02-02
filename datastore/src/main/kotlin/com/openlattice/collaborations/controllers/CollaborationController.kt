@@ -1,4 +1,4 @@
-package com.openlattice.datastore.services.com.openlattice.collaborations.controllers
+package com.openlattice.collaborations.controllers
 
 import com.codahale.metrics.annotation.Timed
 import com.openlattice.authorization.*
