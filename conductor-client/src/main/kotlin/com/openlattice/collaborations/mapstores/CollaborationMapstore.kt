@@ -12,7 +12,7 @@ import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.util.*
 
-class CollaborationMapstore(val hds: HikariDataSource) : AbstractBasePostgresMapstore<UUID, Collaboration>(
+open class CollaborationMapstore(val hds: HikariDataSource) : AbstractBasePostgresMapstore<UUID, Collaboration>(
         HazelcastMap.COLLABORATIONS, COLLABORATIONS, hds
 ) {
 
