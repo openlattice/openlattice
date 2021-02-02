@@ -25,22 +25,21 @@ class PostgresRoles private constructor() {
                 columnId: UUID,
                 permission: Permission
         ): String {
-            val roleAclKey = AclKey(tableId, columnId)
-            return externalRoleNames.executeOnKey(AccessTarget(roleAclKey, permission), GetOrCreateExternalRoleNameEntryProcessor())
-        }
-
-        fun getOrCreatePermissionRole( externalRoleNames: IMap<AccessTarget, UUID>, column: TableColumn, permission: Permission): String {
-            return getOrCreatePermissionRole(externalRoleNames, column.tableId, column.columnId, permission)
+            return getOrCreatePermissionRole(externalRoleNames, AccessTarget.forPermissionOnTarget(permission, tableId, columnId))
         }
 
         @JvmStatic
-        fun getOrCreatePermissionRole( externalRoleNames: IMap<AccessTarget, UUID>, target: AccessTarget ): String {
-            return externalRoleNames.executeOnKey(target, GetOrCreateExternalRoleNameEntryProcessor())
+        fun getOrCreatePermissionRole( externalRoleNames: IMap<AccessTarget, UUID>, column: TableColumn, permission: Permission): String {
+            return getOrCreatePermissionRole(externalRoleNames, AccessTarget.forPermissionOnTarget(permission, column.tableId, column.columnId))
         }
 
         @JvmStatic
         fun getOrCreatePermissionRole( externalRoleNames: IMap<AccessTarget, UUID>, permission: Permission, vararg parts: UUID ): String {
-            val target = AccessTarget.forPermissionOnTarget(permission, *parts)
+            return getOrCreatePermissionRole(externalRoleNames, AccessTarget.forPermissionOnTarget(permission, *parts))
+        }
+
+        @JvmStatic
+        fun getOrCreatePermissionRole( externalRoleNames: IMap<AccessTarget, UUID>, target: AccessTarget ): String {
             return externalRoleNames.executeOnKey(target, GetOrCreateExternalRoleNameEntryProcessor())
         }
 
