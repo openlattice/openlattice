@@ -41,6 +41,9 @@ import com.openlattice.auditing.LocalAuditingService;
 import com.openlattice.auditing.S3AuditingService;
 import com.openlattice.auditing.pods.AuditingConfigurationPod;
 import com.openlattice.authorization.*;
+import com.openlattice.collaborations.CollaborationDatabaseManager;
+import com.openlattice.collaborations.CollaborationService;
+import com.openlattice.collaborations.PostgresCollaborationDatabaseService;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.DataDeletionManager;
 import com.openlattice.data.DataGraphManager;
@@ -204,6 +207,30 @@ public class IndexerServicesPod {
     }
 
     @Bean
+    public CollaborationDatabaseManager collaborationDatabaseManager() {
+        return new PostgresCollaborationDatabaseService(
+                hazelcastInstance,
+                assembler(),
+                assemblerConnectionManager(),
+                externalDbConnMan,
+                authorizationManager(),
+                principalService(),
+                dbcs()
+        );
+    }
+
+    @Bean
+    public CollaborationService collaborationService() {
+        return new CollaborationService(
+                hazelcastInstance,
+                aclKeyReservationService(),
+                authorizationManager(),
+                principalService(),
+                collaborationDatabaseManager()
+        );
+    }
+
+    @Bean
     public HazelcastOrganizationService organizationsManager() {
         return new HazelcastOrganizationService(
                 hazelcastInstance,
@@ -213,7 +240,8 @@ public class IndexerServicesPod {
                 phoneNumberService(),
                 partitionManager(),
                 assembler(),
-                organizationMetadataEntitySetsService() );
+                organizationMetadataEntitySetsService(),
+                collaborationService() );
     }
 
     @Bean

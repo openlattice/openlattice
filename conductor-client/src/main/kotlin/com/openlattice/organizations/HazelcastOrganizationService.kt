@@ -12,6 +12,7 @@ import com.openlattice.assembler.Assembler
 import com.openlattice.assembler.PostgresDatabases
 import com.openlattice.authorization.*
 import com.openlattice.authorization.mapstores.PrincipalMapstore
+import com.openlattice.collaborations.CollaborationService
 import com.openlattice.collections.mapstores.EntitySetCollectionMapstore
 import com.openlattice.controllers.exceptions.ResourceNotFoundException
 import com.openlattice.data.storage.partitions.PartitionManager
@@ -68,7 +69,8 @@ class HazelcastOrganizationService(
         private val phoneNumbers: PhoneNumberService,
         private val partitionManager: PartitionManager,
         private val assembler: Assembler,
-        private val organizationMetadataEntitySetsService: OrganizationMetadataEntitySetsService
+        private val organizationMetadataEntitySetsService: OrganizationMetadataEntitySetsService,
+        private val collaborationService: CollaborationService
 ) {
     init {
         organizationMetadataEntitySetsService.organizationService = this
@@ -644,6 +646,7 @@ class HazelcastOrganizationService(
         try {
             assembler.renameDatabase(currentDatabaseName, newDatabaseName)
             executeDatabaseNameUpdate(organizationId, newDatabaseName)
+            collaborationService.handleOrganizationDatabaseRename(organizationId, currentDatabaseName, newDatabaseName)
         } catch (e: Exception) {
             throw IllegalStateException(
                     "An error occurred while trying to rename org $organizationId database " +

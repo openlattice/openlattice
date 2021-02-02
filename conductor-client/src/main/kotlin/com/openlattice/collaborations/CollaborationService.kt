@@ -79,6 +79,10 @@ class CollaborationService(
         collaborationDatabaseManager.renameCollaborationDatabase(id, newName)
     }
 
+    fun handleOrganizationDatabaseRename(organizationId: UUID, oldName: String, newName: String) {
+        collaborationDatabaseManager.handleOrganizationDatabaseRename(organizationId, oldName, newName)
+    }
+
     private fun reserveCollaborationIfNotExists(collaboration: Collaboration): AclKey {
         aclKeyReservationService.reserveIdAndValidateType(collaboration) { collaboration.name }
 

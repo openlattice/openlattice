@@ -47,6 +47,9 @@ import com.openlattice.authorization.*;
 import com.openlattice.authorization.mapstores.ResolvedPrincipalTreesMapLoader;
 import com.openlattice.authorization.mapstores.SecurablePrincipalsMapLoader;
 import com.openlattice.codex.CodexService;
+import com.openlattice.collaborations.CollaborationDatabaseManager;
+import com.openlattice.collaborations.CollaborationService;
+import com.openlattice.collaborations.PostgresCollaborationDatabaseService;
 import com.openlattice.collections.CollectionsManager;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.DataDeletionManager;
@@ -61,7 +64,12 @@ import com.openlattice.data.storage.aws.AwsDataSinkService;
 import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datastore.configuration.DatastoreConfiguration;
 import com.openlattice.datastore.configuration.ReadonlyDatasourceSupplier;
-import com.openlattice.datastore.services.*;
+import com.openlattice.datastore.services.AnalysisService;
+import com.openlattice.datastore.services.DatastoreElasticsearchImpl;
+import com.openlattice.datastore.services.EdmManager;
+import com.openlattice.datastore.services.EdmService;
+import com.openlattice.datastore.services.EntitySetManager;
+import com.openlattice.datastore.services.EntitySetService;
 import com.openlattice.directory.Auth0UserDirectoryService;
 import com.openlattice.directory.LocalUserDirectoryService;
 import com.openlattice.directory.UserDirectoryService;
@@ -239,7 +247,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public PostgresTypeManager entityTypeManager() {
-        return new PostgresTypeManager( hikariDataSource , hazelcastInstance );
+        return new PostgresTypeManager( hikariDataSource, hazelcastInstance );
     }
 
     @Bean
@@ -338,6 +346,30 @@ public class DatastoreServicesPod {
     }
 
     @Bean
+    public CollaborationDatabaseManager collaborationDatabaseManager() {
+        return new PostgresCollaborationDatabaseService(
+                hazelcastInstance,
+                assembler(),
+                assemblerConnectionManager(),
+                externalDbConnMan,
+                authorizationManager(),
+                principalService(),
+                dcs()
+        );
+    }
+
+    @Bean
+    public CollaborationService collaborationService() {
+        return new CollaborationService(
+                hazelcastInstance,
+                aclKeyReservationService(),
+                authorizationManager(),
+                principalService(),
+                collaborationDatabaseManager()
+        );
+    }
+
+    @Bean
     public HazelcastOrganizationService organizationsManager() {
         return new HazelcastOrganizationService(
                 hazelcastInstance,
@@ -347,7 +379,8 @@ public class DatastoreServicesPod {
                 phoneNumberService(),
                 partitionManager(),
                 assembler(),
-                organizationMetadataEntitySetsService() );
+                organizationMetadataEntitySetsService(),
+                collaborationService() );
     }
 
     @Bean
