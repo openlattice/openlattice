@@ -209,7 +209,7 @@ class AssemblerConnectionManager(
             conn.createStatement().use { stmt ->
                 schemaNameToAuthorizedPgRoles.forEach { (schemaName, authorizedRoles) ->
                     stmt.execute(createSchemaSql(schemaName))
-                    stmt.execute("GRANT USAGE ON SCHEMA $schemaName TO ${authorizedRoles.joinToString { quote(it) }}")
+                    stmt.execute(grantUsageOnSchemaToRolesSql(schemaName, authorizedRoles))
                 }
 
             }
@@ -228,6 +228,14 @@ class AssemblerConnectionManager(
         dataSource.connection.use { connection ->
             connection.createStatement().use { statement ->
                 statement.execute(createSchemaSql(schemaName))
+            }
+        }
+    }
+
+    internal fun renameSchema(collaborationId: UUID, oldName: String, newName: String) {
+        extDbManager.connectToOrg(collaborationId).connection.use { stmt ->
+            stmt.createStatement().use { stmt ->
+                stmt.execute(renameSchemaSql(oldName, newName))
             }
         }
     }
@@ -839,23 +847,31 @@ val MEMBER_ORG_DATABASE_PERMISSIONS = setOf("CREATE", "CONNECT", "TEMPORARY", "T
 private val PRINCIPALS_SQL = "SELECT ${ACL_KEY.name} FROM ${PRINCIPALS.name} WHERE ${PRINCIPAL_TYPE.name} = ?"
 
 internal fun createSchemaSql(schemaName: String): String {
-    return "CREATE SCHEMA IF NOT EXISTS $schemaName"
+    return "CREATE SCHEMA IF NOT EXISTS ${quote(schemaName)}"
 }
 
 internal fun dropSchemaSql(schemaName: String): String {
-    return "DROP SCHEMA $schemaName CASCADE"
+    return "DROP SCHEMA ${quote(schemaName)} CASCADE"
+}
+
+internal fun renameSchemaSql(oldName: String, newName: String): String {
+    return "ALTER SCHEMA ${quote(oldName)} RENAME TO ${quote(newName)}"
+}
+
+internal fun grantUsageOnSchemaToRolesSql(schemaName: String, roles: Iterable<String>): String {
+    return "GRANT USAGE ON SCHEMA ${quote(schemaName)} TO ${roles.joinToString { quote(it) }}"
 }
 
 internal fun grantOrgUserPrivilegesOnSchemaSql(schemaName: String, orgUserId: String): String {
-    return "GRANT USAGE, CREATE ON SCHEMA $schemaName TO $orgUserId"
+    return "GRANT USAGE, CREATE ON SCHEMA ${quote(schemaName)} TO $orgUserId"
 }
 
 private fun setDefaultPrivilegesOnSchemaSql(schemaName: String, usersSql: String): String {
-    return "GRANT ALL PRIVILEGES ON SCHEMA $schemaName TO $usersSql"
+    return "GRANT ALL PRIVILEGES ON SCHEMA ${quote(schemaName)} TO $usersSql"
 }
 
 private fun setAdminUserDefaultPrivilegesSql(schemaName: String, usersSql: String): String {
-    return "ALTER DEFAULT PRIVILEGES IN SCHEMA $schemaName GRANT ALL PRIVILEGES ON TABLES TO $usersSql"
+    return "ALTER DEFAULT PRIVILEGES IN SCHEMA ${quote(schemaName)} GRANT ALL PRIVILEGES ON TABLES TO $usersSql"
 }
 
 private fun setSearchPathSql(granteeId: String, isUser: Boolean, vararg schemas: String): String {
@@ -869,11 +885,11 @@ private fun revokePrivilegesOnDatabaseSql(dbName: String, usersSql: String): Str
 }
 
 private fun revokePrivilegesOnSchemaSql(schemaName: String, usersSql: String): String {
-    return "REVOKE ALL PRIVILEGES ON SCHEMA $schemaName FROM $usersSql"
+    return "REVOKE ALL PRIVILEGES ON SCHEMA ${quote(schemaName)} FROM $usersSql"
 }
 
 private fun revokePrivilegesOnTablesInSchemaSql(schemaName: String, usersSql: String): String {
-    return "REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA $schemaName FROM $usersSql"
+    return "REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA ${quote(schemaName)} FROM $usersSql"
 }
 
 internal fun createRoleIfNotExistsSql(dbRole: String): String {
