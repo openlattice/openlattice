@@ -256,6 +256,14 @@ class HazelcastPrincipalService(
                 }
     }
 
+
+    override fun getOrganizationMemberPrincipals(organizationId: UUID): Set<Principal> {
+        return getOrganizationMembers(mutableSetOf(organizationId))
+                .getValue(organizationId)
+                .map { it.principal }
+                .toSet()
+    }
+
     override fun principalHasChildPrincipal(parent: AclKey, child: AclKey): Boolean {
         return principalTrees[parent]?.contains(child) ?: false
     }

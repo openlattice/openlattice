@@ -171,9 +171,7 @@ public class LinkerServicesPod {
         return new AssemblerConnectionManager(
                 assemblerConfiguration,
                 externalDbConnMan,
-                hikariDataSource,
                 principalService(),
-                organizationsManager(),
                 dbcs(),
                 eventBus,
                 metricRegistry

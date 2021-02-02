@@ -308,9 +308,7 @@ public class ConductorServicesPod {
     public AssemblerConnectionManager assemblerConnectionManager() {
         return new AssemblerConnectionManager( assemblerConfiguration,
                 externalDbConnMan,
-                hikariDataSource,
                 principalService(),
-                organizationsManager(),
                 dbCredService(),
                 eventBus,
                 metricRegistry );

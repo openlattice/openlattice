@@ -534,9 +534,7 @@ public class DatastoreServicesPod {
         return new AssemblerConnectionManager(
                 assemblerConfiguration,
                 externalDbConnMan,
-                hikariDataSource,
                 principalService(),
-                organizationsManager(),
                 dcs(),
                 eventBus,
                 metricRegistry );

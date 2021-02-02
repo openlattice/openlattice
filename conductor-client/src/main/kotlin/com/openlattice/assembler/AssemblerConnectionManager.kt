@@ -64,9 +64,7 @@ private val logger = LoggerFactory.getLogger(AssemblerConnectionManager::class.j
 class AssemblerConnectionManager(
         private val assemblerConfiguration: AssemblerConfiguration,
         private val extDbManager: ExternalDatabaseConnectionManager,
-        private val hds: HikariDataSource,
         private val securePrincipalsManager: SecurePrincipalsManager,
-        private val organizations: HazelcastOrganizationService,
         private val dbCredentialService: DbCredentialService,
         eventBus: EventBus,
         metricRegistry: MetricRegistry
@@ -154,7 +152,7 @@ class AssemblerConnectionManager(
             createSchema(dataSource, ORG_FOREIGN_TABLES_SCHEMA)
             createSchema(dataSource, ORG_VIEWS_SCHEMA)
             configureOrganizationUser(organizationId, dataSource)
-            addMembersToOrganization(organizationId, dataSource, organizations.getMembers(organizationId))
+            addMembersToOrganization(organizationId, dataSource, securePrincipalsManager.getOrganizationMemberPrincipals(organizationId))
             configureServerUser(dataSource)
         }
     }

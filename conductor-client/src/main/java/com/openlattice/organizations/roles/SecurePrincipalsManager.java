@@ -97,6 +97,8 @@ public interface SecurePrincipalsManager {
 
     Map<UUID, Set<SecurablePrincipal>> getOrganizationMembers( Set<UUID> organizationIds );
 
+    Set<Principal> getOrganizationMemberPrincipals( UUID organizationId );
+
     boolean principalHasChildPrincipal( AclKey parent, AclKey child );
 
     // Methods about users

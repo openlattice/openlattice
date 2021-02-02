@@ -354,10 +354,7 @@ class HazelcastOrganizationService(
 
     @Timed
     fun getMembers(organizationId: UUID): Set<Principal> {
-        return securePrincipalsManager.getOrganizationMembers(setOf(organizationId))
-                .getValue(organizationId)
-                .map { it.principal }
-                .toSet()
+        return securePrincipalsManager.getOrganizationMemberPrincipals(organizationId)
     }
 
     @Timed
