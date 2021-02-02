@@ -23,7 +23,18 @@ package com.openlattice.postgres;
 import com.openlattice.IdConstants;
 import com.openlattice.edm.type.Analyzer;
 
-import static com.openlattice.postgres.PostgresDatatype.*;
+import static com.openlattice.postgres.PostgresDatatype.BIGINT;
+import static com.openlattice.postgres.PostgresDatatype.BIGINT_ARRAY;
+import static com.openlattice.postgres.PostgresDatatype.BOOLEAN;
+import static com.openlattice.postgres.PostgresDatatype.BYTEA;
+import static com.openlattice.postgres.PostgresDatatype.INTEGER;
+import static com.openlattice.postgres.PostgresDatatype.INTEGER_ARRAY;
+import static com.openlattice.postgres.PostgresDatatype.JSONB;
+import static com.openlattice.postgres.PostgresDatatype.TEXT;
+import static com.openlattice.postgres.PostgresDatatype.TEXT_ARRAY;
+import static com.openlattice.postgres.PostgresDatatype.TIMESTAMPTZ;
+import static com.openlattice.postgres.PostgresDatatype.UUID;
+import static com.openlattice.postgres.PostgresDatatype.UUID_ARRAY;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -387,6 +398,9 @@ public final class PostgresColumn {
     public static final String                   PARTITION_INDEX_FIELD             = "partition_index";
     public static final PostgresColumnDefinition PARTITION_INDEX                   =
             new PostgresColumnDefinition( PARTITION_INDEX_FIELD, BIGINT ).notNull();
+    public static final String                   PERMISSION_FIELD                  = "permission";
+    public static final PostgresColumnDefinition PERMISSION                        =
+            new PostgresColumnDefinition( PERMISSION_FIELD, TEXT );
     public static final String                   PERMISSIONS_FIELD                 = "permissions";
     public static final PostgresColumnDefinition PERMISSIONS                       =
             new PostgresColumnDefinition( PERMISSIONS_FIELD, TEXT_ARRAY );
@@ -431,11 +445,11 @@ public final class PostgresColumn {
     public static final PostgresColumnDefinition REASON                            =
             new PostgresColumnDefinition( REASON_FIELD, TEXT );
     public static final String                   REFRESH_RATE_FIELD                = "refresh_rate";
-    public static final PostgresColumnDefinition REFRESH_RATE                      =
+    public static final PostgresColumnDefinition REFRESH_RATE  =
             new PostgresColumnDefinition( REFRESH_RATE_FIELD, BIGINT );
-    public static final String                   ROLE_NAME_FIELD                   = "role";
-    public static final PostgresColumnDefinition ROLE_NAME =
-            new PostgresColumnDefinition( ROLE_NAME_FIELD, UUID).notNull();
+    public static final String                   ROLE_ID_FIELD                     = "role_id";
+    public static final PostgresColumnDefinition ROLE_ID                           =
+            new PostgresColumnDefinition( ROLE_ID_FIELD, UUID).notNull();
     public static final String                   ROLES_FIELD                       = "roles";
     public static final PostgresColumnDefinition ROLES                             =
             new PostgresColumnDefinition( ROLES_FIELD, JSONB ).notNull().withDefault( "'{}'" );

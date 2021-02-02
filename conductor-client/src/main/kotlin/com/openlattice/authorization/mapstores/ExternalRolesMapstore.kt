@@ -50,6 +50,6 @@ class ExternalRolesMapstore(
     }
 
     override fun mapToValue(rs: ResultSet): UUID {
-        return ResultSetAdapters.roleName(rs)
+        return ResultSetAdapters.roleId(rs)
     }
 }

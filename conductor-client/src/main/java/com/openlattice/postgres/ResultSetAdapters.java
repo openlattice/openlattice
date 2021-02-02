@@ -191,6 +191,7 @@ import static com.openlattice.postgres.PostgresColumn.ORIGIN_ID;
 import static com.openlattice.postgres.PostgresColumn.PARTITION;
 import static com.openlattice.postgres.PostgresColumn.PARTITIONS_FIELD;
 import static com.openlattice.postgres.PostgresColumn.PARTITION_INDEX_FIELD;
+import static com.openlattice.postgres.PostgresColumn.PERMISSION;
 import static com.openlattice.postgres.PostgresColumn.PERMISSIONS_FIELD;
 import static com.openlattice.postgres.PostgresColumn.PHONE_NUMBER_FIELD;
 import static com.openlattice.postgres.PostgresColumn.PII;
@@ -203,6 +204,7 @@ import static com.openlattice.postgres.PostgresColumn.PROPERTY_TAGS_FIELD;
 import static com.openlattice.postgres.PostgresColumn.PROPERTY_TYPE_ID;
 import static com.openlattice.postgres.PostgresColumn.REASON;
 import static com.openlattice.postgres.PostgresColumn.REFRESH_RATE;
+import static com.openlattice.postgres.PostgresColumn.ROLE_ID;
 import static com.openlattice.postgres.PostgresColumn.SCHEDULED_DATE;
 import static com.openlattice.postgres.PostgresColumn.SCHEMAS;
 import static com.openlattice.postgres.PostgresColumn.SCHEMA_NAME_FIELD;
@@ -310,10 +312,6 @@ public final class ResultSetAdapters {
         final UUID dstEntitySetId = (UUID) rs.getObject( DST_ENTITY_SET_ID_FIELD );
         final UUID dstEntityKeyId = (UUID) rs.getObject( DST_ENTITY_KEY_ID_FIELD );
         return new EntityDataKey( dstEntitySetId, dstEntityKeyId );
-    }
-
-    public static String externalRoleName(ResultSet rs ) throws SQLException {
-        return rs.getString( ROLE_NAME_FIELD );
     }
 
     public static Double score( ResultSet rs ) throws SQLException {
@@ -1208,12 +1206,12 @@ public final class ResultSetAdapters {
         return new OrganizationDatabase( oid, name );
     }
 
-    @NotNull public static UUID roleName( @NotNull ResultSet rs ) throws SQLException {
-        return rs.getObject(ROLE_NAME.getName(), UUID.class);
+    @NotNull public static UUID roleId( @NotNull ResultSet rs ) throws SQLException {
+        return rs.getObject( ROLE_ID.getName(), UUID.class);
     }
 
     @NotNull public static Permission permission( @NotNull ResultSet rs ) throws SQLException {
-        return Permission.valueOf(rs.getString(ROLE_NAME.getName()));
+        return Permission.valueOf(rs.getString( PERMISSION.getName()));
     }
 
     @NotNull public static AccessTarget accessTarget( @NotNull ResultSet rs ) throws SQLException {
