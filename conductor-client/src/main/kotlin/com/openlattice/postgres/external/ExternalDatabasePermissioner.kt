@@ -407,8 +407,8 @@ class ExternalDatabasePermissioner(
     ): List<String> {
         val targetAclKey = AclKey(column.tableId, column.columnId)
         val targets = when (viewOrTable) {
-            TableType.VIEW -> allViewPermissions.mapTo(mutableSetOf()) { AccessTarget(targetAclKey, it) }
-            TableType.TABLE -> allTablePermissions.mapTo(mutableSetOf()) { AccessTarget(targetAclKey, it) }
+            TableType.VIEW -> allViewPermissions.mapTo(mutableSetOf<AccessTarget>()) { AccessTarget(targetAclKey, it) }
+            TableType.TABLE -> allTablePermissions.mapTo(mutableSetOf<AccessTarget>()) { AccessTarget(targetAclKey, it) }
         }
 
         val securablePrincipal = principalsMapManager.getSecurablePrincipal(principal.id)
