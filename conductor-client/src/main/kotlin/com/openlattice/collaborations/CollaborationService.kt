@@ -95,27 +95,25 @@ class CollaborationService(
     }
 
     fun handleMembersRemovedFromOrg(organizationId: UUID, removedMembers: Set<AclKey>) {
-        val collaborations = getCollaborationsIncludingOrg(organizationId)
+        val collaborationsIncludingOrg = getCollaborationsIncludingOrg(organizationId)
 
-        val orgIds = collaborations.flatMap { it.organizationIds }.toSet()
+        if (collaborationsIncludingOrg.isEmpty()) {
+            return
+        }
 
-        val membersByOrg = principalsManager.getOrganizationMembers(orgIds)
+        val membersByOrg = principalsManager.getOrganizationMembers(
+                collaborationsIncludingOrg.flatMap { it.organizationIds }.toSet()
+        )
 
-        collaborations.forEach { collaboration ->
+        collaborationsIncludingOrg.forEach { collaboration ->
             val remainingMemberAclKeys = collaboration.organizationIds
                     .flatMap { membersByOrg[it] ?: setOf() }
                     .map { it.aclKey }
                     .toSet()
 
-            val membersToRemove = removedMembers.filter { !remainingMemberAclKeys.contains(it) }
+            val membersToRemove = removedMembers.filter { !remainingMemberAclKeys.contains(it) }.toSet()
 
             collaborationDatabaseManager.removeMembersFromOrganizationInCollaboration(collaboration.id, organizationId, membersToRemove)
-        }
-
-        if (collaborations.isNotEmpty()) {
-
-
-            collaborationDatabaseManager.removeMembersFromOrganizationInCollaboration(collabIds, organizationId, newMembers)
         }
     }
 
