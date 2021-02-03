@@ -56,7 +56,7 @@ class JdbcConnectionStreamSerializer:SelfRegisteringStreamSerializer<JdbcConnect
             val username=input.readUTF()
             val password=input.readUTF()
             val roleManagementEnabled = input.readBoolean()
-            val propertiesSize = input.readInt( )
+            val propertiesSize = input.readInt()
             val properties = Properties(propertiesSize)
             for( i in 0 until propertiesSize) {
                 properties[input.readUTF()] = input.readUTF()
