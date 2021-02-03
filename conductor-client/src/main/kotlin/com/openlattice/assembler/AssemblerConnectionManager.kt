@@ -35,7 +35,6 @@ import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.organization.OrganizationEntitySetFlag
 import com.openlattice.organization.roles.Role
-import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresColumn.*
@@ -169,11 +168,8 @@ class AssemblerConnectionManager(
     }
 
     fun addMembersToCollaboration(collaborationId: UUID, memberRoles: Iterable<String>) {
-        val dbName = extDbManager.getOrganizationDatabaseName(collaborationId)
-        extDbManager.connect(dbName).connection.use { conn ->
-            conn.createStatement().use { stmt ->
-                stmt.execute(collaborationMemberGrantSql(dbName, memberRoles))
-            }
+        executeStatementInDatabase(collaborationId) { dbName ->
+            collaborationMemberGrantSql(dbName, memberRoles)
         }
     }
 
@@ -186,11 +182,8 @@ class AssemblerConnectionManager(
     }
 
     fun removeMembersFromCollaboration(collaborationId: UUID, memberRoles: Iterable<String>) {
-        val dbName = extDbManager.getOrganizationDatabaseName(collaborationId)
-        extDbManager.connect(dbName).connection.use { conn ->
-            conn.createStatement().use { stmt ->
-                stmt.execute(collaborationMemberRevokeSql(dbName, memberRoles))
-            }
+        executeStatementInDatabase(collaborationId) { dbName ->
+            collaborationMemberRevokeSql(dbName, memberRoles)
         }
     }
 
@@ -203,36 +196,42 @@ class AssemblerConnectionManager(
     }
 
     fun createAndInitializeSchemas(collaborationId: UUID, schemaNameToAuthorizedPgRoles: Map<String, Iterable<String>>) {
-        extDbManager.connectToOrg(collaborationId).connection.use { conn ->
-            conn.createStatement().use { stmt ->
-                schemaNameToAuthorizedPgRoles.forEach { (schemaName, authorizedRoles) ->
-                    stmt.execute(createSchemaSql(schemaName))
-                    stmt.execute(grantUsageOnSchemaToRolesSql(schemaName, authorizedRoles))
-                }
+        executeStatementsInDatabase(collaborationId) {
+            val sqlStatements = mutableSetOf<String>()
 
+            schemaNameToAuthorizedPgRoles.forEach { (schemaName, authorizedRoles) ->
+                sqlStatements.add(createSchemaSql(schemaName))
+                sqlStatements.add(grantUsageOnSchemaToRolesSql(schemaName, authorizedRoles))
             }
+
+            sqlStatements
         }
     }
 
     fun addMembersToCollabInSchema(collaborationId: UUID, schemaName: String, members: Iterable<String>) {
-        val dbName = extDbManager.getOrganizationDatabaseName(collaborationId)
-        extDbManager.connect(dbName).connection.use { conn ->
-            conn.createStatement().use { stmt ->
-                stmt.execute(collaborationMemberGrantSql(dbName, members))
-                stmt.execute(grantUsageOnSchemaToRolesSql(schemaName, members))
-            }
+        executeStatementsInDatabase(collaborationId) { dbName ->
+            setOf(
+                    collaborationMemberGrantSql(dbName, members),
+                    grantUsageOnSchemaToRolesSql(schemaName, members)
+            )
         }
     }
 
     fun removeMembersFromSchemaInCollab(collaborationId: UUID, schemaName: String, members: Iterable<String>) {
+        executeStatementInDatabase(collaborationId) {
+            revokeUsageOnSchemaToRolesSql(schemaName, members)
+        }
+    }
 
+    fun removeMembersFromDatabaseInCollab(collaborationId: UUID, members: Iterable<String>) {
+        executeStatementInDatabase(collaborationId) { dbName ->
+            collaborationMemberRevokeSql(dbName, members)
+        }
     }
 
     fun dropSchemas(collaborationId: UUID, schemasToDrop: Iterable<String>) {
-        extDbManager.connectToOrg(collaborationId).connection.use { conn ->
-            conn.createStatement().use { stmt ->
-                schemasToDrop.forEach { stmt.execute(dropSchemaSql(it)) }
-            }
+        executeStatementsInDatabase(collaborationId) {
+            schemasToDrop.map { dropSchemaSql(it) }
         }
     }
 
@@ -245,10 +244,8 @@ class AssemblerConnectionManager(
     }
 
     internal fun renameSchema(collaborationId: UUID, oldName: String, newName: String) {
-        extDbManager.connectToOrg(collaborationId).connection.use { stmt ->
-            stmt.createStatement().use { stmt ->
-                stmt.execute(renameSchemaSql(oldName, newName))
-            }
+        executeStatementInDatabase(collaborationId) {
+            renameSchemaSql(oldName, newName)
         }
     }
 
@@ -332,11 +329,14 @@ class AssemblerConnectionManager(
             organizationId: UUID,
             principals: Collection<SecurablePrincipal>
     ) {
+        if (principals.isEmpty()) {
+            return
+        }
+
+        val roleNames = dbCredentialService.getDbAccounts(principals.map { it.aclKey }.toSet()).map { it.value.username }
+
         extDbManager.connectToOrg(organizationId).let { dataSource ->
-            if (principals.isNotEmpty()) {
-                val userNames = principals.map { dbCredentialService.getDbUsername(it) }
-                revokeConnectAndSchemaUsage(dataSource, organizationId, userNames)
-            }
+            revokeConnectAndSchemaUsage(dataSource, organizationId, roleNames)
         }
     }
 
@@ -435,6 +435,21 @@ class AssemblerConnectionManager(
 
             connection.createStatement().use { statement ->
                 statement.execute(dropDbSql)
+            }
+        }
+    }
+
+    internal fun executeStatementInDatabase(organizationId: UUID, sqlFromDbName: (String) -> String) {
+        executeStatementsInDatabase(organizationId) { setOf(sqlFromDbName(it)) }
+    }
+
+    internal fun executeStatementsInDatabase(organizationId: UUID, sqlFromDbName: (String) -> Iterable<String>) {
+        val dbName = extDbManager.getOrganizationDatabaseName(organizationId)
+        val sqlStatements = sqlFromDbName(dbName)
+
+        extDbManager.connect(dbName).connection.use { conn ->
+            conn.createStatement().use { stmt ->
+                sqlStatements.forEach { stmt.execute(it) }
             }
         }
     }
@@ -872,6 +887,10 @@ internal fun renameSchemaSql(oldName: String, newName: String): String {
 
 internal fun grantUsageOnSchemaToRolesSql(schemaName: String, roles: Iterable<String>): String {
     return "GRANT USAGE ON SCHEMA ${quote(schemaName)} TO ${roles.joinToString { quote(it) }}"
+}
+
+internal fun revokeUsageOnSchemaToRolesSql(schemaName: String, roles: Iterable<String>): String {
+    return "REVOKE USAGE ON SCHEMA ${quote(schemaName)} TO ${roles.joinToString { quote(it) }}"
 }
 
 internal fun grantOrgUserPrivilegesOnSchemaSql(schemaName: String, orgUserId: String): String {

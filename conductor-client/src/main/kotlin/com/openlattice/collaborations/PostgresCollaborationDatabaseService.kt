@@ -117,11 +117,18 @@ class PostgresCollaborationDatabaseService(
         }
     }
 
-    override fun removeMembersFromOrganizationInCollaborations(collaborationIds: Set<UUID>, organizationId: UUID, members: Set<AclKey>) {
+    override fun removeMembersFromOrganizationInCollaboration(
+            collaborationId: UUID,
+            organizationId: UUID,
+            membersToRemoveFromSchema: Set<AclKey>,
+            membersToRemoveFromDatabase: Set<AclKey>
+    ) {
         val schemaName = organizationDatabases.getValue(organizationId).name
-        val usernames = dbCreds.getDbAccounts(members).values.map { it.username }
-        collaborationIds.forEach {
-            acm.removeMembersFromSchemaInCollab(it, schemaName, usernames)
-        }
+        val roleNamesByAclKey = dbCreds.getDbAccounts(membersToRemoveFromSchema + membersToRemoveFromDatabase).mapValues { it.value.username }
+
+        val roleNamesToRemoveFromDatabase = membersToRemoveFromDatabase.mapNotNull { roleNamesByAclKey[it] }
+
+        acm.removeMembersFromSchemaInCollab(collaborationId, schemaName, roleNamesByAclKey.values)
+        acm.removeMembersFromDatabaseInCollab(collaborationId, roleNamesToRemoveFromDatabase)
     }
 }

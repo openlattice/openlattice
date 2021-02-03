@@ -3,7 +3,6 @@ package com.openlattice.collaborations
 import com.google.common.base.Preconditions
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicates
-import com.openlattice.assembler.Assembler
 import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.collaborations.mapstores.CollaborationMapstore
@@ -82,28 +81,49 @@ class CollaborationService(
     }
 
     fun handleOrganizationDatabaseRename(organizationId: UUID, oldName: String, newName: String) {
-        getCollaborationsIncludingOrg(organizationId).forEach {
+        getCollaborationIdsIncludingOrg(organizationId).forEach {
             collaborationDatabaseManager.handleOrganizationDatabaseRename(it, oldName, newName)
         }
     }
 
     fun handleMembersAdddedToOrg(organizationId: UUID, newMembers: Set<AclKey>) {
-        val collabIds = getCollaborationsIncludingOrg(organizationId)
+        val collabIds = getCollaborationIdsIncludingOrg(organizationId)
 
         if (collabIds.isNotEmpty()) {
             collaborationDatabaseManager.addMembersToOrganizationInCollaborations(collabIds, organizationId, newMembers)
         }
     }
 
-    fun handleMembersRemovedFromOrg(organizationId: UUID, newMembers: Set<AclKey>) {
-        val collabIds = getCollaborationsIncludingOrg(organizationId)
+    fun handleMembersRemovedFromOrg(organizationId: UUID, removedMembers: Set<AclKey>) {
+        val collaborations = getCollaborationsIncludingOrg(organizationId)
 
-        if (collabIds.isNotEmpty()) {
-            collaborationDatabaseManager.removeMembersFromOrganizationInCollaborations(collabIds, organizationId, newMembers)
+        val orgIds = collaborations.flatMap { it.organizationIds }.toSet()
+
+        val membersByOrg = principalsManager.getOrganizationMembers(orgIds)
+
+        collaborations.forEach { collaboration ->
+            val remainingMemberAclKeys = collaboration.organizationIds
+                    .flatMap { membersByOrg[it] ?: setOf() }
+                    .map { it.aclKey }
+                    .toSet()
+
+            val membersToRemove = removedMembers.filter { !remainingMemberAclKeys.contains(it) }
+
+            collaborationDatabaseManager.removeMembersFromOrganizationInCollaboration(collaboration.id, organizationId, membersToRemove)
+        }
+
+        if (collaborations.isNotEmpty()) {
+
+
+            collaborationDatabaseManager.removeMembersFromOrganizationInCollaboration(collabIds, organizationId, newMembers)
         }
     }
 
-    private fun getCollaborationsIncludingOrg(organizationId: UUID): Set<UUID> {
+    private fun getCollaborationsIncludingOrg(organizationId: UUID): Iterable<Collaboration> {
+        return collaborations.values(Predicates.equal(CollaborationMapstore.ORGANIZATION_ID_IDX, organizationId))
+    }
+
+    private fun getCollaborationIdsIncludingOrg(organizationId: UUID): Set<UUID> {
         return collaborations.keySet(Predicates.equal(CollaborationMapstore.ORGANIZATION_ID_IDX, organizationId))
     }
 

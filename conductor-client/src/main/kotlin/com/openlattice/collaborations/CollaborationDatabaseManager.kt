@@ -22,5 +22,10 @@ interface CollaborationDatabaseManager {
 
     fun addMembersToOrganizationInCollaborations(collaborationIds: Set<UUID>, organizationId: UUID, members: Set<AclKey>)
 
-    fun removeMembersFromOrganizationInCollaborations(collaborationIds: Set<UUID>, organizationId: UUID, members: Set<AclKey>)
+    fun removeMembersFromOrganizationInCollaboration(
+            collaborationId: UUID,
+            organizationId: UUID,
+            membersToRemoveFromSchema: Set<AclKey>,
+            membersToRemoveFromDatabase: Set<AclKey>
+    )
 }

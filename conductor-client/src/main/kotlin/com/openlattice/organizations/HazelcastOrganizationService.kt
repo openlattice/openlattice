@@ -471,10 +471,7 @@ class HazelcastOrganizationService(
     fun removeMembers(organizationId: UUID, members: Set<Principal>) {
         val users = members.filter { it.type == PrincipalType.USER }
         val securablePrincipals = securePrincipalsManager.getSecurablePrincipals(users)
-        val userAclKeys = securePrincipalsManager
-                .getSecurablePrincipals(users)
-                .map { it.aclKey }
-                .toSet()
+        val userAclKeys = securablePrincipals.map { it.aclKey }.toSet()
 
         removeRolesFromMembers(getRoles(organizationId).map { it.aclKey }, userAclKeys)
 
