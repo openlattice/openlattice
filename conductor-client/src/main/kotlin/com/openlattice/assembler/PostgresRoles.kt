@@ -5,7 +5,7 @@ import com.openlattice.authorization.AccessTarget
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.Permission
 import com.openlattice.authorization.PrincipalType
-import com.openlattice.authorization.processors.GetOrCreateExternalRoleNameEntryProcessor
+import com.openlattice.authorization.processors.GetOrCreateExternalPermissionRoleNameEntryProcessor
 import com.openlattice.postgres.TableColumn
 import java.util.*
 
@@ -40,7 +40,7 @@ class PostgresRoles private constructor() {
 
         @JvmStatic
         fun getOrCreatePermissionRole( externalRoleNames: IMap<AccessTarget, UUID>, target: AccessTarget ): String {
-            return externalRoleNames.executeOnKey(target, GetOrCreateExternalRoleNameEntryProcessor())
+            return externalRoleNames.executeOnKey(target, GetOrCreateExternalPermissionRoleNameEntryProcessor())
         }
 
         @JvmStatic
@@ -49,6 +49,7 @@ class PostgresRoles private constructor() {
         }
 
         @JvmStatic
+        @Deprecated("Role names are stored in dbcredentials mapstore")
         fun buildPostgresRoleName(roleId: UUID): String {
             return "$INTERNAL_PREFIX|role|$roleId"
         }
@@ -59,10 +60,9 @@ class PostgresRoles private constructor() {
         }
 
         @JvmStatic
-        @Deprecated("Use buildPostgresRoleName instead", ReplaceWith("buildPostgresRoleName"))
+        @Deprecated("Role names are stored in dbcredentials mapstore")
         fun buildOrganizationRoleName(organizationDbName: String): String {
             return "${organizationDbName}_role"
         }
-
     }
 }

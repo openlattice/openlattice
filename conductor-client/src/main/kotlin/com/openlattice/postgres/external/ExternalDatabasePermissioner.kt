@@ -6,7 +6,7 @@ import com.hazelcast.query.Predicates
 import com.openlattice.ApiHelpers
 import com.openlattice.assembler.PostgresRoles
 import com.openlattice.authorization.*
-import com.openlattice.authorization.processors.GetOrCreateExternalRoleNameEntryProcessor
+import com.openlattice.authorization.processors.GetOrCreateExternalPermissionRoleNameEntryProcessor
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.edm.EdmConstants
 import com.openlattice.edm.PropertyTypeIdFqn
@@ -59,25 +59,6 @@ class ExternalDatabasePermissioner(
 
         private fun fqnToColumnName(fqn: FullQualifiedName): String {
             return fqn.toString()
-        }
-    }
-
-    internal fun configureRolesInDatabase(dataSource: HikariDataSource) {
-        val roles = principalsMapManager.getAllRoles()
-
-        if (roles.isEmpty()){
-            return
-        }
-        val roleIds = roles.map { PostgresRoles.buildPostgresRoleName(it.id) }
-        val roleIdsSql = roleIds.joinToString { DataTables.quote(it) }
-
-        dataSource.connection.use { connection ->
-            connection.createStatement().use { statement ->
-
-                logger.info("Revoking ${Schemas.PUBLIC_SCHEMA} schema right from roles: {}", roleIds)
-                //Don't allow users to access public schema which will contain foreign data wrapper tables.
-                statement.execute("REVOKE USAGE ON SCHEMA ${Schemas.PUBLIC_SCHEMA} FROM $roleIdsSql")
-            }
         }
     }
 
@@ -208,7 +189,7 @@ class ExternalDatabasePermissioner(
         atlas.connection.use { connection ->
             connection.createStatement().use { stmt ->
                 principalsToRemove.forEach { aclKey ->
-                    val roleName = PostgresRoles.buildPostgresRoleName(principalsMapManager.lookupRole(aclKey).id)
+                    val roleName = dbCredentialService.getDbUsername(aclKey)
                     stmt.addBatch(revokeRoleSql(roleName, removeFrom))
                 }
                 stmt.executeBatch()
@@ -328,7 +309,7 @@ class ExternalDatabasePermissioner(
             return
         }
 
-        val allOrgs = columnsById.values.map { it.organizationId }
+        val allOrgs = columnsById.values.map { it.organizationId }.toSet()
         val removes = mutableMapOf<UUID, MutableList<String>>()
         val adds = mutableMapOf<UUID, MutableList<String>>()
         columnAcls.forEach { columnAcl ->
@@ -414,7 +395,7 @@ class ExternalDatabasePermissioner(
 
         val securablePrincipal = principalsMapManager.getSecurablePrincipal(principal.id)
         val userRole = dbCredentialService.getDbUsername(securablePrincipal)
-        return externalRoleNames.submitToKeys(targets, GetOrCreateExternalRoleNameEntryProcessor()).thenApply {
+        return externalRoleNames.submitToKeys(targets, GetOrCreateExternalPermissionRoleNameEntryProcessor()).thenApply {
             it.values.map { permissionRoleName ->
                 revokeRoleSql(permissionRoleName, setOf(userRole))
             }
@@ -443,7 +424,7 @@ class ExternalDatabasePermissioner(
         val usernameAsync = dbCredentialService.getDbUsernameAsync(securablePrincipal)
 
         val permissionRoles = externalRoleNames.submitToKeys(
-                accessTargets, GetOrCreateExternalRoleNameEntryProcessor()
+                accessTargets, GetOrCreateExternalPermissionRoleNameEntryProcessor()
         ).thenCombine( usernameAsync ) { targetsToNames, userRole ->
             targetsToNames.values.map { permissionRole ->
                 when (action) {

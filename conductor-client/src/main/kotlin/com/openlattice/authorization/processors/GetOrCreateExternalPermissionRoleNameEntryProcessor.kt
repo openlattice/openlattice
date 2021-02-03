@@ -7,7 +7,7 @@ import java.util.*
 /**
  * @author Drew Bailey (drew@openlattice.com)
  */
-class GetOrCreateExternalRoleNameEntryProcessor: AbstractRhizomeEntryProcessor<AccessTarget, UUID, String>() {
+class GetOrCreateExternalPermissionRoleNameEntryProcessor: AbstractRhizomeEntryProcessor<AccessTarget, UUID, String>() {
     override fun process(entry: MutableMap.MutableEntry<AccessTarget, UUID?>): String {
         val value = entry.value
         if ( value != null ){

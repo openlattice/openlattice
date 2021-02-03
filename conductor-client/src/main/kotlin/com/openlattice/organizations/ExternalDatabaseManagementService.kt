@@ -182,8 +182,12 @@ class ExternalDatabaseManagementService(
         val acls = permissions.entrySet(Predicates.and(
                 Predicates.equal<AceKey, AceValue>(PermissionMapstore.ROOT_OBJECT_INDEX, entitySetId),
                 Predicates.equal<AceKey, AceValue>(PermissionMapstore.SECURABLE_OBJECT_TYPE_INDEX, SecurableObjectType.PropertyTypeInEntitySet))
-        ).map { (key, valu) ->
-            Acl( key.aclKey, listOf( Ace(key.principal, valu as Set<Permission>, Optional.of(valu.expirationDate))) )
+        ).groupBy({(aceKey, _) ->
+            aceKey.aclKey
+        },{(aceKey, aceValu) ->
+            Ace(aceKey.principal, aceValu as Set<Permission>, Optional.of(aceValu.expirationDate))
+        }).map {
+            Acl(it.key, it.value)
         }
 
         ptIdsToFqns.thenCombine( tableCols ) { asPtFqns, colsById ->
