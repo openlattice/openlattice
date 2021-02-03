@@ -14,7 +14,7 @@ import java.util.*
  * @param name The name of the table
  * @param title A title for the object
  * @param description An optional description of this object
- * @param organizationId The id of the organization that owns this table
+ * @param organizationId The id of the organization that owns this schema
  * @param dataSourceId The id of the data source to which this table belongs.
  * @param externalId An datasource specific uniqued string identifier for a table.
  */
