@@ -59,7 +59,7 @@ class JdbcConnectionStreamSerializer:SelfRegisteringStreamSerializer<JdbcConnect
             val propertiesSize = input.readInt( )
             val properties = Properties(propertiesSize)
             for( i in 0 until propertiesSize) {
-                properties[input.readUTF() ] = input.readUTF()
+                properties[input.readUTF()] = input.readUTF()
             }
             return JdbcConnection(
                     id = Optional.of(id),
