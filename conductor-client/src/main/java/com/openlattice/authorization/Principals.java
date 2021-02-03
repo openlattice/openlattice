@@ -28,7 +28,6 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.map.IMap;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.organizations.SortedPrincipalSet;
-import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
@@ -53,7 +52,7 @@ public final class Principals {
     private Principals() {
     }
 
-    public static void init( SecurePrincipalsManager spm, HazelcastInstance hazelcastInstance ) {
+    public static void init( HazelcastInstance hazelcastInstance ) {
         if ( startupLock.tryLock() ) {
             securablePrincipals = HazelcastMap.SECURABLE_PRINCIPALS.getMap( hazelcastInstance );
             principals = HazelcastMap.RESOLVED_PRINCIPAL_TREES.getMap( hazelcastInstance );
