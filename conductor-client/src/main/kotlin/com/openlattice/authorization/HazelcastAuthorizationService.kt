@@ -1,6 +1,7 @@
 package com.openlattice.authorization
 
 import com.codahale.metrics.annotation.Timed
+import com.dataloom.hazelcast.ListenableHazelcastFuture
 import com.google.common.collect.HashMultimap
 import com.google.common.collect.ImmutableSet
 import com.google.common.collect.Maps
@@ -21,6 +22,7 @@ import com.openlattice.authorization.processors.PermissionRemover
 import com.openlattice.authorization.processors.SecurableObjectTypeUpdater
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.authorization.util.toAceKeys
+import com.openlattice.controllers.exceptions.ForbiddenException
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organizations.PrincipalSet
 import org.slf4j.LoggerFactory
@@ -37,7 +39,9 @@ class HazelcastAuthorizationService(
         val eventBus: EventBus
 ) : AuthorizationManager {
 
-    private val securableObjectTypes: IMap<AclKey, SecurableObjectType> = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap(hazelcastInstance)
+    private val securableObjectTypes: IMap<AclKey, SecurableObjectType> = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap(
+            hazelcastInstance
+    )
     private val aces: IMap<AceKey, AceValue> = HazelcastMap.PERMISSIONS.getMap(hazelcastInstance)
 
     companion object {
@@ -110,7 +114,9 @@ class HazelcastAuthorizationService(
         addPermission(key, principal, permissions, OffsetDateTime.MAX)
     }
 
-    override fun addPermission(key: AclKey, principal: Principal, permissions: Set<Permission>, expirationDate: OffsetDateTime) {
+    override fun addPermission(
+            key: AclKey, principal: Principal, permissions: Set<Permission>, expirationDate: OffsetDateTime
+    ) {
         //TODO: We should do something better than reading the securable object type.
         val securableObjectType = getDefaultObjectType(securableObjectTypes, key)
 
@@ -294,25 +300,27 @@ class HazelcastAuthorizationService(
 
         val permissionMap = requests.mapValues { noAccess(it.value) }.toMutableMap()
 
-        val aceKeys = requests.keys.flatMap { aclKey ->
-            principals.map { principal -> AceKey(aclKey, principal) }
-        }.toSet()
+        val aceKeys = requests.keys
+                .flatMap { aclKey -> principals.map { principal -> AceKey(aclKey, principal) } }
+                .toSet()
 
-        aces.executeOnKeys(aceKeys, AuthorizationEntryProcessor()).forEach { (aceKey: AceKey, permissions: Any) ->
+        aces
+                .executeOnKeys(aceKeys, AuthorizationEntryProcessor())
+                .forEach { (aceKey, permissions) ->
+                    val aclKeyPermissions = permissionMap.getValue(aceKey.aclKey)
+                    permissions.forEach { permission ->
+                        aclKeyPermissions.computeIfPresent(permission) { _, _ -> true }
+                    }
+                }
 
-            val aclKeyPermissions = permissionMap.getValue(aceKey.aclKey)
-
-            (permissions as DelegatedPermissionEnumSet).filter { aclKeyPermissions.contains(it) }.forEach {
-                aclKeyPermissions[it] = true
-            }
-
-            permissionMap[aceKey.aclKey] = aclKeyPermissions
-        }
         return permissionMap
     }
 
     @Timed
-    override fun accessChecksForPrincipals(accessChecks: Set<AccessCheck>, principals: Set<Principal>): Stream<Authorization> {
+    override fun accessChecksForPrincipals(
+            accessChecks: Set<AccessCheck>,
+            principals: Set<Principal>
+    ): Stream<Authorization> {
         val requests: MutableMap<AclKey, EnumSet<Permission>> = Maps.newLinkedHashMapWithExpectedSize(accessChecks.size)
 
         accessChecks.forEach {
@@ -379,8 +387,11 @@ class HazelcastAuthorizationService(
     override fun getAuthorizedObjectsOfType(
             principals: Set<Principal>,
             objectType: SecurableObjectType,
-            permissions: EnumSet<Permission>): Stream<AclKey> {
-        val principalPredicate = if (principals.size == 1) hasPrincipal(principals.first()) else hasAnyPrincipals(principals)
+            permissions: EnumSet<Permission>
+    ): Stream<AclKey> {
+        val principalPredicate = if (principals.size == 1) hasPrincipal(principals.first()) else hasAnyPrincipals(
+                principals
+        )
         val p = Predicates.and<AceKey, AceValue>(
                 principalPredicate,
                 hasType(objectType),
@@ -398,12 +409,14 @@ class HazelcastAuthorizationService(
             principals: Set<Principal>,
             objectType: SecurableObjectType,
             permissions: EnumSet<Permission>,
-            additionalFilter: Predicate<*, *>): Stream<AclKey> {
+            additionalFilter: Predicate<*, *>
+    ): Stream<AclKey> {
         val p = Predicates.and<AceKey, AceValue>(
                 hasAnyPrincipals(principals),
                 hasType(objectType),
                 hasExactPermissions(permissions),
-                additionalFilter)
+                additionalFilter
+        )
         return aces.keySet(p)
                 .stream()
                 .map { obj: AceKey -> obj.aclKey }
@@ -430,7 +443,9 @@ class HazelcastAuthorizationService(
                 }
     }
 
-    override fun getAuthorizedPrincipalsOnSecurableObject(key: AclKey, permissions: EnumSet<Permission>): Set<Principal> {
+    override fun getAuthorizedPrincipalsOnSecurableObject(
+            key: AclKey, permissions: EnumSet<Permission>
+    ): Set<Principal> {
         val principalMap = mutableMapOf(key to PrincipalSet(mutableSetOf()))
 
         return aces.aggregate(PrincipalAggregator(principalMap), matches(key, permissions))
@@ -469,7 +484,9 @@ class HazelcastAuthorizationService(
                     hasPrincipalType(PrincipalType.USER)
             )
 
-            val allOtherUserOwnersCount: Long = aces.aggregate(Aggregators.count<Map.Entry<AceKey, AceValue>>(), allOtherUserOwnersPredicate)
+            val allOtherUserOwnersCount: Long = aces.aggregate(
+                    Aggregators.count<Map.Entry<AceKey, AceValue>>(), allOtherUserOwnersPredicate
+            )
             check(allOtherUserOwnersCount != 0L) {
                 "Unable to remove owner permissions as a securable object will be left without an owner of " +
                         "type USER"
