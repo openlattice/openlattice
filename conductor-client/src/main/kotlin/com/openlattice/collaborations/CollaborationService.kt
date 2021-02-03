@@ -111,13 +111,18 @@ class CollaborationService(
                     .map { it.aclKey }
                     .toSet()
 
-            val membersToRemove = removedMembers.filter { !remainingMemberAclKeys.contains(it) }.toSet()
+            val membersToRemoveFromDatabase = removedMembers.filter { !remainingMemberAclKeys.contains(it) }.toSet()
 
-            collaborationDatabaseManager.removeMembersFromOrganizationInCollaboration(collaboration.id, organizationId, membersToRemove)
+            collaborationDatabaseManager.removeMembersFromOrganizationInCollaboration(
+                    collaboration.id,
+                    organizationId,
+                    removedMembers,
+                    membersToRemoveFromDatabase
+            )
         }
     }
 
-    private fun getCollaborationsIncludingOrg(organizationId: UUID): Iterable<Collaboration> {
+    private fun getCollaborationsIncludingOrg(organizationId: UUID): Collection<Collaboration> {
         return collaborations.values(Predicates.equal(CollaborationMapstore.ORGANIZATION_ID_IDX, organizationId))
     }
 
