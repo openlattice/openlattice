@@ -65,17 +65,18 @@ class ExternalDatabasePermissioner(
     internal fun configureRolesInDatabase(dataSource: HikariDataSource) {
         val roles = principalsMapManager.getAllRoles()
 
-        if (roles.isNotEmpty()) {
-            val roleIds = roles.map { PostgresRoles.buildPostgresRoleName(it.id) }
-            val roleIdsSql = roleIds.joinToString { DataTables.quote(it) }
+        if (roles.isEmpty()){
+            return
+        }
+        val roleIds = roles.map { PostgresRoles.buildPostgresRoleName(it.id) }
+        val roleIdsSql = roleIds.joinToString { DataTables.quote(it) }
 
-            dataSource.connection.use { connection ->
-                connection.createStatement().use { statement ->
+        dataSource.connection.use { connection ->
+            connection.createStatement().use { statement ->
 
-                    logger.info("Revoking ${Schemas.PUBLIC_SCHEMA} schema right from roles: {}", roleIds)
-                    //Don't allow users to access public schema which will contain foreign data wrapper tables.
-                    statement.execute("REVOKE USAGE ON SCHEMA ${Schemas.PUBLIC_SCHEMA} FROM $roleIdsSql")
-                }
+                logger.info("Revoking ${Schemas.PUBLIC_SCHEMA} schema right from roles: {}", roleIds)
+                //Don't allow users to access public schema which will contain foreign data wrapper tables.
+                statement.execute("REVOKE USAGE ON SCHEMA ${Schemas.PUBLIC_SCHEMA} FROM $roleIdsSql")
             }
         }
     }
