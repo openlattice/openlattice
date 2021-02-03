@@ -20,7 +20,7 @@ import java.util.*
 class ExternalRolesMapstore(
         val hds: HikariDataSource
 ) : AbstractBasePostgresMapstore<AccessTarget, UUID>(
-        HazelcastMap.EXTERNAL_ROLES, PostgresTable.EXTERNAL_ROLES, hds
+        HazelcastMap.EXTERNAL_PERMISSION_ROLES, PostgresTable.EXTERNAL_PERMISSION_ROLES, hds
 ) {
     override fun generateTestKey(): AccessTarget {
         return AccessTarget(

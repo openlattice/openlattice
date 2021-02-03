@@ -286,7 +286,7 @@ public final class PostgresTable {
             new PostgresTableDefinition( "entity_type_property_metadata" )
                     .addColumns( ENTITY_TYPE_ID, PROPERTY_TYPE_ID, TITLE, DESCRIPTION, TAGS, SHOW )
                     .primaryKey( ENTITY_TYPE_ID, PROPERTY_TYPE_ID );
-    public static final PostgresTableDefinition ENUM_TYPES                    =
+    public static final PostgresTableDefinition ENUM_TYPES                =
             new PostgresTableDefinition( "enum_types" )
                     .addColumns( ID,
                             NAMESPACE,
@@ -301,8 +301,8 @@ public final class PostgresTable {
                             ANALYZER,
                             MULTI_VALUED,
                             INDEX_TYPE );
-    public static final PostgresTableDefinition EXTERNAL_ROLES =
-            new PostgresTableDefinition( "external_roles" )
+    public static final PostgresTableDefinition EXTERNAL_PERMISSION_ROLES =
+            new PostgresTableDefinition( "external_permission_roles" )
                     .addColumns( ACL_KEY, PERMISSION, ROLE_ID )
                     .primaryKey( ACL_KEY, PERMISSION);
 

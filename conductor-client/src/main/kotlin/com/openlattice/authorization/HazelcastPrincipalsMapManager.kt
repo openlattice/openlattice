@@ -2,8 +2,10 @@ package com.openlattice.authorization
 
 import com.google.common.base.Preconditions
 import com.hazelcast.core.HazelcastInstance
-import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
+import com.openlattice.authorization.PrincipalsMapManager.Companion.findPrincipal
+import com.openlattice.authorization.PrincipalsMapManager.Companion.getFirstSecurablePrincipal
+import com.openlattice.authorization.PrincipalsMapManager.Companion.hasPrincipalType
 import com.openlattice.authorization.mapstores.PrincipalMapstore
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organization.roles.Role
@@ -22,12 +24,12 @@ class HazelcastPrincipalsMapManager(
 
     override fun lookupRole(aclKey: AclKey): Role {
         val principal = principals.getValue(aclKey)
-        return lookupRole(principal.principal)
+        return castSecurablePrincipalAsRole(principal)
     }
 
     override fun lookupRole(principal: Principal): Role {
-        require(principal.type == PrincipalType.ROLE) { "The provided principal $principal is not a role" }
-        return getFirstSecurablePrincipal(findPrincipal(principal)) as Role
+        val sp = getFirstSecurablePrincipal(principals, findPrincipal(principal))
+        return castSecurablePrincipalAsRole(sp)
     }
 
     override fun getAllRoles(): Set<Role> {
@@ -47,15 +49,8 @@ class HazelcastPrincipalsMapManager(
         return principals[aclKey]
     }
 
-    private fun hasPrincipalType(principalType: PrincipalType): Predicate<AclKey, SecurablePrincipal> {
-        return Predicates.equal<AclKey, SecurablePrincipal>(PrincipalMapstore.PRINCIPAL_TYPE_INDEX, principalType)
-    }
-
-    private fun findPrincipal(p: Principal): Predicate<AclKey, SecurablePrincipal> {
-        return Predicates.equal(PrincipalMapstore.PRINCIPAL_INDEX, p)
-    }
-
-    private fun getFirstSecurablePrincipal(p: Predicate<AclKey, SecurablePrincipal>): SecurablePrincipal {
-        return principals.values(p).first()
+    private fun castSecurablePrincipalAsRole(sp: SecurablePrincipal): Role {
+        require(sp.principal.type == PrincipalType.ROLE) { "The provided principal $sp is not a role" }
+        return sp as Role
     }
 }

@@ -9,7 +9,7 @@ import com.openlattice.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizome
 /**
  * @author Drew Bailey (drew@openlattice.com)
  */
-class GetDbUsernameFromDbCredsEntryProcessor(): Offloadable,
+class GetDbUsernameFromDbCredsEntryProcessor: Offloadable,
         AbstractReadOnlyRhizomeEntryProcessor<AclKey, MaterializedViewAccount, String>() {
 
     override fun process(entry: MutableMap.MutableEntry<AclKey, MaterializedViewAccount>): String {

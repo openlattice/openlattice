@@ -42,7 +42,7 @@ class ExternalDatabasePermissioner(
     private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
     private val securableObjectTypes = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap(hazelcastInstance)
     private val organizationExternalDatabaseColumns = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_COLUMN.getMap(hazelcastInstance)
-    private val externalRoleNames = HazelcastMap.EXTERNAL_ROLES.getMap(hazelcastInstance)
+    private val externalRoleNames = HazelcastMap.EXTERNAL_PERMISSION_ROLES.getMap(hazelcastInstance)
 
     companion object {
         private val logger = LoggerFactory.getLogger(ExternalDatabasePermissioner::class.java)

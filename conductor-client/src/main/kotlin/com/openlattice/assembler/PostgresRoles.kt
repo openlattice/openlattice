@@ -59,8 +59,9 @@ class PostgresRoles private constructor() {
         }
 
         @JvmStatic
-        fun buildOrganizationRoleName(orgId: UUID): String {
-            return buildPostgresRoleName(orgId)
+        @Deprecated("Use buildPostgresRoleName instead", ReplaceWith("buildPostgresRoleName"))
+        fun buildOrganizationRoleName(organizationDbName: String): String {
+            return "${organizationDbName}_role"
         }
 
     }

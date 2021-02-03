@@ -63,7 +63,7 @@ class HazelcastPrincipalService(
                 .getLogger(HazelcastPrincipalService::class.java)
 
         private fun findPrincipal(p: Principal): Predicate<AclKey, SecurablePrincipal> {
-            return Predicates.equal(PrincipalMapstore.PRINCIPAL_INDEX, p)
+            return PrincipalsMapManager.findPrincipal(p)
         }
 
         private fun findPrincipals(principals: Collection<Principal>): Predicate<AclKey, SecurablePrincipal> {
@@ -71,7 +71,7 @@ class HazelcastPrincipalService(
         }
 
         private fun hasPrincipalType(principalType: PrincipalType): Predicate<AclKey, SecurablePrincipal> {
-            return Predicates.equal<AclKey, SecurablePrincipal>(PrincipalMapstore.PRINCIPAL_TYPE_INDEX, principalType)
+            return PrincipalsMapManager.hasPrincipalType(principalType)
         }
 
         private fun hasSecurablePrincipal(principalAclKey: AclKey): Predicate<AclKey, AclKeySet> {
@@ -142,8 +142,7 @@ class HazelcastPrincipalService(
     }
 
     override fun lookupRole(principal: Principal): Role {
-        require(principal.type == PrincipalType.ROLE) { "The provided principal is not a role" }
-        return getFirstSecurablePrincipal(findPrincipal(principal)) as Role
+        return principalsMapManager.lookupRole(principal)
     }
 
     override fun getSecurablePrincipal(principalId: String): SecurablePrincipal {
@@ -368,7 +367,7 @@ class HazelcastPrincipalService(
     }
 
     private fun getFirstSecurablePrincipal(p: Predicate<AclKey, SecurablePrincipal>): SecurablePrincipal {
-        return principals.values(p).first()
+        return PrincipalsMapManager.getFirstSecurablePrincipal(principals, p)
     }
 
     override fun getAuthorizationManager(): AuthorizationManager {
@@ -384,7 +383,7 @@ class HazelcastPrincipalService(
     }
 
     override fun getAllRoles(): Set<Role> {
-        return principals.values(hasPrincipalType(PrincipalType.ROLE)).map { it as Role }.toSet()
+        return principalsMapManager.getAllRoles()
     }
 
     override fun getAllUsers(): Set<SecurablePrincipal> {

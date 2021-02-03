@@ -268,7 +268,7 @@ class AssemblerConnectionManager(
     fun dropOrganizationDatabase(organizationId: UUID) {
         val dbName = extDbManager.getOrganizationDatabaseName(organizationId)
         val db = quote(dbName)
-        val dbRole = quote(buildOrganizationRoleName(organizationId))
+        val dbRole = quote(buildOrganizationRoleName(organizationId.toString()))
         val dbAdminUser = quote(dbCredentialService.getDbUsername(AclKey(organizationId)))
 
         val dropDb = " DROP DATABASE $db"
