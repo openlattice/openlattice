@@ -313,12 +313,12 @@ class HazelcastAuthorizationService(
                 .toSet()
 
         aces
-                .getAll(aceKeys)
-                .forEach { (aceKey, aceValue) ->
-                    val permissions = aceValue.permissions
+                .executeOnKeys(aceKeys, AuthorizationEntryProcessor())
+                .forEach { (aceKey, permissions) ->
                     val aclKeyPermissions = permissionMap.getValue(aceKey.aclKey)
-
-                    permissions.forEach { permission -> aclKeyPermissions.computeIfPresent(permission) { _,_ -> true } }
+                    permissions.forEach { permission ->
+                        aclKeyPermissions.computeIfPresent(permission) { _, _ -> true }
+                    }
                 }
 
         return permissionMap
