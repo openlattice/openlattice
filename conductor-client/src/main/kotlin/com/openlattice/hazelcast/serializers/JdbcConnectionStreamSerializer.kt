@@ -39,7 +39,7 @@ class JdbcConnectionStreamSerializer:SelfRegisteringStreamSerializer<JdbcConnect
             out.writeUTF(obj.username)
             out.writeUTF(obj.password)
             out.writeBoolean(obj.roleManagementEnabled)
-            out.writeInt( obj.properties.size)
+            out.writeInt(obj.properties.size)
             obj.properties.forEach { k, v ->
                 out.writeUTF(k as String)
                 out.writeUTF(v as String)
