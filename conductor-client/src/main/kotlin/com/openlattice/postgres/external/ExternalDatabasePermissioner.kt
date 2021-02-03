@@ -185,24 +185,22 @@ class ExternalDatabasePermissioner(
     }
 
     override fun removePrincipalsFromPrincipals(principalsToRemove: Set<AclKey>, fromPrincipals: Set<AclKey>) {
-        val removeFrom = principalsToPostgresRoleNames(fromPrincipals)
+        val removeFrom = dbCredentialService.getDbUsernames(fromPrincipals)
+        val removeSqls = dbCredentialService.getDbUsernames(principalsToRemove).map { roleName ->
+            revokeRoleSql(roleName, removeFrom)
+        }
         atlas.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                principalsToRemove.forEach { aclKey ->
-                    val roleName = dbCredentialService.getDbUsername(aclKey)
-                    stmt.addBatch(revokeRoleSql(roleName, removeFrom))
+                removeSqls.forEach { sql ->
+                    stmt.addBatch(sql)
                 }
                 stmt.executeBatch()
             }
         }
     }
 
-    private fun principalsToPostgresRoleNames(principals: Set<AclKey>): Set<String> {
-        return dbCredentialService.getDbUsernames(principals)
-    }
-
     /**
-     * Create all postgres roles to apply to [entitySet] and [propertyTypes]
+     * Create all postgres roles to apply to [entitySetId] and [propertyTypes]
      * Adds permissions on [EdmConstants.ID_FQN] to each of the above roles
      */
     override fun initializeAssemblyPermissions(
@@ -325,7 +323,7 @@ class ExternalDatabasePermissioner(
                                 column,
                                 PgPermAction.GRANT
                         ) )
-                        adds.set( orgId, sqls)
+                        adds[orgId] = sqls
                     }
                     Action.REMOVE -> {
                         val sqls = removes.getOrDefault(orgId, mutableListOf())
@@ -334,7 +332,7 @@ class ExternalDatabasePermissioner(
                                         ace.principal, column, tableType
                                 )
                         )
-                        removes.set( orgId, sqls)
+                        removes[orgId] = sqls
                     }
                     Action.SET -> {
                         val remSqls = removes.getOrDefault(orgId, mutableListOf())
@@ -343,7 +341,7 @@ class ExternalDatabasePermissioner(
                                         ace.principal, column, tableType
                                 )
                         )
-                        removes.set( orgId, remSqls)
+                        removes[orgId] = remSqls
 
                         val addSqls = adds.getOrDefault(orgId, mutableListOf())
                         addSqls.addAll(  updatePermissionsOnColumnSql(
@@ -351,7 +349,7 @@ class ExternalDatabasePermissioner(
                                 column,
                                 PgPermAction.GRANT
                         ))
-                        adds.set( orgId, addSqls)
+                        adds[orgId] = addSqls
                     }
                 }
             }
@@ -364,9 +362,12 @@ class ExternalDatabasePermissioner(
                 conn.autoCommit = false
                 val stmt: Statement = conn.createStatement()
                 try {
-                    rems.forEach {
-                        stmt.execute(it)
+                    rems.forEach { sql ->
+                        stmt.addBatch(sql)
                     }
+                    stmt.executeBatch()
+                    stmt.clearBatch()
+
                     addz.forEach { sql ->
                         stmt.addBatch(sql)
                     }
