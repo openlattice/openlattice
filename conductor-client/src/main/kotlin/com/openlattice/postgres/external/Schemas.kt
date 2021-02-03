@@ -9,7 +9,7 @@ package com.openlattice.postgres.external
  * - "transporter"
  *      schema in org_* database where foreign et tables are accessible
  * - "ol"
- *      schema in atlas transporterd database where production tables are accessible
+ *      schema in atlas transporter database where production tables are accessible
  */
 enum class Schemas(val label: String) {
     INTEGRATIONS_SCHEMA("integrations"),

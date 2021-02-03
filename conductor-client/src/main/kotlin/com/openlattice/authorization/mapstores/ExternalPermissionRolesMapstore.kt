@@ -17,7 +17,7 @@ import java.util.*
  * @author Drew Bailey (drew@openlattice.com)
  */
 @Component
-class ExternalRolesMapstore(
+class ExternalPermissionRolesMapstore(
         val hds: HikariDataSource
 ) : AbstractBasePostgresMapstore<AccessTarget, UUID>(
         HazelcastMap.EXTERNAL_PERMISSION_ROLES, PostgresTable.EXTERNAL_PERMISSION_ROLES, hds
@@ -35,6 +35,8 @@ class ExternalRolesMapstore(
 
     override fun bind(ps: PreparedStatement, key: AccessTarget, value: UUID) {
         var index = bind(ps, key, 1)
+        ps.setObject(index++, value)
+
         ps.setObject(index++, value)
     }
 
