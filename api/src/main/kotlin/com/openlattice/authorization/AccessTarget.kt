@@ -8,8 +8,8 @@ import java.util.*
 data class AccessTarget(val aclKey: AclKey, val permission: Permission) {
     companion object {
         @JvmStatic
-        fun forPermissionOnTarget( permission: Permission, vararg targetParts: UUID): AccessTarget {
-            return AccessTarget( AclKey(*targetParts), permission)
+        fun forPermissionOnTarget( permission: Permission, root: UUID, vararg targetParts: UUID): AccessTarget {
+            return AccessTarget( AclKey(root, *targetParts), permission)
         }
     }
 }

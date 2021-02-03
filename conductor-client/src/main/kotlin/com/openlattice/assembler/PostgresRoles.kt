@@ -34,8 +34,8 @@ class PostgresRoles private constructor() {
         }
 
         @JvmStatic
-        fun getOrCreatePermissionRole( externalRoleNames: IMap<AccessTarget, UUID>, permission: Permission, vararg parts: UUID ): String {
-            return getOrCreatePermissionRole(externalRoleNames, AccessTarget.forPermissionOnTarget(permission, *parts))
+        fun getOrCreatePermissionRole( externalRoleNames: IMap<AccessTarget, UUID>, permission: Permission, root: UUID, vararg parts: UUID ): String {
+            return getOrCreatePermissionRole(externalRoleNames, AccessTarget.forPermissionOnTarget(permission, root, *parts))
         }
 
         @JvmStatic
