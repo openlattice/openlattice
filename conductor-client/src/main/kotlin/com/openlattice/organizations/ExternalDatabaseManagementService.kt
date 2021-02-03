@@ -12,6 +12,7 @@ import com.openlattice.authorization.*
 import com.openlattice.authorization.mapstores.PermissionMapstore
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.edm.PropertyTypeIdFqn
+import com.openlattice.edm.processors.AddFlagsOnEntitySetEntryProcessor
 import com.openlattice.edm.processors.GetEntityTypeFromEntitySetEntryProcessor
 import com.openlattice.edm.processors.GetFqnFromPropertyTypeEntryProcessor
 import com.openlattice.edm.requests.MetadataUpdate
@@ -201,8 +202,7 @@ class ExternalDatabaseManagementService(
                         acls,
                         colsById
                 )
-                es.flags.add(EntitySetFlag.TRANSPORTED)
-                entitySets.put(entitySetId, es)
+                entitySets.executeOnKey(entitySetId, AddFlagsOnEntitySetEntryProcessor(EnumSet.of(EntitySetFlag.TRANSPORTED)))
             } finally {
                 entitySets.unlock(entitySetId)
             }
