@@ -15,8 +15,8 @@ import java.util.*
  * @param title A title for the schema
  * @param description An optional description of the schema
  * @param organizationId The id of the organization that owns this schema
- * @param dataSourceId The id of the data source to which this table belongs.
- * @param externalId An datasource specific uniqued string identifier for a table.
+ * @param dataSourceId The id of the data source to which this schema belongs.
+ * @param externalId A datasource specific unique string identifier for a schema.
  */
 
 class OrganizationExternalDatabaseSchema
