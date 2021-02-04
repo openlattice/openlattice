@@ -57,7 +57,7 @@ interface OrganizationsApi {
         const val USER_ID = "userId"
         const val USER_ID_PATH = "/{$USER_ID:.*}"
 
-        const val DATASOURCE = "/datasource"
+        const val DATASOURCES = "/datasources"
         const val DATASOURCE_ID = "datasource_id"
         const val DATASOURCE_ID_PATH = "/{$DATASOURCE_ID}"
 
