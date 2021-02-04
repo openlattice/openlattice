@@ -4,7 +4,6 @@ import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.map.IMap
 import com.openlattice.authorization.*
 import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.hazelcast.processors.EpResult
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.organization.OrganizationExternalDatabaseSchema
 import com.openlattice.organization.OrganizationExternalDatabaseTable

@@ -1,7 +1,7 @@
 package com.openlattice.organizations.processors
 
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
-import com.openlattice.hazelcast.processors.EpResult
+import com.openlattice.hazelcast.processors.EntryProcessorResult
 import com.openlattice.organizations.Organization
 import org.slf4j.LoggerFactory
 import java.util.*
@@ -14,7 +14,7 @@ private val logger = LoggerFactory.getLogger(OrganizationEntryProcessor::class.j
  */
 
 class OrganizationEntryProcessor(
-        val update: (Organization) -> EpResult
+        val update: (Organization) -> EntryProcessorResult
 ) : AbstractRhizomeEntryProcessor<UUID, Organization, Any?>() {
 
     override fun process(entry: MutableMap.MutableEntry<UUID, Organization?>): Any? {

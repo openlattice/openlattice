@@ -4,17 +4,15 @@ import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Preconditions
 import com.google.common.eventbus.EventBus
 import com.hazelcast.core.HazelcastInstance
-import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.openlattice.IdConstants
 import com.openlattice.assembler.Assembler
 import com.openlattice.assembler.PostgresDatabases
 import com.openlattice.authorization.*
-import com.openlattice.authorization.mapstores.PrincipalMapstore
 import com.openlattice.collections.mapstores.EntitySetCollectionMapstore
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.hazelcast.processors.EpResult
+import com.openlattice.hazelcast.processors.EntryProcessorResult
 import com.openlattice.notifications.sms.PhoneNumberService
 import com.openlattice.notifications.sms.SmsEntitySetInformation
 import com.openlattice.organization.OrganizationPrincipal
@@ -296,10 +294,10 @@ class HazelcastOrganizationService(
         securePrincipalsManager.updateTitle(aclKey, title)
         organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
             if (title == it.securablePrincipal.title) {
-                EpResult(null, false)
+                EntryProcessorResult(null, false)
             } else {
                 it.securablePrincipal.title = title
-                EpResult(null)
+                EntryProcessorResult(null)
             }
         })
         eventBus.post(OrganizationUpdatedEvent(organizationId, Optional.of(title), Optional.empty()))
@@ -311,10 +309,10 @@ class HazelcastOrganizationService(
         securePrincipalsManager.updateDescription(aclKey, description)
         organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
             if (description == it.securablePrincipal.description) {
-                EpResult(null, false)
+                EntryProcessorResult(null, false)
             } else {
                 it.securablePrincipal.description = description
-                EpResult(null)
+                EntryProcessorResult(null)
             }
         })
         eventBus.post(OrganizationUpdatedEvent(organizationId, Optional.empty(), Optional.of(description)))
@@ -336,7 +334,7 @@ class HazelcastOrganizationService(
     fun setEmailDomains(organizationId: UUID, emailDomains: Set<String>) {
         organizations.executeOnKey(organizationId, OrganizationEntryProcessor { organization ->
             organization.emailDomains.clear()
-            EpResult(organization.emailDomains.addAll(emailDomains))
+            EntryProcessorResult(organization.emailDomains.addAll(emailDomains))
         })
 
     }
@@ -345,7 +343,7 @@ class HazelcastOrganizationService(
     fun addEmailDomains(organizationId: UUID, emailDomains: Set<String>) {
         organizations.executeOnKey(organizationId, OrganizationEntryProcessor { organization ->
             val modified = organization.emailDomains.addAll(emailDomains)
-            EpResult(modified, modified)
+            EntryProcessorResult(modified, modified)
         })
     }
 
@@ -353,7 +351,7 @@ class HazelcastOrganizationService(
     fun removeEmailDomains(organizationId: UUID, emailDomains: Set<String>) {
         organizations.executeOnKey(organizationId, OrganizationEntryProcessor { organization ->
             val modified = organization.emailDomains.removeAll(emailDomains)
-            EpResult(modified, modified)
+            EntryProcessorResult(modified, modified)
         })
     }
 
@@ -560,7 +558,7 @@ class HazelcastOrganizationService(
     fun addAppToOrg(organizationId: UUID, appId: UUID) {
         organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
             val modified = it.apps.add(appId)
-            EpResult(modified, modified)
+            EntryProcessorResult(modified, modified)
         })
     }
 
@@ -568,7 +566,7 @@ class HazelcastOrganizationService(
     fun removeAppFromOrg(organizationId: UUID, appId: UUID) {
         organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
             val modified = it.apps.remove(appId)
-            EpResult(modified, modified)
+            EntryProcessorResult(modified, modified)
         })
 
     }
@@ -600,7 +598,7 @@ class HazelcastOrganizationService(
     fun updateRoleGrant(organizationId: UUID, roleId: UUID, grant: Grant) {
         organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
             it.grants.getOrPut(roleId) { mutableMapOf() }[grant.grantType] = grant
-            EpResult(null) //TODO: Being lazy not implementing diff as this should rarely be called.
+            EntryProcessorResult(null) //TODO: Being lazy not implementing diff as this should rarely be called.
         })
     }
 
@@ -608,7 +606,7 @@ class HazelcastOrganizationService(
     fun addConnections(organizationId: UUID, connections: Set<String>) {
         organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
             it.connections += connections
-            EpResult(null) //TODO: Being lazy not implementing diff as this should rarely be called.
+            EntryProcessorResult(null) //TODO: Being lazy not implementing diff as this should rarely be called.
         })
 
         addUsersMatchingConnections(organizationId, connections)
@@ -618,7 +616,7 @@ class HazelcastOrganizationService(
     fun removeConnections(organizationId: UUID, connections: Set<String>) {
         organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
             it.connections -= connections
-            EpResult(null) //TODO: Being lazy not implementing diff as this should rarely be called.
+            EntryProcessorResult(null) //TODO: Being lazy not implementing diff as this should rarely be called.
         })
     }
 
@@ -626,7 +624,7 @@ class HazelcastOrganizationService(
     fun setConnections(organizationId: UUID, connections: Set<String>) {
         organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
             it.connections.clear()
-            EpResult(it.connections.addAll(connections), true)
+            EntryProcessorResult(it.connections.addAll(connections), true)
         })
 
         addUsersMatchingConnections(organizationId, connections)

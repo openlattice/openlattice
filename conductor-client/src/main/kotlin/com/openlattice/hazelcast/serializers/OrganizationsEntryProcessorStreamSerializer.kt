@@ -4,7 +4,7 @@ import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.hazelcast.StreamSerializerTypeIds
-import com.openlattice.hazelcast.processors.EpResult
+import com.openlattice.hazelcast.processors.EntryProcessorResult
 import com.openlattice.organizations.processors.OrganizationEntryProcessor
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.slf4j.LoggerFactory
@@ -54,7 +54,7 @@ class OrganizationsEntryProcessorStreamSerializer : SelfRegisteringStreamSeriali
             OrganizationEntryProcessor { org ->
                 LoggerFactory.getLogger(OrganizationEntryProcessor::class.java)
                         .error("This entry processor didn't de-serialize correctly.")
-                EpResult(null, false)
+                EntryProcessorResult(null, false)
             }
         }
 
