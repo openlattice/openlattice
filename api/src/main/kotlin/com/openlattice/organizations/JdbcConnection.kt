@@ -34,7 +34,7 @@ constructor(
         @JsonProperty(SerializationConstants.ROLE_MANAGEMENT_ENABLED) val roleManagementEnabled: Boolean = false,
         @JsonProperty(SerializationConstants.PROPERTIES_FIELD) val properties: Properties = Properties(),
         @JsonProperty(SerializationConstants.DESCRIPTION_FIELD) description: Optional<String> = Optional.empty()
-) : AbstractSecurableObject(id, title, description), Serializable {
+) : AbstractSecurableObject(id, title, description) {
 
     constructor() : this(Optional.empty(), "", "", "")
 
