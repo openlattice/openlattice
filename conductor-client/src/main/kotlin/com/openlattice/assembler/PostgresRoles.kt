@@ -49,20 +49,8 @@ class PostgresRoles private constructor() {
         }
 
         @JvmStatic
-        @Deprecated("Role names are stored in dbcredentials mapstore")
-        fun buildPostgresRoleName(roleId: UUID): String {
-            return "$INTERNAL_PREFIX|role|$roleId"
-        }
-
-        @JvmStatic
         fun buildExternalPrincipalId(aclKey: AclKey, principalType: PrincipalType): String {
             return "$INTERNAL_PREFIX|${principalType.toString().toLowerCase()}|${aclKey.last()}"
-        }
-
-        @JvmStatic
-        @Deprecated("Role names are stored in dbcredentials mapstore")
-        fun buildOrganizationRoleName(organizationDbName: String): String {
-            return "${organizationDbName}_role"
         }
     }
 }

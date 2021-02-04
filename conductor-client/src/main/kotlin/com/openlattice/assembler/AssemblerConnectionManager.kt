@@ -24,8 +24,6 @@ package com.openlattice.assembler
 import com.codahale.metrics.MetricRegistry
 import com.google.common.eventbus.EventBus
 import com.openlattice.ApiHelpers
-import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationRoleName
-import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresRoleName
 import com.openlattice.authorization.*
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
@@ -268,14 +266,10 @@ class AssemblerConnectionManager(
     fun dropOrganizationDatabase(organizationId: UUID) {
         val dbName = extDbManager.getOrganizationDatabaseName(organizationId)
         val db = quote(dbName)
-        val dbRole = quote(buildOrganizationRoleName(organizationId.toString()))
         val dbAdminUser = quote(dbCredentialService.getDbUsername(AclKey(organizationId)))
 
         val dropDb = " DROP DATABASE $db"
         val dropDbUser = "DROP ROLE $dbAdminUser"
-        //TODO: If we grant this role to other users, we need to make sure we drop it
-        val dropDbRole = "DROP ROLE $dbRole"
-
 
         //We connect to default db in order to do initial db setup
 
@@ -287,7 +281,6 @@ class AssemblerConnectionManager(
             connection.createStatement().use { statement ->
                 statement.execute(dropDb)
                 statement.execute(dropDbUser)
-                statement.execute(dropDbRole)
             }
         }
     }
@@ -399,14 +392,15 @@ class AssemblerConnectionManager(
         if (roles.isEmpty()){
             return
         }
-        val roleIds = roles.map { buildPostgresRoleName(it.id) }
-        val roleIdsSql = roleIds.joinToString { quote(it) }
+        val roleSql = dbCredentialService.getDbUsernamesByPrincipals(roles).joinToString {
+            quote(it)
+        }
 
+        logger.info("Revoking $PUBLIC_SCHEMA schema right from all roles")
         dataSource.connection.use { connection ->
             connection.createStatement().use { statement ->
-                logger.info("Revoking $PUBLIC_SCHEMA schema right from roles: {}", roleIds)
                 //Don't allow users to access public schema which will contain foreign data wrapper tables.
-                statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM $roleIdsSql")
+                statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM $roleSql")
             }
         }
     }

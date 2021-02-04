@@ -86,6 +86,11 @@ class DbCredentialService(
 
     fun getDbUsername(aclKey: AclKey): String = getDbAccount(aclKey)!!.username
 
+    fun getDbUsernamesByPrincipals(principals: Set<SecurablePrincipal>): Set<String> {
+        val foo = principals.mapTo(mutableSetOf<AclKey>()) { it.aclKey }
+        return getDbUsernames(foo)
+    }
+
     fun getDbUsernames(aclKeys: Set<AclKey>): Set<String> {
         return dbCreds.executeOnKeys(aclKeys, GetDbUsernameFromDbCredsEntryProcessor()).values.toSet()
     }
