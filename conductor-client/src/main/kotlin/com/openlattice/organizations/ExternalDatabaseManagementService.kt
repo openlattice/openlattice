@@ -185,8 +185,8 @@ class ExternalDatabaseManagementService(
                 Predicates.equal<AceKey, AceValue>(PermissionMapstore.SECURABLE_OBJECT_TYPE_INDEX, SecurableObjectType.PropertyTypeInEntitySet))
         ).groupBy({(aceKey, _) ->
             aceKey.aclKey
-        },{(aceKey, aceValu) ->
-            Ace(aceKey.principal, aceValu as Set<Permission>, Optional.of(aceValu.expirationDate))
+        },{(aceKey, aceValue) ->
+            Ace(aceKey.principal, aceValue as Set<Permission>, Optional.of(aceValue.expirationDate))
         }).map {
             Acl(it.key, it.value)
         }

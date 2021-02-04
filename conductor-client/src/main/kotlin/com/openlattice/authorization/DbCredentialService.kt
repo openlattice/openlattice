@@ -107,7 +107,7 @@ class DbCredentialService(
 
         logger.info("Generating credentials for principal {}", principalAclKey)
 
-        val username = when ( principalType){
+        val username = when ( principalType ) {
             PrincipalType.ORGANIZATION, PrincipalType.ROLE  -> {
                 buildExternalPrincipalId(principalAclKey, principalType)
             }
@@ -142,4 +142,3 @@ class DbCredentialService(
         }
     }
 }
-
