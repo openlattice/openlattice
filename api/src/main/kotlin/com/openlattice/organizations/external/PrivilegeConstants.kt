@@ -16,7 +16,6 @@ enum class DatabasePrivilege {
 enum class SchemaPrivilege {
     CONNECT,
     USAGE,
-
 }
 
 /**

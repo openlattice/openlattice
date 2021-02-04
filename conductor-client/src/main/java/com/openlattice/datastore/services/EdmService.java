@@ -298,7 +298,7 @@ public class EdmService implements EdmManager {
          */
         EntityType entityType = ( entityTypeRaw.getBaseType().isPresent() )
                 ? getEntityTypeWithBaseType( entityTypeRaw ) : entityTypeRaw;
-        //This won't through type exist exception if name <-> id reservation is consistent
+        // This won't throw TypeExistsException if name <-> id reservation is consistent
         aclKeyReservations.reserveIdAndValidateType( entityType );
         // Only create entity table if insert transaction succeeded.
         final EntityType existing = entityTypes.putIfAbsent( entityType.getId(), entityType );
