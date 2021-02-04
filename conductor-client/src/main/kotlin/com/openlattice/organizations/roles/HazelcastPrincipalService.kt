@@ -75,11 +75,11 @@ class HazelcastPrincipalService(
         }
 
         private fun hasSecurablePrincipal(principalAclKey: AclKey): Predicate<AclKey, AclKeySet> {
-            return Predicates.equal("this.${PrincipalTreesMapstore.INDEX}", principalAclKey.index)
+            return Predicates.equal(PrincipalTreesMapstore.INDEX, principalAclKey.index)
         }
 
         private fun hasAnySecurablePrincipal(aclKeys: Set<AclKey>): Predicate<AclKey, AclKeySet> {
-            return Predicates.`in`("this.${PrincipalTreesMapstore.INDEX}", *aclKeys.map { it.index }.toTypedArray())
+            return Predicates.`in`(PrincipalTreesMapstore.INDEX, *aclKeys.map { it.index }.toTypedArray())
         }
     }
 
