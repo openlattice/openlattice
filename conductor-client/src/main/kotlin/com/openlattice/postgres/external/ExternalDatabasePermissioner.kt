@@ -21,7 +21,6 @@ import com.openlattice.postgres.TableColumn
 import com.openlattice.postgres.mapstores.SecurableObjectTypeMapstore
 import com.openlattice.transporter.grantUsageOnSchemaSql
 import com.zaxxer.hikari.HikariDataSource
-import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.sql.Statement
@@ -56,10 +55,6 @@ class ExternalDatabasePermissioner(
         private val allViewPermissions = setOf(Permission.READ)
 
         private val allTablePermissions = setOf(Permission.READ, Permission.WRITE, Permission.OWNER)
-
-        private fun fqnToColumnName(fqn: FullQualifiedName): String {
-            return fqn.toString()
-        }
     }
 
     override fun createRole(role: Role) {
@@ -212,7 +207,7 @@ class ExternalDatabasePermissioner(
         val ptToSqls = propertyTypes.map { (id, fqn) ->
             val roleName = PostgresRoles.getOrCreatePermissionRole(externalRoleNames, Permission.READ, entitySetId, id)
             val quotedColumns = listOf(fqn, EdmConstants.ID_FQN).joinToString {
-                ApiHelpers.dbQuote(fqnToColumnName(it))
+                ApiHelpers.dbQuote(it.toString())
             }
             val permissions = olToPostgres[Permission.READ]!!.joinToString()
             Triple  (

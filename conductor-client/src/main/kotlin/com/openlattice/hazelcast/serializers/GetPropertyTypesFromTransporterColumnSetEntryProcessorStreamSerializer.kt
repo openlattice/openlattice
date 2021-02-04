@@ -3,10 +3,12 @@ package com.openlattice.hazelcast.serializers
 import com.hazelcast.nio.ObjectDataInput
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.transporter.processors.GetPropertyTypesFromTransporterColumnSetEntryProcessor
+import org.springframework.stereotype.Component
 
 /**
  * @author Drew Bailey (drew@openlattice.com)
  */
+@Component
 class GetPropertyTypesFromTransporterColumnSetEntryProcessorStreamSerializer:
         NoOpSelfRegisteringStreamSerializer<GetPropertyTypesFromTransporterColumnSetEntryProcessor>()
 {

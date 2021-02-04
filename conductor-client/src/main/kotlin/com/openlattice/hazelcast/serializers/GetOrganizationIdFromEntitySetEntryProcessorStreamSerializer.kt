@@ -3,10 +3,12 @@ package com.openlattice.hazelcast.serializers
 import com.hazelcast.nio.ObjectDataInput
 import com.openlattice.edm.processors.GetOrganizationIdFromEntitySetEntryProcessor
 import com.openlattice.hazelcast.StreamSerializerTypeIds
+import org.springframework.stereotype.Component
 
 /**
  * @author Drew Bailey (drew@openlattice.com)
  */
+@Component
 class GetOrganizationIdFromEntitySetEntryProcessorStreamSerializer:
         NoOpSelfRegisteringStreamSerializer<GetOrganizationIdFromEntitySetEntryProcessor>()
 {

@@ -91,12 +91,6 @@ public interface SecurePrincipalsManager {
 
     @Nonnull SecurablePrincipal getSecurablePrincipal( String principalId );
 
-    /**
-     * Retrieves a securable principal by acl key lookup.
-     *
-     * @param aclKey The acl key for the securable principal.
-     * @return The securable principal identified by acl key.
-     */
     Collection<SecurablePrincipal> getAllPrincipalsWithPrincipal( AclKey aclKey );
 
     Collection<SecurablePrincipal> getParentPrincipalsOfPrincipal( AclKey aclKey );
