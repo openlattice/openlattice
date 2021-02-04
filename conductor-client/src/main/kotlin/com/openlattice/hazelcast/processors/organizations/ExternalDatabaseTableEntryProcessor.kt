@@ -27,8 +27,3 @@ class ExternalDatabaseTableEntryProcessor(
 
     data class Result(val value: Any? = null, val modified: Boolean = true)
 }
-
-
-
-
-
