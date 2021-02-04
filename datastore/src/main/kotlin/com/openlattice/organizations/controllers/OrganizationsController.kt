@@ -858,7 +858,7 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
     }
 
     @GetMapping(
-            value = [OrganizationsApi.ID_PATH + OrganizationsApi.DATASOURCE],
+            value = [OrganizationsApi.ID_PATH + OrganizationsApi.DATASOURCES],
             consumes = [MediaType.APPLICATION_JSON_VALUE]
     )
     override fun listDataSources(@PathVariable(OrganizationsApi.ID) organizationId: UUID): Map<UUID, JdbcConnection> {
@@ -866,7 +866,7 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
     }
 
     @PostMapping(
-            value = [OrganizationsApi.ID_PATH + OrganizationsApi.DATASOURCE],
+            value = [OrganizationsApi.ID_PATH + OrganizationsApi.DATASOURCES],
             consumes = [MediaType.APPLICATION_JSON_VALUE]
     )
     override fun registerDataSource(
@@ -877,7 +877,7 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
     }
 
     @PutMapping(
-            value = [OrganizationsApi.ID_PATH + OrganizationsApi.DATASOURCE + OrganizationsApi.DATASOURCE_ID_PATH],
+            value = [OrganizationsApi.ID_PATH + OrganizationsApi.DATASOURCES + OrganizationsApi.DATASOURCE_ID_PATH],
             consumes = [MediaType.APPLICATION_JSON_VALUE]
     )
     override fun updateDataSource(
