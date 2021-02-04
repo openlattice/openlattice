@@ -11,10 +11,10 @@ import java.util.*
  * Creates a securable object for an organization's entire database
  *
  * @param id An optional UUID that will be automatically generated if not provided
- * @param name The name of the table
- * @param title A title for the object
- * @param description An optional description of this object
- * @param organizationId The id of the organization that owns this table
+ * @param name The name of the schema
+ * @param title A title for the schema
+ * @param description An optional description of the schema
+ * @param organizationId The id of the organization that owns this schema
  * @param dataSourceId The id of the data source to which this table belongs.
  * @param externalId An datasource specific uniqued string identifier for a table.
  */

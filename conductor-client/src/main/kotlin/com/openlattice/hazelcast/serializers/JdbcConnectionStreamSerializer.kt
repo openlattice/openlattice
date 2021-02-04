@@ -39,7 +39,7 @@ class JdbcConnectionStreamSerializer:SelfRegisteringStreamSerializer<JdbcConnect
             out.writeUTF(obj.username)
             out.writeUTF(obj.password)
             out.writeBoolean(obj.roleManagementEnabled)
-            out.writeInt( obj.properties.size)
+            out.writeInt(obj.properties.size)
             obj.properties.forEach { k, v ->
                 out.writeUTF(k as String)
                 out.writeUTF(v as String)
@@ -48,18 +48,18 @@ class JdbcConnectionStreamSerializer:SelfRegisteringStreamSerializer<JdbcConnect
         @JvmStatic
         fun deserialize( input:ObjectDataInput): JdbcConnection {
             val id = UUIDStreamSerializerUtils.deserialize(input)
-            val title=input.readUTF()
-            val description=input.readUTF()
-            val  url =input.readUTF()
-            val database=input.readUTF()
-            val driver=input.readUTF()
-            val username=input.readUTF()
-            val password=input.readUTF()
+            val title = input.readUTF()
+            val description = input.readUTF()
+            val url = input.readUTF()
+            val database = input.readUTF()
+            val driver = input.readUTF()
+            val username = input.readUTF()
+            val password = input.readUTF()
             val roleManagementEnabled = input.readBoolean()
-            val propertiesSize = input.readInt( )
+            val propertiesSize = input.readInt()
             val properties = Properties(propertiesSize)
             for( i in 0 until propertiesSize) {
-                properties[input.readUTF() ] = input.readUTF()
+                properties[input.readUTF()] = input.readUTF()
             }
             return JdbcConnection(
                     id = Optional.of(id),
