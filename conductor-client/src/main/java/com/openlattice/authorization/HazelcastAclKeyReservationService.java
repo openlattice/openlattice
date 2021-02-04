@@ -82,7 +82,7 @@ public class HazelcastAclKeyReservationService {
         this.names = HazelcastMap.NAMES.getMap( hazelcast );
     }
 
-    public <T extends AbstractSecurableObject>  T reserveAnonymousId( T aso ) {
+    public <T extends AbstractSecurableObject> T reserveAnonymousId( T aso ) {
         while ( names.putIfAbsent( aso.getId(), PRIVATE_NAMESPACE + "." + ANONYMOUS ) != null ) {
             aso.assignNewId( UUID.randomUUID() );
         }
@@ -248,7 +248,7 @@ public class HazelcastAclKeyReservationService {
         }
 
         //Make sure name hasn't been assigned another id. If it has then return that id and free currently assigned id.
-        final var maybeActualId = aclKeys.putIfAbsent( nameGen.apply( aso ), aso.getId() );
+        final var maybeActualId = aclKeys.putIfAbsent( name, id );
 
         if ( maybeActualId == null ) {
             aso.assignNewId( id );

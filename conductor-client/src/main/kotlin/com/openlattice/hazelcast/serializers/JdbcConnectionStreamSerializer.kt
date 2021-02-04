@@ -33,7 +33,7 @@ class JdbcConnectionStreamSerializer:SelfRegisteringStreamSerializer<JdbcConnect
             UUIDStreamSerializerUtils.serialize(out, obj.id)
             out.writeUTF(obj.title)
             out.writeUTF(obj.description)
-            out.writeUTF( obj.url )
+            out.writeUTF(obj.url)
             out.writeUTF(obj.database)
             out.writeUTF(obj.driver)
             out.writeUTF(obj.username)
