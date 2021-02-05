@@ -80,6 +80,10 @@ class DbCredentialService(
 
     fun getDbAccount(aclKey: AclKey): MaterializedViewAccount? = dbCreds[aclKey]
 
+    fun getDbAccounts(aclKeys: Set<AclKey>): Map<AclKey, MaterializedViewAccount> {
+        return dbCreds.getAll(aclKeys)
+    }
+
     fun getDbUsername(user: SecurablePrincipal): String = getDbAccount(user)!!.username
 
     fun getDbUsernameAsync(user: SecurablePrincipal): CompletionStage<String> = dbCreds.getAsync(user.aclKey).thenApplyAsync { it.username }

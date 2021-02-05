@@ -18,14 +18,14 @@ import java.util.*
  */
 
 class OrganizationExternalDatabaseTable
-
 constructor(
         @JsonProperty(SerializationConstants.ID_FIELD) id: Optional<UUID>,
         @JsonProperty(SerializationConstants.NAME_FIELD) var name: String,
         @JsonProperty(SerializationConstants.TITLE_FIELD) title: String,
         @JsonProperty(SerializationConstants.DESCRIPTION_FIELD) description: Optional<String>,
         @JsonProperty(SerializationConstants.ORGANIZATION_ID) var organizationId: UUID,
-        @JsonProperty(SerializationConstants.OID) val oid: Int
+        @JsonProperty(SerializationConstants.OID) val oid: Int,
+        @JsonProperty(SerializationConstants.SCHEMA) var schema: String
 ) : AbstractSecurableObject(id, title, description) {
 
     constructor(
@@ -34,22 +34,35 @@ constructor(
             title: String,
             description: Optional<String>,
             organizationId: UUID,
-            oid: Int
-    ) : this(Optional.of(id), name, title, description, organizationId, oid)
+            oid: Int,
+            schema: String
+    ) : this(Optional.of(id), name, title, description, organizationId, oid, schema)
 
     @JsonIgnore
     override fun getCategory(): SecurableObjectType {
         return SecurableObjectType.OrganizationExternalDatabaseTable
     }
 
+    // This is an intermediate cleanup step to address places in the code where a unique name (used to reserve the
+    // object's id in HazelcastAclKeyReservationService) is manually constructed, which is pretty dangerous as any
+    // slight difference can contribute to failed lookup and duplicate object creation. Ideally this should eventually
+    // be replaced with something better.
+    @JsonIgnore
+    fun getUniqueName(): String {
+        return "$organizationId.$oid"
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is OrganizationExternalDatabaseTable) return false
+        if (javaClass != other?.javaClass) return false
         if (!super.equals(other)) return false
+
+        other as OrganizationExternalDatabaseTable
 
         if (name != other.name) return false
         if (organizationId != other.organizationId) return false
         if (oid != other.oid) return false
+        if (schema != other.schema) return false
 
         return true
     }
@@ -59,7 +72,9 @@ constructor(
         result = 31 * result + name.hashCode()
         result = 31 * result + organizationId.hashCode()
         result = 31 * result + oid
+        result = 31 * result + schema.hashCode()
         return result
     }
+
 
 }
