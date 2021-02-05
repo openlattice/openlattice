@@ -807,7 +807,8 @@ public final class TestDataFactory {
                 randomAlphanumeric( 5 ),
                 Optional.of( randomAlphanumeric( 5 ) ),
                 UUID.randomUUID(),
-                r.nextInt()
+                r.nextInt(),
+                randomAlphabetic( 5 )
         );
     }
 

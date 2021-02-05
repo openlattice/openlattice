@@ -322,7 +322,6 @@ class DatastoreKotlinElasticsearchImpl(
                 fieldMapping[ConductorElasticsearchApi.TYPE] = ConductorElasticsearchApi.GEO_POINT
             }
             EdmPrimitiveTypeKind.Guid -> {
-                fieldMapping[ConductorElasticsearchApi.INDEX] = "false"
                 fieldMapping[ConductorElasticsearchApi.TYPE] = ConductorElasticsearchApi.KEYWORD
             }
             else -> {

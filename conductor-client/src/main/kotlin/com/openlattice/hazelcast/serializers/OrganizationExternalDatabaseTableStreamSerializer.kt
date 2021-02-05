@@ -5,12 +5,13 @@ import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.hazelcast.StreamSerializerTypeIds
+import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.organization.OrganizationExternalDatabaseTable
 import org.springframework.stereotype.Component
 import java.util.*
 
 @Component
-class OrganizationExternalDatabaseTableStreamSerializer : SelfRegisteringStreamSerializer<OrganizationExternalDatabaseTable> {
+class OrganizationExternalDatabaseTableStreamSerializer : TestableSelfRegisteringStreamSerializer<OrganizationExternalDatabaseTable> {
 
     companion object {
         fun serialize(output: ObjectDataOutput, obj: OrganizationExternalDatabaseTable) {
@@ -20,6 +21,7 @@ class OrganizationExternalDatabaseTableStreamSerializer : SelfRegisteringStreamS
             output.writeUTF(obj.description)
             UUIDStreamSerializerUtils.serialize(output, obj.organizationId)
             output.writeInt(obj.oid)
+            output.writeUTF(obj.schema)
         }
 
         fun deserialize(input: ObjectDataInput): OrganizationExternalDatabaseTable {
@@ -28,8 +30,9 @@ class OrganizationExternalDatabaseTableStreamSerializer : SelfRegisteringStreamS
             val title = input.readUTF()
             val description = input.readUTF()
             val orgId = UUIDStreamSerializerUtils.deserialize(input)
-            val oid = input.readInt();
-            return OrganizationExternalDatabaseTable(id, name, title, Optional.of(description), orgId, oid)
+            val oid = input.readInt()
+            val schema = input.readUTF()
+            return OrganizationExternalDatabaseTable(id, name, title, Optional.of(description), orgId, oid, schema)
         }
     }
 
@@ -49,4 +52,7 @@ class OrganizationExternalDatabaseTableStreamSerializer : SelfRegisteringStreamS
         return StreamSerializerTypeIds.ORGANIZATION_EXTERNAL_DATABASE_TABLE.ordinal
     }
 
+    override fun generateTestValue(): OrganizationExternalDatabaseTable {
+        return TestDataFactory.organizationExternalDatabaseTable()
+    }
 }

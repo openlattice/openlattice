@@ -118,6 +118,9 @@ public class IndexerPostConfigurationServicesPod {
     @Inject
     public SecurePrincipalsManager securePrincipalsManager;
 
+    @Inject
+    private HazelcastAclKeyReservationService reservationService;
+
     @Bean
     public PartitionManager partitionManager() {
         return new PartitionManager( hazelcastInstance, hikariDataSource );
@@ -194,7 +197,8 @@ public class IndexerPostConfigurationServicesPod {
                 auditingManager,
                 ares,
                 indexerConfiguration,
-                organizationMetadataEntitySetsService );
+                organizationMetadataEntitySetsService,
+                reservationService );
     }
 
     @Bean
