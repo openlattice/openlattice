@@ -6,7 +6,6 @@ import com.hazelcast.query.Predicates
 import com.openlattice.ApiHelpers
 import com.openlattice.assembler.PostgresRoles
 import com.openlattice.authorization.*
-import com.openlattice.authorization.processors.GetOrCreateExternalPermissionRoleNameEntryProcessor
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.edm.EdmConstants
 import com.openlattice.edm.PropertyTypeIdFqn
@@ -204,30 +203,38 @@ class ExternalDatabasePermissioner(
             entitySetName: String,
             propertyTypes: Set<PropertyTypeIdFqn>
     ) {
-        val ptToSqls = propertyTypes.map { (id, fqn) ->
-            val roleName = PostgresRoles.getOrCreatePermissionRole(externalRoleNames, Permission.READ, entitySetId, id)
-            val quotedColumns = listOf(fqn, EdmConstants.ID_FQN).joinToString {
-                ApiHelpers.dbQuote(it.toString())
-            }
-            val permissions = olToPostgres[Permission.READ]!!.joinToString()
-            Triple  (
-                    createRoleIfNotExistsSql(roleName),
-                    grantUsageOnSchemaSql(Schemas.ASSEMBLED_ENTITY_SETS, roleName),
-                    grantPermissionsOnColumnsOnTableToRoleSql(
-                            permissions,
-                            quotedColumns,
-                            Schemas.ASSEMBLED_ENTITY_SETS,
-                            entitySetName,
-                            roleName)
-            )
+        val targets = propertyTypes.mapTo(mutableSetOf()) { (id, fqn) ->
+            AccessTarget.forPermissionOnTarget(Permission.READ, entitySetId, id)
         }
 
-        orgDatasource.connection.use { conn ->
-            conn.createStatement().use { stmt ->
-                ptToSqls.forEach { (createRoleSql, grantSchemaSql, grantViewSql) ->
-                    stmt.execute(createRoleSql)
-                    stmt.execute(grantSchemaSql)
-                    stmt.execute(grantViewSql)
+        PostgresRoles.getOrCreatePermissionRolesAsync( externalRoleNames, targets ) { roleName ->
+            orgDatasource.connection.use { conn ->
+                conn.createStatement().use { stmt ->
+                    stmt.execute(createRoleIfNotExistsSql(roleName))
+                }
+            }
+        }.thenApplyAsync { targetsToRoleNames ->
+            propertyTypes.map { (id, fqn) ->
+                val quotedColumns = listOf(fqn, EdmConstants.ID_FQN).joinToString {
+                    ApiHelpers.dbQuote(it.toString())
+                }
+                val permissions = olToPostgres[Permission.READ]!!.joinToString()
+                val roleName = targetsToRoleNames[AccessTarget.forPermissionOnTarget(Permission.READ, entitySetId, id)].toString()
+                grantUsageOnSchemaSql(Schemas.ASSEMBLED_ENTITY_SETS, roleName) to
+                        grantPermissionsOnColumnsOnTableToRoleSql(
+                                permissions,
+                                quotedColumns,
+                                Schemas.ASSEMBLED_ENTITY_SETS,
+                                entitySetName,
+                                roleName)
+            }
+        }.thenAccept { ptToSqls ->
+            orgDatasource.connection.use { conn ->
+                conn.createStatement().use { stmt ->
+                    ptToSqls.forEach { (grantSchemaSql, grantViewSql) ->
+                        stmt.execute(grantSchemaSql)
+                        stmt.execute(grantViewSql)
+                    }
                 }
             }
         }
@@ -255,7 +262,7 @@ class ExternalDatabasePermissioner(
         val sqlCommandsPerPropertyType = columns.map { col ->
             val quotedColumn = ApiHelpers.dbQuote(col.name)
             olToPostgres.map { (permission, pgPermission) ->
-                val roleName = PostgresRoles.getOrCreatePermissionRole( externalRoleNames, permission, table.id, col.id)
+                val roleName = ""//PostgresRoles.getOrCreatePermissionRole( externalRoleNames, permission, table.id, col.id)
                 val pgPermissionString = pgPermission.joinToString()
                 createRoleIfNotExistsSql(roleName) to grantPermissionsOnColumnsOnTableToRoleSql(
                         pgPermissionString,
@@ -314,6 +321,7 @@ class ExternalDatabasePermissioner(
                     Action.ADD -> {
                         val sqls = adds.getOrDefault(orgId, mutableListOf())
                         sqls.addAll( updatePermissionsOnColumnSql(
+                                orgId,
                                 ace,
                                 column,
                                 PgPermAction.GRANT
@@ -324,7 +332,7 @@ class ExternalDatabasePermissioner(
                         val sqls = removes.getOrDefault(orgId, mutableListOf())
                         sqls.addAll(
                                 removeAllPermissionsForPrincipalOnColumn(
-                                        ace.principal, column, tableType
+                                        orgId, ace.principal, column, tableType
                                 )
                         )
                         removes[orgId] = sqls
@@ -333,13 +341,14 @@ class ExternalDatabasePermissioner(
                         val remSqls = removes.getOrDefault(orgId, mutableListOf())
                         remSqls.addAll(
                                 removeAllPermissionsForPrincipalOnColumn(
-                                        ace.principal, column, tableType
+                                        orgId, ace.principal, column, tableType
                                 )
                         )
                         removes[orgId] = remSqls
 
                         val addSqls = adds.getOrDefault(orgId, mutableListOf())
                         addSqls.addAll(  updatePermissionsOnColumnSql(
+                                orgId,
                                 ace,
                                 column,
                                 PgPermAction.GRANT
@@ -379,6 +388,7 @@ class ExternalDatabasePermissioner(
     }
 
     private fun removeAllPermissionsForPrincipalOnColumn(
+            orgId: UUID,
             principal: Principal,
             column: TableColumn,
             viewOrTable: TableType
@@ -391,9 +401,16 @@ class ExternalDatabasePermissioner(
 
         val securablePrincipal = principalsMapManager.getSecurablePrincipal(principal.id)
         val userRole = dbCredentialService.getDbUsername(securablePrincipal)
-        return externalRoleNames.submitToKeys(targets, GetOrCreateExternalPermissionRoleNameEntryProcessor()).thenApply {
+
+        return PostgresRoles.getOrCreatePermissionRolesAsync( externalRoleNames, targets ) { roleName ->
+            extDbManager.connectToOrg(orgId).connection.use { conn ->
+                conn.createStatement().use { stmt ->
+                    stmt.execute(createRoleIfNotExistsSql(roleName))
+                }
+            }
+        }.thenApply {
             it.values.map { permissionRoleName ->
-                revokeRoleSql(permissionRoleName, setOf(userRole))
+                revokeRoleSql(permissionRoleName.toString(), setOf(userRole))
             }
         }.toCompletableFuture().get()
     }
@@ -412,20 +429,29 @@ class ExternalDatabasePermissioner(
         """.trimIndent()
     }
 
-    private fun updatePermissionsOnColumnSql(ace: Ace, column: TableColumn, action: PgPermAction): List<String> {
+    private fun updatePermissionsOnColumnSql(
+            orgId: UUID,
+            ace: Ace,
+            column: TableColumn,
+            action: PgPermAction
+    ): List<String> {
         val accessTargets = filteredAcePermissions(ace.permissions).mapTo(mutableSetOf()) { perm ->
             AccessTarget(AclKey(column.tableId, column.columnId), perm)
         }
         val securablePrincipal = principalsMapManager.getSecurablePrincipal(ace.principal.id)
         val usernameAsync = dbCredentialService.getDbUsernameAsync(securablePrincipal)
 
-        val permissionRoles = externalRoleNames.submitToKeys(
-                accessTargets, GetOrCreateExternalPermissionRoleNameEntryProcessor()
-        ).thenCombine( usernameAsync ) { targetsToNames, userRole ->
+        val permissionRoles = PostgresRoles.getOrCreatePermissionRolesAsync( externalRoleNames, accessTargets ) { roleName ->
+            extDbManager.connectToOrg(orgId).connection.use { conn ->
+                conn.createStatement().use { stmt ->
+                    stmt.execute(createRoleIfNotExistsSql(roleName))
+                }
+            }
+        }.thenCombine( usernameAsync ) { targetsToNames, userRole ->
             targetsToNames.values.map { permissionRole ->
                 when (action) {
-                    PgPermAction.GRANT -> grantRoleToRole(permissionRole, setOf(userRole))
-                    PgPermAction.REVOKE -> revokeRoleSql(permissionRole, setOf(userRole))
+                    PgPermAction.GRANT -> grantRoleToRole(permissionRole.toString(), setOf(userRole))
+                    PgPermAction.REVOKE -> revokeRoleSql(permissionRole.toString(), setOf(userRole))
                 }
             }
         }.toCompletableFuture()
