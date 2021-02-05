@@ -25,9 +25,7 @@ package com.openlattice.hazelcast.pods;
 import com.auth0.json.mgmt.users.User;
 import com.geekbeast.rhizome.jobs.DistributableJob;
 import com.geekbeast.rhizome.jobs.PostgresJobsMapStore;
-import com.google.common.base.Charsets;
 import com.google.common.eventbus.EventBus;
-import com.google.common.io.Resources;
 import com.kryptnostic.rhizome.mapstores.SelfRegisteringMapStore;
 import com.openlattice.apps.App;
 import com.openlattice.apps.AppConfigKey;
@@ -40,8 +38,19 @@ import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.auth0.AwsAuth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
-import com.openlattice.authorization.*;
-import com.openlattice.authorization.mapstores.*;
+import com.openlattice.authorization.AccessTarget;
+import com.openlattice.authorization.AceKey;
+import com.openlattice.authorization.AceValue;
+import com.openlattice.authorization.AclKey;
+import com.openlattice.authorization.SecurablePrincipal;
+import com.openlattice.authorization.mapstores.ExternalPermissionRolesMapstore;
+import com.openlattice.authorization.mapstores.PermissionMapstore;
+import com.openlattice.authorization.mapstores.PostgresCredentialMapstore;
+import com.openlattice.authorization.mapstores.PrincipalMapstore;
+import com.openlattice.authorization.mapstores.PrincipalTreesMapstore;
+import com.openlattice.authorization.mapstores.ResolvedPrincipalTreesMapLoader;
+import com.openlattice.authorization.mapstores.SecurablePrincipalsMapLoader;
+import com.openlattice.authorization.mapstores.UserMapstore;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.collections.CollectionTemplateKey;
 import com.openlattice.collections.EntitySetCollection;
@@ -87,10 +96,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 
 import javax.inject.Inject;
-import java.io.IOException;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.UUID;
 
 @Configuration
@@ -131,6 +136,11 @@ public class MapstoresPod {
     @Bean
     public SelfRegisteringMapStore<AceKey, AceValue> permissionMapstore() {
         return new PermissionMapstore( hikariDataSource, eventBus );
+    }
+
+    @Bean
+    public SelfRegisteringMapStore<AccessTarget, UUID> externalPermissionRoleMapstore() {
+        return new ExternalPermissionRolesMapstore(hikariDataSource);
     }
 
     @Bean

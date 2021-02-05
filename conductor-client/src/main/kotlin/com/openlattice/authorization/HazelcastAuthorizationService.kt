@@ -1,7 +1,6 @@
 package com.openlattice.authorization
 
 import com.codahale.metrics.annotation.Timed
-import com.dataloom.hazelcast.ListenableHazelcastFuture
 import com.google.common.collect.HashMultimap
 import com.google.common.collect.ImmutableSet
 import com.google.common.collect.Maps
@@ -15,18 +14,13 @@ import com.hazelcast.query.Predicates
 import com.openlattice.assembler.events.MaterializePermissionChangeEvent
 import com.openlattice.authorization.aggregators.AuthorizationSetAggregator
 import com.openlattice.authorization.aggregators.PrincipalAggregator
-import com.openlattice.authorization.mapstores.PermissionMapstore.ACL_KEY_INDEX
-import com.openlattice.authorization.mapstores.PermissionMapstore.PERMISSIONS_INDEX
-import com.openlattice.authorization.mapstores.PermissionMapstore.PRINCIPAL_INDEX
-import com.openlattice.authorization.mapstores.PermissionMapstore.PRINCIPAL_TYPE_INDEX
-import com.openlattice.authorization.mapstores.PermissionMapstore.SECURABLE_OBJECT_TYPE_INDEX
+import com.openlattice.authorization.mapstores.PermissionMapstore.*
 import com.openlattice.authorization.processors.AuthorizationEntryProcessor
 import com.openlattice.authorization.processors.PermissionMerger
 import com.openlattice.authorization.processors.PermissionRemover
 import com.openlattice.authorization.processors.SecurableObjectTypeUpdater
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.authorization.util.toAceKeys
-import com.openlattice.controllers.exceptions.ForbiddenException
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organizations.PrincipalSet
 import org.slf4j.LoggerFactory
@@ -101,7 +95,6 @@ class HazelcastAuthorizationService(
 
     /** Set Securable Object Type **/
 
-
     override fun setSecurableObjectTypes(aclKeys: Set<AclKey>, objectType: SecurableObjectType) {
         securableObjectTypes.putAll(aclKeys.associateWith { objectType })
         aces.executeOnEntries(SecurableObjectTypeUpdater(objectType), hasAnyAclKeys(aclKeys))
@@ -119,11 +112,24 @@ class HazelcastAuthorizationService(
     }
 
     override fun addPermission(
-            key: AclKey, principal: Principal, permissions: Set<Permission>, expirationDate: OffsetDateTime
+            key: AclKey,
+            principal: Principal,
+            permissions: Set<Permission>,
+            expirationDate: OffsetDateTime
     ) {
         //TODO: We should do something better than reading the securable object type.
         val securableObjectType = getDefaultObjectType(securableObjectTypes, key)
 
+        addPermission(key, principal, permissions, securableObjectType, expirationDate)
+    }
+
+    override fun addPermission(
+            key: AclKey,
+            principal: Principal,
+            permissions: Set<Permission>,
+            securableObjectType: SecurableObjectType,
+            expirationDate: OffsetDateTime
+    ) {
         aces.executeOnKey(AceKey(key, principal), PermissionMerger(permissions, securableObjectType, expirationDate))
 
         signalMaterializationPermissionChange(key, principal, permissions, securableObjectType)
@@ -160,16 +166,14 @@ class HazelcastAuthorizationService(
     /** Remove Permissions **/
 
     override fun removePermissions(acls: List<Acl>) {
-        acls
-                .map {
-                    AclKey(it.aclKey) to it.aces
-                            .filter { ace -> ace.permissions.contains(Permission.OWNER) }
-                            .map { ace -> ace.principal }
-                            .toSet()
-                }
-                .filter { (_, owners) -> owners.isNotEmpty() }
-                .forEach { (aclKey, owners) -> ensureAclKeysHaveOtherUserOwners(ImmutableSet.of(aclKey), owners) }
-
+        acls.map {
+            AclKey(it.aclKey) to it.aces
+                    .filter { ace -> ace.permissions.contains(Permission.OWNER) }
+                    .map { ace -> ace.principal }
+                    .toSet()
+        }.filter { (_, owners) -> owners.isNotEmpty() }.forEach { (aclKey, owners) ->
+            ensureAclKeysHaveOtherUserOwners(ImmutableSet.of(aclKey), owners)
+        }
 
         val updates = getAceValueToAceKeyMap(acls)
 

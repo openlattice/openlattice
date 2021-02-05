@@ -24,6 +24,7 @@ package com.openlattice.transporter
 import com.kryptnostic.rhizome.configuration.RhizomeConfiguration
 import com.openlattice.assembler.AssemblerConfiguration
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
+import com.openlattice.postgres.external.ExternalDatabasePermissioningService
 import com.openlattice.transporter.types.TransporterDatastore
 import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Bean
@@ -44,12 +45,15 @@ class TransporterConfigurationPod {
     private lateinit var externalDbConnMan: ExternalDatabaseConnectionManager
 
     @Inject
+    private lateinit var externalDbPermMan: ExternalDatabasePermissioningService
+
+    @Inject
     private lateinit var rhizome: RhizomeConfiguration
 
     @Bean(name = ["transporterDatastore"])
     @Throws(IOException::class)
     fun transporterDatastore(): TransporterDatastore {
         LoggerFactory.getLogger(TransporterConfigurationPod::class.java).info("Constructing TransporterDatastore")
-        return TransporterDatastore(assemblerConfiguration, rhizome, externalDbConnMan)
+        return TransporterDatastore(assemblerConfiguration, rhizome, externalDbConnMan, externalDbPermMan)
     }
 }
