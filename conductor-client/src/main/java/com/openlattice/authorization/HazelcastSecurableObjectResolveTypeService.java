@@ -22,14 +22,14 @@
 
 package com.openlattice.authorization;
 
+import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.map.IMap;
 import com.hazelcast.query.Predicates;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.hazelcast.HazelcastMap;
-import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.map.IMap;
 import com.openlattice.postgres.mapstores.SecurableObjectTypeMapstore;
 
-import java.util.*;
+import java.util.Set;
 
 public class HazelcastSecurableObjectResolveTypeService implements SecurableObjectResolveTypeService {
 
