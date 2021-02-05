@@ -344,7 +344,10 @@ public class DatastoreElasticsearchImpl implements ConductorElasticsearchApi {
                 fieldMapping.put( TYPE, GEO_POINT );
                 break;
             }
-            case Guid:
+            case Guid: {
+                fieldMapping.put( TYPE, KEYWORD );
+                break;
+            }
             default: {
                 fieldMapping.put( INDEX, "false" );
                 fieldMapping.put( TYPE, KEYWORD );
