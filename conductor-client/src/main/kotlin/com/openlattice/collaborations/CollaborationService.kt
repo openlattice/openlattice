@@ -87,10 +87,10 @@ class CollaborationService(
     }
 
     fun handleMembersAdddedToOrg(organizationId: UUID, newMembers: Set<AclKey>) {
-        val collabIds = getCollaborationIdsIncludingOrg(organizationId)
+        val collaborationIds = getCollaborationIdsIncludingOrg(organizationId)
 
-        if (collabIds.isNotEmpty()) {
-            collaborationDatabaseManager.addMembersToOrganizationInCollaborations(collabIds, organizationId, newMembers)
+        if (collaborationIds.isNotEmpty()) {
+            collaborationDatabaseManager.addMembersToOrganizationInCollaborations(collaborationIds, organizationId, newMembers)
         }
     }
 
