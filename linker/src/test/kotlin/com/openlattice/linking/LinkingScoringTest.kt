@@ -42,10 +42,10 @@ open class LinkingScoringTest {
         // loop over comparisons
         for (comparison: LinkingTestComparison in configurations.comparisons) {
 
-            val lhs = configurations.people?.get(comparison.lhs)
+            val lhs = configurations.people[comparison.lhs]
                     ?.mapValues{(_, v) -> DelegatedStringSet(v)}
 
-            val rhs = configurations.people?.get(comparison.rhs)
+            val rhs = configurations.people[comparison.rhs]
                     ?.mapValues{(_, v) -> DelegatedStringSet(v)}
 
             // extract features

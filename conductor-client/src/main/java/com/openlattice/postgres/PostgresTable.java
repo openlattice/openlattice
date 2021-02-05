@@ -110,6 +110,7 @@ import static com.openlattice.postgres.PostgresColumn.ORGANIZATION_ID;
 import static com.openlattice.postgres.PostgresColumn.PARTITION;
 import static com.openlattice.postgres.PostgresColumn.PARTITIONS;
 import static com.openlattice.postgres.PostgresColumn.PARTITION_INDEX;
+import static com.openlattice.postgres.PostgresColumn.PERMISSION;
 import static com.openlattice.postgres.PostgresColumn.PHONE_NUMBER;
 import static com.openlattice.postgres.PostgresColumn.PII;
 import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_ID;
@@ -123,8 +124,9 @@ import static com.openlattice.postgres.PostgresColumn.QUERY_ID;
 import static com.openlattice.postgres.PostgresColumn.REASON;
 import static com.openlattice.postgres.PostgresColumn.REFRESH_RATE;
 import static com.openlattice.postgres.PostgresColumn.ROLES;
+import static com.openlattice.postgres.PostgresColumn.ROLE_ID;
 import static com.openlattice.postgres.PostgresColumn.SCHEDULED_DATE;
-import static com.openlattice.postgres.PostgresColumn.SCHEMAS;
+import static com.openlattice.postgres.PostgresColumn.SCHEMA;
 import static com.openlattice.postgres.PostgresColumn.SCOPE;
 import static com.openlattice.postgres.PostgresColumn.SCORE;
 import static com.openlattice.postgres.PostgresColumn.SEARCH_CONSTRAINTS;
@@ -266,7 +268,7 @@ public final class PostgresTable {
                             PROPERTIES,
                             PROPERTY_TAGS,
                             BASE_TYPE,
-                            SCHEMAS,
+                            PostgresColumn.SCHEMAS,
                             CATEGORY,
                             SHARDS );
     //.setUnique( NAMESPACE, NAME );
@@ -278,13 +280,13 @@ public final class PostgresTable {
                             NAME,
                             TITLE,
                             DESCRIPTION,
-                            SCHEMAS,
+                            PostgresColumn.SCHEMAS,
                             TEMPLATE );
     public static final PostgresTableDefinition ENTITY_TYPE_PROPERTY_METADATA =
             new PostgresTableDefinition( "entity_type_property_metadata" )
                     .addColumns( ENTITY_TYPE_ID, PROPERTY_TYPE_ID, TITLE, DESCRIPTION, TAGS, SHOW )
                     .primaryKey( ENTITY_TYPE_ID, PROPERTY_TYPE_ID );
-    public static final PostgresTableDefinition ENUM_TYPES                    =
+    public static final PostgresTableDefinition ENUM_TYPES                =
             new PostgresTableDefinition( "enum_types" )
                     .addColumns( ID,
                             NAMESPACE,
@@ -292,13 +294,18 @@ public final class PostgresTable {
                             TITLE,
                             DESCRIPTION,
                             MEMBERS,
-                            SCHEMAS,
+                            PostgresColumn.SCHEMAS,
                             DATATYPE,
                             FLAGS,
                             PII,
                             ANALYZER,
                             MULTI_VALUED,
                             INDEX_TYPE );
+    public static final PostgresTableDefinition EXTERNAL_PERMISSION_ROLES =
+            new PostgresTableDefinition( "external_permission_roles" )
+                    .addColumns( ACL_KEY, PERMISSION, ROLE_ID )
+                    .primaryKey( ACL_KEY, PERMISSION);
+
     public static final PostgresTableDefinition GRAPH_QUERIES                 =
             new PostgresTableDefinition( "graph_queries" )
                     .addColumns( QUERY_ID, QUERY, STATE, START_TIME )
@@ -432,7 +439,8 @@ public final class PostgresTable {
                             OID,
                             TITLE,
                             DESCRIPTION,
-                            ORGANIZATION_ID );
+                            ORGANIZATION_ID,
+                            SCHEMA );
 
     public static final PostgresTableDefinition PERMISSIONS         =
             new PostgresTableDefinition( "permissions" )
@@ -466,7 +474,7 @@ public final class PostgresTable {
             "propagation_graph" )
             .addColumns( SRC_ENTITY_SET_ID, SRC_PROPERTY_TYPE_ID, DST_ENTITY_SET_ID, DST_PROPERTY_TYPE_ID )
             .primaryKey( SRC_ENTITY_SET_ID, SRC_PROPERTY_TYPE_ID, DST_ENTITY_SET_ID, DST_PROPERTY_TYPE_ID );
-    public static final PostgresTableDefinition PROPERTY_TYPES      =
+    public static final PostgresTableDefinition PROPERTY_TYPES    =
 
             new PostgresTableDefinition( "property_types" )
                     .addColumns( ID,
@@ -476,7 +484,7 @@ public final class PostgresTable {
                             TITLE,
                             DESCRIPTION,
                             ENUM_VALUES,
-                            SCHEMAS,
+                            PostgresColumn.SCHEMAS,
                             PII,
                             ANALYZER,
                             MULTI_VALUED,
@@ -495,14 +503,14 @@ public final class PostgresTable {
             new PostgresTableDefinition( "requests" )
                     .addColumns( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID, PostgresColumn.PERMISSIONS, REASON, STATUS )
                     .primaryKey( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID );
-    public static final PostgresTableDefinition SCHEDULED_TASKS     =
+    public static final PostgresTableDefinition SCHEDULED_TASKS   =
             new PostgresTableDefinition( "scheduled_tasks" )
                     .addColumns( ID, SCHEDULED_DATE, CLASS_NAME, CLASS_PROPERTIES );
-    public static final PostgresTableDefinition SCHEMA              =
+    public static final PostgresTableDefinition SCHEMAS           =
             new PostgresTableDefinition( "schemas" )
                     .addColumns( NAMESPACE, NAME_SET )
                     .primaryKey( NAMESPACE );
-    public static final PostgresTableDefinition SECURABLE_OBJECTS   =
+    public static final PostgresTableDefinition SECURABLE_OBJECTS =
             new PostgresTableDefinition( "securable_objects" )
                     .addColumns( ACL_KEY, SECURABLE_OBJECT_TYPE )
                     .primaryKey( ACL_KEY );

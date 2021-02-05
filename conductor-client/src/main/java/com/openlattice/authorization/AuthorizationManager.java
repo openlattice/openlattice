@@ -75,6 +75,13 @@ public interface AuthorizationManager {
             Set<Permission> permissions,
             OffsetDateTime expirationDate );
 
+    void addPermission(
+            AclKey aclKeys,
+            Principal principal,
+            Set<Permission> permissions,
+            SecurableObjectType securableObjectType,
+            OffsetDateTime expirationDate );
+
     /**
      * Method for bulk adding permissions to a single principal across multiple acl keys of the same type.
      *

@@ -15,10 +15,13 @@ import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.util.*
 
+const val NAME_INDEX = "name"
+const val SCHEMA_INDEX = "schema"
+
 open class OrganizationExternalDatabaseTableMapstore(
         hds: HikariDataSource
 ) : AbstractBasePostgresMapstore<UUID, OrganizationExternalDatabaseTable>
-    (HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE, PostgresTable.ORGANIZATION_EXTERNAL_DATABASE_TABLE, hds) {
+(HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE, PostgresTable.ORGANIZATION_EXTERNAL_DATABASE_TABLE, hds) {
 
     override fun bind(ps: PreparedStatement, key: UUID, value: OrganizationExternalDatabaseTable) {
         var index = bind(ps, key, 1)
@@ -29,6 +32,7 @@ open class OrganizationExternalDatabaseTableMapstore(
         ps.setString(index++, value.title)
         ps.setString(index++, value.description)
         ps.setObject(index++, value.organizationId)
+        ps.setString(index++, value.schema)
 
         //update
         ps.setString(index++, value.name)
@@ -36,6 +40,8 @@ open class OrganizationExternalDatabaseTableMapstore(
         ps.setString(index++, value.title)
         ps.setString(index++, value.description)
         ps.setObject(index++, value.organizationId)
+        ps.setString(index++, value.schema)
+
     }
 
     override fun bind(ps: PreparedStatement, key: UUID, offset: Int): Int {
@@ -55,6 +61,8 @@ open class OrganizationExternalDatabaseTableMapstore(
     override fun getMapConfig(): MapConfig {
         return super.getMapConfig()
                 .addIndexConfig(IndexConfig(IndexType.HASH, ORGANIZATION_ID_INDEX))
+                .addIndexConfig(IndexConfig(IndexType.HASH, NAME_INDEX))
+                .addIndexConfig(IndexConfig(IndexType.HASH, SCHEMA_INDEX))
                 .setInMemoryFormat(InMemoryFormat.OBJECT)
     }
 

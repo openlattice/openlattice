@@ -59,7 +59,6 @@ public class Linker extends BaseRhizomeServer {
             HazelcastQueuePod.class,
             PlasmaCoupling.class,
             PostgresPod.class,
-            PostgresTablesPod.class,
             SharedStreamSerializersPod.class,
             TaskSchedulerPod.class
     };

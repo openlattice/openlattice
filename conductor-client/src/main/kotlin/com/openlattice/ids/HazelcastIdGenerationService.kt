@@ -1,9 +1,7 @@
 package com.openlattice.ids
 
-import com.geekbeast.hazelcast.HazelcastClientProvider
 import com.geekbeast.hazelcast.IHazelcastClientProvider
 import com.google.common.collect.Queues
-import com.google.common.util.concurrent.ListeningExecutorService
 import com.openlattice.hazelcast.HazelcastClient
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastQueue
@@ -67,7 +65,7 @@ class HazelcastIdGenerationService(clients: IHazelcastClientProvider) {
 
             ids.values.asSequence().flatten().forEach { idsQueue.put(it) }
 
-            logger.info("Added $NUM_PARTITIONS ids to queue")
+            logger.debug("Added $NUM_PARTITIONS ids to queue")
         }
     }
 
