@@ -363,8 +363,8 @@ class ExternalDatabasePermissioner(
                     Action.SET -> {
                         val remSqls = removes.getOrDefault(orgId, mutableListOf())
                         remSqls.addAll(
-                                removePermissionsOnColumn(
-                                        orgId, ace, column, tableType
+                                removeAllPermissionsForPrincipalOnColumn(
+                                        orgId, ace.principal, column, tableType
                                 )
                         )
                         removes[orgId] = remSqls
@@ -407,6 +407,32 @@ class ExternalDatabasePermissioner(
                 }
             }
         }
+    }
+
+    private fun removeAllPermissionsForPrincipalOnColumn(
+            orgId: UUID,
+            principal: Principal,
+            column: TableColumn,
+            viewOrTable: TableType
+    ): List<String> {
+        val targetAclKey = AclKey(column.tableId, column.columnId)
+        val targets = when (viewOrTable) {
+            TableType.VIEW -> allViewPermissions.mapTo(mutableSetOf<AccessTarget>()) { AccessTarget(targetAclKey, it) }
+            TableType.TABLE -> allTablePermissions.mapTo(mutableSetOf<AccessTarget>()) { AccessTarget(targetAclKey, it) }
+        }
+
+        val securablePrincipal = principalsMapManager.getSecurablePrincipal(principal.id)
+        val userRole = dbCredentialService.getDbUsername(securablePrincipal)
+
+        return PostgresRoles.getOrCreatePermissionRolesAsync(
+                externalRoleNames,
+                targets,
+                extDbManager.connectToOrg(orgId)
+        ).thenApply {
+            it.values.map { permissionRoleName ->
+                revokeRoleSql(permissionRoleName.toString(), setOf(userRole))
+            }
+        }.toCompletableFuture().get()
     }
 
     private fun removePermissionsOnColumn(
