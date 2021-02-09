@@ -228,7 +228,7 @@ class ExternalDatabasePermissioner(
                 val quotedColumns = listOf(fqn, EdmConstants.ID_FQN).joinToString {
                     ApiHelpers.dbQuote(it.toString())
                 }
-                val permissions = olToPostgres[Permission.READ]!!.joinToString()
+                val permissions = olToPostgres.getValue(Permission.READ)
                 val roleName = targetsToRoleNames[AccessTarget.forPermissionOnTarget(Permission.READ, entitySetId, id)].toString()
                 grantUsageOnSchemaSql(Schemas.ASSEMBLED_ENTITY_SETS, roleName) to
                         grantPermissionsOnColumnsOnTableToRoleSql(
@@ -287,7 +287,7 @@ class ExternalDatabasePermissioner(
         ).thenApplyAsync { targetToRoleNames ->
             targetToRoleNames.map { ( target, roleName ) ->
                 val column = targetsToColumns.getValue(target)
-                val pgPermissions = olToPostgres.getValue(target.permission).joinToString()
+                val pgPermissions = olToPostgres.getValue(target.permission)
                 grantPermissionsOnColumnsOnTableToRoleSql(
                         pgPermissions,
                         ApiHelpers.dbQuote(column.name),
@@ -474,13 +474,16 @@ class ExternalDatabasePermissioner(
     }
 
     private fun grantPermissionsOnColumnsOnTableToRoleSql(
-            permissions: String,
+            privileges: Set<PostgresPrivileges>,
             columns: String,
             schemaName: Schemas,
             tableName: String,
             roleName: String): String {
+        val privilegeString = privileges.joinToString { privilege ->
+            "$privilege ( $columns )"
+        }
         return """
-            GRANT $permissions ( $columns )
+            GRANT $privilegeString 
             ON $schemaName.${ApiHelpers.dbQuote(tableName)}
             TO ${ApiHelpers.dbQuote(roleName)}
         """.trimIndent()
