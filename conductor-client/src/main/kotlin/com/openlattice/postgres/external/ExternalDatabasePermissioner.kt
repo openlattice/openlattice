@@ -325,9 +325,13 @@ class ExternalDatabasePermissioner(
             columnsById: Map<AclKey, TableColumn>,
             tableType: TableType
     ) {
-        if (action != Action.ADD && action != Action.REMOVE && action != Action.SET) {
-            logger.error("Action $action passed through to updateTablePermissions is unhandled. Doing no operations")
-            return
+
+        when (action) {
+            Action.ADD, Action.REMOVE, Action.SET -> { }
+            else -> {
+                logger.error("Action $action passed through to updateTablePermissions is unhandled. Doing no operations")
+                return
+            }
         }
 
         val allOrgs = columnsById.values.map { it.organizationId }.toSet()
@@ -340,19 +344,18 @@ class ExternalDatabasePermissioner(
                 when (action) {
                     Action.ADD -> {
                         val sqls = adds.getOrDefault(orgId, mutableListOf())
-                        sqls.addAll( updatePermissionsOnColumnSql(
+                        sqls.addAll( grantPermissionsOnColumnSql(
                                 orgId,
                                 ace,
-                                column,
-                                PgPermAction.GRANT
+                                column
                         ) )
                         adds[orgId] = sqls
                     }
                     Action.REMOVE -> {
                         val sqls = removes.getOrDefault(orgId, mutableListOf())
                         sqls.addAll(
-                                removeAllPermissionsForPrincipalOnColumn(
-                                        orgId, ace.principal, column, tableType
+                                removePermissionsOnColumn(
+                                        orgId, ace, column, tableType
                                 )
                         )
                         removes[orgId] = sqls
@@ -360,18 +363,17 @@ class ExternalDatabasePermissioner(
                     Action.SET -> {
                         val remSqls = removes.getOrDefault(orgId, mutableListOf())
                         remSqls.addAll(
-                                removeAllPermissionsForPrincipalOnColumn(
-                                        orgId, ace.principal, column, tableType
+                                removePermissionsOnColumn(
+                                        orgId, ace, column, tableType
                                 )
                         )
                         removes[orgId] = remSqls
 
                         val addSqls = adds.getOrDefault(orgId, mutableListOf())
-                        addSqls.addAll( updatePermissionsOnColumnSql(
+                        addSqls.addAll( grantPermissionsOnColumnSql(
                                 orgId,
                                 ace,
-                                column,
-                                PgPermAction.GRANT
+                                column
                         ))
                         adds[orgId] = addSqls
                     }
@@ -407,19 +409,31 @@ class ExternalDatabasePermissioner(
         }
     }
 
-    private fun removeAllPermissionsForPrincipalOnColumn(
+    private fun removePermissionsOnColumn(
             orgId: UUID,
-            principal: Principal,
+            ace: Ace,
             column: TableColumn,
             viewOrTable: TableType
     ): List<String> {
-        val targetAclKey = AclKey(column.tableId, column.columnId)
+        val validPermissions = filteredAcePermissions(ace.permissions)
         val targets = when (viewOrTable) {
-            TableType.VIEW -> allViewPermissions.mapTo(mutableSetOf<AccessTarget>()) { AccessTarget(targetAclKey, it) }
-            TableType.TABLE -> allTablePermissions.mapTo(mutableSetOf<AccessTarget>()) { AccessTarget(targetAclKey, it) }
+            TableType.VIEW -> {
+                validPermissions.filter {
+                    allViewPermissions.contains(it)
+                }.mapTo(mutableSetOf()) { perm ->
+                    AccessTarget(AclKey(column.tableId, column.columnId), perm)
+                }
+            }
+            TableType.TABLE -> {
+                validPermissions.filter {
+                    allTablePermissions.contains(it)
+                }.mapTo(mutableSetOf()) { perm ->
+                    AccessTarget(AclKey(column.tableId, column.columnId), perm)
+                }
+            }
         }
 
-        val securablePrincipal = principalsMapManager.getSecurablePrincipal(principal.id)
+        val securablePrincipal = principalsMapManager.getSecurablePrincipal(ace.principal.id)
         val userRole = dbCredentialService.getDbUsername(securablePrincipal)
 
         return PostgresRoles.getOrCreatePermissionRolesAsync(
@@ -446,11 +460,10 @@ class ExternalDatabasePermissioner(
         """.trimIndent()
     }
 
-    private fun updatePermissionsOnColumnSql(
+    private fun grantPermissionsOnColumnSql(
             orgId: UUID,
             ace: Ace,
-            column: TableColumn,
-            action: PgPermAction
+            column: TableColumn
     ): List<String> {
         val accessTargets = filteredAcePermissions(ace.permissions).mapTo(mutableSetOf()) { perm ->
             AccessTarget(AclKey(column.tableId, column.columnId), perm)
@@ -465,10 +478,7 @@ class ExternalDatabasePermissioner(
         ).thenCombine( usernameAsync ) { targetsToNames, userRole ->
             val sqls = mutableListOf<String>()
             targetsToNames.values.forEach { permissionRole ->
-                when (action) {
-                    PgPermAction.GRANT -> sqls.add(grantRoleToRole(permissionRole.toString(), setOf(userRole)))
-                    PgPermAction.REVOKE -> sqls.add(revokeRoleSql(permissionRole.toString(), setOf(userRole)))
-                }
+                sqls.add(grantRoleToRole(permissionRole.toString(), setOf(userRole)))
             }
             if (column.schema != null){
                 sqls.add(grantUsageOnSchemaSql(column.schema, userRole))
