@@ -106,24 +106,20 @@ class ExternalDatabasePermissioner(
 
         // for organizationexternalDatabaseColumns:
         val externalTableColAcls = aclsByType.getValue(SecurableObjectType.OrganizationExternalDatabaseColumn)
-        val externalTables = aclsByType.getValue(SecurableObjectType.OrganizationExternalDatabaseTable)
-        executePrivilegesUpdateOnOrgExternalDbColumns(action, externalTableColAcls, externalTables)
+        executePrivilegesUpdateOnOrgExternalDbColumns(action, externalTableColAcls)
     }
 
     fun executePrivilegesUpdateOnOrgExternalDbColumns(
             action: Action,
-            externalTableColAcls: List<Acl>,
-            externalTableAcls: List<Acl>
+            externalTableColAcls: List<Acl>
     ) {
-        val extTableColIds = externalTableColAcls.aclKeysAsSet {
-            it.aclKey[1]
-        }
-
-        val extTableIds = externalTableAcls.aclKeysAsSet {
-            it.aclKey[1]
+        val extTableColIds = mutableSetOf<UUID>()
+        val extTableIds = externalTableColAcls.mapTo(mutableSetOf()) {
+            extTableColIds.add(it.aclKey[1])
+            it.aclKey[0]
         }
         val extTablesById = organizationExternalTables.submitToKeys(extTableIds, GetSchemaFromOrganizationExternalTableEntryProcessor()).toCompletableFuture().get().mapValues {
-            Schemas.valueOf(it.value)
+            Schemas.fromName(it.value)
         }
 
         val columnsById = organizationExternalDatabaseColumns.getAll(extTableColIds).values.associate {
@@ -148,8 +144,7 @@ class ExternalDatabasePermissioner(
         val aclKeyIndex = acls.aclKeysAsSet { it.aclKey.index }.toTypedArray()
         return mapOf(
                 getAclKeysOfSecurableObjectType(acls, aclKeyIndex, SecurableObjectType.OrganizationExternalDatabaseColumn),
-                getAclKeysOfSecurableObjectType(acls, aclKeyIndex, SecurableObjectType.PropertyTypeInEntitySet),
-                getAclKeysOfSecurableObjectType(acls, aclKeyIndex, SecurableObjectType.OrganizationExternalDatabaseTable)
+                getAclKeysOfSecurableObjectType(acls, aclKeyIndex, SecurableObjectType.PropertyTypeInEntitySet)
         )
     }
 
@@ -162,7 +157,7 @@ class ExternalDatabasePermissioner(
                 getAclKeysOfObjectTypePredicate( aclKeyIndex, securableObjectType)
         )
         val aclsOfType = acls.filter { aclKeysOfType.contains(it.aclKey) }
-        return SecurableObjectType.OrganizationExternalDatabaseTable to aclsOfType
+        return securableObjectType to aclsOfType
     }
 
     private fun getAclKeysOfObjectTypePredicate(
@@ -296,7 +291,7 @@ class ExternalDatabasePermissioner(
                 grantPermissionsOnColumnsOnTableToRoleSql(
                         pgPermissions,
                         ApiHelpers.dbQuote(column.name),
-                        null,
+                        Schemas.fromName(table.schema),
                         table.name,
                         roleName.toString()
                 )
@@ -441,13 +436,12 @@ class ExternalDatabasePermissioner(
     private fun grantPermissionsOnColumnsOnTableToRoleSql(
             permissions: String,
             columns: String,
-            schemaName: Schemas?,
+            schemaName: Schemas,
             tableName: String,
             roleName: String): String {
-        val schema = schemaName ?: ""
         return """
             GRANT $permissions ( $columns )
-            ON $schema.${ApiHelpers.dbQuote(tableName)}
+            ON $schemaName.${ApiHelpers.dbQuote(tableName)}
             TO ${ApiHelpers.dbQuote(roleName)}
         """.trimIndent()
     }
