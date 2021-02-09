@@ -53,10 +53,6 @@ public interface SecurePrincipalsManager {
      */
     SecurablePrincipal getSecurablePrincipal( AclKey aclKey );
 
-    Map<AclKey, SecurablePrincipal> getSecurablePrincipals( Set<AclKey> aclKeys );
-
-    @Nonnull SecurablePrincipal getPrincipal( String principalId );
-
     Collection<SecurablePrincipal> getAllRolesInOrganization( UUID organizationId );
 
     Map<UUID, Collection<SecurablePrincipal>> getAllRolesInOrganizations( Collection<UUID> organizationIds );
@@ -88,6 +84,14 @@ public interface SecurePrincipalsManager {
     void removePrincipalFromPrincipal( AclKey source, AclKey target );
 
     void removePrincipalsFromPrincipals( Set<AclKey> sources, Set<AclKey> target );
+
+    /**
+     * Reads
+     */
+
+    @Nonnull SecurablePrincipal getSecurablePrincipal( String principalId );
+
+    Map<AclKey, SecurablePrincipal> getSecurablePrincipals( Set<AclKey> aclKeys );
 
     Collection<SecurablePrincipal> getAllPrincipalsWithPrincipal( AclKey aclKey );
 

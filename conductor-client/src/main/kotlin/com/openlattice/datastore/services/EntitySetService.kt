@@ -23,6 +23,7 @@ package com.openlattice.datastore.services
 import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Preconditions.checkArgument
 import com.google.common.base.Preconditions.checkState
+import com.google.common.collect.Lists
 import com.google.common.collect.Sets
 import com.google.common.eventbus.EventBus
 import com.hazelcast.core.HazelcastInstance
@@ -62,8 +63,15 @@ import com.openlattice.hazelcast.processors.RemoveDataExpirationPolicyProcessor
 import com.openlattice.hazelcast.processors.RemoveEntitySetsFromLinkingEntitySetProcessor
 import com.openlattice.organizations.OrganizationMetadataEntitySetsService
 import com.openlattice.postgres.PostgresColumn
+import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresTable.ENTITY_SETS
+import com.openlattice.postgres.PostgresTable.PERMISSIONS
+import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.mapstores.EntitySetMapstore
+import com.openlattice.postgres.streams.BasePostgresIterable
+import com.openlattice.postgres.streams.StatementHolderSupplier
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
+import com.openlattice.search.requests.EntityNeighborsFilter
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -93,7 +101,7 @@ class EntitySetService(
             authorizations,
             hazelcastInstance
     )
-
+    
     companion object {
         private val logger = LoggerFactory.getLogger(EntitySetManager::class.java)
     }
@@ -181,6 +189,112 @@ class EntitySetService(
 
         aresManager.createAuditEntitySetForEntitySet(entitySet)
 
+    }
+
+    override fun getTransportedEntitySetsOfType(entityTypeId: UUID): Set<EntitySet> {
+        return entitySets.values(
+                Predicates.and(
+                        Predicates.equal<UUID, EntitySet>(EntitySetMapstore.FLAGS_INDEX, EntitySetFlag.TRANSPORTED),
+                        Predicates.notEqual<UUID, EntitySet>(EntitySetMapstore.FLAGS_INDEX, EntitySetFlag.LINKING),
+                        Predicates.equal<UUID, EntitySet>(EntitySetMapstore.ENTITY_TYPE_ID_INDEX, entityTypeId)
+                )
+        ).toSet()
+    }
+
+    override fun getAuthorizedNeighborEntitySets(
+            principals: Set<Principal>,
+            entitySetIds: Set<UUID>,
+            filter: EntityNeighborsFilter
+    ): EntityNeighborsFilter {
+        val entityTypeIds = getEntityTypeIdsByEntitySetIds(entitySetIds).values.toSet()
+
+        val (srcEntityTypeIds, assocEntityTypeIds, dstEntityTypeIds) = edm.getSrcAssocDstInvolvingEntityTypes(entityTypeIds)
+
+        if (srcEntityTypeIds.isEmpty() || assocEntityTypeIds.isEmpty() || dstEntityTypeIds.isEmpty()) {
+            return EntityNeighborsFilter(filter.entityKeyIds, Optional.of(setOf()), Optional.of(setOf()), Optional.of(setOf()))
+        }
+
+        val sql = getAuthorizedNeighborEntitySetsQuery(principals, srcEntityTypeIds, assocEntityTypeIds, dstEntityTypeIds, filter)
+        val entitySetIdsByEntityTypeIds = BasePostgresIterable(StatementHolderSupplier(hds, sql)) {
+            ResultSetAdapters.id(it) to ResultSetAdapters.entityTypeId(it)
+        }.groupBy { (_, etid) -> etid }.mapValues { entry -> entry.value.map { (esid, _) -> esid } }
+
+        val srcEntitySetIds = getFilteredEntitySetOfTypeGroup(entitySetIdsByEntityTypeIds, srcEntityTypeIds, filter.srcEntitySetIds)
+        val dstEntitySetIds = getFilteredEntitySetOfTypeGroup(entitySetIdsByEntityTypeIds, dstEntityTypeIds, filter.dstEntitySetIds)
+        val assocEntitySetIds = getFilteredEntitySetOfTypeGroup(entitySetIdsByEntityTypeIds, assocEntityTypeIds, filter.associationEntitySetIds)
+
+        return EntityNeighborsFilter(
+                filter.entityKeyIds,
+                Optional.of(srcEntitySetIds),
+                Optional.of(dstEntitySetIds),
+                Optional.of(assocEntitySetIds)
+        )
+    }
+
+    private fun getFilteredEntitySetOfTypeGroup(entitySetIdsByEntityTypeIds: Map<UUID, List<UUID>>, entityTypeIds: Set<UUID>, maybeEntitySetIds: Optional<Set<UUID>>): Set<UUID> {
+        val unfilteredEntitySetIds = entityTypeIds.flatMap { entitySetIdsByEntityTypeIds[it] ?: listOf() }
+
+        if (maybeEntitySetIds.isPresent) {
+            val entitySetIdFilter = maybeEntitySetIds.get()
+            return unfilteredEntitySetIds.filter { entitySetIdFilter.contains(it) }.toSet()
+        }
+
+        return unfilteredEntitySetIds.toSet()
+
+    }
+
+    private fun getAuthorizedNeighborEntitySetsQuery(
+            principals: Set<Principal>,
+            srcEntityTypeIds: Set<UUID>,
+            assocEntityTypeIds: Set<UUID>,
+            dstEntityTypeIds: Set<UUID>,
+            filter: EntityNeighborsFilter
+    ): String {
+
+        val subFilters = Lists.newArrayListWithCapacity<String>(3)
+        val entityTypeIdsWithoutSetIdRestrictions = mutableSetOf<UUID>()
+
+        listOf(
+                filter.srcEntitySetIds to srcEntityTypeIds,
+                filter.associationEntitySetIds to assocEntityTypeIds,
+                filter.dstEntitySetIds to dstEntityTypeIds
+        ).forEach { (maybeEntitySetIds, entityTypeIds) ->
+            maybeEntitySetIds.ifPresentOrElse({
+                if (it.isNotEmpty()) {
+                    subFilters.add(whereEntityTypeIdsAndEntitySetIds(entityTypeIds, it))
+                }
+            }, {
+                entityTypeIdsWithoutSetIdRestrictions.addAll(entityTypeIds)
+            })
+        }
+
+        if (entityTypeIdsWithoutSetIdRestrictions.isNotEmpty()) {
+            subFilters.add(whereEntityTypeIdsAndEntitySetIds(entityTypeIdsWithoutSetIdRestrictions))
+        }
+
+        val subClauses = subFilters.joinToString(" OR ") { "( $it )" }
+
+        val authFilter = "${PERMISSIONS.name}.${PRINCIPAL_ID.name} = ANY('{${principals.joinToString { "\"${it.id}\"" }}}') "
+
+        return """
+            SELECT ${ID.name}, ${ENTITY_TYPE_ID.name}
+            FROM ${ENTITY_SETS.name}
+            INNER JOIN ${PERMISSIONS.name}
+            ON ${PERMISSIONS.name}.${ACL_KEY.name} = ARRAY[ ${ENTITY_SETS.name}.${ID.name} ]
+            WHERE ( $subClauses )
+            AND $authFilter
+        """.trimIndent()
+    }
+
+    private fun whereEntityTypeIdsAndEntitySetIds(entityTypeIds: Set<UUID>, entitySetIds: Set<UUID>? = null): String {
+        val entityTypeClause = "${ENTITY_SETS.name}.${ENTITY_TYPE_ID.name} = ANY('{${entityTypeIds.joinToString()}}')"
+        val entitySetClause = if (entitySetIds != null) {
+            "AND ${ENTITY_SETS.name}.${ID.name} = ANY('{${entitySetIds.joinToString()}}')"
+        } else {
+            ""
+        }
+
+        return "$entityTypeClause $entitySetClause"
     }
 
     private fun reserveEntitySetIfNotExists(entitySet: EntitySet): UUID {

@@ -39,7 +39,12 @@ import com.openlattice.assembler.AssemblerConnectionManager;
 import com.openlattice.assembler.AssemblerDependencies;
 import com.openlattice.assembler.pods.AssemblerConfigurationPod;
 import com.openlattice.assembler.tasks.UserCredentialSyncTask;
-import com.openlattice.auditing.*;
+import com.openlattice.auditing.AuditRecordEntitySetsManager;
+import com.openlattice.auditing.AuditingConfiguration;
+import com.openlattice.auditing.AuditingManager;
+import com.openlattice.auditing.AuditingProfiles;
+import com.openlattice.auditing.LocalAuditingService;
+import com.openlattice.auditing.S3AuditingService;
 import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.auth0.AwsAuth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
@@ -96,6 +101,8 @@ import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.PostgresTableManager;
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
+import com.openlattice.postgres.external.ExternalDatabasePermissioner;
+import com.openlattice.postgres.external.ExternalDatabasePermissioningService;
 import com.openlattice.requests.HazelcastRequestsManager;
 import com.openlattice.requests.RequestQueryService;
 import com.openlattice.search.PersistentSearchService;
@@ -104,7 +111,8 @@ import com.openlattice.subscriptions.PostgresSubscriptionService;
 import com.openlattice.subscriptions.SubscriptionService;
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies;
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask;
-import com.openlattice.transporter.types.TransporterDatastore;
+import com.openlattice.transporter.pods.TransporterPod;
+import com.openlattice.transporter.services.TransporterService;
 import com.openlattice.twilio.TwilioConfiguration;
 import com.openlattice.twilio.pods.TwilioConfigurationPod;
 import com.openlattice.users.Auth0SyncService;
@@ -128,6 +136,7 @@ import static com.openlattice.datastore.util.Util.returnAndLog;
         Auth0Pod.class,
         ByteBlobServicePod.class,
         AssemblerConfigurationPod.class,
+        TransporterPod.class,
         TwilioConfigurationPod.class,
         OrganizationExternalDatabaseConfigurationPod.class
 } )
@@ -185,7 +194,33 @@ public class DatastoreServicesPod {
     private ExternalDatabaseConnectionManager externalDbConnMan;
 
     @Inject
-    private TransporterDatastore transporterDatastore;
+    private TransporterService transporterService;
+
+    @Bean
+    public PrincipalsMapManager principalsMapManager() {
+        return new HazelcastPrincipalsMapManager( hazelcastInstance, aclKeyReservationService() );
+    }
+
+    @Bean
+    public SecurePrincipalsManager securePrincipalsManager() {
+        return new HazelcastPrincipalService(
+                hazelcastInstance,
+                aclKeyReservationService(),
+                authorizationManager(),
+                principalsMapManager(),
+                externalDatabasePermissionsManager()
+        );
+    }
+
+    @Bean
+    public ExternalDatabasePermissioningService externalDatabasePermissionsManager() {
+        return new ExternalDatabasePermissioner(
+                hazelcastInstance,
+                externalDbConnMan,
+                dcs(),
+                principalsMapManager()
+        );
+    }
 
     @Bean
     public PostgresUserApi pgUserApi() {
@@ -207,7 +242,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public Auth0SyncService auth0SyncService() {
-        return new Auth0SyncService( hazelcastInstance, principalService(), organizationsManager() );
+        return new Auth0SyncService( hazelcastInstance, securePrincipalsManager(), organizationsManager() );
     }
 
     @Bean
@@ -315,7 +350,7 @@ public class DatastoreServicesPod {
                 dcs(),
                 hikariDataSource,
                 authorizationManager(),
-                principalService(),
+                securePrincipalsManager(),
                 metricRegistry,
                 hazelcastInstance,
                 eventBus
@@ -333,14 +368,6 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    public SecurePrincipalsManager principalService() {
-        return new HazelcastPrincipalService( hazelcastInstance,
-                aclKeyReservationService(),
-                authorizationManager(),
-                eventBus );
-    }
-
-    @Bean
     public PhoneNumberService phoneNumberService() {
         return new PhoneNumberService( hazelcastInstance );
     }
@@ -353,7 +380,7 @@ public class DatastoreServicesPod {
                 assemblerConnectionManager(),
                 externalDbConnMan,
                 authorizationManager(),
-                principalService(),
+                securePrincipalsManager(),
                 dcs()
         );
     }
@@ -364,7 +391,7 @@ public class DatastoreServicesPod {
                 hazelcastInstance,
                 aclKeyReservationService(),
                 authorizationManager(),
-                principalService(),
+                securePrincipalsManager(),
                 collaborationDatabaseManager()
         );
     }
@@ -375,7 +402,7 @@ public class DatastoreServicesPod {
                 hazelcastInstance,
                 aclKeyReservationService(),
                 authorizationManager(),
-                principalService(),
+                securePrincipalsManager(),
                 phoneNumberService(),
                 partitionManager(),
                 assembler(),
@@ -463,7 +490,7 @@ public class DatastoreServicesPod {
                         dataModelService(),
                         organizationsManager(),
                         authorizationManager(),
-                        principalService(),
+                        securePrincipalsManager(),
                         aclKeyReservationService(),
                         collectionsManager(),
                         entitySetManager()
@@ -534,15 +561,16 @@ public class DatastoreServicesPod {
         return new AssemblerConnectionManager(
                 assemblerConfiguration,
                 externalDbConnMan,
-                principalService(),
+                securePrincipalsManager(),
                 dcs(),
+                externalDatabasePermissionsManager(),
                 eventBus,
                 metricRegistry );
     }
 
     @Bean
     public PersistentSearchService persistentSearchService() {
-        return new PersistentSearchService( hikariDataSource, principalService() );
+        return new PersistentSearchService( hikariDataSource, securePrincipalsManager() );
     }
 
     @Bean AwsDataSinkService awsDataSinkService() {
@@ -628,11 +656,12 @@ public class DatastoreServicesPod {
         return new ExternalDatabaseManagementService(
                 hazelcastInstance,
                 externalDbConnMan,
-                principalService(),
+                securePrincipalsManager(),
                 aclKeyReservationService(),
                 authorizationManager(),
                 organizationExternalDatabaseConfiguration,
-                transporterDatastore,
+                externalDatabasePermissionsManager(),
+                transporterService,
                 dcs(),
                 hikariDataSource );
     }
@@ -646,7 +675,7 @@ public class DatastoreServicesPod {
                 dataModelService(),
                 dataGraphService(),
                 idService(),
-                principalService(),
+                securePrincipalsManager(),
                 organizationsManager(),
                 collectionsManager(),
                 executor,
@@ -670,7 +699,7 @@ public class DatastoreServicesPod {
 
     @PostConstruct
     void initPrincipals() {
-        Principals.init( principalService(), hazelcastInstance );
+        Principals.init( securePrincipalsManager(), hazelcastInstance );
         organizationMetadataEntitySetsService().dataGraphManager = dataGraphService();
     }
 }

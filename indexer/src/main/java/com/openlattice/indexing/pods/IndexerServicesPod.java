@@ -73,7 +73,6 @@ import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
 import com.openlattice.notifications.sms.PhoneNumberService;
-import com.openlattice.organizations.ExternalDatabaseManagementService;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.OrganizationExternalDatabaseConfiguration;
 import com.openlattice.organizations.OrganizationMetadataEntitySetsService;
@@ -81,8 +80,10 @@ import com.openlattice.organizations.pods.OrganizationExternalDatabaseConfigurat
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
+import com.openlattice.postgres.external.ExternalDatabasePermissioner;
+import com.openlattice.postgres.external.ExternalDatabasePermissioningService;
 import com.openlattice.scrunchie.search.ConductorElasticsearchImpl;
-import com.openlattice.transporter.types.TransporterDatastore;
+import com.openlattice.transporter.pods.TransporterPod;
 import com.zaxxer.hikari.HikariDataSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -94,7 +95,7 @@ import javax.inject.Inject;
 
 @Configuration
 @Import( { IndexerConfigurationPod.class, AuditingConfigurationPod.class, AssemblerConfigurationPod.class,
-        ByteBlobServicePod.class, OrganizationExternalDatabaseConfigurationPod.class } )
+        ByteBlobServicePod.class, OrganizationExternalDatabaseConfigurationPod.class, TransporterPod.class } )
 public class IndexerServicesPod {
 
     @Inject
@@ -133,9 +134,6 @@ public class IndexerServicesPod {
     @Inject
     private ExternalDatabaseConnectionManager externalDbConnMan;
 
-    @Inject
-    private TransporterDatastore transporterDatastore;
-
     @Bean
     public ConductorElasticsearchApi elasticsearchApi() {
         return new ConductorElasticsearchImpl( indexerConfiguration.getSearchConfiguration() );
@@ -157,16 +155,34 @@ public class IndexerServicesPod {
     }
 
     @Bean
-    public SecurePrincipalsManager principalService() {
-        return new HazelcastPrincipalService( hazelcastInstance,
-                aclKeyReservationService(),
-                authorizationManager(),
-                eventBus );
+    public AuthorizationManager authorizationManager() {
+        return new HazelcastAuthorizationService( hazelcastInstance, eventBus );
     }
 
     @Bean
-    public AuthorizationManager authorizationManager() {
-        return new HazelcastAuthorizationService( hazelcastInstance, eventBus );
+    public PrincipalsMapManager principalsMapManager() {
+        return new HazelcastPrincipalsMapManager( hazelcastInstance, aclKeyReservationService() );
+    }
+
+    @Bean
+    public SecurePrincipalsManager securePrincipalsManager() {
+        return new HazelcastPrincipalService(
+                hazelcastInstance,
+                aclKeyReservationService(),
+                authorizationManager(),
+                principalsMapManager(),
+                externalDatabasePermissionsManager()
+        );
+    }
+
+    @Bean
+    public ExternalDatabasePermissioningService externalDatabasePermissionsManager() {
+        return new ExternalDatabasePermissioner(
+                hazelcastInstance,
+                externalDbConnMan,
+                dbcs(),
+                principalsMapManager()
+        );
     }
 
     @Bean
@@ -175,7 +191,7 @@ public class IndexerServicesPod {
                 dbcs(),
                 hikariDataSource,
                 authorizationManager(),
-                principalService(),
+                securePrincipalsManager(),
                 metricRegistry,
                 hazelcastInstance,
                 eventBus
@@ -187,8 +203,9 @@ public class IndexerServicesPod {
         return new AssemblerConnectionManager(
                 assemblerConfiguration,
                 externalDbConnMan,
-                principalService(),
+                securePrincipalsManager(),
                 dbcs(),
+                externalDatabasePermissionsManager(),
                 eventBus,
                 metricRegistry
         );
@@ -212,7 +229,7 @@ public class IndexerServicesPod {
                 assemblerConnectionManager(),
                 externalDbConnMan,
                 authorizationManager(),
-                principalService(),
+                securePrincipalsManager(),
                 dbcs()
         );
     }
@@ -223,7 +240,7 @@ public class IndexerServicesPod {
                 hazelcastInstance,
                 aclKeyReservationService(),
                 authorizationManager(),
-                principalService(),
+                securePrincipalsManager(),
                 collaborationDatabaseManager()
         );
     }
@@ -234,7 +251,7 @@ public class IndexerServicesPod {
                 hazelcastInstance,
                 aclKeyReservationService(),
                 authorizationManager(),
-                principalService(),
+                securePrincipalsManager(),
                 phoneNumberService(),
                 partitionManager(),
                 assembler(),
@@ -360,20 +377,6 @@ public class IndexerServicesPod {
         return new DataGraphService( graphApi(), idService(), entityDatastore(), jobService() );
     }
 
-    @Bean
-    public ExternalDatabaseManagementService edms() {
-        return new ExternalDatabaseManagementService(
-                hazelcastInstance,
-                externalDbConnMan,
-                principalService(),
-                aclKeyReservationService(),
-                authorizationManager(),
-                organizationExternalDatabaseConfiguration,
-                transporterDatastore,
-                dbcs(),
-                hikariDataSource );
-    }
-
     @Bean( name = "auditingManager" )
     @Profile( { ConfigurationConstants.Profiles.AWS_CONFIGURATION_PROFILE,
             ConfigurationConstants.Profiles.AWS_TESTING_PROFILE, AuditingProfiles.LOCAL_AWS_AUDITING_PROFILE } )
@@ -417,6 +420,6 @@ public class IndexerServicesPod {
 
     @PostConstruct
     void initPrincipals() {
-        Principals.init( principalService(), hazelcastInstance );
+        Principals.init( securePrincipalsManager(), hazelcastInstance );
     }
 }

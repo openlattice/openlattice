@@ -21,7 +21,7 @@ const val SCHEMA_INDEX = "schema"
 open class OrganizationExternalDatabaseTableMapstore(
         hds: HikariDataSource
 ) : AbstractBasePostgresMapstore<UUID, OrganizationExternalDatabaseTable>
-    (HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE, PostgresTable.ORGANIZATION_EXTERNAL_DATABASE_TABLE, hds) {
+(HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE, PostgresTable.ORGANIZATION_EXTERNAL_DATABASE_TABLE, hds) {
 
     override fun bind(ps: PreparedStatement, key: UUID, value: OrganizationExternalDatabaseTable) {
         var index = bind(ps, key, 1)
@@ -61,6 +61,8 @@ open class OrganizationExternalDatabaseTableMapstore(
     override fun getMapConfig(): MapConfig {
         return super.getMapConfig()
                 .addIndexConfig(IndexConfig(IndexType.HASH, ORGANIZATION_ID_INDEX))
+                .addIndexConfig(IndexConfig(IndexType.HASH, NAME_INDEX))
+                .addIndexConfig(IndexConfig(IndexType.HASH, SCHEMA_INDEX))
                 .setInMemoryFormat(InMemoryFormat.OBJECT)
     }
 

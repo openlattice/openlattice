@@ -221,9 +221,9 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Map<String, Auth0UserBasic> searchAllUsersByEmail( @PathVariable( SEARCH_QUERY ) String emailSearchQuery ) {
 
-        // to search by an exact email, the search query must be in this format: email.raw:"hristo@openlattice.com"
-        // https://auth0.com/docs/api/management/v2/user-search#search-by-email
-        String exactEmailSearchQuery = "email.raw:\"" + emailSearchQuery + "\"";
+        // to search by an exact email, the search query must be in this format: email:"hristo@openlattice.com"
+        // https://auth0.com/docs/users/user-search/migrate-v2-v3
+        String exactEmailSearchQuery = "email:\"" + emailSearchQuery + "\"";
 
         return userDirectoryService.searchAllUsers( exactEmailSearchQuery );
     }
@@ -268,7 +268,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
 
         //First remove from all organizations
         organizationService.removeMemberFromAllOrganizations( new Principal( PrincipalType.USER, userId ) );
-        SecurablePrincipal securablePrincipal = spm.getPrincipal( userId );
+        SecurablePrincipal securablePrincipal = spm.getSecurablePrincipal( userId );
         spm.deletePrincipal( securablePrincipal.getAclKey() );
 
         //Remove from materialized view account

@@ -401,6 +401,9 @@ public final class PostgresColumn {
     public static final String                   PARTITION_INDEX_FIELD             = "partition_index";
     public static final PostgresColumnDefinition PARTITION_INDEX                   =
             new PostgresColumnDefinition( PARTITION_INDEX_FIELD, BIGINT ).notNull();
+    public static final String                   PERMISSION_FIELD                  = "permission";
+    public static final PostgresColumnDefinition PERMISSION                        =
+            new PostgresColumnDefinition( PERMISSION_FIELD, TEXT );
     public static final String                   PERMISSIONS_FIELD                 = "permissions";
     public static final PostgresColumnDefinition PERMISSIONS                       =
             new PostgresColumnDefinition( PERMISSIONS_FIELD, TEXT_ARRAY );
@@ -434,17 +437,22 @@ public final class PostgresColumn {
             new PostgresColumnDefinition( PROPERTY_TYPE_ID_FIELD, UUID ).notNull();
     public static final PostgresColumnDefinition DST_PROPERTY_TYPE_ID              =
             new PostgresColumnDefinition( PROPERTY_TYPE_ID_FIELD, UUID ).notNull();
+    public static final String                   QUERY_FIELD                       = "query";
     public static final PostgresColumnDefinition QUERY                             =
-            new PostgresColumnDefinition( "query", TEXT ).notNull();
+            new PostgresColumnDefinition( QUERY_FIELD, TEXT ).notNull();
+    public static final String                   QUERY_ID_FIELD                    = "query_id";
     public static final PostgresColumnDefinition QUERY_ID                          =
-            new PostgresColumnDefinition( "query_id", UUID )
+            new PostgresColumnDefinition( QUERY_ID_FIELD, UUID )
                     .notNull();
     public static final String                   REASON_FIELD                      = "reason";
     public static final PostgresColumnDefinition REASON                            =
             new PostgresColumnDefinition( REASON_FIELD, TEXT );
     public static final String                   REFRESH_RATE_FIELD                = "refresh_rate";
-    public static final PostgresColumnDefinition REFRESH_RATE                      =
+    public static final PostgresColumnDefinition REFRESH_RATE  =
             new PostgresColumnDefinition( REFRESH_RATE_FIELD, BIGINT );
+    public static final String                   ROLE_ID_FIELD                     = "role_id";
+    public static final PostgresColumnDefinition ROLE_ID                           =
+            new PostgresColumnDefinition( ROLE_ID_FIELD, UUID).notNull();
     public static final String                   ROLES_FIELD                       = "roles";
     public static final PostgresColumnDefinition ROLES                             =
             new PostgresColumnDefinition( ROLES_FIELD, JSONB ).notNull().withDefault( "'{}'" );

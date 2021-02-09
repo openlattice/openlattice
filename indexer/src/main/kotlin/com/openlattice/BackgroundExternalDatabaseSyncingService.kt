@@ -148,8 +148,9 @@ class BackgroundExternalDatabaseSyncingService(
                 schemaName
         )
 
-        if (reservationService.isReserved(table.getUniqueName())) {
-            return organizationExternalDatabaseTables.getValue(reservationService.getId(table.getUniqueName()))
+        val uniqueName = table.getUniqueName()
+        if (reservationService.isReserved(uniqueName)) {
+            return organizationExternalDatabaseTables.getValue(reservationService.getId(uniqueName))
         }
 
         createSecurableTableObject(orgOwnerAclKeys, orgId, table)

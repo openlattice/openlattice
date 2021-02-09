@@ -22,36 +22,24 @@
 package com.openlattice.assembler
 
 import com.codahale.metrics.MetricRegistry
-import com.codahale.metrics.MetricRegistry.name
-import com.codahale.metrics.Timer
 import com.google.common.eventbus.EventBus
-import com.google.common.eventbus.Subscribe
 import com.openlattice.ApiHelpers
-import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationRoleName
-import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationUserId
-import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresRoleName
 import com.openlattice.authorization.*
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
-import com.openlattice.organization.OrganizationEntitySetFlag
 import com.openlattice.organization.roles.Role
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.E
-import com.openlattice.postgres.PostgresTable.PRINCIPALS
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
-import com.openlattice.principals.RoleCreatedEvent
-import com.openlattice.principals.UserCreatedEvent
-import com.openlattice.transporter.types.TransporterDatastore.Companion.ORG_FOREIGN_TABLES_SCHEMA
-import com.openlattice.transporter.types.TransporterDatastore.Companion.ORG_VIEWS_SCHEMA
+import com.openlattice.postgres.external.ExternalDatabasePermissioningService
+import com.openlattice.postgres.external.Schemas
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.sql.Connection
-import java.sql.Statement
 import java.util.*
-import kotlin.NoSuchElementException
 
 private val logger = LoggerFactory.getLogger(AssemblerConnectionManager::class.java)
 
@@ -65,15 +53,12 @@ class AssemblerConnectionManager(
         private val extDbManager: ExternalDatabaseConnectionManager,
         private val securePrincipalsManager: SecurePrincipalsManager,
         private val dbCredentialService: DbCredentialService,
+        val extDbPermissioner: ExternalDatabasePermissioningService,
         eventBus: EventBus,
         metricRegistry: MetricRegistry
 ) {
 
     private val atlas: HikariDataSource = extDbManager.connect("postgres")
-    private val materializeAllTimer: Timer =
-            metricRegistry.timer(name(AssemblerConnectionManager::class.java, "materializeAll"))
-    private val materializeEntitySetsTimer: Timer =
-            metricRegistry.timer(name(AssemblerConnectionManager::class.java, "materializeEntitySets"))
 
     init {
         eventBus.register(this)
@@ -83,19 +68,19 @@ class AssemblerConnectionManager(
         const val PUBLIC_ROLE = "public"
 
         @JvmStatic
-        val INTEGRATIONS_SCHEMA = "integrations"
+        val INTEGRATIONS_SCHEMA = Schemas.INTEGRATIONS_SCHEMA.label
 
         @JvmStatic
-        val OPENLATTICE_SCHEMA = "openlattice"
+        val OPENLATTICE_SCHEMA = Schemas.OPENLATTICE_SCHEMA.label
 
         @JvmStatic
-        val TRANSPORTED_VIEWS_SCHEMA = "ol"
+        private val TRANSPORTED_VIEWS_SCHEMA = Schemas.ENTERPRISE_FDW_SCHEMA.label
 
         @JvmStatic
-        val PUBLIC_SCHEMA = "public"
+        val PUBLIC_SCHEMA = Schemas.PUBLIC_SCHEMA.label
 
         @JvmStatic
-        val STAGING_SCHEMA = "staging"
+        val STAGING_SCHEMA = Schemas.STAGING_SCHEMA.label
 
         @JvmStatic
         fun entitySetNameTableName(entitySetName: String): String {
@@ -124,16 +109,6 @@ class AssemblerConnectionManager(
         }
     }
 
-    @Subscribe
-    fun handleUserCreated(userCreatedEvent: UserCreatedEvent) {
-        createUnprivilegedUser(userCreatedEvent.user)
-    }
-
-    @Subscribe
-    fun handleRoleCreated(roleCreatedEvent: RoleCreatedEvent) {
-        createRole(roleCreatedEvent.role)
-    }
-
     /**
      * Creates a private organization database that can be used for uploading data using launchpad.
      * Also sets up foreign data wrapper using assembler in assembler so that materialized views of data can be
@@ -145,11 +120,11 @@ class AssemblerConnectionManager(
 
         extDbManager.connect(dbName).let { dataSource ->
             configureRolesInDatabase(dataSource)
-            createSchema(dataSource, OPENLATTICE_SCHEMA)
-            createSchema(dataSource, INTEGRATIONS_SCHEMA)
-            createSchema(dataSource, STAGING_SCHEMA)
-            createSchema(dataSource, ORG_FOREIGN_TABLES_SCHEMA)
-            createSchema(dataSource, ORG_VIEWS_SCHEMA)
+            createSchema(dataSource, Schemas.OPENLATTICE_SCHEMA)
+            createSchema(dataSource, Schemas.INTEGRATIONS_SCHEMA)
+            createSchema(dataSource, Schemas.STAGING_SCHEMA)
+            createSchema(dataSource, Schemas.TRANSPORTER_SCHEMA)
+            createSchema(dataSource, Schemas.ASSEMBLED_ENTITY_SETS)
             configureOrganizationUser(organizationId, dataSource)
             addMembersToOrganization(organizationId, dataSource, securePrincipalsManager.getOrganizationMemberPrincipals(organizationId))
             configureServerUser(dataSource)
@@ -232,6 +207,15 @@ class AssemblerConnectionManager(
     fun dropSchemas(collaborationId: UUID, schemasToDrop: Iterable<String>) {
         executeStatementsInDatabase(collaborationId) {
             schemasToDrop.map { dropSchemaSql(it) }
+        }
+    }
+
+
+    internal fun createSchema(dataSource: HikariDataSource, schema: Schemas) {
+        dataSource.connection.use { connection ->
+            connection.createStatement().use { statement ->
+                statement.execute("CREATE SCHEMA IF NOT EXISTS ${schema.label}")
+            }
         }
     }
 
@@ -351,31 +335,22 @@ class AssemblerConnectionManager(
     }
 
     private fun createOrganizationDatabase(organizationId: UUID, dbName: String) {
+        val (dbOrgRole, dbAdminUserPassword) = dbCredentialService.getOrCreateOrganizationAccount(AclKey(organizationId))
+        val createOrgDbUser = createUserIfNotExistsSql(dbOrgRole, dbAdminUserPassword)
+
         val db = quote(dbName)
-        val dbRole = buildOrganizationRoleName(dbName)
-
-        val unquotedDbAdminUser = buildOrganizationUserId(organizationId)
-
-        val (dbOrgUser, dbAdminUserPassword) = dbCredentialService.getOrCreateDbAccount(AclKey(organizationId), true)
-
-        val createOrgDbRole = createRoleIfNotExistsSql(dbRole)
-        val createOrgDbUser = createUserIfNotExistsSql(unquotedDbAdminUser, dbAdminUserPassword)
-
-        val grantRole = "GRANT ${quote(dbRole)} TO ${quote(dbOrgUser)}"
         val createDb = "CREATE DATABASE $db"
         val revokeAll = "REVOKE ALL ON DATABASE $db FROM $PUBLIC_ROLE"
 
-        //We connect to default db in order to do initial db setup
+//        We connect to default db in order to do initial db setup
         atlas.connection.use { connection ->
             connection.createStatement().use { statement ->
-                statement.execute(createOrgDbRole)
                 statement.execute(createOrgDbUser)
-                statement.execute(grantRole)
                 if (!exists(dbName)) {
                     statement.execute(createDb)
                     statement.execute(
                             "GRANT ${MEMBER_ORG_DATABASE_PERMISSIONS.joinToString(", ")} " +
-                                    "ON DATABASE $db TO ${quote(dbOrgUser)}"
+                                    "ON DATABASE $db TO ${quote(dbOrgRole)}"
                     )
                 }
                 statement.execute(revokeAll)
@@ -404,27 +379,21 @@ class AssemblerConnectionManager(
         val dbName = extDbManager.getOrganizationDatabaseName(organizationId)
         dropDatabase(dbName)
 
-        val dbRole = quote(buildOrganizationRoleName(dbName))
         val dbAdminUser = quote(dbCredentialService.getDbUsername(AclKey(organizationId)))
-
         val dropDbUser = "DROP ROLE $dbAdminUser"
-        //TODO: If we grant this role to other users, we need to make sure we drop it
-        val dropDbRole = "DROP ROLE $dbRole"
-
 
         // Drop organization-specific database roles
 
         atlas.connection.use { connection ->
             connection.createStatement().use { statement ->
                 statement.execute(dropDbUser)
-                statement.execute(dropDbRole)
             }
         }
     }
 
 
     fun dropDatabase(dbName: String) {
-        val dropDbSql = " DROP DATABASE ${quote(dbName)}"
+        val dropDbSql = "DROP DATABASE ${quote(dbName)}"
 
         //We connect to default db in order to do initial db setup
 
@@ -454,115 +423,10 @@ class AssemblerConnectionManager(
         }
     }
 
-    fun materializeEntitySets(
-            organizationId: UUID,
-            authorizedPropertyTypesByEntitySet: Map<EntitySet, Map<UUID, PropertyType>>,
-            authorizedPropertyTypesOfPrincipalsByEntitySetId: Map<UUID, Map<Principal, Set<PropertyType>>>
-    ): Map<UUID, Set<OrganizationEntitySetFlag>> {
-        logger.info(
-                "Materializing entity sets ${authorizedPropertyTypesByEntitySet.keys.map { it.id }} in " +
-                        "organization $organizationId database."
-        )
-
-        materializeAllTimer.time().use {
-            extDbManager.connectToOrg(organizationId).let { datasource ->
-                materializeEntitySets(
-                        datasource,
-                        authorizedPropertyTypesByEntitySet,
-                        authorizedPropertyTypesOfPrincipalsByEntitySetId
-                )
-            }
-            return authorizedPropertyTypesByEntitySet
-                    .map { it.key.id to EnumSet.of(OrganizationEntitySetFlag.MATERIALIZED) }
-                    .toMap()
-        }
-    }
-
-
-    private fun materializeEntitySets(
-            dataSource: HikariDataSource,
-            materializablePropertyTypesByEntitySet: Map<EntitySet, Map<UUID, PropertyType>>,
-            authorizedPropertyTypesOfPrincipalsByEntitySetId: Map<UUID, Map<Principal, Set<PropertyType>>>
-    ) {
-        materializablePropertyTypesByEntitySet.forEach { (entitySet, _) ->
-            materialize(
-                    dataSource,
-                    entitySet,
-                    authorizedPropertyTypesOfPrincipalsByEntitySetId.getValue(entitySet.id)
-            )
-        }
-    }
-
-    /**
-     * Materializes an entity set on atlas.
-     */
-    private fun materialize(
-            dataSource: HikariDataSource,
-            entitySet: EntitySet,
-            authorizedPropertyTypesOfPrincipals: Map<Principal, Set<PropertyType>>
-    ) {
-        materializeEntitySetsTimer.time().use {
-            val tableName = entitySetNameTableName(entitySet.name)
-
-            dataSource.connection.use { connection ->
-                // first drop and create materialized view
-                logger.info("Materialized entity set ${entitySet.id}")
-
-                //Next we need to grant select on materialize view to everyone who has permission.
-                val selectGrantedResults = grantSelectForEntitySet(
-                        connection,
-                        tableName,
-                        entitySet.id,
-                        authorizedPropertyTypesOfPrincipals
-                )
-                logger.info(
-                        "Granted select for ${selectGrantedResults.filter { it >= 0 }.size} users/roles " +
-                                "on materialized view $tableName"
-                )
-            }
-        }
-    }
-
     private fun getSelectColumnsForMaterializedView(propertyTypes: Collection<PropertyType>): List<String> {
         return listOf(ENTITY_SET_ID.name, ID_VALUE.name, ENTITY_KEY_IDS_COL.name) + propertyTypes.map {
             quote(it.type.fullQualifiedNameAsString)
         }
-    }
-
-    private fun grantSelectForEntitySet(
-            connection: Connection,
-            tableName: String,
-            entitySetId: UUID,
-            authorizedPropertyTypesOfPrincipals: Map<Principal, Set<PropertyType>>
-    ): IntArray {
-        // prepare batch queries
-        return connection.createStatement().use { stmt ->
-            authorizedPropertyTypesOfPrincipals.forEach { (principal, propertyTypes) ->
-                val columns = getSelectColumnsForMaterializedView(propertyTypes)
-                try {
-                    val grantSelectSql = grantSelectSql(tableName, principal, columns)
-                    stmt.addBatch(grantSelectSql)
-                } catch (e: NoSuchElementException) {
-                    logger.error("Principal $principal does not exists but has permission on entity set $entitySetId")
-                }
-            }
-            stmt.executeBatch()
-        }
-    }
-
-    fun grantSelectForEdges(
-            stmt: Statement, tableName: String, entitySetIds: Set<UUID>, authorizedPrincipals: Set<Principal>
-    ): IntArray {
-        authorizedPrincipals.forEach {
-            try {
-                val grantSelectSql = grantSelectSql(tableName, it, listOf())
-                stmt.addBatch(grantSelectSql)
-            } catch (e: NoSuchElementException) {
-                logger.error("Principal $it does not exists but has permission on one of the entity sets $entitySetIds")
-            }
-        }
-
-        return stmt.executeBatch()
     }
 
     private fun grantSelectForNewMembers(
@@ -592,28 +456,6 @@ class AssemblerConnectionManager(
                     }
             stmt.executeBatch()
         }
-    }
-
-    /**
-     * Build grant select sql statement for a given table and principal with column level security.
-     * If properties (columns) are left empty, it will grant select on whole table.
-     */
-    @Throws(NoSuchElementException::class)
-    private fun grantSelectSql(
-            entitySetTableName: String,
-            principal: Principal,
-            columns: List<String>
-    ): String {
-        val postgresUserName = when (principal.type) {
-            PrincipalType.USER -> dbCredentialService.getDbUsername(securePrincipalsManager.getPrincipal(principal.id))
-            PrincipalType.ROLE -> buildPostgresRoleName(securePrincipalsManager.lookupRole(principal))
-            else -> throw IllegalArgumentException(
-                    "Only ${PrincipalType.USER} and ${PrincipalType.ROLE} principal " +
-                            "types can be granted select."
-            )
-        }
-
-        return grantSelectSql(entitySetTableName, quote(postgresUserName), columns)
     }
 
     /**
@@ -685,17 +527,18 @@ class AssemblerConnectionManager(
     private fun configureRolesInDatabase(dataSource: HikariDataSource) {
         val roles = getAllRoles()
 
-        if (roles.isNotEmpty()) {
-            val roleIds = roles.map { buildPostgresRoleName(it) }
-            val roleIdsSql = roleIds.joinToString { quote(it) }
+        if (roles.isEmpty()) {
+            return
+        }
+        val roleSql = dbCredentialService.getDbUsernamesByPrincipals(roles).joinToString {
+            quote(it)
+        }
 
-            dataSource.connection.use { connection ->
-                connection.createStatement().use { statement ->
-
-                    logger.info("Revoking $PUBLIC_SCHEMA schema right from roles: {}", roleIds)
-                    //Don't allow users to access public schema which will contain foreign data wrapper tables.
-                    statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM $roleIdsSql")
-                }
+        logger.info("Revoking $PUBLIC_SCHEMA schema right from all roles")
+        dataSource.connection.use { connection ->
+            connection.createStatement().use { statement ->
+                //Don't allow users to access public schema which will contain foreign data wrapper tables.
+                statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM $roleSql")
             }
         }
     }
@@ -711,44 +554,6 @@ class AssemblerConnectionManager(
                 dbCredentialService.deletePrincipalDbAccount(user)
                 //Don't allow users to access public schema which will contain foreign data wrapper tables.
                 logger.info("Revoking $PUBLIC_SCHEMA schema right from user {}", user)
-            }
-        }
-    }
-
-    fun createRole(role: Role) {
-        val dbRole = buildPostgresRoleName(role)
-
-        atlas.connection.use { connection ->
-            connection.createStatement().use { statement ->
-                statement.execute(createRoleIfNotExistsSql(dbRole))
-                //Don't allow users to access public schema which will contain foreign data wrapper tables.
-                logger.info("Revoking $PUBLIC_SCHEMA schema right from role: {}", role)
-                statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM ${quote(dbRole)}")
-            }
-        }
-    }
-
-    fun createUnprivilegedUser(user: SecurablePrincipal) {
-        /**
-         * To simplify work-around for ESRI username limitations, we are only introducing one additional
-         * field into the dbcreds table. We keep the results of calling [buildPostgresUsername] as the lookup
-         * key, but instead use the username and password returned from the db credential service.
-         */
-        val (dbUser, dbUserPassword) = dbCredentialService.getOrCreateDbAccount(user)
-
-        atlas.connection.use { connection ->
-            connection.createStatement().use { statement ->
-                //TODO: Go through every database and for old users clean them out.
-//                    logger.info("Attempting to drop owned by old name {}", user.name)
-//                    statement.execute(dropOwnedIfExistsSql(user.name))
-//                    logger.info("Attempting to drop user {}", user.name)
-//                    statement.execute(dropUserIfExistsSql(user.name)) //Clean out the old users.
-//                    logger.info("Creating new user {}", dbUser)
-                logger.info("Creating user if not exists {}", dbUser)
-                statement.execute(createUserIfNotExistsSql(dbUser, dbUserPassword))
-                //Don't allow users to access public schema which will contain foreign data wrapper tables.
-                logger.info("Revoking $PUBLIC_SCHEMA schema right from user {}", user)
-                statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM ${quote(dbUser)}")
             }
         }
     }
@@ -871,8 +676,6 @@ class AssemblerConnectionManager(
 val MEMBER_COLLAB_DATABASE_PERMISSIONS = setOf("CREATE", "TEMPORARY", "TEMP")
 val MEMBER_ORG_DATABASE_PERMISSIONS = setOf("CREATE", "CONNECT", "TEMPORARY", "TEMP")
 
-private val PRINCIPALS_SQL = "SELECT ${ACL_KEY.name} FROM ${PRINCIPALS.name} WHERE ${PRINCIPAL_TYPE.name} = ?"
-
 internal fun createSchemaSql(schemaName: String): String {
     return "CREATE SCHEMA IF NOT EXISTS ${quote(schemaName)}"
 }
@@ -923,21 +726,6 @@ private fun revokePrivilegesOnTablesInSchemaSql(schemaName: String, usersSql: St
     return "REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA ${quote(schemaName)} FROM $usersSql"
 }
 
-internal fun createRoleIfNotExistsSql(dbRole: String): String {
-    return "DO\n" +
-            "\$do\$\n" +
-            "BEGIN\n" +
-            "   IF NOT EXISTS (\n" +
-            "      SELECT\n" +
-            "      FROM   pg_catalog.pg_roles\n" +
-            "      WHERE  rolname = '$dbRole') THEN\n" +
-            "\n" +
-            "      CREATE ROLE ${ApiHelpers.dbQuote(dbRole)} NOSUPERUSER NOCREATEDB NOCREATEROLE INHERIT NOLOGIN;\n" +
-            "   END IF;\n" +
-            "END\n" +
-            "\$do\$;"
-}
-
 internal fun createUserIfNotExistsSql(dbUser: String, dbUserPassword: String): String {
     return "DO\n" +
             "\$do\$\n" +
@@ -948,21 +736,6 @@ internal fun createUserIfNotExistsSql(dbUser: String, dbUserPassword: String): S
             "      WHERE  rolname = '$dbUser') THEN\n" +
             "\n" +
             "      CREATE ROLE ${ApiHelpers.dbQuote(dbUser)} NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT LOGIN ENCRYPTED PASSWORD '$dbUserPassword';\n" +
-            "   END IF;\n" +
-            "END\n" +
-            "\$do\$;"
-}
-
-internal fun dropOwnedIfExistsSql(dbUser: String): String {
-    return "DO\n" +
-            "\$do\$\n" +
-            "BEGIN\n" +
-            "   IF EXISTS (\n" +
-            "      SELECT\n" +
-            "      FROM   pg_catalog.pg_roles\n" +
-            "      WHERE  rolname = '$dbUser') THEN\n" +
-            "\n" +
-            "      DROP OWNED BY ${ApiHelpers.dbQuote(dbUser)} ;\n" +
             "   END IF;\n" +
             "END\n" +
             "\$do\$;"

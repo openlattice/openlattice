@@ -31,6 +31,7 @@ import com.openlattice.edm.set.EntitySetPropertyMetadata
 import com.openlattice.edm.type.AssociationType
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
+import com.openlattice.search.requests.EntityNeighborsFilter
 import java.util.*
 
 interface EntitySetManager {
@@ -68,6 +69,8 @@ interface EntitySetManager {
     fun getAssociationTypeByEntitySetId(entitySetId: UUID): AssociationType
 
     fun getAssociationTypeDetailsByEntitySetIds(entitySetIds: Set<UUID>): Map<UUID, AssociationType>
+
+    fun getTransportedEntitySetsOfType(entityTypeId: UUID): Set<EntitySet>
 
     fun isAssociationEntitySet(entitySetId: UUID): Boolean
 
@@ -107,5 +110,11 @@ interface EntitySetManager {
     fun exists(entitySetId: UUID): Boolean
 
     fun setupOrganizationMetadataAndAuditEntitySets(entitySet: EntitySet)
+
+    fun getAuthorizedNeighborEntitySets(
+            principals: Set<Principal>,
+            entitySetIds: Set<UUID>,
+            filter: EntityNeighborsFilter
+    ): EntityNeighborsFilter
 
 }

@@ -20,8 +20,10 @@
 
 package com.openlattice.postgres;
 
+import com.openlattice.ApiHelpers;
 import com.openlattice.edm.PostgresEdmTypeConverter;
 import com.openlattice.edm.type.PropertyType;
+
 import java.util.UUID;
 
 import static com.openlattice.postgres.PostgresColumn.*;
@@ -62,7 +64,7 @@ public class DataTables {
     }
 
     public static String quote( String s ) {
-        return "\"" + s + "\"";
+        return ApiHelpers.dbQuote(s);
     }
 
     public static PostgresColumnDefinition value( PropertyType pt ) {
