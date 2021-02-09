@@ -420,14 +420,14 @@ class ExternalDatabasePermissioner(
             TableType.VIEW -> {
                 validPermissions.filter {
                     allViewPermissions.contains(it)
-                }.mapTo(mutableSetOf()) { perm ->
+                }.mapTo(mutableSetOf<AccessTarget>()) { perm ->
                     AccessTarget(AclKey(column.tableId, column.columnId), perm)
                 }
             }
             TableType.TABLE -> {
                 validPermissions.filter {
                     allTablePermissions.contains(it)
-                }.mapTo(mutableSetOf()) { perm ->
+                }.mapTo(mutableSetOf<AccessTarget>()) { perm ->
                     AccessTarget(AclKey(column.tableId, column.columnId), perm)
                 }
             }
