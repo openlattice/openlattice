@@ -1,5 +1,6 @@
 package com.openlattice.assembler
 
+import com.google.common.collect.Maps
 import com.hazelcast.map.IMap
 import com.openlattice.ApiHelpers
 import com.openlattice.authorization.AccessTarget
@@ -26,12 +27,21 @@ class PostgresRoles private constructor() {
                 orgDataSource: HikariDataSource
         ): CompletionStage<Map<AccessTarget, UUID>> {
             val allExistingRoleNames = permissionRoleNames.getAll(targets)
+            val finalRoles = mutableMapOf<AccessTarget, UUID>()
+            finalRoles.putAll(allExistingRoleNames)
+
             val targetsToNewIds = targets.filterNot {
                 // filter out roles that already exist
                 allExistingRoleNames.containsKey(it)
             }.associateWith {
                 val newRole = UUID.randomUUID()
                 newRole
+            }
+
+            if (targetsToNewIds.isEmpty()){
+                return CompletableFuture.supplyAsync {
+                    Maps.newLinkedHashMap<AccessTarget, UUID>(finalRoles)
+                }
             }
 
             orgDataSource.connection.use { conn ->
@@ -42,17 +52,7 @@ class PostgresRoles private constructor() {
                 }
             }
 
-            val finalRoles = mutableMapOf<AccessTarget, UUID>()
-            if (targetsToNewIds.isEmpty()){
-                return CompletableFuture.supplyAsync {
-                    finalRoles.putAll(allExistingRoleNames)
-                    finalRoles
-                }
-            }
-
             val roleSetCompletion = permissionRoleNames.putAllAsync(targetsToNewIds)
-
-            finalRoles.putAll(allExistingRoleNames)
             finalRoles.putAll(targetsToNewIds)
 
             return roleSetCompletion.thenApplyAsync {
