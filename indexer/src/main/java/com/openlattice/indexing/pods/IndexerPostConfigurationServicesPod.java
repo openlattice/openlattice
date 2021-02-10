@@ -194,6 +194,7 @@ public class IndexerPostConfigurationServicesPod {
         return new BackgroundExternalDatabaseSyncingService(
                 hazelcastInstance,
                 edms(),
+                externalDatabasePermissioningService,
                 auditingManager,
                 ares,
                 indexerConfiguration,
