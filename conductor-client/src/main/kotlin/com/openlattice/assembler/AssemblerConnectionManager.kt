@@ -35,6 +35,7 @@ import com.openlattice.postgres.PostgresTable.E
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService
 import com.openlattice.postgres.external.Schemas
+import com.openlattice.postgres.external.Schemas.*
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -66,21 +67,6 @@ class AssemblerConnectionManager(
 
     companion object {
         const val PUBLIC_ROLE = "public"
-
-        @JvmStatic
-        val INTEGRATIONS_SCHEMA = Schemas.INTEGRATIONS_SCHEMA.label
-
-        @JvmStatic
-        val OPENLATTICE_SCHEMA = Schemas.OPENLATTICE_SCHEMA.label
-
-        @JvmStatic
-        private val TRANSPORTED_VIEWS_SCHEMA = Schemas.ENTERPRISE_FDW_SCHEMA.label
-
-        @JvmStatic
-        val PUBLIC_SCHEMA = Schemas.PUBLIC_SCHEMA.label
-
-        @JvmStatic
-        val STAGING_SCHEMA = Schemas.STAGING_SCHEMA.label
 
         @JvmStatic
         fun entitySetNameTableName(entitySetName: String): String {
@@ -120,11 +106,11 @@ class AssemblerConnectionManager(
 
         extDbManager.connect(dbName).let { dataSource ->
             configureRolesInDatabase(dataSource)
-            createSchema(dataSource, Schemas.OPENLATTICE_SCHEMA)
-            createSchema(dataSource, Schemas.INTEGRATIONS_SCHEMA)
-            createSchema(dataSource, Schemas.STAGING_SCHEMA)
-            createSchema(dataSource, Schemas.TRANSPORTER_SCHEMA)
-            createSchema(dataSource, Schemas.ASSEMBLED_ENTITY_SETS)
+            createSchema(dataSource, OPENLATTICE_SCHEMA)
+            createSchema(dataSource, INTEGRATIONS_SCHEMA)
+            createSchema(dataSource, STAGING_SCHEMA)
+            createSchema(dataSource, TRANSPORTER_SCHEMA)
+            createSchema(dataSource, ASSEMBLED_ENTITY_SETS)
             configureOrganizationUser(organizationId, dataSource)
             addMembersToOrganization(organizationId, dataSource, securePrincipalsManager.getOrganizationMemberPrincipals(organizationId))
             configureServerUser(dataSource)
@@ -219,14 +205,6 @@ class AssemblerConnectionManager(
         }
     }
 
-    internal fun createSchema(dataSource: HikariDataSource, schemaName: String) {
-        dataSource.connection.use { connection ->
-            connection.createStatement().use { statement ->
-                statement.execute(createSchemaSql(schemaName))
-            }
-        }
-    }
-
     internal fun renameSchema(collaborationId: UUID, oldName: String, newName: String) {
         executeStatementInDatabase(collaborationId) {
             renameSchemaSql(oldName, newName)
@@ -241,7 +219,7 @@ class AssemblerConnectionManager(
                                 assemblerConfiguration.server["username"].toString(),
                                 false,
                                 INTEGRATIONS_SCHEMA,
-                                TRANSPORTED_VIEWS_SCHEMA,
+                                ENTERPRISE_FDW_SCHEMA,
                                 OPENLATTICE_SCHEMA,
                                 PUBLIC_SCHEMA,
                                 STAGING_SCHEMA
@@ -584,9 +562,9 @@ class AssemblerConnectionManager(
                 statement.execute("GRANT USAGE, CREATE ON SCHEMA $OPENLATTICE_SCHEMA TO $userIdsSql")
                 statement.execute("GRANT USAGE, CREATE ON SCHEMA $STAGING_SCHEMA TO $userIdsSql")
                 //Set the search path for the user
-                logger.info("Setting search_path to $OPENLATTICE_SCHEMA,$TRANSPORTED_VIEWS_SCHEMA for users $userIds")
+                logger.info("Setting search_path to $OPENLATTICE_SCHEMA,$ASSEMBLED_ENTITY_SETS for users $userIds")
                 userIds.forEach { userId ->
-                    statement.addBatch(setSearchPathSql(userId, true, OPENLATTICE_SCHEMA, STAGING_SCHEMA, TRANSPORTED_VIEWS_SCHEMA))
+                    statement.addBatch(setSearchPathSql(userId, true, OPENLATTICE_SCHEMA, STAGING_SCHEMA, ASSEMBLED_ENTITY_SETS))
                 }
                 statement.executeBatch()
             }
@@ -696,19 +674,19 @@ internal fun revokeUsageOnSchemaToRolesSql(schemaName: String, roles: Iterable<S
     return "REVOKE USAGE ON SCHEMA ${quote(schemaName)} TO ${roles.joinToString { quote(it) }}"
 }
 
-internal fun grantOrgUserPrivilegesOnSchemaSql(schemaName: String, orgUserId: String): String {
-    return "GRANT USAGE, CREATE ON SCHEMA ${quote(schemaName)} TO $orgUserId"
+internal fun grantOrgUserPrivilegesOnSchemaSql(schemaName: Schemas, orgUserId: String): String {
+    return "GRANT USAGE, CREATE ON SCHEMA ${quote(schemaName.label)} TO $orgUserId"
 }
 
-private fun setDefaultPrivilegesOnSchemaSql(schemaName: String, usersSql: String): String {
-    return "GRANT ALL PRIVILEGES ON SCHEMA ${quote(schemaName)} TO $usersSql"
+private fun setDefaultPrivilegesOnSchemaSql(schemaName: Schemas, usersSql: String): String {
+    return "GRANT ALL PRIVILEGES ON SCHEMA ${quote(schemaName.label)} TO $usersSql"
 }
 
-private fun setAdminUserDefaultPrivilegesSql(schemaName: String, usersSql: String): String {
-    return "ALTER DEFAULT PRIVILEGES IN SCHEMA ${quote(schemaName)} GRANT ALL PRIVILEGES ON TABLES TO $usersSql"
+private fun setAdminUserDefaultPrivilegesSql(schemaName: Schemas, usersSql: String): String {
+    return "ALTER DEFAULT PRIVILEGES IN SCHEMA ${quote(schemaName.label)} GRANT ALL PRIVILEGES ON TABLES TO $usersSql"
 }
 
-private fun setSearchPathSql(granteeId: String, isUser: Boolean, vararg schemas: String): String {
+private fun setSearchPathSql(granteeId: String, isUser: Boolean, vararg schemas: Schemas): String {
     val schemasSql = schemas.joinToString()
     val granteeType = if (isUser) "USER" else "ROLE"
     return "ALTER $granteeType $granteeId SET search_path TO $schemasSql"
@@ -718,12 +696,12 @@ private fun revokePrivilegesOnDatabaseSql(dbName: String, usersSql: String): Str
     return "REVOKE ${MEMBER_ORG_DATABASE_PERMISSIONS.joinToString(", ")} ON DATABASE ${quote(dbName)} FROM $usersSql"
 }
 
-private fun revokePrivilegesOnSchemaSql(schemaName: String, usersSql: String): String {
-    return "REVOKE ALL PRIVILEGES ON SCHEMA ${quote(schemaName)} FROM $usersSql"
+private fun revokePrivilegesOnSchemaSql(schemaName: Schemas, usersSql: String): String {
+    return "REVOKE ALL PRIVILEGES ON SCHEMA ${quote(schemaName.label)} FROM $usersSql"
 }
 
-private fun revokePrivilegesOnTablesInSchemaSql(schemaName: String, usersSql: String): String {
-    return "REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA ${quote(schemaName)} FROM $usersSql"
+private fun revokePrivilegesOnTablesInSchemaSql(schemaName: Schemas, usersSql: String): String {
+    return "REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA ${quote(schemaName.label)} FROM $usersSql"
 }
 
 internal fun createUserIfNotExistsSql(dbUser: String, dbUserPassword: String): String {

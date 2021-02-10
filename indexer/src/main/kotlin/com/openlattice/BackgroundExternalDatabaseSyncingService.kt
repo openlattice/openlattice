@@ -24,8 +24,7 @@ import com.openlattice.organization.OrganizationExternalDatabaseTable
 import com.openlattice.organizations.ExternalDatabaseManagementService
 import com.openlattice.organizations.OrganizationMetadataEntitySetsService
 import com.openlattice.organizations.mapstores.ORGANIZATION_ID_INDEX
-import com.openlattice.organizations.mapstores.OrganizationExternalDatabaseTableMapstore
-import org.apache.olingo.commons.api.edm.FullQualifiedName
+import com.openlattice.postgres.external.ExternalDatabasePermissioningService
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import java.time.OffsetDateTime
@@ -41,6 +40,7 @@ const val SCAN_RATE = 30_000L
 class BackgroundExternalDatabaseSyncingService(
         hazelcastInstance: HazelcastInstance,
         private val edms: ExternalDatabaseManagementService,
+        private val extDbPermsService: ExternalDatabasePermissioningService,
         private val auditingManager: AuditingManager,
         private val ares: AuditRecordEntitySetsManager,
         private val indexerConfiguration: IndexerConfiguration,
@@ -55,7 +55,6 @@ class BackgroundExternalDatabaseSyncingService(
     private val organizationExternalDatabaseTables = ORGANIZATION_EXTERNAL_DATABASE_TABLE.getMap(hazelcastInstance)
     private val organizationDatabases = ORGANIZATION_DATABASES.getMap(hazelcastInstance)
 
-    private val aclKeys = HazelcastMap.ACL_KEYS.getMap(hazelcastInstance)
     private val organizations = HazelcastMap.ORGANIZATIONS.getMap(hazelcastInstance)
     private val expirationLocks = HazelcastMap.EXPIRATION_LOCKS.getMap(hazelcastInstance)
 
@@ -105,7 +104,7 @@ class BackgroundExternalDatabaseSyncingService(
                         syncOrganizationDatabases(it)
                     }
 
-            lockedOrganizationIds.forEach(this::deleteIndexingLock)
+            lockedOrganizationIds.forEach(this::deleteLock)
 
             logger.info("Completed syncing database objects in {}", timer)
         } catch (ex: Exception) {
@@ -125,16 +124,22 @@ class BackgroundExternalDatabaseSyncingService(
 
         val orgOwnerAclKeys = edms.getOrganizationOwners(orgId).map { it.aclKey }
 
-        val tablesToCols = edms.getColumnNamesByTableName(dbName).associate { (oid, tableName, schemaName, columnNames) ->
+        val tablesToCols = edms.getColumnNamesByTableName(dbName).associate { (oid, tableName, schemaName, _) ->
 
             val table = getOrCreateTable(orgId, oid, tableName, schemaName, orgOwnerAclKeys)
-            val columnIds = syncTableColumns(table, orgOwnerAclKeys)
+            val columns = syncTableColumns(table, orgOwnerAclKeys)
 
-            table.id to columnIds
+            extDbPermsService.initializeExternalTablePermissions(
+                    orgId,
+                    table,
+                    columns
+            )
+            table.id to columns
         }
 
-        removeNonexistentTablesAndColumnsForOrg(orgId, tablesToCols.keys, tablesToCols.flatMap { it.value }.toSet())
-
+        removeNonexistentTablesAndColumnsForOrg(orgId, tablesToCols.keys, tablesToCols.flatMap {
+            it.value.map { col -> col.id }
+        }.toSet())
     }
 
     private fun getOrCreateTable(orgId: UUID, oid: Int, tableName: String, schemaName: String, orgOwnerAclKeys: List<AclKey>): OrganizationExternalDatabaseTable {
@@ -178,7 +183,7 @@ class BackgroundExternalDatabaseSyncingService(
         return newTableId
     }
 
-    private fun syncTableColumns(table: OrganizationExternalDatabaseTable, ownerAclKeys: List<AclKey>): Set<UUID> {
+    private fun syncTableColumns(table: OrganizationExternalDatabaseTable, ownerAclKeys: List<AclKey>): Set<OrganizationExternalDatabaseColumn> {
         val tableCols = edms.getColumnMetadata(table)
         val tableColNames = tableCols.map { it.getUniqueName() }.toSet()
 
@@ -191,10 +196,12 @@ class BackgroundExternalDatabaseSyncingService(
 
             if (shouldUpdate) {
                 updateColumns(cols, existingColumnIdsByName)
+
             } else {
                 createColumns(table, cols, ownerAclKeys)
+
             }
-        }.map { it.id }.toSet()
+        }.toSet()
     }
 
     private fun removeNonexistentTablesAndColumnsForOrg(orgId: UUID, existingTableIds: Set<UUID>, existingColumnIds: Set<UUID>) {
@@ -335,7 +342,7 @@ class BackgroundExternalDatabaseSyncingService(
         return expirationLocks.putIfAbsent(orgId, System.currentTimeMillis() + MAX_DURATION_MILLIS) == null
     }
 
-    private fun deleteIndexingLock(orgId: UUID) {
+    private fun deleteLock(orgId: UUID) {
         expirationLocks.delete(orgId)
     }
 

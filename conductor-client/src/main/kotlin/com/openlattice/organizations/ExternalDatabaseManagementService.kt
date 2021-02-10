@@ -5,8 +5,6 @@ import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.hazelcast.query.QueryConstants
-import com.openlattice.assembler.AssemblerConnectionManager.Companion.OPENLATTICE_SCHEMA
-import com.openlattice.assembler.AssemblerConnectionManager.Companion.STAGING_SCHEMA
 import com.openlattice.assembler.dropAllConnectionsToDatabaseSql
 import com.openlattice.authorization.*
 import com.openlattice.authorization.mapstores.PermissionMapstore
@@ -32,6 +30,7 @@ import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.ResultSetAdapters.*
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService
+import com.openlattice.postgres.external.Schemas.*
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.StatementHolderSupplier
 import com.openlattice.transporter.processors.GetPropertyTypesFromTransporterColumnSetEntryProcessor
@@ -707,7 +706,7 @@ class ExternalDatabaseManagementService(
 
         val table = singletonTableSet.first()
         organizationExternalDatabaseTables.executeOnKey(table, ExternalDatabaseTableEntryProcessor {
-            it.schema = OPENLATTICE_SCHEMA
+            it.schema = OPENLATTICE_SCHEMA.label
             ExternalDatabaseTableEntryProcessor.Result()
         })
     }
@@ -735,7 +734,7 @@ class ExternalDatabaseManagementService(
               ) AS $COLUMN_NAMES_FIELD
             $fromExpression $leftJoinColumnsExpression
             WHERE
-              information_schema.tables.table_schema=ANY('{$OPENLATTICE_SCHEMA,$STAGING_SCHEMA}')
+              information_schema.tables.table_schema=ANY('{$OPENLATTICE_SCHEMA,$STAGING_SCHEMA,$INTEGRATIONS_SCHEMA}')
               AND table_type='BASE TABLE'
             GROUP BY name, information_schema.tables.table_schema;
         """.trimIndent()

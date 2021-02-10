@@ -8,10 +8,11 @@ import java.util.*
 /**
  * @author Drew Bailey (drew@openlattice.com)
  */
-class AddFlagsOnEntitySetEntryProcessor(val flags: EnumSet<EntitySetFlag>) : AbstractRhizomeEntryProcessor<UUID, EntitySet, Unit>() {
-    override fun process(entry: MutableMap.MutableEntry<UUID, EntitySet>) {
+class AddFlagsOnEntitySetEntryProcessor(val flags: EnumSet<EntitySetFlag>) : AbstractRhizomeEntryProcessor<UUID, EntitySet, Void>() {
+    override fun process(entry: MutableMap.MutableEntry<UUID, EntitySet>): Void? {
         val es = entry.value
         es.flags.addAll(flags)
         entry.setValue(es)
+        return null
     }
 }
