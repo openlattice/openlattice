@@ -220,7 +220,8 @@ class ExternalSqlDatabasesManagementService(
                 Optional.of(tableMetadata.comment),
                 organizationId,
                 dataSourceId,
-                tableMetadata.externalId
+                tableMetadata.externalId,
+                tableMetadata.schema
         )
 
         val tablePermissions = mapTablePrivileges(tableAclKey, tableMetadata.privileges)
