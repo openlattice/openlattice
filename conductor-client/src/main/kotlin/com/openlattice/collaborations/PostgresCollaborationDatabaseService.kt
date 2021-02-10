@@ -131,4 +131,12 @@ class PostgresCollaborationDatabaseService(
         acm.removeMembersFromSchemaInCollab(collaborationId, schemaName, roleNamesByAclKey.values)
         acm.removeMembersFromDatabaseInCollab(collaborationId, roleNamesToRemoveFromDatabase)
     }
+
+    override fun initializeTableProjection(collaborationId: UUID, organizationId: UUID, tableId: UUID) {
+        logger.info("initialize the thing!")
+    }
+
+    override fun removeTableProjection(collaborationId: UUID, organizationId: UUID, tableId: UUID) {
+        logger.info("destroy the thing!")
+    }
 }

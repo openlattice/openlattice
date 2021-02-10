@@ -2,10 +2,12 @@ package com.openlattice.collaborations
 
 import com.google.common.base.Preconditions
 import com.hazelcast.core.HazelcastInstance
+import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.collaborations.mapstores.CollaborationMapstore
+import com.openlattice.collaborations.mapstores.ProjectedTablesMapstore
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organizations.OrganizationDatabase
 import com.openlattice.organizations.roles.SecurePrincipalsManager
@@ -22,6 +24,7 @@ class CollaborationService(
 
     private val collaborations = HazelcastMap.COLLABORATIONS.getMap(hazelcast)
     private val organizations = HazelcastMap.ORGANIZATIONS.getMap(hazelcast)
+    private val projectedTables = HazelcastMap.PROJECTED_TABLES.getMap(hazelcast)
     private val externalTables = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE.getMap(hazelcast)
 
     companion object {
@@ -126,11 +129,38 @@ class CollaborationService(
     fun projectTableToCollaboration(collaborationId: UUID, organizationId: UUID, tableId: UUID) {
         ensureTableBelongsToOrganization(tableId, organizationId)
 
+        val tableName = externalTables.getValue(tableId).name
+
+        check(projectedTables.keySet(Predicates.and(
+                collaborationIdPredicate(collaborationId),
+                organizationIdPredicate(organizationId),
+                tableNamePredicate(tableName)
+        )).isEmpty()) {
+            "Cannot project table $tableId because a table with name $tableName already exists in schema for " +
+                    "organization $organizationId in collaboration $collaborationId database"
+        }
+
+        val key = ProjectedTableKey(tableId, collaborationId)
+        val metadata = ProjectedTableMetadata(organizationId, tableName)
+
+        check(projectedTables.putIfAbsent(key, metadata) == null) {
+            "Table $tableId is already projected in collaboration $collaborationId"
+        }
+
+        collaborationDatabaseManager.initializeTableProjection(collaborationId, organizationId, tableId)
     }
 
     fun removeProjectedTableFromCollaboration(collaborationId: UUID, organizationId: UUID, tableId: UUID) {
         ensureTableBelongsToOrganization(tableId, organizationId)
 
+        val key = ProjectedTableKey(tableId, collaborationId)
+        val metadata = projectedTables[key]
+        check(metadata != null) {
+            "Table $tableId is not projected in collaboration $collaborationId"
+        }
+
+        collaborationDatabaseManager.removeTableProjection(collaborationId, organizationId, tableId)
+        projectedTables.remove(key)
     }
 
     private fun ensureTableBelongsToOrganization(tableId: UUID, organizationId: UUID) {
@@ -206,6 +236,22 @@ class CollaborationService(
                 .map { Ace(it.principal, READ_PERMISSIONS) }
 
         return listOf(Acl(AclKey(id), orgAces))
+    }
+
+    private fun collaborationIdPredicate(collaborationId: UUID): Predicate<ProjectedTableKey, ProjectedTableMetadata> {
+        return Predicates.equal(ProjectedTablesMapstore.COLLABORATION_ID_INDEX, collaborationId)
+    }
+
+    private fun organizationIdPredicate(organizationId: UUID): Predicate<ProjectedTableKey, ProjectedTableMetadata> {
+        return Predicates.equal(ProjectedTablesMapstore.ORGANIZATION_ID_INDEX, organizationId)
+    }
+
+    private fun tableIdPredicate(tableId: UUID): Predicate<ProjectedTableKey, ProjectedTableMetadata> {
+        return Predicates.equal(ProjectedTablesMapstore.TABLE_ID_INDEX, tableId)
+    }
+
+    private fun tableNamePredicate(tableName: String): Predicate<ProjectedTableKey, ProjectedTableMetadata> {
+        return Predicates.equal(ProjectedTablesMapstore.TABLE_NAME_INDEX, tableName)
     }
 
 

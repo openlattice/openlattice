@@ -28,4 +28,8 @@ interface CollaborationDatabaseManager {
             membersToRemoveFromSchema: Set<AclKey>,
             membersToRemoveFromDatabase: Set<AclKey>
     )
+
+    fun initializeTableProjection(collaborationId: UUID, organizationId: UUID, tableId: UUID)
+
+    fun removeTableProjection(collaborationId: UUID, organizationId: UUID, tableId: UUID)
 }
