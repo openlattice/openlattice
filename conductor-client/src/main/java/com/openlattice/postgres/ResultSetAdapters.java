@@ -38,6 +38,8 @@ import com.openlattice.auditing.AuditRecordEntitySetConfiguration;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.collaborations.Collaboration;
+import com.openlattice.collaborations.ProjectedTableKey;
+import com.openlattice.collaborations.ProjectedTableMetadata;
 import com.openlattice.collections.CollectionTemplateKey;
 import com.openlattice.collections.CollectionTemplateType;
 import com.openlattice.collections.EntitySetCollection;
@@ -120,6 +122,7 @@ import static com.openlattice.postgres.PostgresColumn.BIDIRECTIONAL;
 import static com.openlattice.postgres.PostgresColumn.CATEGORY;
 import static com.openlattice.postgres.PostgresColumn.CLASS_NAME;
 import static com.openlattice.postgres.PostgresColumn.CLASS_PROPERTIES;
+import static com.openlattice.postgres.PostgresColumn.COLLABORATION_ID;
 import static com.openlattice.postgres.PostgresColumn.COLUMN_NAME;
 import static com.openlattice.postgres.PostgresColumn.COLUMN_NAMES_FIELD;
 import static com.openlattice.postgres.PostgresColumn.CONFIG_ID;
@@ -1228,6 +1231,10 @@ public final class ResultSetAdapters {
         return new Collaboration( id, name, title, description, organizationIds );
     }
 
+    @NotNull public static UUID collaborationId( @NotNull ResultSet rs ) throws SQLException {
+        return rs.getObject( COLLABORATION_ID.getName(), UUID.class );
+    }
+
     @NotNull public static UUID roleId( @NotNull ResultSet rs ) throws SQLException {
         return rs.getObject( ROLE_ID.getName(), UUID.class );
     }
@@ -1239,4 +1246,13 @@ public final class ResultSetAdapters {
     @NotNull public static AccessTarget accessTarget( @NotNull ResultSet rs ) throws SQLException {
         return new AccessTarget( aclKey( rs ), permission( rs ) );
     }
+
+    @NotNull public static ProjectedTableKey projectedTableKey( @NotNull ResultSet rs ) throws SQLException {
+        return new ProjectedTableKey( tableId( rs ), collaborationId( rs ) );
+    }
+
+    @NotNull public static ProjectedTableMetadata projectedTableMetadata( @NotNull ResultSet rs ) throws SQLException {
+        return new ProjectedTableMetadata( organizationId( rs ), name( rs ) );
+    }
+
 }

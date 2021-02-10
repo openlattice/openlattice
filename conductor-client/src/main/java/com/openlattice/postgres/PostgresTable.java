@@ -42,6 +42,7 @@ import static com.openlattice.postgres.PostgresColumn.BIDIRECTIONAL;
 import static com.openlattice.postgres.PostgresColumn.CATEGORY;
 import static com.openlattice.postgres.PostgresColumn.CLASS_NAME;
 import static com.openlattice.postgres.PostgresColumn.CLASS_PROPERTIES;
+import static com.openlattice.postgres.PostgresColumn.COLLABORATION_ID;
 import static com.openlattice.postgres.PostgresColumn.CONFIG_ID;
 import static com.openlattice.postgres.PostgresColumn.CONNECTION_TYPE;
 import static com.openlattice.postgres.PostgresColumn.CONTACTS;
@@ -296,7 +297,7 @@ public final class PostgresTable {
             new PostgresTableDefinition( "entity_type_property_metadata" )
                     .addColumns( ENTITY_TYPE_ID, PROPERTY_TYPE_ID, TITLE, DESCRIPTION, TAGS, SHOW )
                     .primaryKey( ENTITY_TYPE_ID, PROPERTY_TYPE_ID );
-    public static final PostgresTableDefinition ENUM_TYPES                =
+    public static final PostgresTableDefinition ENUM_TYPES                    =
             new PostgresTableDefinition( "enum_types" )
                     .addColumns( ID,
                             NAMESPACE,
@@ -311,16 +312,16 @@ public final class PostgresTable {
                             ANALYZER,
                             MULTI_VALUED,
                             INDEX_TYPE );
-    public static final PostgresTableDefinition EXTERNAL_PERMISSION_ROLES =
+    public static final PostgresTableDefinition EXTERNAL_PERMISSION_ROLES     =
             new PostgresTableDefinition( "external_permission_roles" )
                     .addColumns( ACL_KEY, PERMISSION, ROLE_ID )
-                    .primaryKey( ACL_KEY, PERMISSION);
+                    .primaryKey( ACL_KEY, PERMISSION );
 
-    public static final PostgresTableDefinition GRAPH_QUERIES                 =
+    public static final PostgresTableDefinition GRAPH_QUERIES              =
             new PostgresTableDefinition( "graph_queries" )
                     .addColumns( QUERY_ID, QUERY, STATE, START_TIME )
                     .primaryKey( QUERY_ID );
-    public static final PostgresTableDefinition HBA_AUTHENTICATION_RECORDS    =
+    public static final PostgresTableDefinition HBA_AUTHENTICATION_RECORDS =
             new PostgresTableDefinition( "hba_authentication_records" )
                     .addColumns(
                             USERNAME,
@@ -329,7 +330,7 @@ public final class PostgresTable {
                             IP_ADDRESS,
                             AUTHENTICATION_METHOD )
                     .primaryKey( USERNAME, DATABASE, CONNECTION_TYPE, IP_ADDRESS );
-    public static final PostgresTableDefinition IDS                           =
+    public static final PostgresTableDefinition IDS                        =
             new CitusDistributedTableDefinition( "ids" )
                     .addColumns( PARTITION,
                             ENTITY_SET_ID,
@@ -346,20 +347,20 @@ public final class PostgresTable {
                             LAST_TRANSPORT )
                     .primaryKey( ID_VALUE, PARTITION )
                     .distributionColumn( PARTITION );
-    public static final PostgresTableDefinition ID_GENERATION                 =
+    public static final PostgresTableDefinition ID_GENERATION              =
             new PostgresTableDefinition( "id_gen" )
                     .primaryKey( PARTITION_INDEX )
                     .addColumns( PARTITION_INDEX, MSB, LSB );
-    public static final PostgresTableDefinition INTEGRATIONS                  =
+    public static final PostgresTableDefinition INTEGRATIONS               =
             new PostgresTableDefinition( "integrations" )
                     .addColumns( NAME,
                             INTEGRATION )
                     .primaryKey( NAME );
-    public static final PostgresTableDefinition INTEGRATION_JOBS              =
+    public static final PostgresTableDefinition INTEGRATION_JOBS           =
             new PostgresTableDefinition( "integration_jobs" )
                     .addColumns( ID, NAME, STATUS );
-    public static final PostgresTableDefinition JOBS                          = PostgresJobsMapStore.JOBS;
-    public static final PostgresTableDefinition LINKING_FEEDBACK              =
+    public static final PostgresTableDefinition JOBS                       = PostgresJobsMapStore.JOBS;
+    public static final PostgresTableDefinition LINKING_FEEDBACK           =
             new PostgresTableDefinition( "linking_feedback" )
                     .addColumns(
                             SRC_ENTITY_SET_ID,
@@ -480,6 +481,10 @@ public final class PostgresTable {
             "principal_trees" )
             .addColumns( ACL_KEY, PRINCIPAL_OF_ACL_KEY )
             .primaryKey( ACL_KEY, PRINCIPAL_OF_ACL_KEY );
+    public static final PostgresTableDefinition PROJECTED_TABLES    = new PostgresTableDefinition(
+            "projected_tables" )
+            .addColumns( TABLE_ID, COLLABORATION_ID, ORGANIZATION_ID, NAME )
+            .primaryKey( TABLE_ID, COLLABORATION_ID );
     public static final PostgresTableDefinition PROPAGATION_GRAPH   = new PostgresTableDefinition(
             "propagation_graph" )
             .addColumns( SRC_ENTITY_SET_ID, SRC_PROPERTY_TYPE_ID, DST_ENTITY_SET_ID, DST_PROPERTY_TYPE_ID )

@@ -11,6 +11,11 @@ import com.openlattice.collaborations.CollaborationsApi.Companion.DATABASE_PATH
 import com.openlattice.collaborations.CollaborationsApi.Companion.ID
 import com.openlattice.collaborations.CollaborationsApi.Companion.ID_PATH
 import com.openlattice.collaborations.CollaborationsApi.Companion.ORGANIZATIONS_PATH
+import com.openlattice.collaborations.CollaborationsApi.Companion.ORGANIZATION_ID
+import com.openlattice.collaborations.CollaborationsApi.Companion.ORGANIZATION_ID_PATH
+import com.openlattice.collaborations.CollaborationsApi.Companion.PROJECT_PATH
+import com.openlattice.collaborations.CollaborationsApi.Companion.TABLE_ID_PATH
+import com.openlattice.organization.TABLE_ID
 import com.openlattice.organizations.OrganizationDatabase
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.springframework.http.MediaType
@@ -90,6 +95,35 @@ class CollaborationController : AuthorizingComponent, CollaborationsApi {
     override fun renameDatabase(@PathVariable(ID) id: UUID, @RequestBody newDatabaseName: String) {
         ensureOwnerAccess(AclKey(id))
         collaborationService.renameDatabase(id, newDatabaseName)
+
+    }
+
+    @Timed
+    @GetMapping(value = [ID_PATH + PROJECT_PATH + ORGANIZATION_ID_PATH + TABLE_ID_PATH])
+    override fun projectTableToCollaboration(
+            @PathVariable(ID) collaborationId: UUID,
+            @PathVariable(ORGANIZATION_ID) organizationId: UUID,
+            @PathVariable(TABLE_ID) tableId: UUID
+    ) {
+        ensureReadAccess(AclKey(collaborationId))
+        ensureReadAccess(AclKey(organizationId))
+        ensureOwnerAccess(AclKey(tableId))
+
+        collaborationService.projectTableToCollaboration(collaborationId, organizationId, tableId)
+    }
+
+    @Timed
+    @DeleteMapping(value = [ID_PATH + PROJECT_PATH + ORGANIZATION_ID_PATH + TABLE_ID_PATH])
+    override fun removeProjectedTableFromCollaboration(
+            @PathVariable(ID) collaborationId: UUID,
+            @PathVariable(ORGANIZATION_ID) organizationId: UUID,
+            @PathVariable(TABLE_ID) tableId: UUID
+    ) {
+        ensureReadAccess(AclKey(collaborationId))
+        ensureReadAccess(AclKey(organizationId))
+        ensureOwnerAccess(AclKey(tableId))
+
+        collaborationService.removeProjectedTableFromCollaboration(collaborationId, organizationId, tableId)
 
     }
 

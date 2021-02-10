@@ -30,15 +30,12 @@ import com.openlattice.assembler.EntitySetAssemblyKey
 import com.openlattice.assembler.MaterializedEntitySet
 import com.openlattice.assembler.OrganizationAssembly
 import com.openlattice.auditing.AuditRecordEntitySetConfiguration
-import com.openlattice.authorization.AccessTarget
-import com.openlattice.authorization.AceKey
-import com.openlattice.authorization.AceValue
-import com.openlattice.authorization.AclKey
-import com.openlattice.authorization.AclKeySet
-import com.openlattice.authorization.SecurablePrincipal
+import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.codex.Base64Media
 import com.openlattice.collaborations.Collaboration
+import com.openlattice.collaborations.ProjectedTableKey
+import com.openlattice.collaborations.ProjectedTableMetadata
 import com.openlattice.collections.CollectionTemplateKey
 import com.openlattice.collections.EntitySetCollection
 import com.openlattice.collections.EntityTypeCollection
@@ -47,11 +44,7 @@ import com.openlattice.directory.MaterializedViewAccount
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetPropertyKey
 import com.openlattice.edm.set.EntitySetPropertyMetadata
-import com.openlattice.edm.type.AssociationType
-import com.openlattice.edm.type.EntityType
-import com.openlattice.edm.type.EntityTypePropertyKey
-import com.openlattice.edm.type.EntityTypePropertyMetadata
-import com.openlattice.edm.type.PropertyType
+import com.openlattice.edm.type.*
 import com.openlattice.ids.Range
 import com.openlattice.linking.EntityKeyPair
 import com.openlattice.notifications.sms.SmsEntitySetInformation
@@ -99,6 +92,8 @@ class HazelcastMap<K, V> internal constructor(val name: String) : TypedMapIdenti
     companion object {
         private val valuesCache: MutableList<HazelcastMap<*, *>> = ArrayList()
         private val instanceChecker = UniqueInstanceManager(HazelcastMap::class.java)
+
+        // @formatter:off
 
         // When adding new entries to this list, please make sure to keep it sorted and keep the name in sync
         @JvmField val ACL_KEYS = HazelcastMap<String, UUID>("ACL_KEYS")
@@ -148,6 +143,7 @@ class HazelcastMap<K, V> internal constructor(val name: String) : TypedMapIdenti
         @JvmField val PERMISSIONS = HazelcastMap<AceKey, AceValue>("PERMISSIONS")
         @JvmField val PRINCIPAL_TREES = HazelcastMap<AclKey, AclKeySet>("PRINCIPAL_TREES")
         @JvmField val PRINCIPALS = HazelcastMap<AclKey, SecurablePrincipal>("PRINCIPALS")
+        @JvmField val PROJECTED_TABLES = HazelcastMap<ProjectedTableKey, ProjectedTableMetadata>("PROJECTED_TABLES")
         @JvmField val PROPERTY_TYPES = HazelcastMap<UUID, PropertyType>("PROPERTY_TYPES")
         @JvmField val REQUESTS = HazelcastMap<AceKey, Status>("REQUESTS")
         @JvmField val RESOLVED_PRINCIPAL_TREES = HazelcastMap<String, SortedPrincipalSet>("RESOLVED_PRINCIPAL_TREES")
@@ -159,6 +155,8 @@ class HazelcastMap<K, V> internal constructor(val name: String) : TypedMapIdenti
         @JvmField val SMS_INFORMATION = HazelcastMap<SmsInformationKey, SmsEntitySetInformation>("SMS_INFORMATION")
         @JvmField val TRANSPORTER_DB_COLUMNS = HazelcastMap<UUID, TransporterColumnSet>("TRANSPORTER_DB_COLUMNS")
         @JvmField val USERS = HazelcastMap<String, User>("USERS")
+
+        // @formatter:on
 
         @JvmStatic
         fun values(): Array<HazelcastMap<*, *>> {

@@ -36,6 +36,8 @@ import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.codex.Base64Media;
 import com.openlattice.codex.MessageRequest;
 import com.openlattice.collaborations.Collaboration;
+import com.openlattice.collaborations.ProjectedTableKey;
+import com.openlattice.collaborations.ProjectedTableMetadata;
 import com.openlattice.collections.CollectionTemplateType;
 import com.openlattice.collections.EntitySetCollection;
 import com.openlattice.collections.EntityTypeCollection;
@@ -867,6 +869,14 @@ public final class TestDataFactory {
                 randomAlphanumeric( 10 ),
                 Sets.newHashSet( UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID() )
         );
+    }
+
+    public static ProjectedTableKey projectedTableKey() {
+        return new ProjectedTableKey( UUID.randomUUID(), UUID.randomUUID() );
+    }
+
+    public static ProjectedTableMetadata projectedTableMetadata() {
+        return new ProjectedTableMetadata( UUID.randomUUID(), randomAlphanumeric( 10 ) );
     }
 
 }

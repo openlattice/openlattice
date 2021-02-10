@@ -22,6 +22,7 @@ class CollaborationService(
 
     private val collaborations = HazelcastMap.COLLABORATIONS.getMap(hazelcast)
     private val organizations = HazelcastMap.ORGANIZATIONS.getMap(hazelcast)
+    private val externalTables = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE.getMap(hazelcast)
 
     companion object {
         private val logger = LoggerFactory.getLogger(CollaborationService::class.java)
@@ -119,6 +120,22 @@ class CollaborationService(
                     removedMembers,
                     membersToRemoveFromDatabase
             )
+        }
+    }
+
+    fun projectTableToCollaboration(collaborationId: UUID, organizationId: UUID, tableId: UUID) {
+        ensureTableBelongsToOrganization(tableId, organizationId)
+
+    }
+
+    fun removeProjectedTableFromCollaboration(collaborationId: UUID, organizationId: UUID, tableId: UUID) {
+        ensureTableBelongsToOrganization(tableId, organizationId)
+
+    }
+
+    private fun ensureTableBelongsToOrganization(tableId: UUID, organizationId: UUID) {
+        check(externalTables.getValue(tableId).organizationId == organizationId) {
+            "Table $tableId does not belong to organization $organizationId"
         }
     }
 

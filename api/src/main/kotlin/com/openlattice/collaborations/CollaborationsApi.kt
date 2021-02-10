@@ -15,9 +15,14 @@ interface CollaborationsApi {
 
         const val DATABASE_PATH = "/database"
         const val ORGANIZATIONS_PATH = "/organizations"
+        const val PROJECT_PATH = "/project"
 
         const val ID = "id"
         const val ID_PATH = "/{$ID}"
+        const val ORGANIZATION_ID = "organizationId"
+        const val ORGANIZATION_ID_PATH = "/{$ORGANIZATION_ID}"
+        const val TABLE_ID = "tableId"
+        const val TABLE_ID_PATH = "/{$TABLE_ID}"
     }
 
     @GET(BASE)
@@ -43,4 +48,18 @@ interface CollaborationsApi {
 
     @PATCH(BASE + ID_PATH + DATABASE_PATH)
     fun renameDatabase(@Path(ID) id: UUID, @Body newDatabaseName: String)
+
+    @GET(BASE + ID_PATH + PROJECT_PATH + ORGANIZATION_ID_PATH + TABLE_ID_PATH)
+    fun projectTableToCollaboration(
+            @Path(ID) collaborationId: UUID,
+            @Path(ORGANIZATION_ID) organizationId: UUID,
+            @Path(TABLE_ID) tableId: UUID
+    )
+
+    @DELETE(BASE + ID_PATH + PROJECT_PATH + ORGANIZATION_ID_PATH + TABLE_ID_PATH)
+    fun removeProjectedTableFromCollaboration(
+            @Path(ID) collaborationId: UUID,
+            @Path(ORGANIZATION_ID) organizationId: UUID,
+            @Path(TABLE_ID) tableId: UUID
+    )
 }
