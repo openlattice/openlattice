@@ -36,12 +36,11 @@ class UsersAndRolesInitializationTask : HazelcastInitializationTask<AssemblerDep
         dependencies
                 .assemblerConnectionManager
                 .getAllRoles()
-                .map(dependencies.assemblerConnectionManager::createRole)
+                .map(dependencies.assemblerConnectionManager.extDbPermissioner::createRole)
         dependencies
                 .assemblerConnectionManager
                 .getAllUsers()
-                .map(dependencies.assemblerConnectionManager::createUnprivilegedUser)
-
+                .map(dependencies.assemblerConnectionManager.extDbPermissioner::createUnprivilegedUser)
     }
 
     override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {

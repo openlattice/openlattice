@@ -75,7 +75,7 @@ class OrganizationsInitializationTask : HazelcastInitializationTask<Organization
             )
 
             require(GLOBAL_ORGANIZATION_ID.id == orgPrincipal.id) {
-                "Mistmatch in expected global org id and read global org id"
+                "Mismatch in expected global org id and read global org id"
             }
         } else {
             val org = createGlobalOrg(defaultPartitions)

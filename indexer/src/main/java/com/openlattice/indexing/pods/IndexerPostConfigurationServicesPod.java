@@ -25,6 +25,9 @@ import com.hazelcast.core.HazelcastInstance;
 import com.openlattice.BackgroundExternalDatabaseSyncingService;
 import com.openlattice.auditing.AuditRecordEntitySetsManager;
 import com.openlattice.auditing.AuditingManager;
+import com.openlattice.authorization.AuthorizationManager;
+import com.openlattice.authorization.DbCredentialService;
+import com.openlattice.authorization.HazelcastAclKeyReservationService;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.DataDeletionManager;
 import com.openlattice.data.DataGraphManager;
@@ -38,15 +41,18 @@ import com.openlattice.indexing.BackgroundIndexingService;
 import com.openlattice.indexing.BackgroundLinkingIndexingService;
 import com.openlattice.indexing.IndexingService;
 import com.openlattice.indexing.configuration.IndexerConfiguration;
-import com.openlattice.linking.LinkingQueryService;
-import com.openlattice.linking.PostgresLinkingFeedbackService;
 import com.openlattice.organizations.ExternalDatabaseManagementService;
 import com.openlattice.organizations.OrganizationEntitySetsService;
+import com.openlattice.organizations.OrganizationExternalDatabaseConfiguration;
+import com.openlattice.organizations.roles.SecurePrincipalsManager;
+import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
+import com.openlattice.postgres.external.ExternalDatabasePermissioningService;
+import com.openlattice.transporter.services.TransporterService;
 import com.zaxxer.hikari.HikariDataSource;
-import javax.annotation.PostConstruct;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 
 @Configuration
@@ -83,19 +89,37 @@ public class IndexerPostConfigurationServicesPod {
     private EntityDatastore entityDatastore;
 
     @Inject
-    private ExternalDatabaseManagementService edms;
-
-    @Inject
     private DataDeletionManager dataDeletionManager;
 
     @Inject
     private AuditRecordEntitySetsManager ares;
 
     @Inject
-    private LinkingQueryService lqs;
+    private HazelcastAclKeyReservationService aclKeyReservationService;
 
     @Inject
-    private PostgresLinkingFeedbackService postgresLinkingFeedbackService;
+    private ExternalDatabasePermissioningService externalDatabasePermissioningService;
+
+    @Inject
+    private ExternalDatabaseConnectionManager externalDbConnMan;
+
+    @Inject
+    private TransporterService transporterService;
+
+    @Inject
+    private OrganizationExternalDatabaseConfiguration organizationExternalDatabaseConfiguration;
+
+    @Inject
+    private DbCredentialService                       dbcs;
+
+    @Inject
+    public AuthorizationManager authorizationManager;
+
+    @Inject
+    public SecurePrincipalsManager securePrincipalsManager;
+
+    @Inject
+    private HazelcastAclKeyReservationService reservationService;
 
     @Bean
     public PartitionManager partitionManager() {
@@ -150,17 +174,32 @@ public class IndexerPostConfigurationServicesPod {
                 dataDeletionManager );
     }
 
-
+    @Bean
+    public ExternalDatabaseManagementService edms() {
+        return new ExternalDatabaseManagementService(
+                hazelcastInstance,
+                externalDbConnMan,
+                securePrincipalsManager,
+                aclKeyReservationService,
+                authorizationManager,
+                organizationExternalDatabaseConfiguration,
+                externalDatabasePermissioningService,
+                transporterService,
+                dbcs,
+                hikariDataSource );
+    }
 
     @Bean
     public BackgroundExternalDatabaseSyncingService backgroundExternalDatabaseUpdatingService() {
         return new BackgroundExternalDatabaseSyncingService(
                 hazelcastInstance,
-                edms,
+                edms(),
+                externalDatabasePermissioningService,
                 auditingManager,
                 ares,
                 indexerConfiguration,
-                organizationEntitySetsService );
+                organizationEntitySetsService,
+                reservationService );
     }
 
     @Bean

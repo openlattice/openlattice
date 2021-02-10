@@ -30,7 +30,12 @@ import com.openlattice.assembler.EntitySetAssemblyKey
 import com.openlattice.assembler.MaterializedEntitySet
 import com.openlattice.assembler.OrganizationAssembly
 import com.openlattice.auditing.AuditRecordEntitySetConfiguration
-import com.openlattice.authorization.*
+import com.openlattice.authorization.AccessTarget
+import com.openlattice.authorization.AceKey
+import com.openlattice.authorization.AceValue
+import com.openlattice.authorization.AclKey
+import com.openlattice.authorization.AclKeySet
+import com.openlattice.authorization.SecurablePrincipal
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.codex.Base64Media
 import com.openlattice.collections.CollectionTemplateKey
@@ -41,7 +46,11 @@ import com.openlattice.directory.MaterializedViewAccount
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetPropertyKey
 import com.openlattice.edm.set.EntitySetPropertyMetadata
-import com.openlattice.edm.type.*
+import com.openlattice.edm.type.AssociationType
+import com.openlattice.edm.type.EntityType
+import com.openlattice.edm.type.EntityTypePropertyKey
+import com.openlattice.edm.type.EntityTypePropertyMetadata
+import com.openlattice.edm.type.PropertyType
 import com.openlattice.external.JdbcConnections
 import com.openlattice.ids.Range
 import com.openlattice.linking.EntityKeyPair
@@ -113,6 +122,7 @@ class HazelcastMap<K, V> internal constructor(val name: String) : TypedMapIdenti
         @JvmField val ENTITY_TYPE_PROPERTY_METADATA = HazelcastMap<EntityTypePropertyKey, EntityTypePropertyMetadata>("ENTITY_TYPE_PROPERTY_METADATA")
         @JvmField val ENTITY_TYPES = HazelcastMap<UUID, EntityType>("ENTITY_TYPES")
         @JvmField val EXPIRATION_LOCKS = HazelcastMap<UUID, Long>("EXPIRATION_LOCKS")
+        @JvmField val EXTERNAL_PERMISSION_ROLES = HazelcastMap<AccessTarget, UUID>("EXTERNAL_PERMISSION_ROLES")
         @JvmField val EXTERNAL_SQL_DATABASES = HazelcastMap<UUID, JdbcConnections> ("EXTERNAL_SQL_DATABASES")
         @JvmField val HBA_AUTHENTICATION_RECORDS = HazelcastMap<String, PostgresAuthenticationRecord>("HBA_AUTHENTICATION_RECORDS")
         @JvmField val ID_GENERATION = HazelcastMap<Long, Range>("ID_GENERATION")

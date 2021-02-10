@@ -16,6 +16,9 @@ import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.util.*
 
+const val NAME_INDEX = "name"
+const val SCHEMA_INDEX = "schema"
+
 @Component
 class OrganizationExternalDatabaseTableMapstore(
         hds: HikariDataSource
@@ -32,6 +35,7 @@ class OrganizationExternalDatabaseTableMapstore(
         ps.setObject(index++, value.organizationId)
         ps.setObject(index++, value.dataSourceId)
         ps.setString(index++, value.externalId)
+        ps.setString(index++, value.schema)
 
         //update
         ps.setString(index++, value.name)
@@ -40,6 +44,7 @@ class OrganizationExternalDatabaseTableMapstore(
         ps.setObject(index++, value.organizationId)
         ps.setObject(index++, value.dataSourceId)
         ps.setString(index++, value.externalId)
+        ps.setString(index++, value.schema)
     }
 
     override fun bind(ps: PreparedStatement, key: UUID, offset: Int): Int {
@@ -60,6 +65,8 @@ class OrganizationExternalDatabaseTableMapstore(
         return super.getMapConfig()
                 .addIndexConfig(IndexConfig(IndexType.HASH, ORGANIZATION_ID_INDEX))
                 .addIndexConfig(IndexConfig(IndexType.HASH, DATA_SOURCE_ID_INDEX))
+                .addIndexConfig(IndexConfig(IndexType.HASH, NAME_INDEX))
+                .addIndexConfig(IndexConfig(IndexType.HASH, SCHEMA_INDEX))
                 .setInMemoryFormat(InMemoryFormat.OBJECT)
     }
 

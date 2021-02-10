@@ -35,6 +35,7 @@ import com.openlattice.apps.AppTypeSetting;
 import com.openlattice.assembler.EntitySetAssemblyKey;
 import com.openlattice.assembler.MaterializedEntitySet;
 import com.openlattice.auditing.AuditRecordEntitySetConfiguration;
+import com.openlattice.authorization.AccessTarget;
 import com.openlattice.authorization.AceKey;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.Permission;
@@ -194,6 +195,7 @@ import static com.openlattice.postgres.PostgresColumn.ORIGIN_ID;
 import static com.openlattice.postgres.PostgresColumn.PARTITION;
 import static com.openlattice.postgres.PostgresColumn.PARTITIONS_FIELD;
 import static com.openlattice.postgres.PostgresColumn.PARTITION_INDEX_FIELD;
+import static com.openlattice.postgres.PostgresColumn.PERMISSION;
 import static com.openlattice.postgres.PostgresColumn.PERMISSIONS_FIELD;
 import static com.openlattice.postgres.PostgresColumn.PHONE_NUMBER_FIELD;
 import static com.openlattice.postgres.PostgresColumn.PII;
@@ -206,7 +208,9 @@ import static com.openlattice.postgres.PostgresColumn.PROPERTY_TAGS_FIELD;
 import static com.openlattice.postgres.PostgresColumn.PROPERTY_TYPE_ID;
 import static com.openlattice.postgres.PostgresColumn.REASON;
 import static com.openlattice.postgres.PostgresColumn.REFRESH_RATE;
+import static com.openlattice.postgres.PostgresColumn.ROLE_ID;
 import static com.openlattice.postgres.PostgresColumn.SCHEDULED_DATE;
+import static com.openlattice.postgres.PostgresColumn.SCHEMA;
 import static com.openlattice.postgres.PostgresColumn.SCHEMAS;
 import static com.openlattice.postgres.PostgresColumn.SCHEMA_NAME_FIELD;
 import static com.openlattice.postgres.PostgresColumn.SCORE_FIELD;
@@ -1047,6 +1051,10 @@ public final class ResultSetAdapters {
         return rs.getObject( TEMPLATE_TYPE_ID.getName(), UUID.class );
     }
 
+    public static String schema( ResultSet rs ) throws SQLException {
+        return rs.getString( SCHEMA.getName() );
+    }
+
     public static EntityTypeCollection entityTypeCollection( ResultSet rs ) throws SQLException, IOException {
         UUID id = id( rs );
         FullQualifiedName type = fqn( rs );
@@ -1093,6 +1101,7 @@ public final class ResultSetAdapters {
         String externalId = externalId( rs );
         UUID organizationId = organizationId( rs );
         UUID dataSourceId = dataSourceId( rs );
+        String schema = schema( rs );
 
         return new OrganizationExternalDatabaseTable( id,
                 name,
@@ -1100,7 +1109,8 @@ public final class ResultSetAdapters {
                 description,
                 organizationId,
                 dataSourceId,
-                externalId );
+                externalId,
+                schema );
     }
 
     public static OrganizationExternalDatabaseView organizationExternalDatabaseView( ResultSet rs )
@@ -1266,5 +1276,17 @@ public final class ResultSetAdapters {
         String name = name( rs );
 
         return new OrganizationDatabase( oid, name );
+    }
+
+    @NotNull public static UUID roleId( @NotNull ResultSet rs ) throws SQLException {
+        return rs.getObject( ROLE_ID.getName(), UUID.class);
+    }
+
+    @NotNull public static Permission permission( @NotNull ResultSet rs ) throws SQLException {
+        return Permission.valueOf(rs.getString( PERMISSION.getName()));
+    }
+
+    @NotNull public static AccessTarget accessTarget( @NotNull ResultSet rs ) throws SQLException {
+        return new AccessTarget(aclKey( rs ), permission(rs) );
     }
 }

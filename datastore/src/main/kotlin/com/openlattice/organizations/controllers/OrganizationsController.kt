@@ -150,7 +150,6 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
     override fun destroyOrganization(@PathVariable(OrganizationsApi.ID) organizationId: UUID): Void? {
         ensureOwner(organizationId)
         ensureObjectCanBeDeleted(organizationId)
-        organizations.ensureOrganizationExists(organizationId)
         organizations.destroyOrganization(organizationId)
         edms.deleteOrganizationExternalDatabase(organizationId)
         return null
@@ -167,7 +166,6 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
             @PathVariable(OrganizationsApi.ID) organizationId: UUID,
             @PathVariable(OrganizationsApi.SET_ID) entitySetId: UUID
     ): Void? {
-        organizations.ensureOrganizationExists(organizationId)
         ensureRead(organizationId)
         ensureTransportAccess(AclKey(entitySetId))
         edms.transportEntitySet(organizationId, entitySetId)
@@ -185,10 +183,9 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
             @PathVariable(OrganizationsApi.ID) organizationId: UUID,
             @PathVariable(OrganizationsApi.SET_ID) entitySetId: UUID
     ): Void? {
-        organizations.ensureOrganizationExists(organizationId)
         ensureRead(organizationId)
         ensureTransportAccess(AclKey(entitySetId))
-        edms.destroyTransportedEntitySet(entitySetId)
+        edms.destroyTransportedEntitySet(organizationId, entitySetId)
         return null
     }
 
@@ -492,13 +489,7 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
     )
     override fun getMemberCountForOrganizations(organizationIds: Set<UUID>): Map<UUID, Int> {
         val readPermissions = EnumSet.of(Permission.READ)
-        accessCheck(
-                organizationIds.stream().collect(
-                        Collectors.toMap(
-                                { uuids: UUID -> AclKey(uuids) },
-                                { readPermissions })
-                )
-        )
+        accessCheck( organizationIds.associate { AclKey(it) to readPermissions } )
         return organizations.getMemberCountsForOrganizations(organizationIds)
     }
 
@@ -509,13 +500,7 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
     )
     override fun getRoleCountForOrganizations(organizationIds: Set<UUID>): Map<UUID, Int> {
         val readPermissions = EnumSet.of(Permission.READ)
-        accessCheck(
-                organizationIds.stream().collect(
-                        Collectors.toMap(
-                                { uuids: UUID -> AclKey(uuids) },
-                                { readPermissions })
-                )
-        )
+        accessCheck( organizationIds.associate { AclKey(it) to readPermissions } )
         return organizations.getRoleCountsForOrganizations(organizationIds)
     }
 
@@ -576,6 +561,9 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
     @PostMapping(value = [OrganizationsApi.ROLES], consumes = [MediaType.APPLICATION_JSON_VALUE])
     override fun createRole(@RequestBody role: Role): UUID {
         ensureOwner(role.organizationId)
+        require(role.principalType == PrincipalType.ROLE) {
+            "Role principal type must be ROLE"
+        }
         //We only create the role, but do not necessarily assign it to ourselves.
         organizations.createRoleIfNotExists(Principals.getCurrentUser(), role)
         return role.id
@@ -821,6 +809,7 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
     override fun removeConnections(
             @PathVariable(OrganizationsApi.ID) organizationId: UUID, @RequestBody connections: Set<String>
     ): Void? {
+        ensureAdminAccess()
         organizations.removeConnections(organizationId, connections)
         return null
     }
@@ -898,13 +887,13 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
         return authorizations
     }
 
-    private fun ensureOwner(organizationId: UUID): AclKey {
-        val aclKey = AclKey(organizationId)
-        accessCheck(aclKey, EnumSet.of(Permission.OWNER))
-        return aclKey
+    private fun ensureOwner(organizationId: UUID){
+        organizations.ensureOrganizationExists(organizationId)
+        ensureOwnerAccess(AclKey(organizationId))
     }
 
     private fun ensureRead(organizationId: UUID) {
+        organizations.ensureOrganizationExists(organizationId)
         ensureReadAccess(AclKey(organizationId))
     }
 

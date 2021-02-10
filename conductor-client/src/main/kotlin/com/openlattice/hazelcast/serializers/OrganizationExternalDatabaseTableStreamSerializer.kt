@@ -5,12 +5,13 @@ import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.hazelcast.StreamSerializerTypeIds
+import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.organization.OrganizationExternalDatabaseTable
 import org.springframework.stereotype.Component
 import java.util.*
 
 @Component
-class OrganizationExternalDatabaseTableStreamSerializer : SelfRegisteringStreamSerializer<OrganizationExternalDatabaseTable> {
+class OrganizationExternalDatabaseTableStreamSerializer : TestableSelfRegisteringStreamSerializer<OrganizationExternalDatabaseTable> {
 
     companion object {
         fun serialize(output: ObjectDataOutput, obj: OrganizationExternalDatabaseTable) {
@@ -21,6 +22,7 @@ class OrganizationExternalDatabaseTableStreamSerializer : SelfRegisteringStreamS
             UUIDStreamSerializerUtils.serialize(output, obj.organizationId)
             UUIDStreamSerializerUtils.serialize(output, obj.dataSourceId)
             output.writeUTF(obj.externalId)
+            output.writeUTF(obj.schema)
         }
 
         fun deserialize(input: ObjectDataInput): OrganizationExternalDatabaseTable {
@@ -31,6 +33,7 @@ class OrganizationExternalDatabaseTableStreamSerializer : SelfRegisteringStreamS
             val orgId = UUIDStreamSerializerUtils.deserialize(input)
             val dataSourceId = UUIDStreamSerializerUtils.deserialize(input)
             val externalId = input.readUTF()
+            val schema = input.readUTF()
             return OrganizationExternalDatabaseTable(
                     id,
                     name,
@@ -38,7 +41,8 @@ class OrganizationExternalDatabaseTableStreamSerializer : SelfRegisteringStreamS
                     Optional.of(description),
                     orgId,
                     dataSourceId,
-                    externalId
+                    externalId,
+                    schema
             )
         }
     }
@@ -59,4 +63,7 @@ class OrganizationExternalDatabaseTableStreamSerializer : SelfRegisteringStreamS
         return StreamSerializerTypeIds.ORGANIZATION_EXTERNAL_DATABASE_TABLE.ordinal
     }
 
+    override fun generateTestValue(): OrganizationExternalDatabaseTable {
+        return TestDataFactory.organizationExternalDatabaseTable()
+    }
 }

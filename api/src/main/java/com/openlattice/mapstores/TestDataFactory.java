@@ -836,7 +836,8 @@ public final class TestDataFactory {
                 Optional.of( randomAlphanumeric( 5 ) ),
                 UUID.randomUUID(),
                 UUID.randomUUID(),
-                randomAlphanumeric( 5 )
+                randomAlphanumeric( 5 ),
+                randomAlphabetic( 5 )
         );
     }
 

@@ -3,16 +3,17 @@ package com.openlattice.hazelcast.serializers
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.hazelcast.StreamSerializerTypeIds
+import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import org.springframework.stereotype.Component
 import java.util.*
 
 @Component
-class OrganizationExternalDatabaseColumnStreamSerializer : SelfRegisteringStreamSerializer<OrganizationExternalDatabaseColumn> {
+class OrganizationExternalDatabaseColumnStreamSerializer : TestableSelfRegisteringStreamSerializer<OrganizationExternalDatabaseColumn> {
 
     companion object {
+
         fun serialize(output: ObjectDataOutput, obj: OrganizationExternalDatabaseColumn) {
             UUIDStreamSerializerUtils.serialize(output, obj.id)
             output.writeUTF(obj.name)
@@ -71,4 +72,7 @@ class OrganizationExternalDatabaseColumnStreamSerializer : SelfRegisteringStream
         return StreamSerializerTypeIds.ORGANIZATION_EXTERNAL_DATABASE_COLUMN.ordinal
     }
 
+    override fun generateTestValue(): OrganizationExternalDatabaseColumn {
+        return TestDataFactory.organizationExternalDatabaseColumn()
+    }
 }

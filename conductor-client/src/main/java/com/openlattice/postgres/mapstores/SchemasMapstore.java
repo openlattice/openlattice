@@ -1,7 +1,7 @@
 package com.openlattice.postgres.mapstores;
 
 import static com.openlattice.postgres.PostgresColumn.NAME_SET;
-import static com.openlattice.postgres.PostgresTable.SCHEMA;
+import static com.openlattice.postgres.PostgresTable.SCHEMAS;
 
 import com.openlattice.hazelcast.HazelcastMap;
 import com.google.common.collect.ImmutableSet;
@@ -19,7 +19,7 @@ import java.sql.SQLException;
 public class SchemasMapstore extends AbstractBasePostgresMapstore<String, DelegatedStringSet> {
 
     public SchemasMapstore( HikariDataSource hds ) {
-        super( HazelcastMap.SCHEMAS, SCHEMA, hds );
+        super( HazelcastMap.SCHEMAS, SCHEMAS, hds );
     }
 
     @Override protected void bind(

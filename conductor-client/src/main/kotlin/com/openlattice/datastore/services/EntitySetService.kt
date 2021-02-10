@@ -101,7 +101,7 @@ class EntitySetService(
             authorizations,
             hazelcastInstance
     )
-
+    
     companion object {
         private val logger = LoggerFactory.getLogger(EntitySetManager::class.java)
     }
@@ -189,6 +189,16 @@ class EntitySetService(
 
         aresManager.createAuditEntitySetForEntitySet(entitySet)
 
+    }
+
+    override fun getTransportedEntitySetsOfType(entityTypeId: UUID): Set<EntitySet> {
+        return entitySets.values(
+                Predicates.and(
+                        Predicates.equal<UUID, EntitySet>(EntitySetMapstore.FLAGS_INDEX, EntitySetFlag.TRANSPORTED),
+                        Predicates.notEqual<UUID, EntitySet>(EntitySetMapstore.FLAGS_INDEX, EntitySetFlag.LINKING),
+                        Predicates.equal<UUID, EntitySet>(EntitySetMapstore.ENTITY_TYPE_ID_INDEX, entityTypeId)
+                )
+        ).toSet()
     }
 
     override fun getAuthorizedNeighborEntitySets(
