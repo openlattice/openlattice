@@ -53,7 +53,6 @@ import com.openlattice.linking.util.PersonProperties;
 import com.openlattice.notifications.sms.PhoneNumberService;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.OrganizationEntitySetsService;
-import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService;
@@ -192,7 +191,7 @@ public class LinkerServicesPod {
                 phoneNumberService(),
                 partitionManager(),
                 assembler(),
-                organizationMetadataEntitySetsService() );
+                organizationEntitySetsService() );
     }
 
     @Bean
@@ -244,7 +243,7 @@ public class LinkerServicesPod {
                 partitionManager(),
                 dataModelService(),
                 hikariDataSource,
-                organizationMetadataEntitySetsService(),
+                organizationEntitySetsService(),
                 auditingConfiguration
         );
     }
@@ -271,11 +270,13 @@ public class LinkerServicesPod {
     }
 
     @Bean
-    public OrganizationEntitySetsService organizationMetadataEntitySetsService() {
-        return new OrganizationEntitySetsService( hazelcastInstance,
+    public OrganizationEntitySetsService organizationEntitySetsService() {
+        return new OrganizationEntitySetsService(
+                hazelcastInstance,
                 dataModelService(),
-                principalService(),
-                authorizationManager() );
+                principalService,
+                authorizationManager()
+        );
     }
 
     @Bean

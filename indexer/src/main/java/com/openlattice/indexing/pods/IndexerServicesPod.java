@@ -230,7 +230,7 @@ public class IndexerServicesPod {
                 phoneNumberService(),
                 partitionManager(),
                 assembler(),
-                organizationMetadataEntitySetsService() );
+                organizationEntitySetsService() );
     }
 
     @Bean
@@ -279,7 +279,7 @@ public class IndexerServicesPod {
                 partitionManager(),
                 dataModelService(),
                 hikariDataSource,
-                organizationMetadataEntitySetsService(),
+                organizationEntitySetsService(),
                 auditingConfiguration
         );
     }
@@ -388,11 +388,11 @@ public class IndexerServicesPod {
     }
 
     @Bean
-    public OrganizationEntitySetsService organizationMetadataEntitySetsService() {
+    public OrganizationEntitySetsService organizationEntitySetsService() {
         return new OrganizationEntitySetsService(
                 hazelcastInstance,
                 dataModelService(),
-                principalService(),
+                securePrincipalsManager(),
                 authorizationManager()
         );
     }
