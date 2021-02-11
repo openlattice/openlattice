@@ -86,7 +86,7 @@ class CollaborationService(
 
     fun handleOrganizationDatabaseRename(organizationId: UUID, oldName: String, newName: String) {
         getCollaborationIdsIncludingOrg(organizationId).forEach {
-            collaborationDatabaseManager.handleOrganizationDatabaseRename(it, oldName, newName)
+            collaborationDatabaseManager.handleOrganizationDatabaseRename(it, organizationId, oldName, newName)
         }
     }
 

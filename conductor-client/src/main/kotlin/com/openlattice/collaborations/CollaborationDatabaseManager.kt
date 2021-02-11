@@ -18,7 +18,7 @@ interface CollaborationDatabaseManager {
 
     fun removeOrganizationsFromCollaboration(collaborationId: UUID, organizationIds: Set<UUID>)
 
-    fun handleOrganizationDatabaseRename(organizationId: UUID, oldName: String, newName: String)
+    fun handleOrganizationDatabaseRename(collaborationId: UUID, organizationId: UUID, oldName: String, newName: String)
 
     fun addMembersToOrganizationInCollaborations(collaborationIds: Set<UUID>, organizationId: UUID, members: Set<AclKey>)
 

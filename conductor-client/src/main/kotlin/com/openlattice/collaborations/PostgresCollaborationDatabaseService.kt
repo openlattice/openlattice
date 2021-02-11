@@ -129,8 +129,13 @@ class PostgresCollaborationDatabaseService(
         acm.dropSchemas(collaborationId, schemaNames)
     }
 
-    override fun handleOrganizationDatabaseRename(collaborationId: UUID, oldName: String, newName: String) {
+    override fun handleOrganizationDatabaseRename(collaborationId: UUID, organizationId: UUID, oldName: String, newName: String) {
         acm.renameSchema(collaborationId, oldName, newName)
+        PostgresProjectionService.changeDbNameForFdw(
+                externalDbConnMan.connectToOrg(collaborationId),
+                getFdwName(organizationId),
+                newName
+        )
     }
 
     override fun addMembersToOrganizationInCollaborations(collaborationIds: Set<UUID>, organizationId: UUID, members: Set<AclKey>) {
