@@ -35,7 +35,7 @@ class ExternalDatabasePermissioner(
         private val extDbManager: ExternalDatabaseConnectionManager,
         private val dbCredentialService: DbCredentialService,
         private val principalsMapManager: PrincipalsMapManager
-): ExternalDatabasePermissioningService {
+) : ExternalDatabasePermissioningService {
     private val atlas: HikariDataSource = extDbManager.connect("postgres")
 
     private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
@@ -140,7 +140,7 @@ class ExternalDatabasePermissioner(
         updateAssemblyPermissions(action, assemblyAcls, aclKeyToTableCols.toCompletableFuture().get())
     }
 
-    private fun groupAclsByType(acls: List<Acl>): Map<SecurableObjectType, List<Acl>>{
+    private fun groupAclsByType(acls: List<Acl>): Map<SecurableObjectType, List<Acl>> {
         val aclKeyIndex = acls.aclKeysAsSet { it.aclKey.index }.toTypedArray()
         return mapOf(
                 getAclKeysOfSecurableObjectType(acls, aclKeyIndex, SecurableObjectType.OrganizationExternalDatabaseColumn),
@@ -154,7 +154,7 @@ class ExternalDatabasePermissioner(
             securableObjectType: SecurableObjectType
     ): Pair<SecurableObjectType, List<Acl>> {
         val aclKeysOfType: Set<AclKey> = securableObjectTypes.keySet(
-                getAclKeysOfObjectTypePredicate( aclKeyIndex, securableObjectType)
+                getAclKeysOfObjectTypePredicate(aclKeyIndex, securableObjectType)
         )
         val aclsOfType = acls.filter { aclKeysOfType.contains(it.aclKey) }
         return securableObjectType to aclsOfType
@@ -166,16 +166,16 @@ class ExternalDatabasePermissioner(
     ): Predicate<AclKey, SecurableObjectType> {
         return Predicates.and<AclKey, SecurableObjectType>(
                 Predicates.`in`<Any, Any>(SecurableObjectTypeMapstore.ACL_KEY_INDEX, *aclKeysIndexForm),
-                Predicates.equal<Any, Any>(SecurableObjectTypeMapstore.SECURABLE_OBJECT_TYPE_INDEX, objectType )
+                Predicates.equal<Any, Any>(SecurableObjectTypeMapstore.SECURABLE_OBJECT_TYPE_INDEX, objectType)
         )
     }
 
-    private fun <T> Collection<Acl>.aclKeysAsSet( extraction: ( Acl ) -> T ): Set<T> {
-        return this.mapTo( HashSet(this.size) ) { extraction(it) }
+    private fun <T> Collection<Acl>.aclKeysAsSet(extraction: (Acl) -> T): Set<T> {
+        return this.mapTo(HashSet(this.size)) { extraction(it) }
     }
 
     override fun addPrincipalToPrincipals(sourcePrincipalAclKey: AclKey, targetPrincipalAclKeys: Set<AclKey>) {
-        if ( targetPrincipalAclKeys.isEmpty()) {
+        if (targetPrincipalAclKeys.isEmpty()) {
             return
         }
         val grantTargets = dbCredentialService.getDbUsernames(targetPrincipalAclKeys)
@@ -269,35 +269,70 @@ class ExternalDatabasePermissioner(
             table: OrganizationExternalDatabaseTable,
             columns: Set<OrganizationExternalDatabaseColumn>
     ) {
+        initializePermissionSetForExternalTable(
+                hikariDataSource = extDbManager.connectToOrg(organizationId),
+                tableSchema = table.schema,
+                tableName = table.name,
+                columns = columns,
+                permissions = allTablePermissions
+
+        )
+    }
+
+    /**
+     * Create all postgres roles to apply to [table] and [columns] in [organizationId] database
+     */
+    override fun initializeProjectedTableViewPermissions(
+            collaborationId: UUID,
+            schema: String,
+            table: OrganizationExternalDatabaseTable,
+            columns: Set<OrganizationExternalDatabaseColumn>
+    ) {
+        initializePermissionSetForExternalTable(
+                hikariDataSource = extDbManager.connectToOrg(collaborationId),
+                tableSchema = schema,
+                tableName = table.name,
+                columns = columns,
+                permissions = allViewPermissions
+
+        )
+    }
+
+    private fun initializePermissionSetForExternalTable(
+            hikariDataSource: HikariDataSource,
+            tableSchema: String,
+            tableName: String,
+            columns: Set<OrganizationExternalDatabaseColumn>,
+            permissions: Set<Permission>
+    ) {
         val targetsToColumns = mutableMapOf<AccessTarget, OrganizationExternalDatabaseColumn>()
 
         val targets = columns.flatMapTo(mutableSetOf()) { column ->
-            allTablePermissions.map { permission ->
-                val at = AccessTarget.forPermissionOnTarget(permission, column.tableId, column.id )
+            permissions.map { permission ->
+                val at = AccessTarget.forPermissionOnTarget(permission, column.tableId, column.id)
                 targetsToColumns[at] = column
                 at
             }
         }
 
-        val orgHds = extDbManager.connectToOrg(organizationId)
         PostgresRoles.getOrCreatePermissionRolesAsync(
                 externalRoleNames,
                 targets,
-                orgHds
+                hikariDataSource
         ).thenApplyAsync { targetToRoleNames ->
-            targetToRoleNames.map { ( target, roleName ) ->
+            targetToRoleNames.map { (target, roleName) ->
                 val column = targetsToColumns.getValue(target)
                 val pgPermissions = olToPostgres.getValue(target.permission)
                 grantPermissionsOnColumnsOnTableToRoleSql(
                         pgPermissions,
                         ApiHelpers.dbQuote(column.name),
-                        Schemas.fromName(table.schema),
-                        table.name,
+                        Schemas.fromName(tableSchema),
+                        tableName,
                         roleName.toString()
                 )
             }
         }.thenAccept { sqls ->
-            orgHds.connection.use { conn ->
+            hikariDataSource.connection.use { conn ->
                 conn.createStatement().use { stmt ->
                     sqls.forEach { sql ->
                         stmt.addBatch(sql)
@@ -327,7 +362,8 @@ class ExternalDatabasePermissioner(
     ) {
 
         when (action) {
-            Action.ADD, Action.REMOVE, Action.SET -> { }
+            Action.ADD, Action.REMOVE, Action.SET -> {
+            }
             else -> {
                 logger.error("Action $action passed through to updateTablePermissions is unhandled. Doing no operations")
                 return
@@ -344,11 +380,11 @@ class ExternalDatabasePermissioner(
                 when (action) {
                     Action.ADD -> {
                         val sqls = adds.getOrDefault(orgId, mutableListOf())
-                        sqls.addAll( grantPermissionsOnColumnSql(
+                        sqls.addAll(grantPermissionsOnColumnSql(
                                 orgId,
                                 ace,
                                 column
-                        ) )
+                        ))
                         adds[orgId] = sqls
                     }
                     Action.REMOVE -> {
@@ -370,7 +406,7 @@ class ExternalDatabasePermissioner(
                         removes[orgId] = remSqls
 
                         val addSqls = adds.getOrDefault(orgId, mutableListOf())
-                        addSqls.addAll( grantPermissionsOnColumnSql(
+                        addSqls.addAll(grantPermissionsOnColumnSql(
                                 orgId,
                                 ace,
                                 column
@@ -504,12 +540,12 @@ class ExternalDatabasePermissioner(
                 externalRoleNames,
                 accessTargets,
                 extDbManager.connectToOrg(orgId)
-        ).thenCombine( usernameAsync ) { targetsToNames, userRole ->
+        ).thenCombine(usernameAsync) { targetsToNames, userRole ->
             val sqls = mutableListOf<String>()
             targetsToNames.values.forEach { permissionRole ->
                 sqls.add(grantRoleToRole(permissionRole.toString(), setOf(userRole)))
             }
-            if (column.schema != null){
+            if (column.schema != null) {
                 sqls.add(grantUsageOnSchemaSql(column.schema, userRole))
             }
             sqls
@@ -526,7 +562,7 @@ class ExternalDatabasePermissioner(
         return applyRoleOperation(roleName, targetRoles, PgPermAction.GRANT)
     }
 
-    private fun applyRoleOperation(roleName: String, targetRoles: Set<String>, action: PgPermAction ): String {
+    private fun applyRoleOperation(roleName: String, targetRoles: Set<String>, action: PgPermAction): String {
         val targets = targetRoles.joinToString {
             ApiHelpers.dbQuote(it)
         }

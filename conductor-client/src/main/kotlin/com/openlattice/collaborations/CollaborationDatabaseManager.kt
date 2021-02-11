@@ -32,4 +32,6 @@ interface CollaborationDatabaseManager {
     fun initializeTableProjection(collaborationId: UUID, organizationId: UUID, tableId: UUID)
 
     fun removeTableProjection(collaborationId: UUID, organizationId: UUID, tableId: UUID)
+
+    fun refreshTableProjection(collaborationId: UUID, organizationId: UUID, tableId: UUID)
 }
