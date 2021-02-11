@@ -73,7 +73,7 @@ class PostgresProjectionService {
         fun changeDbNameForFdw(hds: HikariDataSource, fdwName: String, newDbName: String) {
             hds.connection.use { conn ->
                 conn.createStatement().use { stmt ->
-                    stmt.execute("ALTER SERVER ${quote(fdwName)} OPTIONS (SET dbname ${quote(newDbName)})")
+                    stmt.execute("ALTER SERVER ${quote(fdwName)} OPTIONS (SET dbname '$newDbName')")
                 }
             }
         }
