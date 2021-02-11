@@ -123,12 +123,12 @@ class ExternalDatabasePermissioner(
         }
 
         val columnsById = organizationExternalDatabaseColumns.getAll(extTableColIds).values.associate {
-            AclKey( it.tableId, it.id) to TableColumn(it.organizationId, it.tableId, it.id, extTablesById[it.tableId])
+            AclKey(it.tableId, it.id) to TableColumn(it.organizationId, it.tableId, it.id, extTablesById[it.tableId])
         }
         updateExternalTablePermissions(action, externalTableColAcls, columnsById)
     }
 
-    fun executePrivilegesUpdateOnPropertyTypes(action: Action, assemblyAcls: List<Acl> ){
+    fun executePrivilegesUpdateOnPropertyTypes(action: Action, assemblyAcls: List<Acl>) {
         val esids = assemblyAcls.aclKeysAsSet {
             it.aclKey[0]
         }
@@ -234,7 +234,7 @@ class ExternalDatabasePermissioner(
                         grantPermissionsOnColumnsOnTableToRoleSql(
                                 permissions,
                                 quotedColumns,
-                                Schemas.ASSEMBLED_ENTITY_SETS,
+                                Schemas.ASSEMBLED_ENTITY_SETS.label,
                                 entitySetName,
                                 roleName)
             }
@@ -326,7 +326,7 @@ class ExternalDatabasePermissioner(
                 grantPermissionsOnColumnsOnTableToRoleSql(
                         pgPermissions,
                         ApiHelpers.dbQuote(column.name),
-                        Schemas.fromName(tableSchema),
+                        tableSchema,
                         tableName,
                         roleName.toString()
                 )
@@ -512,7 +512,7 @@ class ExternalDatabasePermissioner(
     private fun grantPermissionsOnColumnsOnTableToRoleSql(
             privileges: Set<PostgresPrivileges>,
             columns: String,
-            schemaName: Schemas,
+            schemaName: String,
             tableName: String,
             roleName: String): String {
         val privilegeString = privileges.joinToString { privilege ->
