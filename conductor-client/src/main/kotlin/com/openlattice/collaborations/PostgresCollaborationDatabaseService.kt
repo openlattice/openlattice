@@ -1,6 +1,7 @@
 package com.openlattice.collaborations
 
 import com.hazelcast.core.HazelcastInstance
+import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.openlattice.assembler.Assembler
 import com.openlattice.assembler.AssemblerConfiguration
@@ -9,6 +10,7 @@ import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.DbCredentialService
 import com.openlattice.authorization.Permission
+import com.openlattice.collaborations.mapstores.ProjectedTablesMapstore
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organizations.OrganizationDatabase
 import com.openlattice.organizations.mapstores.TABLE_ID_INDEX
@@ -38,6 +40,7 @@ class PostgresCollaborationDatabaseService(
     private val organizationDatabases = HazelcastMap.ORGANIZATION_DATABASES.getMap(hazelcast)
     private val externalTables = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE.getMap(hazelcast)
     private val externalColumns = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_COLUMN.getMap(hazelcast)
+    private val projectedTables = HazelcastMap.PROJECTED_TABLES.getMap(hazelcast)
 
     companion object {
         private val logger = LoggerFactory.getLogger(PostgresCollaborationDatabaseService::class.java)
@@ -109,11 +112,19 @@ class PostgresCollaborationDatabaseService(
 
         val rolesToRemove = dbCreds.getDbAccounts(membersOfRemovedOrgs - remainingMembers).map { it.value.username }
 
+        /* Identify table ids to remove */
+        val projectedTableIds = projectedTables.entrySet(Predicates.and(
+                collaborationIdPredicate(collaborationId),
+                organizationIdsPredicate(organizationIds)
+        )).associate { it.key.tableId to it.value.organizationId }
 
         /* Identify schemas to drop */
         val schemaNames = organizationDatabases.getAll(organizationIds).map { it.value.name }
 
         /* Perform updates on the database */
+        projectedTableIds.forEach { (tableId, organizationId) ->
+            removeTableProjection(collaborationId, organizationId, tableId)
+        }
         acm.removeMembersFromCollaboration(collaborationId, rolesToRemove)
         acm.dropSchemas(collaborationId, schemaNames)
     }
@@ -153,7 +164,7 @@ class PostgresCollaborationDatabaseService(
         val foreignSchema = table.schema
         val foreignName = table.name
 
-        val intermediateSchema = Schemas.FOREIGN_SCHEMA.label
+        val intermediateSchema = Schemas.PROJECTIONS_SCHEMA.label
         val intermediateName = tableId.toString()
 
         val viewSchema = externalDbConnMan.getOrganizationDatabaseName(organizationId)
@@ -192,7 +203,7 @@ class PostgresCollaborationDatabaseService(
         val collaborationHds = externalDbConnMan.connectToOrg(collaborationId)
 
         PostgresProjectionService.destroyViewOverTable(collaborationHds, orgSchema, table.name)
-        PostgresProjectionService.dropTableImportedFromFdw(collaborationHds, Schemas.FOREIGN_SCHEMA.label, table.id.toString())
+        PostgresProjectionService.dropTableImportedFromFdw(collaborationHds, Schemas.PROJECTIONS_SCHEMA.label, table.id.toString())
     }
 
     override fun refreshTableProjection(collaborationId: UUID, organizationId: UUID, tableId: UUID) {
@@ -219,7 +230,7 @@ class PostgresCollaborationDatabaseService(
                 remotePassword = atlasPassword,
                 remoteDbJdbc = orgDbJdbc,
                 localUsername = atlasUsername,
-                localSchema = Schemas.FOREIGN_SCHEMA,
+                localSchema = Schemas.PROJECTIONS_SCHEMA,
                 fdwName = fdwName
         )
     }
@@ -227,4 +238,13 @@ class PostgresCollaborationDatabaseService(
     private fun getFdwName(organizationId: UUID): String {
         return "fdw_${organizationId.toString().replace("-", "")}"
     }
+
+    private fun collaborationIdPredicate(collaborationId: UUID): Predicate<ProjectedTableKey, ProjectedTableMetadata> {
+        return Predicates.equal(ProjectedTablesMapstore.COLLABORATION_ID_INDEX, collaborationId)
+    }
+
+    private fun organizationIdsPredicate(organizationIds: Collection<UUID>): Predicate<ProjectedTableKey, ProjectedTableMetadata> {
+        return Predicates.`in`(ProjectedTablesMapstore.ORGANIZATION_ID_INDEX, *organizationIds.toTypedArray())
+    }
+
 }

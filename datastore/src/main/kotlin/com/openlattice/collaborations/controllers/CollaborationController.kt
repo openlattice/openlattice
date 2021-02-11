@@ -14,8 +14,8 @@ import com.openlattice.collaborations.CollaborationsApi.Companion.ORGANIZATIONS_
 import com.openlattice.collaborations.CollaborationsApi.Companion.ORGANIZATION_ID
 import com.openlattice.collaborations.CollaborationsApi.Companion.ORGANIZATION_ID_PATH
 import com.openlattice.collaborations.CollaborationsApi.Companion.PROJECT_PATH
+import com.openlattice.collaborations.CollaborationsApi.Companion.TABLE_ID
 import com.openlattice.collaborations.CollaborationsApi.Companion.TABLE_ID_PATH
-import com.openlattice.organization.TABLE_ID
 import com.openlattice.organizations.OrganizationDatabase
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.springframework.http.MediaType
