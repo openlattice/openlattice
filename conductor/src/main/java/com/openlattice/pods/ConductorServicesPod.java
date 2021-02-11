@@ -362,12 +362,15 @@ public class ConductorServicesPod {
     public CollaborationDatabaseManager collaborationDatabaseManager() {
         return new PostgresCollaborationDatabaseService(
                 hazelcastInstance,
+                hikariDataSource,
                 assembler(),
                 assemblerConnectionManager(),
                 externalDbConnMan,
                 authorizationManager(),
+                extDatabasePermsManager,
                 securePrincipalsManager(),
-                dbCredService()
+                dbCredService(),
+                assemblerConfiguration
         );
     }
 

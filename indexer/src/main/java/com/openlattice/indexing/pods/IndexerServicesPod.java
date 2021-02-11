@@ -225,12 +225,15 @@ public class IndexerServicesPod {
     public CollaborationDatabaseManager collaborationDatabaseManager() {
         return new PostgresCollaborationDatabaseService(
                 hazelcastInstance,
+                hikariDataSource,
                 assembler(),
                 assemblerConnectionManager(),
                 externalDbConnMan,
                 authorizationManager(),
+                externalDatabasePermissionsManager(),
                 securePrincipalsManager(),
-                dbcs()
+                dbcs(),
+                assemblerConfiguration
         );
     }
 
