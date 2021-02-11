@@ -28,7 +28,7 @@ class ExternalSqlDatabasesManagementService(
         private val securePrincipalsManager: SecurePrincipalsManager,
         private val aclKeyReservations: HazelcastAclKeyReservationService,
         private val authorizationManager: AuthorizationManager,
-        private val organizationMetadataEntitySetsService: OrganizationEntitySetsService,
+        private val organizationEntitySetsService: OrganizationEntitySetsService,
         private val dbCredentialService: DbCredentialService,
         private val hds: HikariDataSource
 ) {
@@ -226,7 +226,7 @@ class ExternalSqlDatabasesManagementService(
 
         val tablePermissions = mapTablePrivileges(tableAclKey, tableMetadata.privileges)
 
-        organizationMetadataEntitySetsService.addDataset(organizationId, table)
+        organizationEntitySetsService.addDataset(organizationId, table)
 
         //It's safe to do set here since this information is pass-through at this point. This mostly just
         //unnecessary crud to leverage the authorization system.

@@ -212,7 +212,7 @@ public class IndexerPostConfigurationServicesPod {
     }
 
     @PostConstruct
-    void initOrganizationMetadataEntitySetsService() {
+    void initOrganizationEntitySetsService() {
         this.organizationEntitySetsService.dataGraphManager = dataGraphService;
     }
 }

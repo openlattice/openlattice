@@ -87,11 +87,11 @@ class EntitySetService(
         private val partitionManager: PartitionManager,
         private val edm: EdmManager,
         private val hds: HikariDataSource,
-        private val organizationMetadataEntitySetsService: OrganizationEntitySetsService,
+        private val organizationEntitySetsService: OrganizationEntitySetsService,
         auditingConfiguration: AuditingConfiguration
 ) : EntitySetManager {
     init {
-        organizationMetadataEntitySetsService.entitySetsManager = this
+        organizationEntitySetsService.entitySetsManager = this
     }
 
     private val aresManager = AuditRecordEntitySetsManager(
@@ -101,7 +101,7 @@ class EntitySetService(
             authorizations,
             hazelcastInstance
     )
-    
+
     companion object {
         private val logger = LoggerFactory.getLogger(EntitySetManager::class.java)
     }
@@ -185,7 +185,7 @@ class EntitySetService(
 
     override fun setupOrganizationMetadataAndAuditEntitySets(entitySet: EntitySet) {
         val propertyTypes = edm.getPropertyTypesOfEntityType(entitySet.entityTypeId)
-        organizationMetadataEntitySetsService.addDatasetsAndColumns(listOf(entitySet), mapOf(entitySet.id to propertyTypes.values))
+        organizationEntitySetsService.addDatasetsAndColumns(listOf(entitySet), mapOf(entitySet.id to propertyTypes.values))
 
         aresManager.createAuditEntitySetForEntitySet(entitySet)
 

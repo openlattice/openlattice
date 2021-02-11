@@ -64,7 +64,7 @@ class HazelcastOrganizationService(
         private val phoneNumbers: PhoneNumberService,
         private val partitionManager: PartitionManager,
         private val assembler: Assembler,
-        private val organizationMetadataEntitySetsService: OrganizationEntitySetsService
+        private val organizationEntitySetsService: OrganizationEntitySetsService
 ) {
 
     protected val organizations = HazelcastMap.ORGANIZATIONS.getMap(hazelcastInstance)
@@ -162,7 +162,7 @@ class HazelcastOrganizationService(
 
         val adminRole = initializeOrganizationAdminRole(principal, organization.adminRoleAclKey, organization)
 
-        organizationMetadataEntitySetsService.initializeOrganizationMetadataEntitySets(adminRole)
+        organizationEntitySetsService.initializeOrganizationMetadataEntitySets(adminRole)
 
         if (membersToAdd.isNotEmpty()) {
             addMembers(organization.getAclKey().first(), membersToAdd, mapOf())
@@ -688,14 +688,14 @@ class HazelcastOrganizationService(
     }
 
     fun getOrganizationMetadataEntitySetIds(organizationId: UUID): OrganizationMetadataEntitySetIds {
-        return organizationMetadataEntitySetsService.getOrganizationMetadataEntitySetIds(organizationId)
+        return organizationEntitySetsService.getOrganizationMetadataEntitySetIds(organizationId)
     }
 
     fun setOrganizationMetadataEntitySetIds(
             organizationId: UUID,
             organizationMetadataEntitySetIds: OrganizationMetadataEntitySetIds
     ) {
-        return organizationMetadataEntitySetsService.setOrganizationMetadataEntitySetIds(
+        return organizationEntitySetsService.setOrganizationMetadataEntitySetIds(
                 organizationId,
                 organizationMetadataEntitySetIds
         )

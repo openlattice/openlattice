@@ -315,7 +315,7 @@ public class DatastoreServicesPod {
                 partitionManager(),
                 dataModelService(),
                 hikariDataSource,
-                organizationMetadataEntitySetsService(),
+                organizationEntitySetsService(),
                 auditingConfiguration
         );
     }
@@ -386,7 +386,7 @@ public class DatastoreServicesPod {
                 phoneNumberService(),
                 partitionManager(),
                 assembler(),
-                organizationMetadataEntitySetsService() );
+                organizationEntitySetsService() );
     }
 
     @Bean
@@ -447,11 +447,13 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    public OrganizationEntitySetsService organizationMetadataEntitySetsService() {
-        return new OrganizationEntitySetsService( hazelcastInstance,
+    public OrganizationEntitySetsService organizationEntitySetsService() {
+        return new OrganizationEntitySetsService(
+                hazelcastInstance,
                 dataModelService(),
-                principalService(),
-                authorizationManager() );
+                securePrincipalsManager(),
+                authorizationManager()
+        );
     }
 
     @Bean
@@ -654,10 +656,10 @@ public class DatastoreServicesPod {
     public ExternalSqlDatabasesManagementService externalSqlDatabasesManagementService() {
         return new ExternalSqlDatabasesManagementService(
                 hazelcastInstance,
-                principalService(),
+                securePrincipalsManager(),
                 aclKeyReservationService(),
                 authorizationManager(),
-                organizationMetadataEntitySetsService(),
+                organizationEntitySetsService(),
                 dcs(),
                 hikariDataSource
         );
@@ -697,6 +699,6 @@ public class DatastoreServicesPod {
     @PostConstruct
     void initPrincipals() {
         Principals.init( securePrincipalsManager(), hazelcastInstance );
-        organizationMetadataEntitySetsService().dataGraphManager = dataGraphService();
+        organizationEntitySetsService().dataGraphManager = dataGraphService();
     }
 }

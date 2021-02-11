@@ -68,7 +68,7 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
     private lateinit var appService: AppService
 
     @Inject
-    private lateinit var organizationMetadataEntitySetsService: OrganizationEntitySetsService
+    private lateinit var organizationEntitySetsService: OrganizationEntitySetsService
 
     @Inject
     private lateinit var externalDatabaseManagementService: ExternalDatabaseManagementService
@@ -772,7 +772,7 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
         ensureAdminAccess()
         ensureOwner(organizationId)
         val adminRoleAclKey = organizations.getAdminRoleAclKey(organizationId)
-        organizationMetadataEntitySetsService.initializeOrganizationMetadataEntitySets(
+        organizationEntitySetsService.initializeOrganizationMetadataEntitySets(
                 principalService
                         .getRole(adminRoleAclKey[0], adminRoleAclKey[1])
         )
@@ -783,7 +783,7 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
         orgTables.values.groupBy { it.organizationId }.forEach { (orgId, tables) ->
             val cols = tables.associate { it.id to (tableCols[it.id]?.values ?: listOf()) }
 
-            organizationMetadataEntitySetsService.addDatasetsAndColumns(organizationId, tables, cols)
+            organizationEntitySetsService.addDatasetsAndColumns(organizationId, tables, cols)
         }
 
         entitySetManager
@@ -793,7 +793,7 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
                         "Entity set was null when importing metadata"
                     }
                     val propertyTypes = edmService.getPropertyTypesOfEntityType(entitySet.entityTypeId)
-                    organizationMetadataEntitySetsService.addDatasetsAndColumns(
+                    organizationEntitySetsService.addDatasetsAndColumns(
                             ImmutableList.of(entitySet),
                             ImmutableMap.of(entitySet.id, propertyTypes.values)
                     )
