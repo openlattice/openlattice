@@ -64,6 +64,7 @@ import com.openlattice.organizations.OrganizationMetadataEntitySetsService;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
+import com.openlattice.postgres.external.ExternalDatabasePermissioner;
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService;
 import com.openlattice.scrunchie.search.ConductorElasticsearchImpl;
 import com.zaxxer.hikari.HikariDataSource;
@@ -116,8 +117,15 @@ public class LinkerServicesPod {
     @Inject
     private ExternalDatabaseConnectionManager externalDbConnMan;
 
-    @Inject
-    private ExternalDatabasePermissioningService extDatabasePermsManager;
+    @Bean
+    public ExternalDatabasePermissioningService externalDatabasePermissionsManager() {
+        return new ExternalDatabasePermissioner(
+                hazelcastInstance,
+                externalDbConnMan,
+                dbcs(),
+                principalsMapManager()
+        );
+    }
 
     @Bean
     public PrincipalsMapManager principalsMapManager() {
@@ -131,7 +139,7 @@ public class LinkerServicesPod {
                 aclKeyReservationService(),
                 authorizationManager(),
                 principalsMapManager(),
-                extDatabasePermsManager
+                externalDatabasePermissionsManager()
         );
     }
 
