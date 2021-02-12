@@ -124,6 +124,7 @@ class PostgresCollaborationDatabaseService(
         /* Perform updates on the database */
         projectedTableIds.forEach { (tableId, organizationId) ->
             removeTableProjection(collaborationId, organizationId, tableId)
+            projectedTables.delete(ProjectedTableKey(tableId, collaborationId))
         }
         acm.removeMembersFromCollaboration(collaborationId, rolesToRemove)
         acm.dropSchemas(collaborationId, schemaNames)
