@@ -175,13 +175,25 @@ class ExternalDatabasePermissioner(
     }
 
     override fun addPrincipalToPrincipals(sourcePrincipalAclKey: AclKey, targetPrincipalAclKeys: Set<AclKey>) {
-        val grantTargets = dbCredentialService.getDbUsernames(targetPrincipalAclKeys.filter { it != sourcePrincipalAclKey }.toSet())
+        val usernamesByAclKey = dbCredentialService.getDbUsernamesAsMap(targetPrincipalAclKeys + setOf(sourcePrincipalAclKey))
+
+        val sourceRole = usernamesByAclKey[sourcePrincipalAclKey]
+        if (sourceRole == null) {
+            logger.info("Source principal {} has no corresponding role name in the database -- skipping db role grants", sourcePrincipalAclKey)
+            return
+        }
+
+        val grantTargets = targetPrincipalAclKeys.filter { it != sourcePrincipalAclKey }.mapNotNull {
+            val username = usernamesByAclKey[it]
+            if (username == null) {
+                logger.info("Target principal {} has no corresponding role name in the database. Skipping assignment to {}", it, sourcePrincipalAclKey)
+            }
+            username
+        }.toSet()
 
         if (grantTargets.isEmpty()) {
             return
         }
-
-        val sourceRole = dbCredentialService.getDbUsername(sourcePrincipalAclKey)
 
         logger.debug("attempting to grant $sourceRole to $grantTargets")
         atlas.connection.use { connection ->
