@@ -25,7 +25,6 @@ import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Stopwatch
 import com.openlattice.data.EntityDataKey
 import com.openlattice.linking.EntityKeyPair
-import com.openlattice.linking.Matcher
 import com.openlattice.linking.PostgresLinkingFeedbackService
 import com.openlattice.linking.util.PersonMetric
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet

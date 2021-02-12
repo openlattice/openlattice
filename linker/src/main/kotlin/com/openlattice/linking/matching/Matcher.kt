@@ -19,7 +19,7 @@
  *
  */
 
-package com.openlattice.linking
+package com.openlattice.linking.matching
 
 import com.openlattice.data.EntityDataKey
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet
@@ -30,10 +30,12 @@ import java.util.*
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-const val DL4J = "dl4j"
-const val KERAS = "keras"
-
 interface Matcher {
+    companion object {
+        const val DL4J = "dl4j"
+        const val KERAS = "keras"
+    }
+
     fun initialize(
             block: Pair<EntityDataKey, Map<EntityDataKey, Map<UUID, Set<Any>>>>
     ): Pair<EntityDataKey, MutableMap<EntityDataKey, MutableMap<EntityDataKey, Double>>>

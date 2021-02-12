@@ -19,7 +19,7 @@
  *
  */
 
-package com.openlattice.linking
+package com.openlattice.linking.blocking
 
 import com.openlattice.data.EntityDataKey
 import java.util.*

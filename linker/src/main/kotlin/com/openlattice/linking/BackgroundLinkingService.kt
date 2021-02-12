@@ -32,6 +32,8 @@ import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastQueue
+import com.openlattice.linking.blocking.Blocker
+import com.openlattice.linking.matching.Matcher
 import com.openlattice.postgres.mapstores.EntitySetMapstore
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
@@ -64,59 +66,83 @@ class BackgroundLinkingService(
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(BackgroundLinkingService::class.java)
+        private fun now(): Long {
+            return Instant.now().toEpochMilli()
+        }
     }
 
     private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
     private val linkingLocks = HazelcastMap.LINKING_LOCKS.getMap(hazelcastInstance)
     private val candidates = HazelcastQueue.LINKING_CANDIDATES.getQueue( hazelcastInstance )
-    private val priorityEntitySets = configuration.whitelist.orElseGet { setOf() }
+//    private val priorityEntitySets = configuration.whitelist.orElseGet { setOf() }
 
     @Suppress("UNUSED")
     @Scheduled(fixedRate = LINKING_RATE)
     fun enqueue() {
+        if ( candidates.isNotEmpty() ){
+            logger.info("Linking queue still has candidates on it, not adding more at the moment")
+            return
+        }
         try {
             val filteredLinkableEntitySetIds = entitySets.keySet(
                     Predicates.and(
-                            Predicates.`in`<UUID,EntitySet>(EntitySetMapstore.ENTITY_TYPE_ID_INDEX, *linkableTypes.toTypedArray()),
+                            Predicates.`in`<UUID, EntitySet>(EntitySetMapstore.ENTITY_TYPE_ID_INDEX, *linkableTypes.toTypedArray()),
                             Predicates.notEqual<UUID,EntitySet>(EntitySetMapstore.FLAGS_INDEX, EntitySetFlag.LINKING)
                     )
             )
 
-            val rest = filteredLinkableEntitySetIds.asSequence().filter {
-                !priorityEntitySets.contains(it)
-            }
+//            val rest = filteredLinkableEntitySetIds.asSequence().filter {
+//                !priorityEntitySets.contains(it)
+//            }
 
-            val priority = priorityEntitySets.asSequence().filter {
-                filteredLinkableEntitySetIds.contains(it)
-            }
+//            val priority = priorityEntitySets.asSequence().filter {
+//                filteredLinkableEntitySetIds.contains(it)
+//            }
 
-            //TODO: Switch to unlimited entity sets
-            (priority + rest)
-                    .forEach { esid ->
-                        logger.debug("Starting to queue linking candidates from entity set {}", esid)
-                        val forLinking = lqs.getEntitiesNeedingLinking(esid, 2 * configuration.loadSize)
-                                .filter {
-                                    val expiration = lockOrGetExpiration(it)
-                                    logger.debug(
-                                            "Considering candidate {} with expiration {} at {}",
-                                            it,
-                                            expiration,
-                                            Instant.now().toEpochMilli()
-                                    )
-                                    if (expiration != null && Instant.now().toEpochMilli() >= expiration) {
-                                        logger.info("Refreshing expiration for {}", it)
-                                        //Assume original lock holder died, probably somewhat unsafe
-                                        refreshExpiration(it)
-                                        true
-                                    } else expiration == null
-                                }
-                        if (forLinking.isNotEmpty()) {
-                            logger.info("Entities needing linking: {}", forLinking.size)
-                            logger.debug("Entities needing linking: {}", forLinking)
-                        }
-                        candidates.addAll(forLinking)
-                        logger.debug( "Queued entities needing linking {}", forLinking)
+            listOf(
+                    UUID.fromString("2deb5292-11b5-4874-b4b1-2a5a57804e68"),
+                    UUID.fromString("e9dc56bf-7cf9-4e25-8969-1ac4c1b1e1ec"),
+                    UUID.fromString("9d9a6c3e-fd82-4599-9dcc-a2602e2bd54d"),
+//                    UUID.fromString("9d9a6c3e-fd82-4599-9dcc-a2602e2bd54d"),
+                    UUID.fromString("4e369747-66aa-432f-8aa3-2591cee0fa8d")
+            ).filter {
+                val es = entitySets[it]
+                if ( es == null ){
+                    logger.info("Entityset with id {} doesnt exist", it)
+                    return@filter false
+                }
+
+                val keep = filteredLinkableEntitySetIds.contains(it)
+                if ( keep ) {
+                    logger.info("including entityset {} for candidate linking", es.id )
+                } else {
+                    logger.info("excluding entityset {} because its not linkable", es.name)
+                }
+                keep
+            }.forEach { esid ->
+                val es = entitySets.getValue(esid)
+                logger.info("Starting to queue linking candidates from entity set {}({})", es.name, esid)
+                val forLinking = lqs.getEntitiesNeedingLinking(
+                        esid,
+                        2 * configuration.loadSize
+                ).filter {
+                    val expiration = refreshExpiration(it)
+                    logger.info("Considering candidate {} with expiration {} at {}", it, expiration, now())
+                    if (expiration != null && now() >= expiration) {
+                        logger.info("Refreshing expiration for edk {}", it)
+                        //Assume original lock holder died, probably somewhat unsafe
+                        refreshExpiration(it)
+                        true
+                    } else {
+                        expiration == null
                     }
+                }
+
+                logger.info("Entities needing linking: {}", forLinking.size)
+                logger.debug("Entities needing linking: {}", forLinking)
+                candidates.addAll(forLinking)
+                logger.info( "Queued entities needing linking {}", forLinking.size)
+            }
         } catch (ex: Exception) {
             logger.info("Encountered error while updating candidates for linking.", ex)
         }
@@ -128,26 +154,23 @@ class BackgroundLinkingService(
     private val linkingWorker = if (isLinkingEnabled()) executor.submit {
         while (true) {
             try {
-                generateSequence(candidates::take)
-                        .map { candidate ->
-                            limiter.acquire()
-                            executor.submit {
-                                try {
-                                    logger.info("Linking {}", candidate)
-                                    link(candidate)
-                                } catch (ex: Exception) {
-                                    logger.error("Unable to link $candidate. ", ex)
-                                } finally {
-                                    unlock(candidate)
-                                    limiter.release()
-                                }
-                            }
-                        }.forEach { it.get() }
+                val candidate = candidates.take()
+                limiter.acquire()
+                executor.submit {
+                    try {
+                        logger.info("Linking {}", candidate)
+                        link(candidate)
+                    } catch (ex: Exception) {
+                        logger.error("Unable to link {}.", candidate, ex)
+                    } finally {
+                        unlock(candidate)
+                        limiter.release()
+                    }
+                }
             } catch (ex: Exception) {
                 logger.info("Encountered error while linking candidates.", ex)
             }
         }
-
     } else null
 
 
@@ -283,20 +306,8 @@ class BackgroundLinkingService(
     /**
      * @return Null if locked, expiration in millis otherwise.
      */
-    private fun lockOrGetExpiration(candidate: EntityDataKey): Long? {
-        return linkingLocks.putIfAbsent(
-                candidate,
-                Instant.now().plusMillis(LINKING_BATCH_TIMEOUT_MILLIS).toEpochMilli(),
-                LINKING_BATCH_TIMEOUT_MILLIS,
-                TimeUnit.MILLISECONDS
-        )
-    }
-
-    /**
-     * @return Null if locked, expiration in millis otherwise.
-     */
-    private fun refreshExpiration(candidate: EntityDataKey) {
-        try {
+    private fun refreshExpiration(candidate: EntityDataKey): Long? {
+        return try {
             linkingLocks.lock(candidate)
 
             linkingLocks.putIfAbsent(
