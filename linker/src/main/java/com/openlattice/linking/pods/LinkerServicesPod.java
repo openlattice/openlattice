@@ -125,7 +125,7 @@ public class LinkerServicesPod {
     }
 
     @Bean
-    private SecurePrincipalsManager principalService() {
+    public SecurePrincipalsManager principalService() {
         return new HazelcastPrincipalService(
                 hazelcastInstance,
                 aclKeyReservationService(),
