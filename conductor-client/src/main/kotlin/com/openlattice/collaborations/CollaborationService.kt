@@ -163,6 +163,12 @@ class CollaborationService(
         projectedTables.remove(key)
     }
 
+    fun handleTableUpdate(tableId: UUID) {
+        projectedTables.entrySet(tableIdPredicate(tableId)).forEach {
+            collaborationDatabaseManager.refreshTableProjection(it.key.collaborationId, it.value.organizationId, tableId)
+        }
+    }
+
     private fun ensureTableBelongsToOrganization(tableId: UUID, organizationId: UUID) {
         check(externalTables.getValue(tableId).organizationId == organizationId) {
             "Table $tableId does not belong to organization $organizationId"
@@ -207,10 +213,7 @@ class CollaborationService(
         ensureValidOrganizationIds(organizationIds)
 
         authorizationManager.addPermissions(getOrgAcls(id, organizationIds))
-        collaborations.executeOnKey(id, CollaborationEntryProcessor {
-            it.addOrganizationIds(organizationIds)
-            CollaborationEntryProcessor.Result()
-        })
+        collaborations.executeOnKey(id, AlterOrganizationsInCollaborationEntryProcessor(organizationIds, true))
 
         collaborationDatabaseManager.addOrganizationsToCollaboration(id, organizationIds)
     }
@@ -221,10 +224,7 @@ class CollaborationService(
         }
 
         authorizationManager.removePermissions(getOrgAcls(id, organizationIds))
-        collaborations.executeOnKey(id, CollaborationEntryProcessor {
-            it.removeOrganizationIds(organizationIds)
-            CollaborationEntryProcessor.Result()
-        })
+        collaborations.executeOnKey(id, AlterOrganizationsInCollaborationEntryProcessor(organizationIds, false))
 
         collaborationDatabaseManager.removeOrganizationsFromCollaboration(id, organizationIds)
     }
