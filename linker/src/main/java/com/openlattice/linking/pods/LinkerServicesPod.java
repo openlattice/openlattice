@@ -36,8 +36,10 @@ import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.DbCredentialService;
 import com.openlattice.authorization.HazelcastAclKeyReservationService;
 import com.openlattice.authorization.HazelcastAuthorizationService;
+import com.openlattice.authorization.HazelcastPrincipalsMapManager;
 import com.openlattice.authorization.HazelcastSecurableObjectResolveTypeService;
 import com.openlattice.authorization.Principals;
+import com.openlattice.authorization.PrincipalsMapManager;
 import com.openlattice.authorization.SecurableObjectResolveTypeService;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.storage.partitions.PartitionManager;
@@ -59,6 +61,7 @@ import com.openlattice.linking.util.PersonProperties;
 import com.openlattice.notifications.sms.PhoneNumberService;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.OrganizationMetadataEntitySetsService;
+import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService;
@@ -114,10 +117,23 @@ public class LinkerServicesPod {
     private ExternalDatabaseConnectionManager externalDbConnMan;
 
     @Inject
-    public SecurePrincipalsManager principalService;
-
-    @Inject
     private ExternalDatabasePermissioningService extDatabasePermsManager;
+
+    @Bean
+    public PrincipalsMapManager principalsMapManager() {
+        return new HazelcastPrincipalsMapManager(hazelcastInstance, aclKeyReservationService());
+    }
+
+    @Bean
+    private SecurePrincipalsManager principalService() {
+        return new HazelcastPrincipalService(
+                hazelcastInstance,
+                aclKeyReservationService(),
+                authorizationManager(),
+                principalsMapManager(),
+                extDatabasePermsManager
+        );
+    }
 
     @Bean
     public PartitionManager partitionManager() {
@@ -160,7 +176,7 @@ public class LinkerServicesPod {
                 dbcs(),
                 hikariDataSource,
                 authorizationManager(),
-                principalService,
+                principalService(),
                 metricRegistry,
                 hazelcastInstance,
                 eventBus
@@ -173,7 +189,7 @@ public class LinkerServicesPod {
                 assemblerConfiguration,
                 externalDbConnMan,
                 hikariDataSource,
-                principalService,
+                principalService(),
                 organizationsManager(),
                 dbcs(),
                 extDatabasePermsManager,
@@ -193,7 +209,7 @@ public class LinkerServicesPod {
                 hazelcastInstance,
                 aclKeyReservationService(),
                 authorizationManager(),
-                principalService,
+                principalService(),
                 phoneNumberService(),
                 partitionManager(),
                 assembler(),
@@ -287,6 +303,6 @@ public class LinkerServicesPod {
 
     @PostConstruct
     void initPrincipals() {
-        Principals.init( principalService, hazelcastInstance );
+        Principals.init( principalService(), hazelcastInstance );
     }
 }
