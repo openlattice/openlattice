@@ -18,7 +18,7 @@ import com.openlattice.organization.roles.Role
 class HazelcastPrincipalsMapManager(
         hazelcastInstance: HazelcastInstance,
         private val reservations: HazelcastAclKeyReservationService
-): PrincipalsMapManager {
+) : PrincipalsMapManager {
 
     private val principals = HazelcastMap.PRINCIPALS.getMap(hazelcastInstance)
 
@@ -47,6 +47,16 @@ class HazelcastPrincipalsMapManager(
 
     override fun getSecurablePrincipal(aclKey: AclKey): SecurablePrincipal? {
         return principals[aclKey]
+    }
+
+    override fun getSecurablePrincipals(aclKeys: Set<AclKey>): Map<AclKey, SecurablePrincipal> {
+        return principals.getAll(aclKeys)
+    }
+
+    override fun getAclKeyByPrincipal(ps: Set<Principal>): Map<Principal, AclKey> {
+        return principals.values(Predicates.`in`(PrincipalMapstore.PRINCIPAL_INDEX, *ps.toTypedArray())).associate {
+            it.principal to it.aclKey
+        }
     }
 
     private fun castSecurablePrincipalAsRole(sp: SecurablePrincipal): Role {
