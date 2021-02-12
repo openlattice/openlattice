@@ -175,10 +175,11 @@ class ExternalDatabasePermissioner(
     }
 
     override fun addPrincipalToPrincipals(sourcePrincipalAclKey: AclKey, targetPrincipalAclKeys: Set<AclKey>) {
-        if ( targetPrincipalAclKeys.isEmpty()) {
+        val grantTargets = dbCredentialService.getDbUsernames(targetPrincipalAclKeys.filter { it != sourcePrincipalAclKey }.toSet())
+
+        if (grantTargets.isEmpty()) {
             return
         }
-        val grantTargets = dbCredentialService.getDbUsernames(targetPrincipalAclKeys)
 
         val sourceRole = dbCredentialService.getDbUsername(sourcePrincipalAclKey)
 
