@@ -200,7 +200,7 @@ public class LinkerServicesPod {
                 principalService(),
                 organizationsManager(),
                 dbcs(),
-                extDatabasePermsManager,
+                externalDatabasePermissionsManager(),
                 eventBus,
                 metricRegistry
         );
