@@ -1,7 +1,6 @@
 package com.openlattice.linking.clustering
 
 import com.openlattice.data.EntityDataKey
-import com.openlattice.linking.ScoredCluster
 
 /**
  * @author Drew Bailey (drew@openlattice.com)
@@ -9,7 +8,7 @@ import com.openlattice.linking.ScoredCluster
 interface Clusterer {
     fun cluster(
             blockKey: EntityDataKey,
-            identifiedCluster: Cluster,
-            clusteringStrategy: (Map<EntityDataKey, Map<EntityDataKey, Double>>) -> Double
+            identifiedCluster: KeyedCluster,
+            clusteringStrategy: (Cluster) -> Double
     ): ScoredCluster
 }

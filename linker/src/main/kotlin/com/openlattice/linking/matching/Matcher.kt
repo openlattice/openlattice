@@ -21,7 +21,6 @@
 
 package com.openlattice.linking.matching
 
-import com.openlattice.data.EntityDataKey
 import com.openlattice.linking.blocking.Block
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
@@ -37,7 +36,7 @@ interface Matcher {
         const val KERAS = "keras"
     }
 
-    fun initialize( block: Block ): Pair<EntityDataKey, MutableMap<EntityDataKey, MutableMap<EntityDataKey, Double>>>
+    fun initialize( block: Block ): PairwiseMatch
 
     /**
      * Computes an approximation of the discrete metric of every pair of blocked entities.
@@ -47,15 +46,14 @@ interface Matcher {
      * @param block An entity paired to a set of entities from across zero or more entity sets mapped by data key.
      * @return The computed match between all unique entities pairs in the block.
      */
-    fun match( block: Block ): Pair<EntityDataKey, MutableMap<EntityDataKey, MutableMap<EntityDataKey, Double>>>
+    fun match( block: Block ): PairwiseMatch
 
-    fun trimAndMerge(matchedBlock: Pair<EntityDataKey, MutableMap<EntityDataKey, MutableMap<EntityDataKey, Double>>>)
+    fun trimAndMerge(matchedBlock: PairwiseMatch)
 
     /**
      * Allow inplace updating of the model used for peforming the matching.
      *
      * @param model A supplier that returns an input stream to a serialized MultiLayerNetwork
-     *
      */
     fun updateMatchingModel(model: MultiLayerNetwork)
 

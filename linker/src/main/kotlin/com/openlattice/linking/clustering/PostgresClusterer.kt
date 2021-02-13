@@ -2,7 +2,6 @@ package com.openlattice.linking.clustering
 
 import com.openlattice.data.EntityDataKey
 import com.openlattice.linking.DataLoader
-import com.openlattice.linking.ScoredCluster
 import com.openlattice.linking.blocking.Block
 import com.openlattice.linking.matching.Matcher
 
@@ -16,14 +15,14 @@ class PostgresClusterer(
 
     override fun cluster(
             blockKey: EntityDataKey,
-            identifiedCluster: Cluster,
-            clusteringStrategy: (Map<EntityDataKey, Map<EntityDataKey, Double>>) -> Double
+            identifiedCluster: KeyedCluster,
+            clusteringStrategy: (Cluster) -> Double
     ): ScoredCluster {
-        val block = Block(blockKey, loader.getEntities(collectKeys(identifiedCluster.data) + blockKey))
+        val block = Block(blockKey, loader.getEntities(collectKeys(identifiedCluster.cluster) + blockKey))
         //At some point, we may want to skip recomputing matches for existing cluster elements as an optimization.
         //Since we're freshly loading entities it's not too bad to recompute everything.
         val matchedBlock = matcher.match(block)
-        val matchedCluster = matchedBlock.second
+        val matchedCluster = Cluster(matchedBlock.matches)
         val score = clusteringStrategy(matchedCluster)
         return ScoredCluster(identifiedCluster.id, matchedCluster, score)
     }

@@ -37,6 +37,8 @@ import com.openlattice.linking.blocking.Blocker
 import com.openlattice.linking.clustering.Cluster
 import com.openlattice.linking.clustering.Clusterer
 import com.openlattice.linking.clustering.Clusters
+import com.openlattice.linking.clustering.KeyedCluster
+import com.openlattice.linking.clustering.ScoredCluster
 import com.openlattice.linking.matching.Matcher
 import com.openlattice.postgres.mapstores.EntitySetMapstore
 import org.slf4j.LoggerFactory
@@ -195,7 +197,7 @@ class BackgroundLinkingService(
                 // only linking id of entity should remain, since we cleared neighborhood, except the ones
                 // with positive feedback
                 val clusters = Clusters(lqs.getClustersForIds(setOf(candidate)))
-                val cluster = Cluster.fromEntry(clusters.entries.first())
+                val cluster = KeyedCluster.fromEntry(clusters.entries.first())
                 val clusterId = cluster.id
                 lateinit var scoredCluster: ScoredCluster
 
@@ -236,7 +238,7 @@ class BackgroundLinkingService(
             logger.info("Initializing matching for block {}", candidate)
             val initializedBlock = matcher.initialize(initialBlock)
             logger.info("Initialization took {} ms", sw.elapsed(TimeUnit.MILLISECONDS))
-            val dataKeys = collectKeys(initializedBlock.second)
+            val dataKeys = collectKeys(initializedBlock.matches)
 
             //Decision that needs to be made is whether to start new cluster or merge into existing cluster.
             //No locks are required since any items that block to this element will be skipped.
@@ -244,7 +246,7 @@ class BackgroundLinkingService(
                 val (linkingId, scores) = lqs.lockClustersDoWorkAndCommit( candidate, dataKeys) { clusters ->
                     val maybeBestCluster = clusters
                             .asSequence()
-                            .map { cluster -> clusterer.cluster(candidate, Cluster(cluster.key, cluster.value), ::completeLinkCluster) }
+                            .map { cluster -> clusterer.cluster(candidate, KeyedCluster.fromEntry(cluster), ::completeLinkCluster) }
                             .filter { it.score > MINIMUM_SCORE }
                             .maxBy { it.score }
 
@@ -253,11 +255,11 @@ class BackgroundLinkingService(
                     }
                     val linkingId = ids.reserveLinkingIds(1).first()
                     val block = Block(candidate, mapOf(candidate to elem))
-                    val cluster = matcher.match(block).second
+                    val cluster = matcher.match(block).matches
                     //TODO: When creating new cluster do we really need to re-match or can we assume score of 1.0?
                     return@lockClustersDoWorkAndCommit Triple(linkingId, cluster, true)
                 }
-                insertMatches( linkingId, candidate, scores )
+                insertMatches( linkingId, candidate, Cluster(scores) )
             } catch (ex: Exception) {
                 logger.error("An error occurred while performing linking.", ex)
                 throw IllegalStateException("Error occured while performing linking.", ex)
@@ -282,7 +284,7 @@ class BackgroundLinkingService(
     private fun insertMatches(
             linkingId: UUID,
             newMember: EntityDataKey,
-            scores: Map<EntityDataKey, Map<EntityDataKey, Double>>
+            scores: Cluster
     ) {
         val scoresAsEsidToEkids = (collectKeys(scores) + newMember)
                 .groupBy { edk -> edk.entitySetId }
@@ -324,7 +326,7 @@ class BackgroundLinkingService(
         linkingLocks.delete(candidate)
     }
 
-    private fun completeLinkCluster(matchedCluster: Map<EntityDataKey, Map<EntityDataKey, Double>>): Double {
+    private fun completeLinkCluster( matchedCluster: Cluster ): Double {
         return matchedCluster.values.flatMap { it.values }.min() ?: 0.0
     }
 }

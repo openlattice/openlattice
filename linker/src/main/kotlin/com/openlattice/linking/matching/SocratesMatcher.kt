@@ -62,8 +62,7 @@ class SocratesMatcher(
      * @return block The resulting block around the entity data key in block.first
      */
     @Timed
-    override fun initialize( block: Block ):
-            Pair<EntityDataKey, MutableMap<EntityDataKey, MutableMap<EntityDataKey, Double>>> {
+    override fun initialize( block: Block ): PairwiseMatch {
         val model = localModel.get()
 
         val entityDataKey = block.entityDataKey
@@ -82,7 +81,7 @@ class SocratesMatcher(
         val featureMatrix = extractedFeatures.map { it.value }.toTypedArray()
         val scores = computeScore(model, featureMatrix).toTypedArray()
         val matchedEntities = featureKeys.zip(scores).toMap().toMutableMap()
-        val initializedBlock = entityDataKey to mutableMapOf(entityDataKey to matchedEntities)
+        val initializedBlock = PairwiseMatch(entityDataKey, mutableMapOf(entityDataKey to matchedEntities))
 
         // trim low scores
         trimAndMerge(initializedBlock)
@@ -96,8 +95,7 @@ class SocratesMatcher(
      * @return All pairs of entities in the block scored by the current model.
      */
     @Timed
-    override fun match( block: Block):
-            Pair<EntityDataKey, MutableMap<EntityDataKey, MutableMap<EntityDataKey, Double>>> {
+    override fun match( block: Block): PairwiseMatch {
         val sw = Stopwatch.createStarted()
 
         val positiveFeedbacks = mutableSetOf<EntityKeyPair>()
@@ -120,13 +118,12 @@ class SocratesMatcher(
         val results = computeResults(block.entities, entities, positiveFeedbacks)
 
         // from list of results to expected output
-        val matchedEntities =
-                results.groupBy { it.lhs }
-                        .mapValues { x ->
-                            x.value.groupBy { it.rhs }
-                                    .mapValues { y -> y.value[0].score }
-                                    .toMutableMap()
-                        }.toMutableMap()
+        val matchedEntities = results.groupBy { it.lhs }
+                .mapValues { x ->
+                    x.value.groupBy { it.rhs }
+                            .mapValues { y -> y.value[0].score }
+                            .toMutableMap()
+                }.toMutableMap()
 
         logger.info(
                 "Matching block {} with {} elements took {} ms",
@@ -134,7 +131,7 @@ class SocratesMatcher(
                 sw.elapsed(TimeUnit.MILLISECONDS)
         )
 
-        return block.entityDataKey to matchedEntities
+        return PairwiseMatch(block.entityDataKey, matchedEntities)
 
     }
 
@@ -219,10 +216,10 @@ class SocratesMatcher(
 
     @Timed
     override fun trimAndMerge(
-            matchedBlock: Pair<EntityDataKey, MutableMap<EntityDataKey, MutableMap<EntityDataKey, Double>>>
+            matchedBlock: PairwiseMatch
     ) {
         //Trim non-center matching thigns.
-        matchedBlock.second[matchedBlock.first] = matchedBlock.second[matchedBlock.first]?.filter {
+        matchedBlock.matches[matchedBlock.candidate] = matchedBlock.matches[matchedBlock.candidate]?.filter {
             it.value > THRESHOLD
         }?.toMutableMap() ?: mutableMapOf()
     }

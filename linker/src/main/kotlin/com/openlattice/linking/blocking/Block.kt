@@ -5,6 +5,7 @@ import java.util.UUID
 
 /**
  * @author Drew Bailey (drew@openlattice.com)
+ * Wrapper for Pair<EntityDataKey, Map<EntityDataKey, Map<UUID, Set<Any>>>
  */
 data class Block(
         val entityDataKey: EntityDataKey,
