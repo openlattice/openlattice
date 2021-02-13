@@ -30,13 +30,17 @@ import com.openlattice.conductor.rpc.ConductorElasticsearchApi
 import com.openlattice.data.EntityDataKey
 import com.openlattice.edm.EntitySet
 import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.linking.*
+import com.openlattice.linking.DataLoader
+import com.openlattice.linking.EntityKeyPair
+import com.openlattice.linking.FeedbackType
+import com.openlattice.linking.PostgresLinkingFeedbackService
 import com.openlattice.linking.util.PersonProperties
 import com.openlattice.postgres.mapstores.EntityTypeMapstore
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
-import java.util.*
+import java.util.Optional
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 import kotlin.streams.asSequence
 
@@ -73,7 +77,7 @@ class ElasticsearchBlocker(
             entityDataKey: EntityDataKey,
             entity: Optional<Map<UUID, Set<Any>>>,
             top: Int
-    ): Pair<EntityDataKey, Map<EntityDataKey, Map<UUID, Set<Any>>>> {
+    ): Block {
         logger.info("Blocking for entity data key {}", entityDataKey)
 
         val sw = Stopwatch.createStarted()
@@ -111,7 +115,8 @@ class ElasticsearchBlocker(
         sw.reset()
         sw.start()
 
-        val loadedData = entityDataKey to
+        val block = Block(
+                entityDataKey,
                 removeNegativeFeedbackFromSearchResult(entityDataKey, blockedEntitySetSearchResults)
                         .filter { it.value.isNotEmpty() }
                         .entries
@@ -124,13 +129,14 @@ class ElasticsearchBlocker(
                         }
                         .asSequence()
                         .toMap()
+        )
 
         logger.info(
-                "Loading {} entities took {} ms.", loadedData.second.values.map { it.size }.sum(),
+                "Loading {} entities took {} ms.", block.entities.values.map { it.size }.sum(),
                 sw.elapsed(TimeUnit.MILLISECONDS)
         )
 
-        return loadedData
+        return block 
 
     }
 

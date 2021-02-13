@@ -32,7 +32,11 @@ import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastQueue
+import com.openlattice.linking.blocking.Block
 import com.openlattice.linking.blocking.Blocker
+import com.openlattice.linking.clustering.Cluster
+import com.openlattice.linking.clustering.Clusterer
+import com.openlattice.linking.clustering.Clusters
 import com.openlattice.linking.matching.Matcher
 import com.openlattice.postgres.mapstores.EntitySetMapstore
 import org.slf4j.LoggerFactory
@@ -58,7 +62,7 @@ class BackgroundLinkingService(
         private val blocker: Blocker,
         private val matcher: Matcher,
         private val ids: EntityKeyIdService,
-        private val loader: DataLoader,
+        private val clusterer: Clusterer,
         private val lqs: LinkingQueryService,
         private val linkingFeedbackService: PostgresLinkingFeedbackService,
         private val linkableTypes: Set<UUID>,
@@ -190,18 +194,18 @@ class BackgroundLinkingService(
             try {
                 // only linking id of entity should remain, since we cleared neighborhood, except the ones
                 // with positive feedback
-                val clusters = lqs.getClustersForIds(setOf(candidate))
-                val cluster = clusters.entries.first()
-                val clusterId = cluster.key
+                val clusters = Clusters(lqs.getClustersForIds(setOf(candidate)))
+                val cluster = Cluster.fromEntry(clusters.entries.first())
+                val clusterId = cluster.id
                 lateinit var scoredCluster: ScoredCluster
 
                 lqs.lockClustersForUpdates(setOf(clusterId)).use { conn ->
-                    scoredCluster = cluster(candidate, cluster, ::completeLinkCluster)
+                    scoredCluster = clusterer.cluster(candidate, cluster, ::completeLinkCluster)
                     if (scoredCluster.score <= MINIMUM_SCORE) {
                         logger.error(
                                 "Recalculated score {} of linking id {} with positives feedbacks did not pass minimum score {}",
                                 scoredCluster.score,
-                                cluster.key,
+                                cluster.id,
                                 MINIMUM_SCORE
                         )
                     }
@@ -225,7 +229,7 @@ class BackgroundLinkingService(
             )
 
             //block contains element being blocked
-            val elem = initialBlock.second.getValue(candidate)
+            val elem = initialBlock.entities.getValue(candidate)
 
             // initialize
             sw.reset().start()
@@ -240,7 +244,7 @@ class BackgroundLinkingService(
                 val (linkingId, scores) = lqs.lockClustersDoWorkAndCommit( candidate, dataKeys) { clusters ->
                     val maybeBestCluster = clusters
                             .asSequence()
-                            .map { cluster -> cluster(candidate, cluster, ::completeLinkCluster) }
+                            .map { cluster -> clusterer.cluster(candidate, Cluster(cluster.key, cluster.value), ::completeLinkCluster) }
                             .filter { it.score > MINIMUM_SCORE }
                             .maxBy { it.score }
 
@@ -248,7 +252,7 @@ class BackgroundLinkingService(
                         return@lockClustersDoWorkAndCommit Triple(maybeBestCluster.clusterId, maybeBestCluster.cluster, false)
                     }
                     val linkingId = ids.reserveLinkingIds(1).first()
-                    val block = candidate to mapOf(candidate to elem)
+                    val block = Block(candidate, mapOf(candidate to elem))
                     val cluster = matcher.match(block).second
                     //TODO: When creating new cluster do we really need to re-match or can we assume score of 1.0?
                     return@lockClustersDoWorkAndCommit Triple(linkingId, cluster, true)
@@ -259,20 +263,6 @@ class BackgroundLinkingService(
                 throw IllegalStateException("Error occured while performing linking.", ex)
             }
         }
-    }
-
-    private fun cluster(
-            blockKey: EntityDataKey,
-            identifiedCluster: Map.Entry<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>>,
-            clusteringStrategy: (Map<EntityDataKey, Map<EntityDataKey, Double>>) -> Double
-    ): ScoredCluster {
-        val block = blockKey to loader.getEntities(collectKeys(identifiedCluster.value) + blockKey)
-        //At some point, we may want to skip recomputing matches for existing cluster elements as an optimization.
-        //Since we're freshly loading entities it's not too bad to recompute everything.
-        val matchedBlock = matcher.match(block)
-        val matchedCluster = matchedBlock.second
-        val score = clusteringStrategy(matchedCluster)
-        return ScoredCluster(identifiedCluster.key, matchedCluster, score)
     }
 
     private fun <T> collectKeys(m: Map<EntityDataKey, Map<EntityDataKey, T>>): Set<EntityDataKey> {
@@ -333,18 +323,8 @@ class BackgroundLinkingService(
     private fun unlock(candidate: EntityDataKey) {
         linkingLocks.delete(candidate)
     }
-}
 
-data class ScoredCluster(
-        val clusterId: UUID,
-        val cluster: Map<EntityDataKey, Map<EntityDataKey, Double>>,
-        val score: Double
-) : Comparable<Double> {
-    override fun compareTo(other: Double): Int {
-        return score.compareTo(other)
+    private fun completeLinkCluster(matchedCluster: Map<EntityDataKey, Map<EntityDataKey, Double>>): Double {
+        return matchedCluster.values.flatMap { it.values }.min() ?: 0.0
     }
-}
-
-private fun completeLinkCluster(matchedCluster: Map<EntityDataKey, Map<EntityDataKey, Double>>): Double {
-    return matchedCluster.values.flatMap { it.values }.min() ?: 0.0
 }

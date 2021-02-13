@@ -26,6 +26,7 @@ import com.google.common.base.Stopwatch
 import com.openlattice.data.EntityDataKey
 import com.openlattice.linking.EntityKeyPair
 import com.openlattice.linking.PostgresLinkingFeedbackService
+import com.openlattice.linking.blocking.Block
 import com.openlattice.linking.util.PersonMetric
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -61,14 +62,13 @@ class SocratesMatcher(
      * @return block The resulting block around the entity data key in block.first
      */
     @Timed
-    override fun initialize(
-            block: Pair<EntityDataKey, Map<EntityDataKey, Map<UUID, Set<Any>>>>
-    ): Pair<EntityDataKey, MutableMap<EntityDataKey, MutableMap<EntityDataKey, Double>>> {
+    override fun initialize( block: Block ):
+            Pair<EntityDataKey, MutableMap<EntityDataKey, MutableMap<EntityDataKey, Double>>> {
         val model = localModel.get()
 
-        val entityDataKey = block.first
+        val entityDataKey = block.entityDataKey
         // negative feedbacks are already filtered out when blocking
-        val entities = block.second
+        val entities = block.entities
 
         // extract properties and features for all entities in block
         val firstProperties = extractProperties(entities.getValue(entityDataKey))
@@ -96,18 +96,15 @@ class SocratesMatcher(
      * @return All pairs of entities in the block scored by the current model.
      */
     @Timed
-    override fun match(
-            block: Pair<EntityDataKey, Map<EntityDataKey, Map<UUID, Set<Any>>>>
-    ): Pair<EntityDataKey, MutableMap<EntityDataKey, MutableMap<EntityDataKey, Double>>> {
+    override fun match( block: Block):
+            Pair<EntityDataKey, MutableMap<EntityDataKey, MutableMap<EntityDataKey, Double>>> {
         val sw = Stopwatch.createStarted()
-
-        val entityDataKey = block.first
 
         val positiveFeedbacks = mutableSetOf<EntityKeyPair>()
         // filter out positive matches from feedback to avoid computation of scores
         // negative feedbacks are already filter out when blocking
-        val entities = block.second.mapValues { entity ->
-            block.second.keys.filter {
+        val entities = block.entities.mapValues { entity ->
+            block.entities.keys.filter {
                 val entityPair = EntityKeyPair(entity.key, it)
                 val feedback = linkingFeedbackService.getLinkingFeedback(entityPair)
                 if (feedback != null) {
@@ -118,9 +115,9 @@ class SocratesMatcher(
                 }
                 return@filter true
             }
-        }.filter { !it.value.isEmpty() }
+        }.filter { it.value.isNotEmpty() }
 
-        val results = computeResults(block.second, entities, positiveFeedbacks)
+        val results = computeResults(block.entities, entities, positiveFeedbacks)
 
         // from list of results to expected output
         val matchedEntities =
@@ -133,11 +130,11 @@ class SocratesMatcher(
 
         logger.info(
                 "Matching block {} with {} elements took {} ms",
-                block.first, block.second.values.map { it.size }.sum(),
+                block.entityDataKey, block.entities.values.map { it.size }.sum(),
                 sw.elapsed(TimeUnit.MILLISECONDS)
         )
 
-        return entityDataKey to matchedEntities
+        return block.entityDataKey to matchedEntities
 
     }
 

@@ -49,6 +49,8 @@ import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
 import com.openlattice.linking.blocking.Blocker;
 import com.openlattice.linking.blocking.ElasticsearchBlocker;
+import com.openlattice.linking.clustering.Clusterer;
+import com.openlattice.linking.clustering.PostgresClusterer;
 import com.openlattice.linking.controllers.RealtimeLinkingController;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
 import com.openlattice.linking.matching.Matcher;
@@ -180,11 +182,19 @@ public class LinkerPostConfigurationServicesPod {
                 blocker(),
                 matcher,
                 idService(),
-                dataLoader(),
+                clusterer(),
                 lqs(),
                 postgresLinkingFeedbackQueryService(),
                 edm.getEntityTypeUuids( linkingConfiguration.getEntityTypes() ),
                 linkingConfiguration );
+    }
+
+    @Bean
+    public Clusterer clusterer() {
+        return new PostgresClusterer(
+                dataLoader(),
+                matcher
+        );
     }
 
     @Bean

@@ -22,7 +22,8 @@
 package com.openlattice.linking.blocking
 
 import com.openlattice.data.EntityDataKey
-import java.util.*
+import java.util.Optional
+import java.util.UUID
 
 /**
  *
@@ -42,7 +43,7 @@ interface Blocker {
             entityKeyId: UUID,
             entity: Optional<Map<UUID, Set<Any>>> = Optional.empty(),
             top: Int = 50
-    ): Pair<EntityDataKey,Map<EntityDataKey, Map<UUID, Set<Any>>>> {
+    ): Block {
         return block(EntityDataKey(entitySetId, entityKeyId), entity, top)
     }
 
@@ -57,6 +58,6 @@ interface Blocker {
             entityDataKey: EntityDataKey,
             entity: Optional<Map<UUID, Set<Any>>> = Optional.empty(),
             top: Int = 50
-    ): Pair<EntityDataKey,Map<EntityDataKey, Map<UUID, Set<Any>>>>
+    ): Block
 
 }
