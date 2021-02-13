@@ -4,7 +4,11 @@ import com.auth0.json.mgmt.users.User
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicates
 import com.openlattice.IdConstants
-import com.openlattice.authorization.*
+import com.openlattice.authorization.AclKey
+import com.openlattice.authorization.AclKeySet
+import com.openlattice.authorization.Principal
+import com.openlattice.authorization.PrincipalType
+import com.openlattice.authorization.SecurablePrincipal
 import com.openlattice.authorization.mapstores.PrincipalMapstore
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organizations.HazelcastOrganizationService
@@ -213,7 +217,7 @@ class Auth0SyncService(
         }
     }
 
-    private fun getAllPrincipals(sp: SecurablePrincipal): Collection<SecurablePrincipal>? {
+    private fun getAllPrincipals(sp: SecurablePrincipal): Collection<SecurablePrincipal> {
         val roles = getLayer(setOf(sp.aclKey))
         var nextLayer: Set<AclKey> = roles
 

@@ -23,4 +23,17 @@ enum class Schemas(val label: String) {
     override fun toString(): String {
         return label
     }
+
+    companion object {
+
+        @JvmStatic
+        fun fromName(label: String): Schemas {
+            for (e in values()) {
+                if (e.label == label) {
+                    return e
+                }
+            }
+            throw IllegalArgumentException("Schema with name $label not found")
+        }
+    }
 }
