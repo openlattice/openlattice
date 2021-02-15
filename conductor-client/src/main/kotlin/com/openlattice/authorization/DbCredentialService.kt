@@ -94,8 +94,12 @@ class DbCredentialService(
         return getDbUsernames(principals.mapTo(mutableSetOf<AclKey>()) { it.aclKey })
     }
 
+    fun getDbUsernamesAsMap(aclKeys: Set<AclKey>): Map<AclKey, String> {
+        return dbCreds.executeOnKeys(aclKeys, GetDbUsernameFromDbCredsEntryProcessor())
+    }
+
     fun getDbUsernames(aclKeys: Set<AclKey>): Set<String> {
-        return dbCreds.executeOnKeys(aclKeys, GetDbUsernameFromDbCredsEntryProcessor()).values.toSet()
+        return getDbUsernamesAsMap(aclKeys).values.toSet()
     }
 
     fun getOrCreateRoleAccount(securablePrincipal: SecurablePrincipal): MaterializedViewAccount {
