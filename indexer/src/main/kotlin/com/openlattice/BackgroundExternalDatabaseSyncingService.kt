@@ -17,7 +17,6 @@ import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastMap.Companion.ORGANIZATION_DATABASES
 import com.openlattice.hazelcast.HazelcastMap.Companion.ORGANIZATION_EXTERNAL_DATABASE_COLUMN
 import com.openlattice.hazelcast.HazelcastMap.Companion.ORGANIZATION_EXTERNAL_DATABASE_TABLE
-import com.openlattice.indexing.MAX_DURATION_MILLIS
 import com.openlattice.indexing.configuration.IndexerConfiguration
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.organization.OrganizationExternalDatabaseTable
@@ -35,7 +34,6 @@ import java.util.concurrent.locks.ReentrantLock
  *
  */
 
-const val SCAN_RATE = 30_000L
 
 class BackgroundExternalDatabaseSyncingService(
         hazelcastInstance: HazelcastInstance,
@@ -49,6 +47,9 @@ class BackgroundExternalDatabaseSyncingService(
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(BackgroundExternalDatabaseSyncingService::class.java)
+
+        const val MAX_DURATION_MILLIS = 1_000L * 60 * 30 // 30 minutes
+        const val SCAN_RATE = 1_000L * 30                // 30 seconds
     }
 
     private val organizationExternalDatabaseColumns = ORGANIZATION_EXTERNAL_DATABASE_COLUMN.getMap(hazelcastInstance)
@@ -77,7 +78,7 @@ class BackgroundExternalDatabaseSyncingService(
     }
 
     @Suppress("UNUSED")
-    @Scheduled(fixedRate = SCAN_RATE)
+    @Scheduled(fixedDelay = SCAN_RATE)
     fun scanOrganizationDatabases() {
         logger.info("Starting background external database sync task.")
 
@@ -99,7 +100,6 @@ class BackgroundExternalDatabaseSyncingService(
                     .shuffled()
 
             lockedOrganizationIds
-                    .parallelStream()
                     .forEach {
                         syncOrganizationDatabases(it)
                     }
