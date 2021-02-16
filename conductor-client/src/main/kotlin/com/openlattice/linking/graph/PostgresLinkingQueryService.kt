@@ -314,13 +314,13 @@ class PostgresLinkingQueryService(
                 if (positiveFeedbacks.isNotEmpty()) " AND NOT ( ${buildFilterEntityKeyPairs(
                         positiveFeedbacks
                 )} )" else ""
-        hds.connection.use {
-            it.prepareStatement(deleteNeighborHoodSql).use {
-                it.setObject(1, entity.entitySetId)
-                it.setObject(2, entity.entityKeyId)
-                it.setObject(3, entity.entitySetId)
-                it.setObject(4, entity.entityKeyId)
-                return it.executeUpdate()
+        hds.connection.use { conn ->
+            conn.prepareStatement(deleteNeighborHoodSql).use { ps ->
+                ps.setObject(1, entity.entitySetId)
+                ps.setObject(2, entity.entityKeyId)
+                ps.setObject(3, entity.entitySetId)
+                ps.setObject(4, entity.entityKeyId)
+                return ps.executeUpdate()
             }
         }
     }

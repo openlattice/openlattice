@@ -162,7 +162,7 @@ class BackgroundLinkingService(
         }
     }
 
-    private val limiter = Semaphore(configuration.parallelism)
+    private val limiter = Semaphore(1)
 
     @Suppress("UNUSED")
     private val linkingWorker = if (isLinkingEnabled()) executor.submit {
