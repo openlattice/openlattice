@@ -1,6 +1,5 @@
 package com.openlattice.assembler
 
-import com.google.common.collect.Maps
 import com.hazelcast.map.IMap
 import com.openlattice.ApiHelpers
 import com.openlattice.authorization.AccessTarget
@@ -38,16 +37,16 @@ class PostgresRoles private constructor() {
                 newRole
             }
 
-            if (targetsToNewIds.isEmpty()){
+            if (targetsToNewIds.isEmpty()) {
                 return CompletableFuture.supplyAsync {
-                    Maps.newLinkedHashMap<AccessTarget, UUID>(finalRoles)
+                    finalRoles
                 }
             }
 
             orgDataSource.connection.use { conn ->
                 conn.createStatement().use { stmt ->
                     targetsToNewIds.values.forEach { roleName ->
-                        stmt.execute( createExternalDatabaseRoleIfNotExistsSql(roleName.toString()))
+                        stmt.execute(createExternalDatabaseRoleIfNotExistsSql(roleName.toString()))
                     }
                 }
             }
