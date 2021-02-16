@@ -34,6 +34,9 @@ interface CollaborationsApi {
     @GET(BASE + ID_PATH)
     fun getCollaboration(@Path(ID) id: UUID): Collaboration
 
+    @GET(BASE + ORGANIZATIONS_PATH + ORGANIZATION_ID_PATH)
+    fun getCollaborationsIncludingOrganization(@Path(ORGANIZATION_ID) organizationId: UUID): Iterable<Collaboration>
+
     @DELETE(BASE + ID_PATH)
     fun deleteCollaboration(@Path(ID) id: UUID)
 

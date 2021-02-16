@@ -63,6 +63,20 @@ class CollaborationController : AuthorizingComponent, CollaborationsApi {
     }
 
     @Timed
+    @GetMapping(value = [ORGANIZATIONS_PATH + ORGANIZATION_ID_PATH], produces = [MediaType.APPLICATION_JSON_VALUE])
+    override fun getCollaborationsIncludingOrganization(@PathVariable(ORGANIZATION_ID) organizationId: UUID): Iterable<Collaboration> {
+        ensureReadAccess(AclKey(organizationId))
+        val collaborations = collaborationService.getCollaborationsIncludingOrg(organizationId)
+
+        val authorizedIds = authorizations.accessChecksForPrincipals(
+                collaborations.map { AccessCheck(AclKey(it.id), EnumSet.of(Permission.READ)) }.toSet(),
+                Principals.getCurrentPrincipals()
+        ).filter { it.permissions.getValue(Permission.READ) }.map { it.aclKey.first() }.collect(Collectors.toSet())
+
+        return collaborations.filter { authorizedIds.contains(it.id) }
+    }
+
+    @Timed
     @DeleteMapping(value = [ID_PATH])
     override fun deleteCollaboration(@PathVariable(ID) id: UUID) {
         ensureOwnerAccess(AclKey(id))

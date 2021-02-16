@@ -175,7 +175,7 @@ class CollaborationService(
         }
     }
 
-    private fun getCollaborationsIncludingOrg(organizationId: UUID): Collection<Collaboration> {
+    fun getCollaborationsIncludingOrg(organizationId: UUID): Collection<Collaboration> {
         return collaborations.values(Predicates.equal(CollaborationMapstore.ORGANIZATION_ID_IDX, organizationId))
     }
 
