@@ -134,7 +134,10 @@ class BackgroundLinkingService(
             }.forEach { esid ->
                 val es = entitySets.getValue(esid)
                 logger.info("Starting to queue linking candidates from entity set {}({})", es.name, esid)
-                val forLinking = lqs.getEntitiesNeedingLinking(esid)
+                val forLinking = lqs.getEntitiesNeedingLinking(
+                        esid,
+                        3 * configuration.loadSize
+                )
 //                        ).filter {
 //                    if( tryLockCandidate(it) ) {
 //                        logger.info("successfully locked $it for linking")
