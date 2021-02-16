@@ -89,7 +89,7 @@ class BackgroundLinkingService(
     @Scheduled(fixedRate = LINKING_RATE)
     fun enqueue() {
         val linkedInSession = requests.count
-        val currentHourlyRate = requests.meanRate * 60 * 60
+        val currentHourlyRate = requests.fifteenMinuteRate * 4
         val timeLeft = candidates.size / currentHourlyRate
         logger.info("$linkedInSession entities linked since last startup. That's a rate of $currentHourlyRate  per hour. The current queue will be run through in $timeLeft hours")
         if ( candidates.isNotEmpty() ){
