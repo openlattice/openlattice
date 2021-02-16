@@ -104,13 +104,13 @@ class SocratesMatcher(
         val entities = block.entities.mapValues { entity ->
             block.entities.keys.filter {
                 val entityPair = EntityKeyPair(entity.key, it)
-                val feedback = linkingFeedbackService.getLinkingFeedback(entityPair)
-                if (feedback != null) {
-                    if (feedback.linked) {
-                        positiveFeedbacks.add(entityPair)
-                        return@filter false
-                    }
-                }
+//                val feedback = linkingFeedbackService.getLinkingFeedback(entityPair)
+//                if (feedback != null) {
+//                    if (feedback.linked) {
+//                        positiveFeedbacks.add(entityPair)
+//                        return@filter false
+//                    }
+//                }
                 return@filter true
             }
         }.filter { it.value.isNotEmpty() }
