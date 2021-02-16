@@ -64,7 +64,7 @@ class BackgroundLinkingService(
         private val ids: EntityKeyIdService,
         private val clusterer: Clusterer,
         private val lqs: LinkingQueryService,
-//        private val linkingFeedbackService: PostgresLinkingFeedbackService,
+        private val linkingFeedbackService: PostgresLinkingFeedbackService,
         private val linkableTypes: Set<UUID>,
         private val configuration: LinkingConfiguration
 ) {

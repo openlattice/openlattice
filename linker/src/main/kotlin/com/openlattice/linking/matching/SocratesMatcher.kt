@@ -45,8 +45,8 @@ private val logger = LoggerFactory.getLogger(SocratesMatcher::class.java)
 @Component
 class SocratesMatcher(
         model: MultiLayerNetwork,
-        private val fqnToIdMap: Map<FullQualifiedName, UUID>
-//        private val linkingFeedbackService: PostgresLinkingFeedbackService
+        private val fqnToIdMap: Map<FullQualifiedName, UUID>,
+        private val linkingFeedbackService: PostgresLinkingFeedbackService
 ) : Matcher {
 
     private var localModel = ThreadLocal.withInitial { model.clone() }
@@ -101,7 +101,7 @@ class SocratesMatcher(
         // filter out positive matches from feedback to avoid computation of scores
         // negative feedbacks are already filter out when blocking
         val entities = block.entities
-        val filteredEntities = entities.mapValues { entity ->
+        val filteredEntities = entities.mapValues { _ ->
             entities.keys.filter {
 //                val entityPair = EntityKeyPair(entity.key, it)
 //                val feedback = linkingFeedbackService.getLinkingFeedback(entityPair)
