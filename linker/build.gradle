@@ -85,11 +85,11 @@ if (GC == 'null' || GC == null || GC == "") {
     GC = "-XX:+UseG1GC"
 }
 
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(11)
-    }
-}
+//java {
+//    toolchain {
+//        languageVersion = JavaLanguageVersion.of(11)
+//    }
+//}
 
 mainClassName = "com.openlattice.linking.Linker"
 applicationDefaultJvmArgs = [LINKER_XMS, LINKER_XMX, "-server", GC, PARALLEL]
