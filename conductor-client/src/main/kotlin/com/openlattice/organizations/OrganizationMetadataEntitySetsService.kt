@@ -373,8 +373,8 @@ class OrganizationMetadataEntitySetsService(
             organizationId = organizationId,
             entityTypeId = organizationMetadataEntityTypeId,
             name = buildOrganizationMetadataEntitySetName(organizationId),
-            _title = "Organization Metadata for $organizationId",
-            _description = "Organization Metadata for $organizationId",
+            _title = "Organization metadata for $organizationId",
+            _description = "Organization metadata for $organizationId",
             contacts = mutableSetOf(),
             flags = EnumSet.of(EntitySetFlag.METADATA)
     )
@@ -399,9 +399,9 @@ class OrganizationMetadataEntitySetsService(
             flags = EnumSet.of(EntitySetFlag.METADATA)
     )
 
-    private fun buildOrganizationMetadataEntitySetName(organizationId: UUID): String = quote("org-metadata-$organizationId")
-    private fun buildDatasetsEntitySetName(organizationId: UUID): String = quote("datasets-$organizationId")
-    private fun buildColumnEntitySetName(organizationId: UUID): String = quote("columns-$organizationId")
+    private fun buildOrganizationMetadataEntitySetName(organizationId: UUID): String = "org-metadata-$organizationId"
+    private fun buildDatasetsEntitySetName(organizationId: UUID): String = "datasets-$organizationId"
+    private fun buildColumnEntitySetName(organizationId: UUID): String = "columns-$organizationId"
 
     private fun buildDatasetEntity(
         organizationId: UUID,
