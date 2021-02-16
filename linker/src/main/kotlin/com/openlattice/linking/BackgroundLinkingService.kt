@@ -36,9 +36,7 @@ import com.openlattice.linking.blocking.Block
 import com.openlattice.linking.blocking.Blocker
 import com.openlattice.linking.clustering.Cluster
 import com.openlattice.linking.clustering.Clusterer
-import com.openlattice.linking.clustering.Clusters
 import com.openlattice.linking.clustering.KeyedCluster
-import com.openlattice.linking.clustering.ScoredCluster
 import com.openlattice.linking.matching.Matcher
 import com.openlattice.postgres.mapstores.EntitySetMapstore
 import org.slf4j.LoggerFactory
@@ -66,7 +64,7 @@ class BackgroundLinkingService(
         private val ids: EntityKeyIdService,
         private val clusterer: Clusterer,
         private val lqs: LinkingQueryService,
-        private val linkingFeedbackService: PostgresLinkingFeedbackService,
+//        private val linkingFeedbackService: PostgresLinkingFeedbackService,
         private val linkableTypes: Set<UUID>,
         private val configuration: LinkingConfiguration
 ) {
@@ -207,33 +205,33 @@ class BackgroundLinkingService(
     private fun link(candidate: EntityDataKey) {
         clearNeighborhoods(candidate)
         // if we have positive feedbacks on entity, we use its linking id and match them together
-        if (linkingFeedbackService.hasFeedbacks(FeedbackType.Positive, candidate)) {
-            try {
-                // only linking id of entity should remain, since we cleared neighborhood, except the ones
-                // with positive feedback
-                val clusters = Clusters(lqs.getClustersForIds(setOf(candidate)))
-                val cluster = KeyedCluster.fromEntry(clusters.entries.first())
-                val clusterId = cluster.id
-                lateinit var scoredCluster: ScoredCluster
-
-                lqs.lockClustersForUpdates(setOf(clusterId)).use { conn ->
-                    scoredCluster = clusterer.cluster(candidate, cluster, ::completeLinkCluster)
-                    if (scoredCluster.score <= MINIMUM_SCORE) {
-                        logger.error(
-                                "Recalculated score {} of linking id {} with positives feedbacks did not pass minimum score {}",
-                                scoredCluster.score,
-                                cluster.id,
-                                MINIMUM_SCORE
-                        )
-                    }
-                    lqs.insertMatchScores(conn, clusterId, scoredCluster.cluster)
-                }
-                insertMatches(clusterId, candidate, scoredCluster.cluster)
-            } catch (ex: Exception) {
-                logger.error("An error occurred while performing linking.", ex)
-                throw IllegalStateException("Error occured while performing linking.", ex)
-            }
-        } else {
+//        if (linkingFeedbackService.hasFeedbacks(FeedbackType.Positive, candidate)) {
+//            try {
+//                // only linking id of entity should remain, since we cleared neighborhood, except the ones
+//                // with positive feedback
+//                val clusters = Clusters(lqs.getClustersForIds(setOf(candidate)))
+//                val cluster = KeyedCluster.fromEntry(clusters.entries.first())
+//                val clusterId = cluster.id
+//                lateinit var scoredCluster: ScoredCluster
+//
+//                lqs.lockClustersForUpdates(setOf(clusterId)).use { conn ->
+//                    scoredCluster = clusterer.cluster(candidate, cluster, ::completeLinkCluster)
+//                    if (scoredCluster.score <= MINIMUM_SCORE) {
+//                        logger.error(
+//                                "Recalculated score {} of linking id {} with positives feedbacks did not pass minimum score {}",
+//                                scoredCluster.score,
+//                                cluster.id,
+//                                MINIMUM_SCORE
+//                        )
+//                    }
+//                    lqs.insertMatchScores(conn, clusterId, scoredCluster.cluster)
+//                }
+//                insertMatches(clusterId, candidate, scoredCluster.cluster)
+//            } catch (ex: Exception) {
+//                logger.error("An error occurred while performing linking.", ex)
+//                throw IllegalStateException("Error occured while performing linking.", ex)
+//            }
+//        } else {
             // Run standard blocking + clustering
             val sw = Stopwatch.createStarted()
             val initialBlock = blocker.block(candidate.entitySetId, candidate.entityKeyId)
@@ -279,7 +277,7 @@ class BackgroundLinkingService(
                 logger.error("An error occurred while performing linking.", ex)
                 throw IllegalStateException("Error occured while performing linking.", ex)
             }
-        }
+//        }
     }
 
     private fun <T> collectKeys(m: Map<EntityDataKey, Map<EntityDataKey, T>>): Set<EntityDataKey> {
@@ -288,9 +286,10 @@ class BackgroundLinkingService(
 
     private fun clearNeighborhoods(candidate: EntityDataKey) {
         logger.debug("Starting neighborhood cleanup of {}", candidate)
-        val positiveFeedbacks = linkingFeedbackService.getLinkingFeedbackEntityKeyPairs(
-                FeedbackType.Positive, candidate
-        )
+        val positiveFeedbacks = listOf<EntityKeyPair>()
+//                linkingFeedbackService.getLinkingFeedbackEntityKeyPairs(
+//                FeedbackType.Positive, candidate
+//        )
 
         val clearedCount = lqs.deleteNeighborhood(candidate, positiveFeedbacks)
         logger.debug("Cleared {} neighbors from neighborhood of {}", clearedCount, candidate)
