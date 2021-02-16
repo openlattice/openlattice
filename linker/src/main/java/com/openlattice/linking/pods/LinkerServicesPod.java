@@ -275,7 +275,7 @@ public class LinkerServicesPod {
         return new OrganizationMetadataEntitySetsService(
                 hazelcastInstance,
                 dataModelService(),
-                principalService,
+                principalsMapManager(),
                 authorizationManager()
         );
     }
@@ -283,6 +283,11 @@ public class LinkerServicesPod {
     @Bean
     public PostgresLinkingFeedbackService postgresLinkingFeedbackQueryService() {
         return new PostgresLinkingFeedbackService( hikariDataSource, hazelcastInstance );
+    }
+
+    @Bean
+    public PrincipalsMapManager principalsMapManager() {
+        return new HazelcastPrincipalsMapManager(hazelcastInstance, aclKeyReservationService());
     }
 
     @PostConstruct

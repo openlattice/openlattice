@@ -515,7 +515,7 @@ public class ConductorServicesPod {
         return new OrganizationMetadataEntitySetsService(
                 hazelcastInstance,
                 dataModelService(),
-                securePrincipalsManager(),
+                principalsMapManager(),
                 authorizationManager()
         );
     }

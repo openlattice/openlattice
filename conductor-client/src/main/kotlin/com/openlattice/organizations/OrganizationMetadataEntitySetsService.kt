@@ -37,7 +37,6 @@ import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.organization.OrganizationExternalDatabaseTable
 import com.openlattice.organization.roles.Role
 import com.openlattice.organizations.processors.OrganizationReadEntryProcessor
-import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.DataTables.quote
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.springframework.stereotype.Service
@@ -51,7 +50,7 @@ import java.util.*
 class OrganizationMetadataEntitySetsService(
     hazelcastInstance: HazelcastInstance,
     private val edmService: EdmManager,
-    private val securePrincipalsManager: SecurePrincipalsManager,
+    private val principalsMapManager: PrincipalsMapManager,
     private val authorizationManager: AuthorizationManager
 ) {
     private val mapper = ObjectMappers.newJsonMapper()
@@ -107,13 +106,12 @@ class OrganizationMetadataEntitySetsService(
             && this::propertyTypes.isInitialized
 
     fun initializeOrganizationMetadataEntitySets(organizationId: UUID) {
-        val adminAclKey = organizations.executeOnKey(
+        val adminRoleAclKey = organizations.executeOnKey(
             organizationId,
             OrganizationReadEntryProcessor { it.adminRoleAclKey }
         ) as AclKey
 
-
-        initializeOrganizationMetadataEntitySets(securePrincipalsManager.getRole(organizationId, adminAclKey[1]))
+        initializeOrganizationMetadataEntitySets(principalsMapManager.lookupRole(adminRoleAclKey))
     }
 
     fun ensureOrganizationMetadataEntitySetIdsFullyInitialized(organizationId: UUID) {

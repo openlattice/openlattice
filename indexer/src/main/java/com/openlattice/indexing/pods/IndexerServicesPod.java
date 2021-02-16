@@ -392,7 +392,7 @@ public class IndexerServicesPod {
         return new OrganizationMetadataEntitySetsService(
                 hazelcastInstance,
                 dataModelService(),
-                securePrincipalsManager(),
+                principalsMapManager(),
                 authorizationManager()
         );
     }

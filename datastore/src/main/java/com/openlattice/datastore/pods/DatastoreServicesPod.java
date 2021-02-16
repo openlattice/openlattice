@@ -450,7 +450,7 @@ public class DatastoreServicesPod {
         return new OrganizationMetadataEntitySetsService(
                 hazelcastInstance,
                 dataModelService(),
-                securePrincipalsManager(),
+                principalsMapManager(),
                 authorizationManager()
         );
     }
