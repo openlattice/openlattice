@@ -21,6 +21,8 @@
 
 package com.openlattice.linking
 
+import com.codahale.metrics.Meter
+import com.codahale.metrics.MetricRegistry
 import com.google.common.base.Stopwatch
 import com.google.common.collect.Sets
 import com.google.common.util.concurrent.ListeningExecutorService
@@ -73,6 +75,9 @@ class BackgroundLinkingService(
         private fun now(): Long {
             return Instant.now().toEpochMilli()
         }
+
+        private val metrics: MetricRegistry = MetricRegistry()
+        private val requests: Meter = metrics.meter("links")
     }
 
     private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
@@ -83,6 +88,10 @@ class BackgroundLinkingService(
     @Suppress("UNUSED")
     @Scheduled(fixedRate = LINKING_RATE)
     fun enqueue() {
+        val linkedInSession = requests.count
+        val currentHourlyRate = requests.meanRate * 60 * 60
+        val timeLeft = candidates.size / currentHourlyRate
+        logger.info("$linkedInSession entities linked since last startup. That's a rate of $currentHourlyRate  per hour. The current queue will be run through in $timeLeft hours")
         if ( candidates.isNotEmpty() ){
             logger.info("Linking queue still has candidates on it, not adding more at the moment")
             return
@@ -102,7 +111,6 @@ class BackgroundLinkingService(
 //            val priority = priorityEntitySets.asSequence().filter {
 //                filteredLinkableEntitySetIds.contains(it)
 //            }
-
             listOf(
                     UUID.fromString("2deb5292-11b5-4874-b4b1-2a5a57804e68"),
                     UUID.fromString("e9dc56bf-7cf9-4e25-8969-1ac4c1b1e1ec"),
@@ -184,6 +192,7 @@ class BackgroundLinkingService(
                     } finally {
                         logger.info("Unlocking candidate after linking: {}", candidate)
                         unlock(candidate)
+                        requests.mark()
                         limiter.release()
                     }
                 })
