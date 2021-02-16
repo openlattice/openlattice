@@ -169,6 +169,20 @@ class CollaborationService(
         }
     }
 
+    fun <T> getProjectedTableIdsInCollaborationsAndOrganizations(
+            collaborationIds: Collection<UUID>,
+            organizationIds: Collection<UUID>,
+            groupingFn: (Map.Entry<ProjectedTableKey, ProjectedTableMetadata>) -> T
+    ): Map<T, List<UUID>> {
+        return projectedTables.entrySet(Predicates.and(
+                collaborationIdsPredicate(collaborationIds),
+                organizationIdsPredicate(organizationIds)
+        ))
+                .groupBy { groupingFn(it) }
+                .mapValues { entry -> entry.value.map { it.key.tableId } }
+
+    }
+
     private fun ensureTableBelongsToOrganization(tableId: UUID, organizationId: UUID) {
         check(externalTables.getValue(tableId).organizationId == organizationId) {
             "Table $tableId does not belong to organization $organizationId"
@@ -242,8 +256,16 @@ class CollaborationService(
         return Predicates.equal(ProjectedTablesMapstore.COLLABORATION_ID_INDEX, collaborationId)
     }
 
+    private fun collaborationIdsPredicate(collaborationIds: Collection<UUID>): Predicate<ProjectedTableKey, ProjectedTableMetadata> {
+        return Predicates.`in`(ProjectedTablesMapstore.COLLABORATION_ID_INDEX, *collaborationIds.toTypedArray())
+    }
+
     private fun organizationIdPredicate(organizationId: UUID): Predicate<ProjectedTableKey, ProjectedTableMetadata> {
         return Predicates.equal(ProjectedTablesMapstore.ORGANIZATION_ID_INDEX, organizationId)
+    }
+
+    private fun organizationIdsPredicate(organizationIds: Collection<UUID>): Predicate<ProjectedTableKey, ProjectedTableMetadata> {
+        return Predicates.`in`(ProjectedTablesMapstore.ORGANIZATION_ID_INDEX, *organizationIds.toTypedArray())
     }
 
     private fun tableIdPredicate(tableId: UUID): Predicate<ProjectedTableKey, ProjectedTableMetadata> {
@@ -253,6 +275,5 @@ class CollaborationService(
     private fun tableNamePredicate(tableName: String): Predicate<ProjectedTableKey, ProjectedTableMetadata> {
         return Predicates.equal(ProjectedTablesMapstore.TABLE_NAME_INDEX, tableName)
     }
-
 
 }

@@ -14,6 +14,7 @@ import com.openlattice.collaborations.CollaborationsApi.Companion.ORGANIZATIONS_
 import com.openlattice.collaborations.CollaborationsApi.Companion.ORGANIZATION_ID
 import com.openlattice.collaborations.CollaborationsApi.Companion.ORGANIZATION_ID_PATH
 import com.openlattice.collaborations.CollaborationsApi.Companion.PROJECT_PATH
+import com.openlattice.collaborations.CollaborationsApi.Companion.TABLES_PATH
 import com.openlattice.collaborations.CollaborationsApi.Companion.TABLE_ID
 import com.openlattice.collaborations.CollaborationsApi.Companion.TABLE_ID_PATH
 import com.openlattice.organizations.OrganizationDatabase
@@ -68,10 +69,7 @@ class CollaborationController : AuthorizingComponent, CollaborationsApi {
         ensureReadAccess(AclKey(organizationId))
         val collaborations = collaborationService.getCollaborationsIncludingOrg(organizationId)
 
-        val authorizedIds = authorizations.accessChecksForPrincipals(
-                collaborations.map { AccessCheck(AclKey(it.id), EnumSet.of(Permission.READ)) }.toSet(),
-                Principals.getCurrentPrincipals()
-        ).filter { it.permissions.getValue(Permission.READ) }.map { it.aclKey.first() }.collect(Collectors.toSet())
+        val authorizedIds = filterToAuthorizedIds(collaborations.map { it.id })
 
         return collaborations.filter { authorizedIds.contains(it.id) }
     }
@@ -139,6 +137,38 @@ class CollaborationController : AuthorizingComponent, CollaborationsApi {
 
         collaborationService.removeProjectedTableFromCollaboration(collaborationId, organizationId, tableId)
 
+    }
+
+    @Timed
+    @GetMapping(value = [ORGANIZATIONS_PATH + ORGANIZATION_ID_PATH + TABLES_PATH], produces = [MediaType.APPLICATION_JSON_VALUE])
+    override fun getProjectedTablesInOrganization(@PathVariable(ORGANIZATION_ID) organizationId: UUID): Map<UUID, List<UUID>> {
+        // auth checks on org and collabs done inside here
+        val collaborationIds = getCollaborationsIncludingOrganization(organizationId).map { it.id }
+
+        return collaborationService.getProjectedTableIdsInCollaborationsAndOrganizations(collaborationIds, setOf(organizationId)) {
+            it.value.organizationId
+        }
+
+    }
+
+    @Timed
+    @GetMapping(value = [ID_PATH + TABLES_PATH], produces = [MediaType.APPLICATION_JSON_VALUE])
+    override fun getProjectedTablesInCollaboration(@PathVariable(ID) collaborationId: UUID): Map<UUID, List<UUID>> {
+        ensureReadAccess(AclKey(collaborationId))
+
+        val authorizedOrgIds = filterToAuthorizedIds(collaborationService.getCollaboration(collaborationId).organizationIds)
+
+        return collaborationService.getProjectedTableIdsInCollaborationsAndOrganizations(setOf(collaborationId), authorizedOrgIds) {
+            it.key.tableId
+        }
+    }
+
+
+    private fun filterToAuthorizedIds(ids: Iterable<UUID>): Set<UUID> {
+        return authorizations.accessChecksForPrincipals(
+                ids.map { AccessCheck(AclKey(it), EnumSet.of(Permission.READ)) }.toSet(),
+                Principals.getCurrentPrincipals()
+        ).filter { it.permissions.getValue(Permission.READ) }.map { it.aclKey.first() }.collect(Collectors.toSet())
     }
 
     override fun getAuthorizationManager(): AuthorizationManager {

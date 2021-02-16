@@ -16,6 +16,7 @@ interface CollaborationsApi {
         const val DATABASE_PATH = "/database"
         const val ORGANIZATIONS_PATH = "/organizations"
         const val PROJECT_PATH = "/project"
+        const val TABLES_PATH = "/tables"
 
         const val ID = "id"
         const val ID_PATH = "/{$ID}"
@@ -65,4 +66,22 @@ interface CollaborationsApi {
             @Path(ORGANIZATION_ID) organizationId: UUID,
             @Path(TABLE_ID) tableId: UUID
     )
+
+    /**
+     * Loads all authorized projected tables in an organization
+     *
+     * @param organizationId The id of the organization to find projected tables for
+     * @return A map from collaborationId to all table ids projected in that collaboration.
+     */
+    @GET(BASE + ORGANIZATIONS_PATH + ORGANIZATION_ID_PATH + TABLES_PATH)
+    fun getProjectedTablesInOrganization(@Path(ORGANIZATION_ID) organizationId: UUID): Map<UUID, List<UUID>>
+
+    /**
+     * Loads all authorized projected tables in a collaboration
+     *
+     * @param collaborationId The id of the collaboration to find projected tables for
+     * @return A map from organizationId to all table ids projected to the requested collaboration from that organization.
+     */
+    @GET(BASE + ID_PATH + TABLES_PATH)
+    fun getProjectedTablesInCollaboration(@Path(ID) collaborationId: UUID): Map<UUID, List<UUID>>
 }
