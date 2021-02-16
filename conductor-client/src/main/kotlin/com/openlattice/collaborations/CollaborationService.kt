@@ -183,6 +183,15 @@ class CollaborationService(
 
     }
 
+    fun getCollaborationIdsWithProjectionsForTables(tableIds: Set<UUID>, collaborationIds: Set<UUID>): Map<UUID, List<UUID>> {
+        return projectedTables.entrySet(Predicates.and(
+                tableIdsPredicate(tableIds),
+                collaborationIdsPredicate(collaborationIds)
+        ))
+                .groupBy { it.key.tableId }
+                .mapValues { entry -> entry.value.map { it.key.collaborationId } }
+    }
+
     private fun ensureTableBelongsToOrganization(tableId: UUID, organizationId: UUID) {
         check(externalTables.getValue(tableId).organizationId == organizationId) {
             "Table $tableId does not belong to organization $organizationId"
@@ -270,6 +279,10 @@ class CollaborationService(
 
     private fun tableIdPredicate(tableId: UUID): Predicate<ProjectedTableKey, ProjectedTableMetadata> {
         return Predicates.equal(ProjectedTablesMapstore.TABLE_ID_INDEX, tableId)
+    }
+
+    private fun tableIdsPredicate(tableIds: Collection<UUID>): Predicate<ProjectedTableKey, ProjectedTableMetadata> {
+        return Predicates.equal(ProjectedTablesMapstore.TABLE_ID_INDEX, *tableIds.toTypedArray())
     }
 
     private fun tableNamePredicate(tableName: String): Predicate<ProjectedTableKey, ProjectedTableMetadata> {

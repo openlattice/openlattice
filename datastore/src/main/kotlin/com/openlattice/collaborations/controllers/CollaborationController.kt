@@ -41,12 +41,7 @@ class CollaborationController : AuthorizingComponent, CollaborationsApi {
     @Timed
     @GetMapping(value = ["", "/"], produces = [MediaType.APPLICATION_JSON_VALUE])
     override fun getCollaborations(): Iterable<Collaboration> {
-        val authorizedCollaborationIds = authorizations.getAuthorizedObjectsOfType(
-                Principals.getCurrentPrincipals(),
-                SecurableObjectType.Collaboration,
-                EnumSet.of(Permission.READ)
-        ).map { it.first() }.collect(Collectors.toSet())
-
+        val authorizedCollaborationIds = getAllAuthorizedCollaborationIds()
         return collaborationService.getCollaborations(authorizedCollaborationIds).values
     }
 
@@ -163,6 +158,22 @@ class CollaborationController : AuthorizingComponent, CollaborationsApi {
         }
     }
 
+    @Timed
+    @PostMapping(value = [TABLES_PATH], consumes = [MediaType.APPLICATION_JSON_VALUE], produces = [MediaType.APPLICATION_JSON_VALUE])
+    override fun getProjectionCollaborationsForTables(@RequestBody tableIds: Set<UUID>): Map<UUID, List<UUID>> {
+        val authorizedTableIds = filterToAuthorizedIds(tableIds)
+        val authorizedCollaborationIds = getAllAuthorizedCollaborationIds()
+
+        return collaborationService.getCollaborationIdsWithProjectionsForTables(authorizedTableIds, authorizedCollaborationIds)
+    }
+
+    private fun getAllAuthorizedCollaborationIds(): Set<UUID> {
+        return authorizations.getAuthorizedObjectsOfType(
+                Principals.getCurrentPrincipals(),
+                SecurableObjectType.Collaboration,
+                EnumSet.of(Permission.READ)
+        ).map { it.first() }.collect(Collectors.toSet())
+    }
 
     private fun filterToAuthorizedIds(ids: Iterable<UUID>): Set<UUID> {
         return authorizations.accessChecksForPrincipals(

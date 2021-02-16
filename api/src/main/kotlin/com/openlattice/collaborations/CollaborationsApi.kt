@@ -84,4 +84,14 @@ interface CollaborationsApi {
      */
     @GET(BASE + ID_PATH + TABLES_PATH)
     fun getProjectedTablesInCollaboration(@Path(ID) collaborationId: UUID): Map<UUID, List<UUID>>
+
+    /**
+     * Loads all collaborations each requested table is projected to
+     *
+     * @param tableIds The tables to load projection information for
+     * @return A map from tableId to all authorized collaboration ids where it's projected
+     */
+    @POST(BASE + TABLES_PATH)
+    fun getProjectionCollaborationsForTables(@Body tableIds: Set<UUID>): Map<UUID, List<UUID>>
+
 }
