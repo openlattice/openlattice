@@ -114,6 +114,9 @@ public class LinkerPostConfigurationServicesPod {
     @Inject
     private HealthCheckRegistry healthCheckRegistry;
 
+    @Inject
+    private PostgresLinkingFeedbackService postgresLinkingFeedbackQueryService;
+
     @Bean
     public HazelcastIdGenerationService idGeneration() {
         return new HazelcastIdGenerationService( hazelcastClientProvider );
@@ -148,7 +151,7 @@ public class LinkerPostConfigurationServicesPod {
         return new ElasticsearchBlocker(
                 elasticsearchApi,
                 dataLoader(),
-                postgresLinkingFeedbackQueryService(),
+                postgresLinkingFeedbackQueryService,
                 hazelcastInstance );
     }
 
@@ -165,7 +168,7 @@ public class LinkerPostConfigurationServicesPod {
                 entitySetManager,
                 metricRegistry,
                 eventBus,
-                postgresLinkingFeedbackQueryService(),
+                postgresLinkingFeedbackQueryService,
                 lqs()
         );
     }
@@ -184,7 +187,7 @@ public class LinkerPostConfigurationServicesPod {
                 idService(),
                 clusterer(),
                 lqs(),
-                postgresLinkingFeedbackQueryService(),
+                postgresLinkingFeedbackQueryService,
                 edm.getEntityTypeUuids( linkingConfiguration.getEntityTypes() ),
                 linkingConfiguration );
     }
@@ -200,10 +203,5 @@ public class LinkerPostConfigurationServicesPod {
     @Bean
     public RealtimeLinkingController realtimeLinkingController() {
         return new RealtimeLinkingController( linkingConfiguration, edm );
-    }
-
-    @Bean
-    public PostgresLinkingFeedbackService postgresLinkingFeedbackQueryService() {
-        return new PostgresLinkingFeedbackService( hikariDataSource, hazelcastInstance );
     }
 }

@@ -101,21 +101,20 @@ class SocratesMatcher(
         val positiveFeedbacks = mutableSetOf<EntityKeyPair>()
         // filter out positive matches from feedback to avoid computation of scores
         // negative feedbacks are already filter out when blocking
-        val entities = block.entities.mapValues { entity ->
-            block.entities.keys.filter {
+        val entities = block.entities
+        val filteredEntities = entities.mapValues { entity ->
+            entities.keys.filter {
                 val entityPair = EntityKeyPair(entity.key, it)
-//                val feedback = linkingFeedbackService.getLinkingFeedback(entityPair)
-//                if (feedback != null) {
-//                    if (feedback.linked) {
-//                        positiveFeedbacks.add(entityPair)
-//                        return@filter false
-//                    }
-//                }
+                val feedback = linkingFeedbackService.getLinkingFeedback(entityPair)
+                if (feedback != null && feedback.linked) {
+                    positiveFeedbacks.add(entityPair)
+                    return@filter false
+                }
                 return@filter true
             }
         }.filter { it.value.isNotEmpty() }
 
-        val results = computeResults(block.entities, entities, positiveFeedbacks)
+        val results = computeResults(entities, filteredEntities, positiveFeedbacks)
 
         // from list of results to expected output
         val matchedEntities = results.groupBy { it.lhs }
@@ -127,7 +126,7 @@ class SocratesMatcher(
 
         logger.info(
                 "Matching block {} with {} elements took {} ms",
-                block.entityDataKey, block.entities.values.map { it.size }.sum(),
+                block.entityDataKey, entities.values.map { it.size }.sum(),
                 sw.elapsed(TimeUnit.MILLISECONDS)
         )
 
