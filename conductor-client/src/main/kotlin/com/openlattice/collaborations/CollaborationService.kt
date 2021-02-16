@@ -282,7 +282,7 @@ class CollaborationService(
     }
 
     private fun tableIdsPredicate(tableIds: Collection<UUID>): Predicate<ProjectedTableKey, ProjectedTableMetadata> {
-        return Predicates.equal(ProjectedTablesMapstore.TABLE_ID_INDEX, *tableIds.toTypedArray())
+        return Predicates.`in`(ProjectedTablesMapstore.TABLE_ID_INDEX, *tableIds.toTypedArray())
     }
 
     private fun tableNamePredicate(tableName: String): Predicate<ProjectedTableKey, ProjectedTableMetadata> {
