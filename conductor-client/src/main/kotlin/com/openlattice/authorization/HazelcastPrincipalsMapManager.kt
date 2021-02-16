@@ -53,6 +53,12 @@ class HazelcastPrincipalsMapManager(
         return principals.getAll(aclKeys)
     }
 
+    override fun getAclKeyByPrincipal(ps: Set<Principal>): Map<Principal, AclKey> {
+        return principals.values(Predicates.`in`(PrincipalMapstore.PRINCIPAL_INDEX, *ps.toTypedArray())).associate {
+            it.principal to it.aclKey
+        }
+    }
+
     private fun castSecurablePrincipalAsRole(sp: SecurablePrincipal): Role {
         require(sp.principal.type == PrincipalType.ROLE) { "The provided principal $sp is not a role" }
         return sp as Role

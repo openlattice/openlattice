@@ -175,12 +175,25 @@ class ExternalDatabasePermissioner(
     }
 
     override fun addPrincipalToPrincipals(sourcePrincipalAclKey: AclKey, targetPrincipalAclKeys: Set<AclKey>) {
-        if (targetPrincipalAclKeys.isEmpty()) {
+        val usernamesByAclKey = dbCredentialService.getDbUsernamesAsMap(targetPrincipalAclKeys + setOf(sourcePrincipalAclKey))
+
+        val sourceRole = usernamesByAclKey[sourcePrincipalAclKey]
+        if (sourceRole == null) {
+            logger.info("Source principal {} has no corresponding role name in the database -- skipping db role grants", sourcePrincipalAclKey)
             return
         }
-        val grantTargets = dbCredentialService.getDbUsernames(targetPrincipalAclKeys)
 
-        val sourceRole = dbCredentialService.getDbUsername(sourcePrincipalAclKey)
+        val grantTargets = targetPrincipalAclKeys.filter { it != sourcePrincipalAclKey }.mapNotNull {
+            val username = usernamesByAclKey[it]
+            if (username == null) {
+                logger.info("Target principal {} has no corresponding role name in the database. Skipping assignment to {}", it, sourcePrincipalAclKey)
+            }
+            username
+        }.toSet()
+
+        if (grantTargets.isEmpty()) {
+            return
+        }
 
         logger.debug("attempting to grant $sourceRole to $grantTargets")
         atlas.connection.use { connection ->
@@ -370,54 +383,54 @@ class ExternalDatabasePermissioner(
             }
         }
 
-        val allOrgs = columnsById.values.map { it.organizationId }.toSet()
+        val allPermissions = if (tableType == TableType.TABLE) allTablePermissions else allViewPermissions
+
+        val principalAclKeys = principalsMapManager.getAclKeyByPrincipal(
+                columnAcls.flatMap { it.aces.map { a -> a.principal } }.toSet()
+        )
+        val usernamesByAclKey = dbCredentialService.getDbUsernamesAsMap(principalAclKeys.values.toSet())
+        val principalToUsername = principalAclKeys.mapValues { usernamesByAclKey.getValue(it.value) }
+
         val removes = mutableMapOf<UUID, MutableList<String>>()
         val adds = mutableMapOf<UUID, MutableList<String>>()
-        columnAcls.forEach { columnAcl ->
-            val column = columnsById.getValue(columnAcl.aclKey)
-            val orgId = column.organizationId
-            columnAcl.aces.forEach { ace ->
-                when (action) {
-                    Action.ADD -> {
-                        val sqls = adds.getOrDefault(orgId, mutableListOf())
-                        sqls.addAll(grantPermissionsOnColumnSql(
-                                orgId,
-                                ace,
-                                column
-                        ))
-                        adds[orgId] = sqls
-                    }
-                    Action.REMOVE -> {
-                        val sqls = removes.getOrDefault(orgId, mutableListOf())
-                        sqls.addAll(
-                                removePermissionsOnColumn(
-                                        orgId, ace, column, tableType
-                                )
-                        )
-                        removes[orgId] = sqls
-                    }
-                    Action.SET -> {
-                        val remSqls = removes.getOrDefault(orgId, mutableListOf())
-                        remSqls.addAll(
-                                removeAllPermissionsForPrincipalOnColumn(
-                                        orgId, ace.principal, column, tableType
-                                )
-                        )
-                        removes[orgId] = remSqls
 
-                        val addSqls = adds.getOrDefault(orgId, mutableListOf())
-                        addSqls.addAll(grantPermissionsOnColumnSql(
-                                orgId,
-                                ace,
-                                column
-                        ))
-                        adds[orgId] = addSqls
+        columnAcls.groupBy { columnsById.getValue(it.aclKey).organizationId }.forEach { (orgId, orgColumnAcls) ->
+            val orgAdds = mutableListOf<String>()
+            val orgRemoves = mutableListOf<String>()
+
+            val accessTargetsToPermissionRoles = getPermissionRolesForAcls(orgId, orgColumnAcls, allPermissions)
+
+            orgColumnAcls.forEach { columnAcl ->
+                val column = columnsById.getValue(columnAcl.aclKey)
+
+                columnAcl.aces.forEach { ace ->
+                    val userRole = principalToUsername.getValue(ace.principal)
+                    val requestedPermissionRoles = lookUpPermissionRoles(ace.permissions, columnAcl, accessTargetsToPermissionRoles)
+
+                    when (action) {
+                        Action.ADD -> {
+                            orgAdds.addAll(grantPermissionsOnColumnSql(userRole, column, requestedPermissionRoles))
+                        }
+                        Action.REMOVE -> {
+                            orgRemoves.addAll(removePermissionsOnColumn(userRole, requestedPermissionRoles))
+                        }
+                        Action.SET -> {
+                            val allColPermissionRoles = lookUpPermissionRoles(allPermissions, columnAcl, accessTargetsToPermissionRoles)
+                            orgRemoves.addAll(removePermissionsOnColumn(userRole, allColPermissionRoles))
+
+                            orgAdds.addAll(grantPermissionsOnColumnSql(userRole, column, requestedPermissionRoles))
+                        }
+                        else -> {
+                        }
                     }
                 }
             }
+
+            adds[orgId] = orgAdds
+            removes[orgId] = orgRemoves
         }
 
-        allOrgs.forEach { organizationId ->
+        (adds.keys + removes.keys).forEach { organizationId ->
             val rems = removes.getOrDefault(organizationId, listOf<String>())
             val addz = adds.getOrDefault(organizationId, listOf<String>())
             extDbManager.connectToOrg(organizationId).connection.use { conn ->
@@ -445,68 +458,32 @@ class ExternalDatabasePermissioner(
         }
     }
 
-    private fun removeAllPermissionsForPrincipalOnColumn(
-            orgId: UUID,
-            principal: Principal,
-            column: TableColumn,
-            viewOrTable: TableType
-    ): List<String> {
-        val targetAclKey = AclKey(column.tableId, column.columnId)
-        val targets = when (viewOrTable) {
-            TableType.VIEW -> allViewPermissions.mapTo(mutableSetOf<AccessTarget>()) { AccessTarget(targetAclKey, it) }
-            TableType.TABLE -> allTablePermissions.mapTo(mutableSetOf<AccessTarget>()) { AccessTarget(targetAclKey, it) }
-        }
-
-        val securablePrincipal = principalsMapManager.getSecurablePrincipal(principal.id)
-        val userRole = dbCredentialService.getDbUsername(securablePrincipal)
-
-        return PostgresRoles.getOrCreatePermissionRolesAsync(
-                externalRoleNames,
-                targets,
-                extDbManager.connectToOrg(orgId)
-        ).thenApply {
-            it.values.map { permissionRoleName ->
-                revokeRoleSql(permissionRoleName.toString(), setOf(userRole))
-            }
-        }.toCompletableFuture().get()
+    private fun lookUpPermissionRoles(
+            permissions: Set<Permission>,
+            columnAcl: Acl,
+            permissionRoles: Map<AccessTarget, UUID>
+    ): List<UUID> {
+        return permissions.mapNotNull { permissionRoles[AccessTarget(columnAcl.aclKey, it)] }
     }
 
-    private fun removePermissionsOnColumn(
-            orgId: UUID,
-            ace: Ace,
-            column: TableColumn,
-            viewOrTable: TableType
-    ): List<String> {
-        val validPermissions = filteredAcePermissions(ace.permissions)
-        val targets = when (viewOrTable) {
-            TableType.VIEW -> {
-                validPermissions.filter {
-                    allViewPermissions.contains(it)
-                }.mapTo(mutableSetOf<AccessTarget>()) { perm ->
-                    AccessTarget(AclKey(column.tableId, column.columnId), perm)
-                }
-            }
-            TableType.TABLE -> {
-                validPermissions.filter {
-                    allTablePermissions.contains(it)
-                }.mapTo(mutableSetOf<AccessTarget>()) { perm ->
-                    AccessTarget(AclKey(column.tableId, column.columnId), perm)
-                }
-            }
-        }
-
-        val securablePrincipal = principalsMapManager.getSecurablePrincipal(ace.principal.id)
-        val userRole = dbCredentialService.getDbUsername(securablePrincipal)
+    private fun getPermissionRolesForAcls(orgId: UUID, acls: List<Acl>, permissions: Set<Permission>): Map<AccessTarget, UUID> {
+        val accessTargets = acls
+                .map { it.aclKey }
+                .flatMap {
+                    permissions.map { permission -> AccessTarget(it, permission) }
+                }.toSet()
 
         return PostgresRoles.getOrCreatePermissionRolesAsync(
                 externalRoleNames,
-                targets,
+                accessTargets,
                 extDbManager.connectToOrg(orgId)
-        ).thenApply {
-            it.values.map { permissionRoleName ->
-                revokeRoleSql(permissionRoleName.toString(), setOf(userRole))
-            }
-        }.toCompletableFuture().get()
+        ).toCompletableFuture().get()
+    }
+
+    private fun removePermissionsOnColumn(userRole: String, permissionRoles: List<UUID>): List<String> {
+        return permissionRoles.map {
+            revokeRoleSql(it.toString(), setOf(userRole))
+        }
     }
 
     private fun grantPermissionsOnColumnsOnTableToRoleSql(
@@ -514,7 +491,8 @@ class ExternalDatabasePermissioner(
             columns: String,
             schemaName: String,
             tableName: String,
-            roleName: String): String {
+            roleName: String
+    ): String {
         val privilegeString = privileges.joinToString { privilege ->
             "$privilege ( $columns )"
         }
@@ -526,32 +504,21 @@ class ExternalDatabasePermissioner(
     }
 
     private fun grantPermissionsOnColumnSql(
-            orgId: UUID,
-            ace: Ace,
-            column: TableColumn
+            userRole: String,
+            column: TableColumn,
+            permissionRoles: List<UUID>
     ): List<String> {
-        val accessTargets = filteredAcePermissions(ace.permissions).mapTo(mutableSetOf()) { perm ->
-            AccessTarget(AclKey(column.tableId, column.columnId), perm)
-        }
-        val securablePrincipal = principalsMapManager.getSecurablePrincipal(ace.principal.id)
-        val usernameAsync = dbCredentialService.getDbUsernameAsync(securablePrincipal)
+        val sqls = mutableListOf<String>()
 
-        val permissionRoles = PostgresRoles.getOrCreatePermissionRolesAsync(
-                externalRoleNames,
-                accessTargets,
-                extDbManager.connectToOrg(orgId)
-        ).thenCombine(usernameAsync) { targetsToNames, userRole ->
-            val sqls = mutableListOf<String>()
-            targetsToNames.values.forEach { permissionRole ->
-                sqls.add(grantRoleToRole(permissionRole.toString(), setOf(userRole)))
-            }
+        permissionRoles.forEach {
+            sqls.add(grantRoleToRole(it.toString(), setOf(userRole)))
+
             if (column.schema != null) {
                 sqls.add(grantUsageOnSchemaSql(column.schema, userRole))
             }
-            sqls
-        }.toCompletableFuture()
+        }
 
-        return permissionRoles.get()
+        return sqls
     }
 
     private fun revokeRoleSql(roleName: String, targetRoles: Set<String>): String {
@@ -569,8 +536,9 @@ class ExternalDatabasePermissioner(
         return "${action.name} ${ApiHelpers.dbQuote(roleName)} ${action.verb} $targets"
     }
 
-    private fun filteredAcePermissions(permissions: Set<Permission>): Set<Permission> {
-        return permissions.filter { olToPostgres.keys.contains(it) }.toSet()
+    private fun filteredAcePermissions(permissions: Set<Permission>, tableType: TableType): Set<Permission> {
+        val accessTargetPermissions = if (tableType == TableType.TABLE) allTablePermissions else allViewPermissions
+        return permissions.filter { accessTargetPermissions.contains(it) }.toSet()
     }
 
     internal fun createRoleIfNotExistsSql(dbRole: String): String {

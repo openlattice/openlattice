@@ -36,4 +36,6 @@ interface PrincipalsMapManager {
 
     fun getSecurablePrincipals(aclKeys: Set<AclKey>): Map<AclKey, SecurablePrincipal>
 
+    fun getAclKeyByPrincipal(ps: Set<Principal>): Map<Principal, AclKey>
+
 }
