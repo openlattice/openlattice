@@ -131,23 +131,31 @@ class BackgroundLinkingService(
                 val forLinking = lqs.getEntitiesNeedingLinking(
                         esid,
                         2 * configuration.loadSize
-                ).filter {
-                    val expiration = refreshExpiration(it)
-                    logger.info("Considering candidate {} with expiration {} at {}", it, expiration, now())
-                    if (expiration != null && now() >= expiration) {
-                        logger.info("Refreshing expiration for edk {}", it)
-                        //Assume original lock holder died, probably somewhat unsafe
-                        refreshExpiration(it)
-                        true
-                    } else {
-                        expiration == null
-                    }
-                }
+                )
+//                        ).filter {
+//                    if( tryLockCandidate(it) ) {
+//                        logger.info("successfully locked $it for linking")
+//                        true
+//                    } else {
+//                        logger.info("$it already locked for linking")
+//                        false
+//                    }
+//                    val expiration = refreshExpiration(it)
+//                    logger.info("Considering candidate {} with expiration {} at {}", it, expiration, now())
+//                    if (expiration != null && now() >= expiration) {
+//                        logger.info("Refreshing expiration for edk {}", it)
+//                        Assume original lock holder died, probably somewhat unsafe
+//                        refreshExpiration(it)
+//                        true
+//                    } else {
+//                        expiration == null
+//                    }
+//                }
 
-                logger.info("Entities needing linking: {}", forLinking.size)
+//                logger.info("Entities needing linking")
                 logger.debug("Entities needing linking: {}", forLinking)
                 candidates.addAll(forLinking)
-                logger.info( "Queued entities needing linking {}", forLinking.size)
+                logger.info( "Queued entities needing linking")
             }
         } catch (ex: Exception) {
             logger.info("Encountered error while updating candidates for linking.", ex)
@@ -162,23 +170,30 @@ class BackgroundLinkingService(
             try {
                 val candidate = candidates.take()
                 limiter.acquire()
-                executor.submit {
+                executor.submit( Runnable {
+                    if( !tryLockCandidate(candidate) ) {
+                        logger.info("candidate already locked for linking: {}\nNot resubmitting", candidate)
+//                        refreshExpiration(it)
+                        return@Runnable
+                    }
+                    logger.info("candidate freshly locked for linking: {}", candidate)
                     try {
                         logger.info("Linking {}", candidate)
                         link(candidate)
+                        logger.info("Finished linking {}", candidate)
                     } catch (ex: Exception) {
                         logger.error("Unable to link {}.", candidate, ex)
                     } finally {
+                        logger.info("Unlocking candidate after linking: {}", candidate)
                         unlock(candidate)
                         limiter.release()
                     }
-                }
+                })
             } catch (ex: Exception) {
                 logger.info("Encountered error while linking candidates.", ex)
             }
         }
     } else null
-
 
     /**
      * Links a candidate entity to other matching entities.
@@ -298,20 +313,15 @@ class BackgroundLinkingService(
     /**
      * @return Null if locked, expiration in millis otherwise.
      */
-    private fun refreshExpiration(candidate: EntityDataKey): Long? {
-        return try {
-            linkingLocks.lock(candidate)
-
-            linkingLocks.putIfAbsent(
-                    candidate,
-                    Instant.now().plusMillis(LINKING_BATCH_TIMEOUT_MILLIS).toEpochMilli(),
-                    LINKING_BATCH_TIMEOUT_MILLIS,
-                    TimeUnit.MILLISECONDS
-            )
-        } finally {
-            linkingLocks.unlock(candidate)
-        }
-    }
+//    private fun refreshExpiration(candidate: EntityDataKey): Long? {
+//        return try {
+//            linkingLocks.lock(candidate)
+//
+//            tryLockCandidateRaw(candidate)
+//        } finally {
+//            linkingLocks.unlock(candidate)
+//        }
+//    }
 
     private fun isLinkingEnabled(): Boolean {
         if (!configuration.backgroundLinkingEnabled) {
@@ -320,6 +330,24 @@ class BackgroundLinkingService(
         }
 
         return true
+    }
+
+    /**
+     * Locks the candidate if possible
+     *
+     * Returns true if the candidate has been successfully locked, false if already locked
+     */
+    private fun tryLockCandidate(candidate: EntityDataKey): Boolean {
+        return tryLockCandidateRaw(candidate) == null
+    }
+
+    private fun tryLockCandidateRaw(candidate: EntityDataKey): Long? {
+        return linkingLocks.putIfAbsent(
+                candidate,
+                Instant.now().plusMillis(LINKING_BATCH_TIMEOUT_MILLIS).toEpochMilli(),
+                LINKING_BATCH_TIMEOUT_MILLIS,
+                TimeUnit.MILLISECONDS
+        )
     }
 
     private fun unlock(candidate: EntityDataKey) {

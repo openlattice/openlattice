@@ -60,7 +60,7 @@ apply plugin: 'license-report'
 
 def INDEXER_XMS = "$System.env.INDEXER_XMS"
 def INDEXER_XMX = "$System.env.INDEXER_XMX"
-def INDEXER_ARGS = "$System.env.CONDUCTOR_ARGS"
+def INDEXER_ARGS = "$System.env.INDEXER_ARGS"
 def PARALLEL = "$System.env.PARALLELISM"
 def GC = "$System.env.GC"
 

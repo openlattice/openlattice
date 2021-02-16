@@ -55,9 +55,11 @@ import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.openlattice.postgres.streams.StatementHolder
 import com.openlattice.postgres.streams.StatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
+import org.slf4j.LoggerFactory
 import java.sql.Array
 import java.sql.Connection
-import java.util.*
+import java.util.LinkedHashSet
+import java.util.UUID
 
 
 /**
@@ -69,6 +71,10 @@ class PostgresLinkingQueryService(
         private val hds: HikariDataSource,
         private val partitionManager: PartitionManager
 ) : LinkingQueryService {
+
+    companion object {
+        private val logger = LoggerFactory.getLogger(PostgresLinkingQueryService::class.java)
+    }
 
     override fun lockClustersForUpdates(clusters: Set<UUID>): Connection {
         val connection = hds.connection
