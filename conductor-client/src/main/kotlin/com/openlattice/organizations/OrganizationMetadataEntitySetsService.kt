@@ -281,32 +281,17 @@ class OrganizationMetadataEntitySetsService(
         val columnEntities = mutableMapOf<UUID, MutableMap<UUID, Set<Any>>>()
 
         tables.forEach { table ->
-
-            val tableColumnEntities = columnsByTableId.getOrDefault(table.id, listOf()).associate { column ->
-                columnEntityKeyIds.getValue(AclKey(table.id, column.id)) to mutableMapOf<UUID, Set<Any>>(
-                    propertyTypes.getValue(COL_NAME).id to setOf(column.name),
-                    propertyTypes.getValue(DATASET_ID).id to setOf(table.id),
-                    propertyTypes.getValue(DATASET_NAME).id to setOf(table.name),
-                    propertyTypes.getValue(DATA_TYPE).id to setOf(column.dataType.toString()),
-                    propertyTypes.getValue(DESCRIPTION).id to setOf(column.description),
-                    propertyTypes.getValue(ID).id to setOf(column.id.toString()),
-                    propertyTypes.getValue(INDEX).id to setOf(column.ordinalPosition),
-                    propertyTypes.getValue(ORG_ID).id to setOf(organizationId),
-                    propertyTypes.getValue(TITLE).id to setOf(column.title)
-                )
-            }
-
+            val tableColumnEntities = columnsByTableId
+                .getOrDefault(table.id, listOf())
+                .associate { column ->
+                    columnEntityKeyIds.getValue(AclKey(table.id, column.id)) to buildColumnEntity(
+                        organizationId,
+                        table,
+                        column
+                    )
+                }
             columnEntities.putAll(tableColumnEntities)
-
-            datasetEntities[datasetEntityKeyIds.getValue(table.id)] = mutableMapOf(
-                propertyTypes.getValue(DATASET_NAME).id to setOf(table.name),
-                propertyTypes.getValue(DESCRIPTION).id to setOf(table.description),
-                propertyTypes.getValue(ID).id to setOf(table.id.toString()),
-                propertyTypes.getValue(ORG_ID).id to setOf(organizationId),
-                propertyTypes.getValue(PG_OID).id to setOf(table.oid),
-                propertyTypes.getValue(STANDARDIZED).id to setOf(false),
-                propertyTypes.getValue(TITLE).id to setOf(table.title)
-            )
+            datasetEntities[datasetEntityKeyIds.getValue(table.id)] = buildDatasetEntity(organizationId, table)
         }
 
         dataGraphManager.partialReplaceEntities(
@@ -330,16 +315,7 @@ class OrganizationMetadataEntitySetsService(
         ensureOrganizationMetadataEntitySetIdsFullyInitialized(organizationId)
         val organizationMetadataEntitySetIds = organizationService.getOrganizationMetadataEntitySetIds(organizationId)
 
-        val datasetEntity = mutableMapOf<UUID, Set<Any>>(
-            propertyTypes.getValue(DATASET_NAME).id to setOf(table.name),
-            propertyTypes.getValue(DESCRIPTION).id to setOf(table.description),
-            propertyTypes.getValue(ID).id to setOf(table.id.toString()),
-            propertyTypes.getValue(ORG_ID).id to setOf(organizationId),
-            propertyTypes.getValue(PG_OID).id to setOf(table.oid),
-            propertyTypes.getValue(STANDARDIZED).id to setOf(false),
-            propertyTypes.getValue(TITLE).id to setOf(table.title)
-        )
-
+        val datasetEntity = buildDatasetEntity(organizationId, table)
         val datasetEntityKeyId = getDatasetEntityKeyId(organizationMetadataEntitySetIds, table.oid)
 
         dataGraphManager.partialReplaceEntities(
@@ -362,18 +338,10 @@ class OrganizationMetadataEntitySetsService(
         val organizationMetadataEntitySetIds = organizationService.getOrganizationMetadataEntitySetIds(organizationId)
 
         val columnEntities = columns.associate { column ->
-            getColumnEntityKeyId(
-                organizationMetadataEntitySetIds, column.tableId, column
-            ) to mutableMapOf<UUID, Set<Any>>(
-                propertyTypes.getValue(COL_NAME).id to setOf(column.name),
-                propertyTypes.getValue(DATASET_ID).id to setOf(table.id),
-                propertyTypes.getValue(DATASET_NAME).id to setOf(table.name),
-                propertyTypes.getValue(DATA_TYPE).id to setOf(column.dataType.toString()),
-                propertyTypes.getValue(DESCRIPTION).id to setOf(column.description),
-                propertyTypes.getValue(ID).id to setOf(column.id.toString()),
-                propertyTypes.getValue(INDEX).id to setOf(column.ordinalPosition),
-                propertyTypes.getValue(ORG_ID).id to setOf(organizationId),
-                propertyTypes.getValue(TITLE).id to setOf(column.title)
+            getColumnEntityKeyId(organizationMetadataEntitySetIds, column.tableId, column) to buildColumnEntity(
+                organizationId,
+                table,
+                column
             )
         }
 
@@ -457,6 +425,39 @@ class OrganizationMetadataEntitySetsService(
     private fun buildOrganizationMetadataEntitySetName(organizationId: UUID): String = quote("org-metadata-$organizationId")
     private fun buildDatasetsEntitySetName(organizationId: UUID): String = quote("datasets-$organizationId")
     private fun buildColumnEntitySetName(organizationId: UUID): String = quote("columns-$organizationId")
+
+    private fun buildDatasetEntity(
+        organizationId: UUID,
+        table: OrganizationExternalDatabaseTable
+    ): MutableMap<UUID, Set<Any>> {
+        return mutableMapOf(
+            propertyTypes.getValue(DATASET_NAME).id to setOf(table.name),
+            propertyTypes.getValue(DESCRIPTION).id to setOf(table.description),
+            propertyTypes.getValue(ID).id to setOf(table.id.toString()),
+            propertyTypes.getValue(ORG_ID).id to setOf(organizationId),
+            propertyTypes.getValue(PG_OID).id to setOf(table.oid),
+            propertyTypes.getValue(STANDARDIZED).id to setOf(false),
+            propertyTypes.getValue(TITLE).id to setOf(table.title)
+        )
+    }
+
+    private fun buildColumnEntity(
+        organizationId: UUID,
+        table: OrganizationExternalDatabaseTable,
+        column: OrganizationExternalDatabaseColumn
+    ): MutableMap<UUID, Set<Any>> {
+        return mutableMapOf(
+            propertyTypes.getValue(COL_NAME).id to setOf(column.name),
+            propertyTypes.getValue(DATASET_ID).id to setOf(table.id),
+            propertyTypes.getValue(DATASET_NAME).id to setOf(table.name),
+            propertyTypes.getValue(DATA_TYPE).id to setOf(column.dataType.toString()),
+            propertyTypes.getValue(DESCRIPTION).id to setOf(column.description),
+            propertyTypes.getValue(ID).id to setOf(column.id.toString()),
+            propertyTypes.getValue(INDEX).id to setOf(column.ordinalPosition),
+            propertyTypes.getValue(ORG_ID).id to setOf(organizationId),
+            propertyTypes.getValue(TITLE).id to setOf(column.title)
+        )
+    }
 
     companion object {
         private val ORGANIZATION_METADATA_ET = FullQualifiedName("ol.organization_metadata")
