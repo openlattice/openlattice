@@ -415,8 +415,8 @@ class ExternalDatabasePermissioner(
                     conn.commit()
                 } catch (ex: Exception) {
                     logger.error("Exception occurred during external permissions update, rolling back", ex)
-                } finally {
                     conn.rollback()
+                } finally {
                     stmt.close()
                 }
             }
