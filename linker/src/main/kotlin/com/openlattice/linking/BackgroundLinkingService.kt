@@ -21,6 +21,7 @@
 
 package com.openlattice.linking
 
+import com.codahale.metrics.Histogram
 import com.codahale.metrics.Meter
 import com.codahale.metrics.MetricRegistry
 import com.google.common.base.Stopwatch
@@ -74,6 +75,7 @@ class BackgroundLinkingService(
         private val logger = LoggerFactory.getLogger(BackgroundLinkingService::class.java)
 
         private val metrics: MetricRegistry = MetricRegistry()
+        val featureExtraction: Histogram = metrics.histogram("feature-extraction")
         private val requests: Meter = metrics.meter("links")
     }
 

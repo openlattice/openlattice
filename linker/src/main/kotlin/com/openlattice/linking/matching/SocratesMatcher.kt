@@ -24,6 +24,7 @@ package com.openlattice.linking.matching
 import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Stopwatch
 import com.openlattice.data.EntityDataKey
+import com.openlattice.linking.BackgroundLinkingService
 import com.openlattice.linking.EntityKeyPair
 import com.openlattice.linking.PostgresLinkingFeedbackService
 import com.openlattice.linking.blocking.Block
@@ -191,6 +192,7 @@ class SocratesMatcher(
 
 
         val bfTime = blockFeatureExtraction - propsExtractionSw
+        BackgroundLinkingService.featureExtraction.update(bfTime)
         val fblTime = featureExtractionSW - blockFeatureExtraction
 //        logger.info(
 //                """
