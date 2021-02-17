@@ -72,9 +72,6 @@ class BackgroundLinkingService(
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(BackgroundLinkingService::class.java)
-        private fun now(): Long {
-            return Instant.now().toEpochMilli()
-        }
 
         private val metrics: MetricRegistry = MetricRegistry()
         private val requests: Meter = metrics.meter("links")
@@ -89,9 +86,9 @@ class BackgroundLinkingService(
     @Scheduled(fixedRate = LINKING_RATE)
     fun enqueue() {
         val linkedInSession = requests.count
-        val currentHourlyRate = requests.fifteenMinuteRate * 4
+        val currentHourlyRate = requests.fifteenMinuteRate * 60 * 60
         val timeLeft = candidates.size / currentHourlyRate
-        logger.info("$linkedInSession entities linked since last startup. That's a rate of $currentHourlyRate  per hour. The current queue will be run through in $timeLeft hours")
+        logger.info("$linkedInSession entities linked since last startup. That's a rate of $currentHourlyRate per hour. The current queue will be run through in $timeLeft hours")
         if ( candidates.isNotEmpty() ){
             logger.info("Linking queue still has candidates on it, not adding more at the moment")
             return
