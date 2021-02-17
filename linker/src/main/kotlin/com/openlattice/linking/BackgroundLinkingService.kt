@@ -21,10 +21,10 @@
 
 package com.openlattice.linking
 
-import com.codahale.metrics.ConsoleReporter
 import com.codahale.metrics.Histogram
 import com.codahale.metrics.Meter
 import com.codahale.metrics.MetricRegistry
+import com.codahale.metrics.Snapshot
 import com.google.common.base.Stopwatch
 import com.google.common.collect.Sets
 import com.google.common.util.concurrent.ListeningExecutorService
@@ -79,13 +79,19 @@ class BackgroundLinkingService(
         val featureExtraction: Histogram = metrics.histogram("feature-extraction")
         private val requests: Meter = metrics.meter("links")
 
-        val reporter: ConsoleReporter = ConsoleReporter.forRegistry(metrics)
-                .outputTo(System.err)
-                .convertRatesTo(TimeUnit.SECONDS)
-                .convertDurationsTo(TimeUnit.MILLISECONDS)
-                .build()
-        init {
-            reporter.start(5, TimeUnit.MINUTES)
+        fun printHistogram(histogram: Histogram) {
+            System.err.printf(Locale.US, "             count = %d%n", histogram.count)
+            val snapshot: Snapshot = histogram.snapshot
+            System.err.printf(Locale.US, "               min = %d%n", snapshot.min)
+            System.err.printf(Locale.US, "               max = %d%n", snapshot.max)
+            System.err.printf(Locale.US, "              mean = %2.2f%n", snapshot.mean)
+            System.err.printf(Locale.US, "            stddev = %2.2f%n", snapshot.stdDev)
+            System.err.printf(Locale.US, "            median = %2.2f%n", snapshot.median)
+            System.err.printf(Locale.US, "              75%% <= %2.2f%n", snapshot.get75thPercentile())
+            System.err.printf(Locale.US, "              95%% <= %2.2f%n", snapshot.get95thPercentile())
+            System.err.printf(Locale.US, "              98%% <= %2.2f%n", snapshot.get98thPercentile())
+            System.err.printf(Locale.US, "              99%% <= %2.2f%n", snapshot.get99thPercentile())
+            System.err.printf(Locale.US, "            99.9%% <= %2.2f%n", snapshot.get999thPercentile())
         }
     }
 
@@ -102,6 +108,7 @@ class BackgroundLinkingService(
         val timeLeft = candidates.size / currentHourlyRate
         logger.info("$linkedInSession entities linked since last startup. That's a rate of $currentHourlyRate per hour. The current queue will be run through in $timeLeft hours")
 
+        printHistogram(featureExtraction)
         if ( candidates.isNotEmpty() ){
             logger.info("Linking queue still has candidates on it, not adding more at the moment")
             return
