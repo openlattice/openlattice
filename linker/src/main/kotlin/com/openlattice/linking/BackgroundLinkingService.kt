@@ -79,10 +79,14 @@ class BackgroundLinkingService(
         val featureExtraction: Histogram = metrics.histogram("feature-extraction")
         private val requests: Meter = metrics.meter("links")
 
-        val reporter = ConsoleReporter.forRegistry(metrics)
+        val reporter: ConsoleReporter = ConsoleReporter.forRegistry(metrics)
+                .outputTo(System.err)
                 .convertRatesTo(TimeUnit.SECONDS)
                 .convertDurationsTo(TimeUnit.MILLISECONDS)
                 .build()
+        init {
+            reporter.start(5, TimeUnit.MINUTES)
+        }
     }
 
     private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
@@ -98,7 +102,6 @@ class BackgroundLinkingService(
         val timeLeft = candidates.size / currentHourlyRate
         logger.info("$linkedInSession entities linked since last startup. That's a rate of $currentHourlyRate per hour. The current queue will be run through in $timeLeft hours")
 
-        reporter.report()
         if ( candidates.isNotEmpty() ){
             logger.info("Linking queue still has candidates on it, not adding more at the moment")
             return
