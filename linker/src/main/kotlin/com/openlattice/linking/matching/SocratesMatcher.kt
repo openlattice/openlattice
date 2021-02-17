@@ -143,8 +143,12 @@ class SocratesMatcher(
             entities: Map<EntityDataKey, List<EntityDataKey>>,
             positiveFeedbacks: Set<EntityKeyPair>
     ): List<ResultSet> {
-        val positiveMatches = positiveFeedbacks.map { ResultSet(it.first, it.second, 1.0) } +
-                positiveFeedbacks.map { ResultSet(it.second, it.first, 1.0) }
+        val positiveMatches = positiveFeedbacks.flatMap {
+            listOf(
+                    ResultSet(it.first, it.second, 1.0),
+                    ResultSet(it.second, it.first, 1.0)
+            )
+        }
 
         // all entities have positive feedback
         if (entities.isEmpty()) {
@@ -154,17 +158,16 @@ class SocratesMatcher(
         val sw = Stopwatch.createStarted()
 
         // extract properties
-        val extractedProperties = entityValues.map { it.key to extractProperties(it.value) }.toMap()
+        val extractedProperties = entityValues.mapValues { extractProperties(it.value) }
 
         val propsExtractionSw = sw.elapsed(TimeUnit.MILLISECONDS)
 
         // extract features for all entities in block
-        val extractedFeatures = entities.mapValues { neighborhood ->
-            val selfProperties = extractedProperties.getValue(neighborhood.key)
-            neighborhood.value.map { dst ->
-                val otherProperties = extractedProperties.getValue(dst)
-                dst to extractFeatures(selfProperties, otherProperties)
-            }.toMap()
+        val extractedFeatures = entities.mapValues { (edk, neighbors) ->
+            val selfProperties = extractedProperties.getValue(edk)
+            neighbors.associateWith { dst ->
+                extractFeatures(selfProperties, extractedProperties.getValue(dst))
+            }
         }
         val blockFeatureExtraction = sw.elapsed(TimeUnit.MILLISECONDS)
 
@@ -190,18 +193,9 @@ class SocratesMatcher(
             ResultSet(it.second.first, it.second.second, it.first)
         }.plus(positiveMatches)
 
-
         val bfTime = blockFeatureExtraction - propsExtractionSw
         BackgroundLinkingService.featureExtraction.update(bfTime)
         val fblTime = featureExtractionSW - blockFeatureExtraction
-//        logger.info(
-//                """
-//                    Timings:
-//                    Property extraction: $propsExtractionSw ms
-//                    Block feature extraction: $bfTime ms
-//                    final transforms: $fblTime ms
-//                """.trimIndent()
-//        )
 
         if (propsExtractionSw > 500){
             logger.error("Property extraction: $propsExtractionSw ms")
