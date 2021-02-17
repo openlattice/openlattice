@@ -21,6 +21,7 @@
 
 package com.openlattice.linking
 
+import com.codahale.metrics.ConsoleReporter
 import com.codahale.metrics.Histogram
 import com.codahale.metrics.Meter
 import com.codahale.metrics.MetricRegistry
@@ -77,6 +78,11 @@ class BackgroundLinkingService(
         private val metrics: MetricRegistry = MetricRegistry()
         val featureExtraction: Histogram = metrics.histogram("feature-extraction")
         private val requests: Meter = metrics.meter("links")
+
+        val reporter = ConsoleReporter.forRegistry(metrics)
+                .convertRatesTo(TimeUnit.SECONDS)
+                .convertDurationsTo(TimeUnit.MILLISECONDS)
+                .build()
     }
 
     private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
@@ -91,6 +97,8 @@ class BackgroundLinkingService(
         val currentHourlyRate = requests.fifteenMinuteRate * 60 * 60
         val timeLeft = candidates.size / currentHourlyRate
         logger.info("$linkedInSession entities linked since last startup. That's a rate of $currentHourlyRate per hour. The current queue will be run through in $timeLeft hours")
+
+        reporter.report()
         if ( candidates.isNotEmpty() ){
             logger.info("Linking queue still has candidates on it, not adding more at the moment")
             return
