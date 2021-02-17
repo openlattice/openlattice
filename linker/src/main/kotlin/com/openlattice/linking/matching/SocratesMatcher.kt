@@ -155,6 +155,8 @@ class SocratesMatcher(
         // extract properties
         val extractedProperties = entityValues.map { it.key to extractProperties(it.value) }.toMap()
 
+        val propsExtractionSw = sw.elapsed(TimeUnit.MILLISECONDS)
+
         // extract features for all entities in block
         val extractedFeatures = entities.mapValues { neighborhood ->
             val selfProperties = extractedProperties.getValue(neighborhood.key)
@@ -163,6 +165,7 @@ class SocratesMatcher(
                 dst to extractFeatures(selfProperties, otherProperties)
             }.toMap()
         }
+        val blockFeatureExtraction = sw.elapsed(TimeUnit.MILLISECONDS)
 
         // transform features to matrix and compute scores
         val featureMatrix = extractedFeatures
@@ -188,9 +191,12 @@ class SocratesMatcher(
 
 
         logger.info(
-                "Feature extraction took {} ms, matching took {} ms",
-                featureExtractionSW,
-                sw.elapsed(TimeUnit.MILLISECONDS) - featureExtractionSW
+                """
+                    Timings:
+                    Property extraction: $propsExtractionSw ms
+                    Block feature extraction: ${blockFeatureExtraction - propsExtractionSw} ms
+                    final transforms: ${featureExtractionSW - blockFeatureExtraction} ms
+                """.trimIndent()
         )
         return results
     }
