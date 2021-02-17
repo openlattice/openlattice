@@ -80,18 +80,18 @@ class BackgroundLinkingService(
         private val requests: Meter = metrics.meter("links")
 
         fun printHistogram(histogram: Histogram) {
-            System.err.printf(Locale.US, "             count = %d%n", histogram.count)
             val snapshot: Snapshot = histogram.snapshot
-            System.err.printf(Locale.US, "               min = %d%n", snapshot.min)
-            System.err.printf(Locale.US, "               max = %d%n", snapshot.max)
-            System.err.printf(Locale.US, "              mean = %2.2f%n", snapshot.mean)
-            System.err.printf(Locale.US, "            stddev = %2.2f%n", snapshot.stdDev)
-            System.err.printf(Locale.US, "            median = %2.2f%n", snapshot.median)
-            System.err.printf(Locale.US, "              75%% <= %2.2f%n", snapshot.get75thPercentile())
-            System.err.printf(Locale.US, "              95%% <= %2.2f%n", snapshot.get95thPercentile())
-            System.err.printf(Locale.US, "              98%% <= %2.2f%n", snapshot.get98thPercentile())
-            System.err.printf(Locale.US, "              99%% <= %2.2f%n", snapshot.get99thPercentile())
-            System.err.printf(Locale.US, "            99.9%% <= %2.2f%n", snapshot.get999thPercentile())
+            logger.error("             count = ${histogram.count}")
+            logger.error("               min = ${snapshot.min}")
+            logger.error("               max = ${snapshot.max}")
+            logger.error("              mean = ${snapshot.mean}")
+            logger.error("            stddev = ${snapshot.stdDev}")
+            logger.error("            median = ${snapshot.median}")
+            logger.error("              75%% <= ${snapshot.get75thPercentile()}")
+            logger.error("              95%% <= ${snapshot.get95thPercentile()}")
+            logger.error("              98%% <= ${snapshot.get98thPercentile()}")
+            logger.error("              99%% <= ${snapshot.get99thPercentile()}")
+            logger.error("            99.9%% <= ${snapshot.get999thPercentile()}")
         }
     }
 
