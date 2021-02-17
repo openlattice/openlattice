@@ -190,14 +190,26 @@ class SocratesMatcher(
         }.plus(positiveMatches)
 
 
-        logger.info(
-                """
-                    Timings:
-                    Property extraction: $propsExtractionSw ms
-                    Block feature extraction: ${blockFeatureExtraction - propsExtractionSw} ms
-                    final transforms: ${featureExtractionSW - blockFeatureExtraction} ms
-                """.trimIndent()
-        )
+        val bfTime = blockFeatureExtraction - propsExtractionSw
+        val fblTime = featureExtractionSW - blockFeatureExtraction
+//        logger.info(
+//                """
+//                    Timings:
+//                    Property extraction: $propsExtractionSw ms
+//                    Block feature extraction: $bfTime ms
+//                    final transforms: $fblTime ms
+//                """.trimIndent()
+//        )
+
+        if (propsExtractionSw > 500){
+            logger.error("Property extraction: $propsExtractionSw ms")
+        }
+        if (bfTime > 500){
+            logger.error("Block feature extraction: $bfTime ms")
+        }
+        if (fblTime > 500){
+            logger.error("final transforms: $fblTime ms")
+        }
         return results
     }
 
