@@ -20,7 +20,6 @@
 
 package com.openlattice.linking.util;
 
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.openlattice.data.EntityDataKey;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
@@ -33,6 +32,7 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
 
 /**
@@ -129,12 +129,12 @@ public enum PersonMetric {
             Map<UUID, DelegatedStringSet> lhs,
             Map<EntityDataKey, Map<UUID, DelegatedStringSet>> rhs,
             Map<FullQualifiedName, UUID> fqnToIdMap ) {
-        Map<EntityDataKey, double[]> bulkResults = Maps.newHashMapWithExpectedSize(rhs.size());
+        Map<EntityDataKey, double[]> bulkResults = new ConcurrentHashMap<>(rhs.size());
         rhs.entrySet().parallelStream().forEach( ent -> {
             double[] result = new double[ metricsList.size() ];
-            metricsList.parallelStream().forEach( m ->
-                    result[ m.ordinal() ] = m.extract( lhs, ent.getValue(), fqnToIdMap ) * 100.0
-            );
+            for (PersonMetric m : metricsList) {
+                result[ m.ordinal() ] = m.extract( lhs, ent.getValue(), fqnToIdMap ) * 100.0;
+            }
             bulkResults.put( ent.getKey(), result );
         });
         return bulkResults;
