@@ -31,6 +31,7 @@ import com.openlattice.organization.roles.Role
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresProjectionService.Companion.RENAME_SERVER_DB_FUNCTION
 import com.openlattice.postgres.PostgresTable.E
 import com.openlattice.postgres.external.Schemas.*
 import com.zaxxer.hikari.HikariDataSource
@@ -86,6 +87,7 @@ class PostgresDatabaseQueryService(
         createDatabase(dbName)
 
         extDbManager.connect(dbName).let { hds ->
+            createRenameServerFunctionIfNotExists(hds)
             configureRolesInDatabase(hds)
         }
 
@@ -556,6 +558,14 @@ class PostgresDatabaseQueryService(
         }
     }
 
+    private fun createRenameServerFunctionIfNotExists(hikariDataSource: HikariDataSource) {
+        hikariDataSource.connection.use { conn ->
+            conn.createStatement().use { stmt ->
+                stmt.execute(createRenameServerDatabaseFunctionSql)
+            }
+        }
+    }
+
     private fun checkIfDatabaseExists(dbName: String): Boolean {
         atlas.connection.use { conn ->
             conn.prepareStatement(checkIfDatabaseNameIsInUseSql).use { ps ->
@@ -673,6 +683,14 @@ internal val createRenameDatabaseFunctionSql = """
     CREATE OR REPLACE FUNCTION rename_database(curr_name text, new_name text) RETURNS VOID AS $$
       BEGIN
         EXECUTE 'ALTER DATABASE ' || quote_ident(curr_name) || ' RENAME TO ' || quote_ident(new_name);
+      END;
+    $$ LANGUAGE plpgsql
+""".trimIndent()
+
+internal val createRenameServerDatabaseFunctionSql = """
+    CREATE OR REPLACE FUNCTION $RENAME_SERVER_DB_FUNCTION(fdw_name text, new_db_name text) RETURNS VOID AS $$
+      BEGIN
+        EXECUTE 'ALTER SERVER ' || quote_ident(fdw_name) || ' OPTIONS (SET dbname ' || quote_literal(new_db_name) || ')';
       END;
     $$ LANGUAGE plpgsql
 """.trimIndent()

@@ -11,6 +11,8 @@ class PostgresProjectionService {
     companion object {
         private val logger = LoggerFactory.getLogger(PostgresProjectionService::class.java)
 
+        const val RENAME_SERVER_DB_FUNCTION = "rename_server_database"
+
         // 0 = whole string, 1 = prefix, 2 = hostname, 3 = port, 4 = database
         private val PAT = Regex("""([\w:]+)://([\w_.]*):(\d+)/(\w+)""")
 
@@ -72,8 +74,10 @@ class PostgresProjectionService {
 
         fun changeDbNameForFdw(hds: HikariDataSource, fdwName: String, newDbName: String) {
             hds.connection.use { conn ->
-                conn.createStatement().use { stmt ->
-                    stmt.execute("ALTER SERVER ${quote(fdwName)} OPTIONS (SET dbname '$newDbName')")
+                conn.prepareStatement("SELECT $RENAME_SERVER_DB_FUNCTION(?, ?)").use { ps ->
+                    ps.setString(1, fdwName)
+                    ps.setString(2, newDbName)
+                    ps.execute()
                 }
             }
         }
