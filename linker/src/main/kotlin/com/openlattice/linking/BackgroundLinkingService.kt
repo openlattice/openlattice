@@ -121,15 +121,7 @@ class BackgroundLinkingService(
                     )
             )
 
-            val rest = filteredLinkableEntitySetIds.asSequence().filter {
-                !priorityEntitySets.contains(it)
-            }
-
-            val priority = priorityEntitySets.asSequence().filter {
-                filteredLinkableEntitySetIds.contains(it)
-            }
-
-            (rest + priority).filter {
+            (priorityEntitySets + filteredLinkableEntitySetIds).filter {
                 val es = entitySets[it]
                 if ( es == null ){
                     logger.info("Entityset with id {} doesnt exist", it)
@@ -207,7 +199,7 @@ class BackgroundLinkingService(
 
         // Run standard blocking + clustering
         val sw = Stopwatch.createStarted()
-        val initialBlock = blocker.block(candidate.entitySetId, candidate.entityKeyId)
+        val initialBlock = blocker.block(candidate)
 
         logger.info(
                 "Blocking ({}, {}) took {} ms.",
