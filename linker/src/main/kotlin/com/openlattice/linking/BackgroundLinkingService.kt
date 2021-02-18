@@ -75,6 +75,10 @@ class BackgroundLinkingService(
     companion object {
         private val logger = LoggerFactory.getLogger(BackgroundLinkingService::class.java)
 
+        fun <T> collectKeys(m: Map<EntityDataKey, Map<EntityDataKey, T>>): Set<EntityDataKey> {
+            return m.keys + m.values.flatMap { it.keys }
+        }
+
         private val metrics: MetricRegistry = MetricRegistry()
         val fullLink: Histogram = metrics.histogram("0linking")
         private val requests: Meter = metrics.meter("links")
@@ -233,9 +237,7 @@ class BackgroundLinkingService(
 
         // initialize
         logger.info("Initializing matching for block {}", candidate)
-        val initializedBlock = histogramify("matcherInitialization") {
-            matcher.initialize(initialBlock)
-        }
+        val initializedBlock = matcher.initialize(initialBlock)
         logger.info("Initialization took {} ms", blockTime - sw.elapsed(TimeUnit.MILLISECONDS))
         val dataKeys = collectKeys(initializedBlock.matches)
 
@@ -254,15 +256,11 @@ class BackgroundLinkingService(
                 }
                 val linkingId = ids.reserveLinkingIds(1).first()
                 val block = Block(candidate, mapOf(candidate to elem))
-                val cluster = histogramify("newClusterCreate") {
-                    matcher.match(block).matches
-                }
+                val cluster = matcher.match(block).matches
                 //TODO: When creating new cluster do we really need to re-match or can we assume score of 1.0?
                 return@lockClustersDoWorkAndCommit Triple(linkingId, cluster, true)
             }
-            histogramify("insertMatches") {
-                insertMatches(linkingId, candidate, Cluster(scores))
-            }
+            insertMatches(linkingId, candidate, Cluster(scores))
         } catch (ex: Exception) {
             logger.error("An error occurred while performing linking.", ex)
             throw IllegalStateException("Error occured while performing linking.", ex)
@@ -270,9 +268,6 @@ class BackgroundLinkingService(
         fullLink.update(sw.elapsed(TimeUnit.MILLISECONDS))
     }
 
-    private fun <T> collectKeys(m: Map<EntityDataKey, Map<EntityDataKey, T>>): Set<EntityDataKey> {
-        return m.keys + m.values.flatMap { it.keys }
-    }
 
     private fun clearNeighborhoods(candidate: EntityDataKey) {
         logger.debug("Starting neighborhood cleanup of {}", candidate)

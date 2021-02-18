@@ -135,9 +135,7 @@ class ElasticsearchBlocker(
                 "Loading {} entities took {} ms.", block.entities.values.map { it.size }.sum(),
                 sw.elapsed(TimeUnit.MILLISECONDS)
         )
-
-        return block 
-
+        return block
     }
 
     /**

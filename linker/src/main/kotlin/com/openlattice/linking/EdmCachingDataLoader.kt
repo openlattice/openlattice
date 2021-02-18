@@ -31,8 +31,8 @@ import com.openlattice.linking.util.PersonProperties
 import com.openlattice.postgres.mapstores.EntityTypeMapstore
 import com.openlattice.postgres.streams.BasePostgresIterable
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
-import java.util.UUID
 import java.util.Optional
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 /**
@@ -66,7 +66,9 @@ class EdmCachingDataLoader(
                 .groupBy({ it.entitySetId }, { it.entityKeyId })
                 .mapValues { it.value.toSet() }
                 .flatMap { edkp ->
-                    getEntityStream(edkp.key, edkp.value).map { EntityDataKey(edkp.key, it.first) to it.second}
+                    getEntityStream(edkp.key, edkp.value).map {
+                        EntityDataKey(edkp.key, it.first) to it.second
+                    }
                 }
                 .toMap()
     }
