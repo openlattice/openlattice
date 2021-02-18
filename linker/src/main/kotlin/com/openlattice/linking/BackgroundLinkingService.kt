@@ -76,7 +76,7 @@ class BackgroundLinkingService(
         private val logger = LoggerFactory.getLogger(BackgroundLinkingService::class.java)
 
         private val metrics: MetricRegistry = MetricRegistry()
-        val featureExtraction: Histogram = metrics.histogram("feature-extraction")
+        val fullLink: Histogram = metrics.histogram("0linking")
         private val requests: Meter = metrics.meter("links")
 
         private fun <R> histogramify( histogramName: String, block: () -> R ): R {
@@ -89,7 +89,7 @@ class BackgroundLinkingService(
 
         fun printHistogram(name: String, histogram: Histogram) {
             val snapshot: Snapshot = histogram.snapshot
-            logger.error("""\n
+            logger.error("""
                          [$name] stats
                          count = ${histogram.count}
                            min = ${snapshot.min}
@@ -267,7 +267,7 @@ class BackgroundLinkingService(
             logger.error("An error occurred while performing linking.", ex)
             throw IllegalStateException("Error occured while performing linking.", ex)
         }
-        featureExtraction.update(sw.elapsed(TimeUnit.MILLISECONDS))
+        fullLink.update(sw.elapsed(TimeUnit.MILLISECONDS))
     }
 
     private fun <T> collectKeys(m: Map<EntityDataKey, Map<EntityDataKey, T>>): Set<EntityDataKey> {
