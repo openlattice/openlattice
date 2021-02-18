@@ -195,8 +195,6 @@ public class LinkerServicesPod {
     public CollaborationDatabaseManager collaborationDatabaseManager() {
         return new PostgresCollaborationDatabaseService(
                 hazelcastInstance,
-                hikariDataSource,
-                assembler(),
                 dbQueryManager(),
                 externalDbConnMan,
                 authorizationManager(),
@@ -324,7 +322,7 @@ public class LinkerServicesPod {
 
     @Bean
     public PrincipalsMapManager principalsMapManager() {
-        return new HazelcastPrincipalsMapManager(hazelcastInstance, aclKeyReservationService());
+        return new HazelcastPrincipalsMapManager( hazelcastInstance, aclKeyReservationService() );
     }
 
     @PostConstruct

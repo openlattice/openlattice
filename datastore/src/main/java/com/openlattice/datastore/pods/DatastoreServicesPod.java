@@ -388,8 +388,6 @@ public class DatastoreServicesPod {
     public CollaborationDatabaseManager collaborationDatabaseManager() {
         return new PostgresCollaborationDatabaseService(
                 hazelcastInstance,
-                hikariDataSource,
-                assembler(),
                 dbQueryManager(),
                 externalDbConnMan,
                 authorizationManager(),

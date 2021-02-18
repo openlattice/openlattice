@@ -168,7 +168,7 @@ class AssemblerConnectionManager(
 
     @Deprecated(message = "Use identical function in DatabaseQueryManager")
     fun renameOrganizationDatabase(currentDatabaseName: String, newDatabaseName: String) {
-        dbQueryManager.renameOrganizationDatabase(currentDatabaseName, newDatabaseName)
+        dbQueryManager.renameDatabase(currentDatabaseName, newDatabaseName)
     }
 
     @Deprecated(message = "Use identical function in DatabaseQueryManager")

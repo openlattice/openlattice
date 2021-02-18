@@ -513,7 +513,7 @@ class PostgresDatabaseQueryService(
         }
     }
 
-    override fun renameOrganizationDatabase(currentDatabaseName: String, newDatabaseName: String) {
+    override fun renameDatabase(currentDatabaseName: String, newDatabaseName: String) {
         if (checkIfDatabaseExists(newDatabaseName)) {
             throw IllegalStateException("Cannot rename database $currentDatabaseName to $newDatabaseName because database $newDatabaseName already exists")
         }

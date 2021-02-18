@@ -66,7 +66,7 @@ interface DatabaseQueryManager {
 
     fun dropUserIfExists(user: SecurablePrincipal)
 
-    fun renameOrganizationDatabase(currentDatabaseName: String, newDatabaseName: String)
+    fun renameDatabase(currentDatabaseName: String, newDatabaseName: String)
 
     fun getDatabaseOid(dbName: String): Int
 

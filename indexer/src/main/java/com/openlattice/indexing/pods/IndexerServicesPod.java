@@ -234,8 +234,6 @@ public class IndexerServicesPod {
     public CollaborationDatabaseManager collaborationDatabaseManager() {
         return new PostgresCollaborationDatabaseService(
                 hazelcastInstance,
-                hikariDataSource,
-                assembler(),
                 dbQueryManager(),
                 externalDbConnMan,
                 authorizationManager(),
