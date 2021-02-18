@@ -85,11 +85,11 @@ if (GC == 'null' || GC == null || GC == "") {
     GC = "-XX:+UseG1GC"
 }
 
-//java {
-//    toolchain {
-//        languageVersion = JavaLanguageVersion.of(11)
-//    }
-//}
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(11)
+    }
+}
 
 mainClassName = "com.openlattice.linking.Linker"
 applicationDefaultJvmArgs = [LINKER_XMS, LINKER_XMX, "-server", GC, PARALLEL]
@@ -100,9 +100,6 @@ applicationDefaultJvmArgs += ["--add-modules", "java.se",
                               "--add-opens", "java.base/sun.nio.ch=ALL-UNNAMED",
                               "--add-opens", "java.management/sun.management=ALL-UNNAMED",
                               "--add-opens", "jdk.management/com.sun.management.internal=ALL-UNNAMED"]
-
-sourceCompatibility = JavaVersion.VERSION_11
-targetCompatibility = JavaVersion.VERSION_11
 
 println "Using java args for running ${projectName}: " + Arrays.toString(applicationDefaultJvmArgs)
 

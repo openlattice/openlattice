@@ -34,7 +34,7 @@ import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
 import org.nd4j.linalg.factory.Nd4j
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
-import java.util.*
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 const val THRESHOLD = 0.9
@@ -102,17 +102,30 @@ class SocratesMatcher(
         // filter out positive matches from feedback to avoid computation of scores
         // negative feedbacks are already filter out when blocking
         val entities = block.entities
-        val filteredEntities = entities.mapValues { _ ->
-            entities.keys.filter {
+
+        // get feedbacks in bulk
+//        val entityPairs = entities.flatMapTo(mutableSetOf()) { entity ->
+//            entities.keys.mapTo(mutableSetOf()) {
+//                EntityKeyPair(entity.key, it)
+//            }
+//        }
+//        val feedbacks = linkingFeedbackService.getLinkingFeedbacks(entityPairs)
+
+        // filter out feedbacks
+        val filteredEntities = entities.mapValues { entity ->
+//            entities.keys.filter {
 //                val entityPair = EntityKeyPair(entity.key, it)
-//                val feedback = linkingFeedbackService.getLinkingFeedback(entityPair)
-//                if (feedback != null && feedback.linked) {
+//                val linked = feedbacks[entityPair]
+//                if (linked != null && linked) {
 //                    positiveFeedbacks.add(entityPair)
 //                    return@filter false
 //                }
-                return@filter true
-            }
-        }.filter { it.value.isNotEmpty() }
+//                return@filter true
+//            }
+            entities.keys
+        }.filter {
+            it.value.isNotEmpty()
+        }
 
         val results = computeResults(entities, filteredEntities, positiveFeedbacks)
 
@@ -126,7 +139,7 @@ class SocratesMatcher(
 
         logger.info(
                 "Matching block {} with {} elements took {} ms",
-                block.entityDataKey, entities.values.map { it.size }.sum(),
+                block.entityDataKey, block.size,
                 sw.elapsed(TimeUnit.MILLISECONDS)
         )
 
@@ -139,7 +152,7 @@ class SocratesMatcher(
      */
     private fun computeResults(
             entityValues: Map<EntityDataKey, Map<UUID, Set<Any>>>,
-            entities: Map<EntityDataKey, List<EntityDataKey>>,
+            entities: Map<EntityDataKey, Set<EntityDataKey>>,
             positiveFeedbacks: Set<EntityKeyPair>
     ): List<ResultSet> {
         val positiveMatches = positiveFeedbacks.flatMap {

@@ -87,6 +87,10 @@ class PostgresLinkingFeedbackService(
         )
     }
 
+    fun getLinkingFeedbacks(entityPairs: Set<EntityKeyPair>): MutableMap<EntityKeyPair, Boolean> {
+        return linkingFeedback.getAll(entityPairs)
+    }
+
     fun getLinkingFeedback(entityPair: EntityKeyPair): EntityLinkingFeedback? {
         val feedback = linkingFeedback[entityPair] ?: return null
 

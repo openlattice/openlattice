@@ -170,7 +170,6 @@ class BackgroundLinkingService(
                 executor.submit( Runnable {
                     if( !tryLockCandidate(candidate) ) {
                         logger.info("candidate already locked for linking: {}\nNot resubmitting", candidate)
-//                        refreshExpiration(it)
                         return@Runnable
                     }
                     logger.info("candidate freshly locked for linking: {}", candidate)
@@ -228,7 +227,6 @@ class BackgroundLinkingService(
         val dataKeys = collectKeys(initializedBlock.matches)
 
         //Decision that needs to be made is whether to start new cluster or merge into existing cluster.
-        //No locks are required since any items that block to this element will be skipped.
         try {
             val (linkingId, scores) = lqs.lockClustersDoWorkAndCommit( candidate, dataKeys) { clusters ->
                 val maybeBestCluster = clusters

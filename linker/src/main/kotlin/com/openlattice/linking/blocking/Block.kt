@@ -10,5 +10,7 @@ import java.util.UUID
 data class Block(
         val entityDataKey: EntityDataKey,
         val entities: Map<EntityDataKey, Map<UUID, Set<Any>>>
-)
+) {
+    val size = entities.values.map { it.size }.sum()
+}
 
