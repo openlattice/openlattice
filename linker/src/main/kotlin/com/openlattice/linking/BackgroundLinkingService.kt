@@ -123,7 +123,12 @@ class BackgroundLinkingService(
                     )
             )
 
-            (priorityEntitySets + filteredLinkableEntitySetIds).filter {
+            listOf(
+                    UUID.fromString("2deb5292-11b5-4874-b4b1-2a5a57804e68"),
+                    UUID.fromString("e9dc56bf-7cf9-4e25-8969-1ac4c1b1e1ec"),
+                    UUID.fromString("9d9a6c3e-fd82-4599-9dcc-a2602e2bd54d"),
+                    UUID.fromString("4e369747-66aa-432f-8aa3-2591cee0fa8d")
+            ).filter {
                 val es = entitySets[it]
                 if ( es == null ){
                     logger.info("Entityset with id {} doesnt exist", it)
@@ -198,26 +203,25 @@ class BackgroundLinkingService(
     private fun link(candidate: EntityDataKey) {
         clearNeighborhoods(candidate)
         //TODO: if we have positive feedbacks on entity, we use its linking id and match them together
-
         // Run standard blocking + clustering
         val sw = Stopwatch.createStarted()
         val initialBlock = blocker.block(candidate)
 
+        val blockTime = sw.elapsed(TimeUnit.MILLISECONDS)
         logger.info(
                 "Blocking ({}, {}) took {} ms.",
                 candidate.entitySetId,
                 candidate.entityKeyId,
-                sw.elapsed(TimeUnit.MILLISECONDS)
+                blockTime
         )
 
         //block contains element being blocked
         val elem = initialBlock.entities.getValue(candidate)
 
         // initialize
-        sw.reset().start()
         logger.info("Initializing matching for block {}", candidate)
         val initializedBlock = matcher.initialize(initialBlock)
-        logger.info("Initialization took {} ms", sw.elapsed(TimeUnit.MILLISECONDS))
+        logger.info("Initialization took {} ms", blockTime - sw.elapsed(TimeUnit.MILLISECONDS))
         val dataKeys = collectKeys(initializedBlock.matches)
 
         //Decision that needs to be made is whether to start new cluster or merge into existing cluster.
@@ -243,6 +247,7 @@ class BackgroundLinkingService(
             logger.error("An error occurred while performing linking.", ex)
             throw IllegalStateException("Error occured while performing linking.", ex)
         }
+        featureExtraction.update(sw.elapsed(TimeUnit.MILLISECONDS))
     }
 
     private fun <T> collectKeys(m: Map<EntityDataKey, Map<EntityDataKey, T>>): Set<EntityDataKey> {
