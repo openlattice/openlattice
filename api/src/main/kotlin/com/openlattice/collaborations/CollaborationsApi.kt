@@ -19,11 +19,11 @@ interface CollaborationsApi {
         const val TABLES_PATH = "/tables"
 
         const val ID = "id"
-        const val ID_PATH = "/{$ID}"
+        const val ID_PATH_PARAM = "/{$ID}"
         const val ORGANIZATION_ID = "organizationId"
-        const val ORGANIZATION_ID_PATH = "/{$ORGANIZATION_ID}"
+        const val ORGANIZATION_ID_PATH_PARAM = "/{$ORGANIZATION_ID}"
         const val TABLE_ID = "tableId"
-        const val TABLE_ID_PATH = "/{$TABLE_ID}"
+        const val TABLE_ID_PATH_PARAM = "/{$TABLE_ID}"
     }
 
     @GET(BASE)
@@ -32,35 +32,35 @@ interface CollaborationsApi {
     @POST(BASE)
     fun createCollaboration(@Body collaboration: Collaboration): UUID
 
-    @GET(BASE + ID_PATH)
+    @GET(BASE + ID_PATH_PARAM)
     fun getCollaboration(@Path(ID) id: UUID): Collaboration
 
-    @GET(BASE + ORGANIZATIONS_PATH + ORGANIZATION_ID_PATH)
+    @GET(BASE + ORGANIZATIONS_PATH + ORGANIZATION_ID_PATH_PARAM)
     fun getCollaborationsIncludingOrganization(@Path(ORGANIZATION_ID) organizationId: UUID): Iterable<Collaboration>
 
-    @DELETE(BASE + ID_PATH)
+    @DELETE(BASE + ID_PATH_PARAM)
     fun deleteCollaboration(@Path(ID) id: UUID)
 
-    @POST(BASE + ID_PATH + ORGANIZATIONS_PATH)
+    @POST(BASE + ID_PATH_PARAM + ORGANIZATIONS_PATH)
     fun addOrganizationIdsToCollaboration(@Path(ID) id: UUID, @Body organizationIds: Set<UUID>)
 
-    @DELETE(BASE + ID_PATH + ORGANIZATIONS_PATH)
+    @DELETE(BASE + ID_PATH_PARAM + ORGANIZATIONS_PATH)
     fun removeOrganizationIdsFromCollaboration(@Path(ID) id: UUID, @Body organizationIds: Set<UUID>)
 
-    @GET(BASE + ID_PATH + DATABASE_PATH)
+    @GET(BASE + ID_PATH_PARAM + DATABASE_PATH)
     fun getCollaborationDatabaseInfo(@Path(ID) id: UUID): OrganizationDatabase
 
-    @PATCH(BASE + ID_PATH + DATABASE_PATH)
+    @PATCH(BASE + ID_PATH_PARAM + DATABASE_PATH)
     fun renameDatabase(@Path(ID) id: UUID, @Body newDatabaseName: String)
 
-    @GET(BASE + ID_PATH + PROJECT_PATH + ORGANIZATION_ID_PATH + TABLE_ID_PATH)
+    @GET(BASE + ID_PATH_PARAM + PROJECT_PATH + ORGANIZATION_ID_PATH_PARAM + TABLE_ID_PATH_PARAM)
     fun projectTableToCollaboration(
             @Path(ID) collaborationId: UUID,
             @Path(ORGANIZATION_ID) organizationId: UUID,
             @Path(TABLE_ID) tableId: UUID
     )
 
-    @DELETE(BASE + ID_PATH + PROJECT_PATH + ORGANIZATION_ID_PATH + TABLE_ID_PATH)
+    @DELETE(BASE + ID_PATH_PARAM + PROJECT_PATH + ORGANIZATION_ID_PATH_PARAM + TABLE_ID_PATH_PARAM)
     fun removeProjectedTableFromCollaboration(
             @Path(ID) collaborationId: UUID,
             @Path(ORGANIZATION_ID) organizationId: UUID,
@@ -73,7 +73,7 @@ interface CollaborationsApi {
      * @param organizationId The id of the organization to find projected tables for
      * @return A map from collaborationId to all table ids projected in that collaboration.
      */
-    @GET(BASE + ORGANIZATIONS_PATH + ORGANIZATION_ID_PATH + TABLES_PATH)
+    @GET(BASE + ORGANIZATIONS_PATH + ORGANIZATION_ID_PATH_PARAM + TABLES_PATH)
     fun getProjectedTablesInOrganization(@Path(ORGANIZATION_ID) organizationId: UUID): Map<UUID, List<UUID>>
 
     /**
@@ -82,7 +82,7 @@ interface CollaborationsApi {
      * @param collaborationId The id of the collaboration to find projected tables for
      * @return A map from organizationId to all table ids projected to the requested collaboration from that organization.
      */
-    @GET(BASE + ID_PATH + TABLES_PATH)
+    @GET(BASE + ID_PATH_PARAM + TABLES_PATH)
     fun getProjectedTablesInCollaboration(@Path(ID) collaborationId: UUID): Map<UUID, List<UUID>>
 
     /**

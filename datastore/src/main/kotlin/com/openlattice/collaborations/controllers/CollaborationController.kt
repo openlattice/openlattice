@@ -9,14 +9,14 @@ import com.openlattice.collaborations.CollaborationsApi
 import com.openlattice.collaborations.CollaborationsApi.Companion.CONTROLLER
 import com.openlattice.collaborations.CollaborationsApi.Companion.DATABASE_PATH
 import com.openlattice.collaborations.CollaborationsApi.Companion.ID
-import com.openlattice.collaborations.CollaborationsApi.Companion.ID_PATH
+import com.openlattice.collaborations.CollaborationsApi.Companion.ID_PATH_PARAM
 import com.openlattice.collaborations.CollaborationsApi.Companion.ORGANIZATIONS_PATH
 import com.openlattice.collaborations.CollaborationsApi.Companion.ORGANIZATION_ID
-import com.openlattice.collaborations.CollaborationsApi.Companion.ORGANIZATION_ID_PATH
+import com.openlattice.collaborations.CollaborationsApi.Companion.ORGANIZATION_ID_PATH_PARAM
 import com.openlattice.collaborations.CollaborationsApi.Companion.PROJECT_PATH
 import com.openlattice.collaborations.CollaborationsApi.Companion.TABLES_PATH
 import com.openlattice.collaborations.CollaborationsApi.Companion.TABLE_ID
-import com.openlattice.collaborations.CollaborationsApi.Companion.TABLE_ID_PATH
+import com.openlattice.collaborations.CollaborationsApi.Companion.TABLE_ID_PATH_PARAM
 import com.openlattice.organizations.OrganizationDatabase
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.springframework.http.MediaType
@@ -52,14 +52,14 @@ class CollaborationController : AuthorizingComponent, CollaborationsApi {
     }
 
     @Timed
-    @GetMapping(value = [ID_PATH], produces = [MediaType.APPLICATION_JSON_VALUE])
+    @GetMapping(value = [ID_PATH_PARAM], produces = [MediaType.APPLICATION_JSON_VALUE])
     override fun getCollaboration(@PathVariable(ID) id: UUID): Collaboration {
         ensureReadAccess(AclKey(id))
         return collaborationService.getCollaboration(id)
     }
 
     @Timed
-    @GetMapping(value = [ORGANIZATIONS_PATH + ORGANIZATION_ID_PATH], produces = [MediaType.APPLICATION_JSON_VALUE])
+    @GetMapping(value = [ORGANIZATIONS_PATH + ORGANIZATION_ID_PATH_PARAM], produces = [MediaType.APPLICATION_JSON_VALUE])
     override fun getCollaborationsIncludingOrganization(@PathVariable(ORGANIZATION_ID) organizationId: UUID): Iterable<Collaboration> {
         ensureReadAccess(AclKey(organizationId))
         val collaborations = collaborationService.getCollaborationsIncludingOrg(organizationId)
@@ -70,35 +70,35 @@ class CollaborationController : AuthorizingComponent, CollaborationsApi {
     }
 
     @Timed
-    @DeleteMapping(value = [ID_PATH])
+    @DeleteMapping(value = [ID_PATH_PARAM])
     override fun deleteCollaboration(@PathVariable(ID) id: UUID) {
         ensureOwnerAccess(AclKey(id))
         collaborationService.deleteCollaboration(id)
     }
 
     @Timed
-    @PostMapping(value = [ID_PATH + ORGANIZATIONS_PATH], consumes = [MediaType.APPLICATION_JSON_VALUE])
+    @PostMapping(value = [ID_PATH_PARAM + ORGANIZATIONS_PATH], consumes = [MediaType.APPLICATION_JSON_VALUE])
     override fun addOrganizationIdsToCollaboration(@PathVariable(ID) id: UUID, @RequestBody organizationIds: Set<UUID>) {
         ensureOwnerAccess(AclKey(id))
         collaborationService.addOrganizationIdsToCollaboration(id, organizationIds)
     }
 
     @Timed
-    @DeleteMapping(value = [ID_PATH + ORGANIZATIONS_PATH], consumes = [MediaType.APPLICATION_JSON_VALUE])
+    @DeleteMapping(value = [ID_PATH_PARAM + ORGANIZATIONS_PATH], consumes = [MediaType.APPLICATION_JSON_VALUE])
     override fun removeOrganizationIdsFromCollaboration(@PathVariable(ID) id: UUID, @RequestBody organizationIds: Set<UUID>) {
         ensureOwnerAccess(AclKey(id))
         collaborationService.removeOrganizationIdsFromCollaboration(id, organizationIds)
     }
 
     @Timed
-    @GetMapping(value = [ID_PATH + DATABASE_PATH], produces = [MediaType.APPLICATION_JSON_VALUE])
+    @GetMapping(value = [ID_PATH_PARAM + DATABASE_PATH], produces = [MediaType.APPLICATION_JSON_VALUE])
     override fun getCollaborationDatabaseInfo(@PathVariable(ID) id: UUID): OrganizationDatabase {
         ensureReadAccess(AclKey(id))
         return collaborationService.getDatabaseInfo(id)
     }
 
     @Timed
-    @PatchMapping(value = [ID_PATH, DATABASE_PATH], consumes = [MediaType.APPLICATION_JSON_VALUE])
+    @PatchMapping(value = [ID_PATH_PARAM, DATABASE_PATH], consumes = [MediaType.APPLICATION_JSON_VALUE])
     override fun renameDatabase(@PathVariable(ID) id: UUID, @RequestBody newDatabaseName: String) {
         ensureOwnerAccess(AclKey(id))
         collaborationService.renameDatabase(id, newDatabaseName)
@@ -106,7 +106,7 @@ class CollaborationController : AuthorizingComponent, CollaborationsApi {
     }
 
     @Timed
-    @GetMapping(value = [ID_PATH + PROJECT_PATH + ORGANIZATION_ID_PATH + TABLE_ID_PATH])
+    @GetMapping(value = [ID_PATH_PARAM + PROJECT_PATH + ORGANIZATION_ID_PATH_PARAM + TABLE_ID_PATH_PARAM])
     override fun projectTableToCollaboration(
             @PathVariable(ID) collaborationId: UUID,
             @PathVariable(ORGANIZATION_ID) organizationId: UUID,
@@ -120,7 +120,7 @@ class CollaborationController : AuthorizingComponent, CollaborationsApi {
     }
 
     @Timed
-    @DeleteMapping(value = [ID_PATH + PROJECT_PATH + ORGANIZATION_ID_PATH + TABLE_ID_PATH])
+    @DeleteMapping(value = [ID_PATH_PARAM + PROJECT_PATH + ORGANIZATION_ID_PATH_PARAM + TABLE_ID_PATH_PARAM])
     override fun removeProjectedTableFromCollaboration(
             @PathVariable(ID) collaborationId: UUID,
             @PathVariable(ORGANIZATION_ID) organizationId: UUID,
@@ -135,7 +135,7 @@ class CollaborationController : AuthorizingComponent, CollaborationsApi {
     }
 
     @Timed
-    @GetMapping(value = [ORGANIZATIONS_PATH + ORGANIZATION_ID_PATH + TABLES_PATH], produces = [MediaType.APPLICATION_JSON_VALUE])
+    @GetMapping(value = [ORGANIZATIONS_PATH + ORGANIZATION_ID_PATH_PARAM + TABLES_PATH], produces = [MediaType.APPLICATION_JSON_VALUE])
     override fun getProjectedTablesInOrganization(@PathVariable(ORGANIZATION_ID) organizationId: UUID): Map<UUID, List<UUID>> {
         // auth checks on org and collabs done inside here
         val collaborationIds = getCollaborationsIncludingOrganization(organizationId).map { it.id }
@@ -147,7 +147,7 @@ class CollaborationController : AuthorizingComponent, CollaborationsApi {
     }
 
     @Timed
-    @GetMapping(value = [ID_PATH + TABLES_PATH], produces = [MediaType.APPLICATION_JSON_VALUE])
+    @GetMapping(value = [ID_PATH_PARAM + TABLES_PATH], produces = [MediaType.APPLICATION_JSON_VALUE])
     override fun getProjectedTablesInCollaboration(@PathVariable(ID) collaborationId: UUID): Map<UUID, List<UUID>> {
         ensureReadAccess(AclKey(collaborationId))
 
