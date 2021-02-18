@@ -28,7 +28,6 @@ import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicates
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
 import com.openlattice.data.EntityDataKey
-import com.openlattice.edm.EntitySet
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.linking.BackgroundLinkingService.Companion.histogramify
 import com.openlattice.linking.DataLoader
@@ -66,13 +65,6 @@ class ElasticsearchBlocker(
             Predicates.equal(EntityTypeMapstore.FULLQUALIFIED_NAME_PREDICATE, PersonProperties.PERSON_TYPE_FQN.fullQualifiedNameAsString)
     ).first()
 
-    @Deprecated("Unused")
-    private val entitySetsCache = Suppliers
-            .memoizeWithExpiration({
-                entitySets.values.filter { it.entityTypeId == personEntityType.id }
-                        .map(EntitySet::getId)
-            }, 1000, TimeUnit.MILLISECONDS)
-
     private val entitySetKeysCache = Suppliers.memoizeWithExpiration({
         entitySets.keys.toSet()
     }, 1, TimeUnit.MINUTES)
@@ -87,9 +79,6 @@ class ElasticsearchBlocker(
 
         val sw = Stopwatch.createStarted()
 
-        val existingEntitySetIds = histogramify("eeks.toSet") {
-            entitySetKeysCache.get()
-        }
         var blockedEntitySetSearchResults = histogramify("blockSearch") {
             elasticsearch.executeBlockingSearch(
                     personEntityType.id ,
@@ -97,11 +86,9 @@ class ElasticsearchBlocker(
                     top,
                     false
             ).filter {
-                existingEntitySetIds.contains(it.key)
+                entitySetKeysCache.get().contains(it.key)
             }
         }
-
-
 
         logger.info(
                 "Entity data key {} blocked to {} elements in {} ms.", entityDataKey,
@@ -128,23 +115,21 @@ class ElasticsearchBlocker(
         sw.reset()
         sw.start()
 
-        val block = histogramify("finalBlock") {
-            Block(
-                    entityDataKey,
-                    removeNegativeFeedbackFromSearchResult(entityDataKey, blockedEntitySetSearchResults)
-                            .filter { it.value.isNotEmpty() }
-                            .entries
-                            .parallelStream()
-                            .flatMap { entry ->
-                                dataLoader
-                                        .getEntityStream(entry.key, entry.value)
-                                        .stream()
-                                        .map { EntityDataKey(entry.key, it.first) to it.second }
-                            }
-                            .asSequence()
-                            .toMap()
-            )
-        }
+        val block = Block(
+                entityDataKey,
+                removeNegativeFeedbackFromSearchResult(entityDataKey, blockedEntitySetSearchResults)
+                        .filter { it.value.isNotEmpty() }
+                        .entries
+                        .parallelStream()
+                        .flatMap { entry ->
+                            dataLoader
+                                    .getEntityStream(entry.key, entry.value)
+                                    .stream()
+                                    .map { EntityDataKey(entry.key, it.first) to it.second }
+                        }
+                        .asSequence()
+                        .toMap()
+        )
 
         logger.info(
                 "Loading {} entities took {} ms.", block.entities.values.map { it.size }.sum(),
@@ -157,7 +142,13 @@ class ElasticsearchBlocker(
      * Handles rendering an object into field searches for blocking.
      */
     private fun getFieldSearches(entity: Map<UUID, Set<Any>>): Map<UUID, DelegatedStringSet> {
-        return entity.map { it.key to DelegatedStringSet.wrap(it.value.map { it.toString() }.toSet()) }.toMap()
+        return entity.entries.associate { (key, contents) ->
+            key to DelegatedStringSet.wrap(
+                    contents.mapTo(mutableSetOf()) {
+                        it.toString()
+                    }
+            )
+        }
     }
 
     private fun removeNegativeFeedbackFromSearchResult(
