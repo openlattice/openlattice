@@ -21,6 +21,7 @@
 
 package com.openlattice.organizations
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import java.io.Serializable
 import java.util.*
 
@@ -31,7 +32,16 @@ val UNINITIALIZED_METADATA_ENTITY_SET_ID = UUID(0, 0)
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 data class OrganizationMetadataEntitySetIds(
-        val organization: UUID = UNINITIALIZED_METADATA_ENTITY_SET_ID,
-        val datasets: UUID = UNINITIALIZED_METADATA_ENTITY_SET_ID,
-        val columns: UUID = UNINITIALIZED_METADATA_ENTITY_SET_ID
-) : Serializable
+    val organization: UUID = UNINITIALIZED_METADATA_ENTITY_SET_ID,
+    val datasets: UUID = UNINITIALIZED_METADATA_ENTITY_SET_ID,
+    val columns: UUID = UNINITIALIZED_METADATA_ENTITY_SET_ID
+) : Serializable {
+
+    val isInitialized: Boolean
+        @JsonIgnore
+        get() = listOf(
+            columns,
+            datasets,
+            organization
+        ).any { it == UNINITIALIZED_METADATA_ENTITY_SET_ID }
+}
