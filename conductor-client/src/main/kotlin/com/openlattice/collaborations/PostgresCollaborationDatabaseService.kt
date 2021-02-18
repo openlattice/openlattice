@@ -202,8 +202,6 @@ class PostgresCollaborationDatabaseService(
     }
 
     override fun removeTableProjection(collaborationId: UUID, organizationId: UUID, tableId: UUID) {
-        logger.info("destroy the thing!")
-
         val table = externalTables.getValue(tableId)
         val orgSchema = externalDbConnMan.getOrganizationDatabaseName(organizationId)
         val collaborationHds = externalDbConnMan.connectToOrg(collaborationId)

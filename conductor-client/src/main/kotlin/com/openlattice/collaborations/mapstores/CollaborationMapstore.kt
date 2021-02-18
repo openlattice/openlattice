@@ -5,8 +5,6 @@ import com.hazelcast.config.IndexConfig
 import com.hazelcast.config.IndexType
 import com.hazelcast.config.MapConfig
 import com.openlattice.collaborations.Collaboration
-import com.openlattice.collections.mapstores.ENTITY_SET_COLLECTION_ID_INDEX
-import com.openlattice.collections.mapstores.ENTITY_SET_ID_INDEX
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.postgres.PostgresArrays
@@ -18,7 +16,7 @@ import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.util.*
 
-open class CollaborationMapstore(val hds: HikariDataSource) : AbstractBasePostgresMapstore<UUID, Collaboration>(
+open class CollaborationMapstore(hds: HikariDataSource) : AbstractBasePostgresMapstore<UUID, Collaboration>(
         HazelcastMap.COLLABORATIONS, COLLABORATIONS, hds
 ) {
 

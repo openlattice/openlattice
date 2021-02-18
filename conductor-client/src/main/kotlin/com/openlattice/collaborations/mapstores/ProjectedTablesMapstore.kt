@@ -15,7 +15,7 @@ import com.zaxxer.hikari.HikariDataSource
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 
-open class ProjectedTablesMapstore(val hds: HikariDataSource) : AbstractBasePostgresMapstore<ProjectedTableKey, ProjectedTableMetadata>(
+open class ProjectedTablesMapstore(hds: HikariDataSource) : AbstractBasePostgresMapstore<ProjectedTableKey, ProjectedTableMetadata>(
         HazelcastMap.PROJECTED_TABLES, PROJECTED_TABLES, hds
 ) {
 
