@@ -165,9 +165,10 @@ class SocratesMatcher(
         // extract features for all entities in block
         val extractedFeatures = entities.mapValues { (edk, neighbors) ->
             val selfProperties = extractedProperties.getValue(edk)
-            neighbors.associateWith { dst ->
-                extractFeatures(selfProperties, extractedProperties.getValue(dst))
+            val neighborExtractedProperties = neighbors.associateWith {
+                extractedProperties.getValue(it)
             }
+            extractFeaturesBulk(selfProperties, neighborExtractedProperties)
         }
         val blockFeatureExtraction = sw.elapsed(TimeUnit.MILLISECONDS)
 
@@ -216,6 +217,12 @@ class SocratesMatcher(
         val scores = model.getModelScore(features)
         logger.info("The model computed scores in {} ms", sw.elapsed(TimeUnit.MILLISECONDS))
         return scores
+    }
+
+    fun extractFeaturesBulk(
+            lhs: Map<UUID, DelegatedStringSet>, rhs: Map<EntityDataKey, Map<UUID, DelegatedStringSet>>
+    ): Map<EntityDataKey, DoubleArray> {
+        return PersonMetric.pDistanceBulk(lhs, rhs, fqnToIdMap)
     }
 
     override fun extractFeatures(

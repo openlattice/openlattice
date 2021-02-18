@@ -104,9 +104,15 @@ public class PersonProperties {
     }
 
     public static int valueIsPresent( Map<UUID, DelegatedStringSet> entity, UUID propertyTypeId ) {
-        if ( !entity.containsKey( propertyTypeId )
-                || entity.get( propertyTypeId ).stream().noneMatch( StringUtils::isNotBlank ) ) { return 0; }
-        return 1;
+        if ( !entity.containsKey( propertyTypeId ) ) {
+            return 0;
+        }
+        for ( String pt : entity.get( propertyTypeId )) {
+            if ( !pt.isBlank() ) {
+                return 1;
+            }
+        }
+        return 0;
     }
 
     public static DelegatedStringSet getFirstName(
