@@ -175,13 +175,13 @@ class BackgroundLinkingService(
                     try {
                         logger.info("Linking {}", candidate)
                         link(candidate)
+                        requests.mark()
                         logger.info("Finished linking {}", candidate)
                     } catch (ex: Exception) {
                         logger.error("Unable to link {}.", candidate, ex)
                     } finally {
                         logger.info("Unlocking candidate after linking: {}", candidate)
                         unlock(candidate)
-                        requests.mark()
                         limiter.release()
                     }
                 })
