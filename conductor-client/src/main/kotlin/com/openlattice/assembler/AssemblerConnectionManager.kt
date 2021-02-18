@@ -324,7 +324,7 @@ class AssemblerConnectionManager(
         atlas.connection.use { connection ->
             connection.createStatement().use { statement ->
                 statement.execute(createOrgDbUser)
-                if (!exists(dbName)) {
+                if (!checkIfDatabaseExists(dbName)) {
                     statement.execute(createDb)
                     statement.execute(
                             "GRANT ${MEMBER_ORG_DATABASE_PERMISSIONS.joinToString(", ")} " +
@@ -345,7 +345,7 @@ class AssemblerConnectionManager(
         //We connect to default db in order to do initial db setup
         atlas.connection.use { connection ->
             connection.createStatement().use { statement ->
-                if (!exists(dbName)) {
+                if (!checkIfDatabaseExists(dbName)) {
                     statement.execute(createDb)
                 }
                 statement.execute(revokeAll)
@@ -481,17 +481,6 @@ class AssemblerConnectionManager(
             //TODO: Implement de-materialization code here.
         }
         logger.info("Removed materialized entity sets $entitySetIds from organization $organizationId")
-    }
-
-    internal fun exists(dbName: String): Boolean {
-        atlas.connection.use { connection ->
-            connection.createStatement().use { stmt ->
-                stmt.executeQuery("select count(*) from pg_database where datname = '$dbName'").use { rs ->
-                    rs.next()
-                    return rs.getInt("count") > 0
-                }
-            }
-        }
     }
 
     fun getAllRoles(): Set<Role> {
