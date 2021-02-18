@@ -224,12 +224,11 @@ class BackgroundLinkingService(
              blocker.block(candidate)
         }
 
-        val blockTime = sw.elapsed(TimeUnit.MILLISECONDS)
         logger.info(
                 "Blocking ({}, {}) took {} ms.",
                 candidate.entitySetId,
                 candidate.entityKeyId,
-                blockTime
+                sw.elapsed(TimeUnit.MILLISECONDS)
         )
 
         //block contains element being blocked
@@ -237,8 +236,10 @@ class BackgroundLinkingService(
 
         // initialize
         logger.info("Initializing matching for block {}", candidate)
+        val sw2 = Stopwatch.createStarted()
         val initializedBlock = matcher.initialize(initialBlock)
-        logger.info("Initialization took {} ms", blockTime - sw.elapsed(TimeUnit.MILLISECONDS))
+        sw2.stop()
+        logger.info("Initialization took {} ms", sw2.elapsed(TimeUnit.MILLISECONDS))
         val dataKeys = collectKeys(initializedBlock.matches)
 
         //Decision that needs to be made is whether to start new cluster or merge into existing cluster.
@@ -246,7 +247,7 @@ class BackgroundLinkingService(
             val (linkingId, scores) = lqs.lockClustersDoWorkAndCommit( candidate, dataKeys) { clusters ->
                 val maybeBestCluster = histogramify("creatingClusters") {
                     clusters.asSequence()
-                            .map { cluster -> clusterer.cluster(candidate, KeyedCluster.fromEntry(cluster), ::completeLinkCluster) }
+                            .map { cluster -> clusterer.cluster(candidate, KeyedCluster.fromEntry(cluster)) }
                             .filter { it.score > MINIMUM_SCORE }
                             .maxBy { it.score }
                 }

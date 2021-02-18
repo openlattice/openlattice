@@ -22,8 +22,7 @@ class PostgresClusterer(
 
     override fun cluster(
             blockKey: EntityDataKey,
-            identifiedCluster: KeyedCluster,
-            clusteringStrategy: (Cluster) -> Double
+            identifiedCluster: KeyedCluster
     ): ScoredCluster {
         val block = Block(blockKey, loader.getEntities(
                 BackgroundLinkingService.collectKeys(identifiedCluster.cluster) + blockKey)

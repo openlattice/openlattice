@@ -8,7 +8,6 @@ import com.openlattice.data.EntityDataKey
 interface Clusterer {
     fun cluster(
             blockKey: EntityDataKey,
-            identifiedCluster: KeyedCluster,
-            clusteringStrategy: (Cluster) -> Double
+            identifiedCluster: KeyedCluster
     ): ScoredCluster
 }

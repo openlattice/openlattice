@@ -73,6 +73,10 @@ class ElasticsearchBlocker(
                         .map(EntitySet::getId)
             }, 1000, TimeUnit.MILLISECONDS)
 
+    private val entitySetKeysCache = Suppliers.memoizeWithExpiration({
+        entitySets.keys.toSet()
+    }, 1, TimeUnit.MINUTES)
+
     @Timed
     override fun block(
             entityDataKey: EntityDataKey,
@@ -84,11 +88,11 @@ class ElasticsearchBlocker(
         val sw = Stopwatch.createStarted()
 
         val existingEntitySetIds = histogramify("eeks.toSet") {
-            entitySets.keys.toSet()
+            entitySetKeysCache.get()
         }
         var blockedEntitySetSearchResults = histogramify("blockSearch") {
             elasticsearch.executeBlockingSearch(
-                    personEntityType.id,
+                    personEntityType.id ,
                     getFieldSearches(entity.orElseGet { dataLoader.getEntity(entityDataKey) }),
                     top,
                     false
@@ -96,6 +100,8 @@ class ElasticsearchBlocker(
                 existingEntitySetIds.contains(it.key)
             }
         }
+
+
 
         logger.info(
                 "Entity data key {} blocked to {} elements in {} ms.", entityDataKey,
