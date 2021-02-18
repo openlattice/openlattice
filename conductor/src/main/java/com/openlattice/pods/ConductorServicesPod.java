@@ -350,13 +350,17 @@ public class ConductorServicesPod {
 
     @Bean
     public AssemblerConnectionManager assemblerConnectionManager() {
-        return new AssemblerConnectionManager( assemblerConfiguration,
+        return new AssemblerConnectionManager(
+                assemblerConfiguration,
                 externalDbConnMan,
+                hikariDataSource,
                 securePrincipalsManager(),
                 organizationsManager(),
                 dbCredService(),
                 externalDatabasePermissionsManager(),
-                eventBus);
+                eventBus,
+                metricRegistry
+        );
     }
 
     @Bean

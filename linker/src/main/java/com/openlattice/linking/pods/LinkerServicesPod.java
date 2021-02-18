@@ -128,11 +128,6 @@ public class LinkerServicesPod {
     }
 
     @Bean
-    public PrincipalsMapManager principalsMapManager() {
-        return new HazelcastPrincipalsMapManager(hazelcastInstance, aclKeyReservationService());
-    }
-
-    @Bean
     public SecurePrincipalsManager principalService() {
         return new HazelcastPrincipalService(
                 hazelcastInstance,

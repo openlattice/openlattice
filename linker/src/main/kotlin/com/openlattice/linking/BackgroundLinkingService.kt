@@ -81,17 +81,19 @@ class BackgroundLinkingService(
 
         fun printHistogram(histogram: Histogram) {
             val snapshot: Snapshot = histogram.snapshot
-            logger.error("             count = ${histogram.count}")
-            logger.error("               min = ${snapshot.min}")
-            logger.error("               max = ${snapshot.max}")
-            logger.error("              mean = ${snapshot.mean}")
-            logger.error("            stddev = ${snapshot.stdDev}")
-            logger.error("            median = ${snapshot.median}")
-            logger.error("              75%% <= ${snapshot.get75thPercentile()}")
-            logger.error("              95%% <= ${snapshot.get95thPercentile()}")
-            logger.error("              98%% <= ${snapshot.get98thPercentile()}")
-            logger.error("              99%% <= ${snapshot.get99thPercentile()}")
-            logger.error("            99.9%% <= ${snapshot.get999thPercentile()}")
+            logger.error("""
+                         count = ${histogram.count}
+                           min = ${snapshot.min}
+                           max = ${snapshot.max}
+                          mean = ${snapshot.mean}
+                        stddev = ${snapshot.stdDev}
+                        median = ${snapshot.median}
+                          75%% <= ${snapshot.get75thPercentile()}
+                          95%% <= ${snapshot.get95thPercentile()}
+                          98%% <= ${snapshot.get98thPercentile()}
+                          99%% <= ${snapshot.get99thPercentile()}
+                        99.9%% <= ${snapshot.get999thPercentile()}
+            """.trimIndent())
         }
     }
 
