@@ -24,7 +24,6 @@ package com.openlattice.linking.matching
 import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Stopwatch
 import com.openlattice.data.EntityDataKey
-import com.openlattice.linking.BackgroundLinkingService
 import com.openlattice.linking.EntityKeyPair
 import com.openlattice.linking.PostgresLinkingFeedbackService
 import com.openlattice.linking.blocking.Block
@@ -170,6 +169,7 @@ class SocratesMatcher(
             }
             extractFeaturesBulk(selfProperties, neighborExtractedProperties)
         }
+
         val blockFeatureExtraction = sw.elapsed(TimeUnit.MILLISECONDS)
 
         // transform features to matrix and compute scores
@@ -195,7 +195,6 @@ class SocratesMatcher(
         }.plus(positiveMatches)
 
         val bfTime = blockFeatureExtraction - propsExtractionSw
-        BackgroundLinkingService.featureExtraction.update(bfTime)
         val fblTime = featureExtractionSW - blockFeatureExtraction
 
         if (propsExtractionSw > 500){
@@ -220,19 +219,23 @@ class SocratesMatcher(
     }
 
     fun extractFeaturesBulk(
-            lhs: Map<UUID, DelegatedStringSet>, rhs: Map<EntityDataKey, Map<UUID, DelegatedStringSet>>
+            lhs: Map<UUID, DelegatedStringSet>,
+            rhs: Map<EntityDataKey, Map<UUID, DelegatedStringSet>>
     ): Map<EntityDataKey, DoubleArray> {
         return PersonMetric.pDistanceBulk(lhs, rhs, fqnToIdMap)
     }
 
     override fun extractFeatures(
-            lhs: Map<UUID, DelegatedStringSet>, rhs: Map<UUID, DelegatedStringSet>
+            lhs: Map<UUID, DelegatedStringSet>,
+            rhs: Map<UUID, DelegatedStringSet>
     ): DoubleArray {
         return PersonMetric.pDistance(lhs, rhs, fqnToIdMap).map { it * 100.0 }.toDoubleArray()
     }
 
     override fun extractProperties(entity: Map<UUID, Set<Any>>): Map<UUID, DelegatedStringSet> {
-        return entity.map { it.key to DelegatedStringSet.wrap(it.value.map(Any::toString).toSet()) }.toMap()
+        return entity.mapValues { ( _, properties ) ->
+            DelegatedStringSet.wrap( properties.mapTo(mutableSetOf()) { it.toString() } )
+        }
     }
 
     @Timed

@@ -107,7 +107,11 @@ public class PersonProperties {
         if ( !entity.containsKey( propertyTypeId ) ) {
             return 0;
         }
-        for ( String pt : entity.get( propertyTypeId )) {
+        var value = entity.get( propertyTypeId );
+        if (value.isEmpty()) {
+            return 0;
+        }
+        for ( String pt : value ) {
             if ( !pt.isBlank() ) {
                 return 1;
             }

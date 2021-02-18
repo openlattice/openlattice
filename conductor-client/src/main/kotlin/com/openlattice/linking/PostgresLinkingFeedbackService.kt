@@ -6,17 +6,28 @@ import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.openlattice.data.EntityDataKey
 import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.linking.mapstores.*
+import com.openlattice.linking.mapstores.FEEDBACK_INDEX
+import com.openlattice.linking.mapstores.FIRST_ENTITY_INDEX
+import com.openlattice.linking.mapstores.FIRST_ENTITY_KEY_INDEX
+import com.openlattice.linking.mapstores.FIRST_ENTITY_SET_INDEX
+import com.openlattice.linking.mapstores.LinkingFeedbackPredicateBuilder
+import com.openlattice.linking.mapstores.SECOND_ENTITY_INDEX
+import com.openlattice.linking.mapstores.SECOND_ENTITY_KEY_INDEX
+import com.openlattice.linking.mapstores.SECOND_ENTITY_SET_INDEX
 import com.openlattice.postgres.PostgresTable.LINKING_FEEDBACK
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.StatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
-import java.util.*
+import java.util.Optional
+import java.util.UUID
 
 const val FETCH_SIZE = 100_000
 
-class PostgresLinkingFeedbackService(private val hds: HikariDataSource, hazelcastInstance: HazelcastInstance) {
+class PostgresLinkingFeedbackService(
+        private val hds: HikariDataSource,
+        hazelcastInstance: HazelcastInstance
+) {
 
     private val linkingFeedback = HazelcastMap.LINKING_FEEDBACK.getMap(hazelcastInstance)
 
@@ -74,7 +85,6 @@ class PostgresLinkingFeedbackService(private val hds: HikariDataSource, hazelcas
                     FeedbackType.All -> Predicates.alwaysTrue<EntityKeyPair, Boolean>()
                 }
         )
-
     }
 
     fun getLinkingFeedback(entityPair: EntityKeyPair): EntityLinkingFeedback? {

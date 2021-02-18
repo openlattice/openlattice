@@ -98,7 +98,7 @@ class BackgroundLinkingService(
     private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
     private val linkingLocks = HazelcastMap.LINKING_LOCKS.getMap(hazelcastInstance)
     private val candidates = HazelcastQueue.LINKING_CANDIDATES.getQueue( hazelcastInstance )
-//    private val priorityEntitySets = configuration.whitelist.orElseGet { setOf() }
+    private val priorityEntitySets = configuration.whitelist.orElseGet { setOf() }
 
     @Suppress("UNUSED")
     @Scheduled(fixedRate = LINKING_RATE)
@@ -121,20 +121,15 @@ class BackgroundLinkingService(
                     )
             )
 
-//            val rest = filteredLinkableEntitySetIds.asSequence().filter {
-//                !priorityEntitySets.contains(it)
-//            }
+            val rest = filteredLinkableEntitySetIds.asSequence().filter {
+                !priorityEntitySets.contains(it)
+            }
 
-//            val priority = priorityEntitySets.asSequence().filter {
-//                filteredLinkableEntitySetIds.contains(it)
-//            }
-            listOf(
-                    UUID.fromString("2deb5292-11b5-4874-b4b1-2a5a57804e68"),
-                    UUID.fromString("e9dc56bf-7cf9-4e25-8969-1ac4c1b1e1ec"),
-                    UUID.fromString("9d9a6c3e-fd82-4599-9dcc-a2602e2bd54d"),
-//                    UUID.fromString("9d9a6c3e-fd82-4599-9dcc-a2602e2bd54d"),
-                    UUID.fromString("4e369747-66aa-432f-8aa3-2591cee0fa8d")
-            ).filter {
+            val priority = priorityEntitySets.asSequence().filter {
+                filteredLinkableEntitySetIds.contains(it)
+            }
+
+            (rest + priority).filter {
                 val es = entitySets[it]
                 if ( es == null ){
                     logger.info("Entityset with id {} doesnt exist", it)
@@ -155,27 +150,6 @@ class BackgroundLinkingService(
                         esid,
                         3 * configuration.loadSize
                 )
-//                        ).filter {
-//                    if( tryLockCandidate(it) ) {
-//                        logger.info("successfully locked $it for linking")
-//                        true
-//                    } else {
-//                        logger.info("$it already locked for linking")
-//                        false
-//                    }
-//                    val expiration = refreshExpiration(it)
-//                    logger.info("Considering candidate {} with expiration {} at {}", it, expiration, now())
-//                    if (expiration != null && now() >= expiration) {
-//                        logger.info("Refreshing expiration for edk {}", it)
-//                        Assume original lock holder died, probably somewhat unsafe
-//                        refreshExpiration(it)
-//                        true
-//                    } else {
-//                        expiration == null
-//                    }
-//                }
-
-//                logger.info("Entities needing linking")
                 logger.debug("Entities needing linking: {}", forLinking)
                 candidates.addAll(forLinking)
                 logger.info( "Queued entities needing linking")
@@ -230,80 +204,53 @@ class BackgroundLinkingService(
      */
     private fun link(candidate: EntityDataKey) {
         clearNeighborhoods(candidate)
-        // if we have positive feedbacks on entity, we use its linking id and match them together
-//        if (linkingFeedbackService.hasFeedbacks(FeedbackType.Positive, candidate)) {
-//            try {
-//                // only linking id of entity should remain, since we cleared neighborhood, except the ones
-//                // with positive feedback
-//                val clusters = Clusters(lqs.getClustersForIds(setOf(candidate)))
-//                val cluster = KeyedCluster.fromEntry(clusters.entries.first())
-//                val clusterId = cluster.id
-//                lateinit var scoredCluster: ScoredCluster
-//
-//                lqs.lockClustersForUpdates(setOf(clusterId)).use { conn ->
-//                    scoredCluster = clusterer.cluster(candidate, cluster, ::completeLinkCluster)
-//                    if (scoredCluster.score <= MINIMUM_SCORE) {
-//                        logger.error(
-//                                "Recalculated score {} of linking id {} with positives feedbacks did not pass minimum score {}",
-//                                scoredCluster.score,
-//                                cluster.id,
-//                                MINIMUM_SCORE
-//                        )
-//                    }
-//                    lqs.insertMatchScores(conn, clusterId, scoredCluster.cluster)
-//                }
-//                insertMatches(clusterId, candidate, scoredCluster.cluster)
-//            } catch (ex: Exception) {
-//                logger.error("An error occurred while performing linking.", ex)
-//                throw IllegalStateException("Error occured while performing linking.", ex)
-//            }
-//        } else {
-            // Run standard blocking + clustering
-            val sw = Stopwatch.createStarted()
-            val initialBlock = blocker.block(candidate.entitySetId, candidate.entityKeyId)
+        //TODO: if we have positive feedbacks on entity, we use its linking id and match them together
 
-            logger.info(
-                    "Blocking ({}, {}) took {} ms.",
-                    candidate.entitySetId,
-                    candidate.entityKeyId,
-                    sw.elapsed(TimeUnit.MILLISECONDS)
-            )
+        // Run standard blocking + clustering
+        val sw = Stopwatch.createStarted()
+        val initialBlock = blocker.block(candidate.entitySetId, candidate.entityKeyId)
 
-            //block contains element being blocked
-            val elem = initialBlock.entities.getValue(candidate)
+        logger.info(
+                "Blocking ({}, {}) took {} ms.",
+                candidate.entitySetId,
+                candidate.entityKeyId,
+                sw.elapsed(TimeUnit.MILLISECONDS)
+        )
 
-            // initialize
-            sw.reset().start()
-            logger.info("Initializing matching for block {}", candidate)
-            val initializedBlock = matcher.initialize(initialBlock)
-            logger.info("Initialization took {} ms", sw.elapsed(TimeUnit.MILLISECONDS))
-            val dataKeys = collectKeys(initializedBlock.matches)
+        //block contains element being blocked
+        val elem = initialBlock.entities.getValue(candidate)
 
-            //Decision that needs to be made is whether to start new cluster or merge into existing cluster.
-            //No locks are required since any items that block to this element will be skipped.
-            try {
-                val (linkingId, scores) = lqs.lockClustersDoWorkAndCommit( candidate, dataKeys) { clusters ->
-                    val maybeBestCluster = clusters
-                            .asSequence()
-                            .map { cluster -> clusterer.cluster(candidate, KeyedCluster.fromEntry(cluster), ::completeLinkCluster) }
-                            .filter { it.score > MINIMUM_SCORE }
-                            .maxBy { it.score }
+        // initialize
+        sw.reset().start()
+        logger.info("Initializing matching for block {}", candidate)
+        val initializedBlock = matcher.initialize(initialBlock)
+        logger.info("Initialization took {} ms", sw.elapsed(TimeUnit.MILLISECONDS))
+        val dataKeys = collectKeys(initializedBlock.matches)
 
-                    if ( maybeBestCluster != null ) {
-                        return@lockClustersDoWorkAndCommit Triple(maybeBestCluster.clusterId, maybeBestCluster.cluster, false)
-                    }
-                    val linkingId = ids.reserveLinkingIds(1).first()
-                    val block = Block(candidate, mapOf(candidate to elem))
-                    val cluster = matcher.match(block).matches
-                    //TODO: When creating new cluster do we really need to re-match or can we assume score of 1.0?
-                    return@lockClustersDoWorkAndCommit Triple(linkingId, cluster, true)
+        //Decision that needs to be made is whether to start new cluster or merge into existing cluster.
+        //No locks are required since any items that block to this element will be skipped.
+        try {
+            val (linkingId, scores) = lqs.lockClustersDoWorkAndCommit( candidate, dataKeys) { clusters ->
+                val maybeBestCluster = clusters
+                        .asSequence()
+                        .map { cluster -> clusterer.cluster(candidate, KeyedCluster.fromEntry(cluster), ::completeLinkCluster) }
+                        .filter { it.score > MINIMUM_SCORE }
+                        .maxBy { it.score }
+
+                if ( maybeBestCluster != null ) {
+                    return@lockClustersDoWorkAndCommit Triple(maybeBestCluster.clusterId, maybeBestCluster.cluster, false)
                 }
-                insertMatches( linkingId, candidate, Cluster(scores) )
-            } catch (ex: Exception) {
-                logger.error("An error occurred while performing linking.", ex)
-                throw IllegalStateException("Error occured while performing linking.", ex)
+                val linkingId = ids.reserveLinkingIds(1).first()
+                val block = Block(candidate, mapOf(candidate to elem))
+                val cluster = matcher.match(block).matches
+                //TODO: When creating new cluster do we really need to re-match or can we assume score of 1.0?
+                return@lockClustersDoWorkAndCommit Triple(linkingId, cluster, true)
             }
-//        }
+            insertMatches( linkingId, candidate, Cluster(scores) )
+        } catch (ex: Exception) {
+            logger.error("An error occurred while performing linking.", ex)
+            throw IllegalStateException("Error occured while performing linking.", ex)
+        }
     }
 
     private fun <T> collectKeys(m: Map<EntityDataKey, Map<EntityDataKey, T>>): Set<EntityDataKey> {
@@ -312,10 +259,8 @@ class BackgroundLinkingService(
 
     private fun clearNeighborhoods(candidate: EntityDataKey) {
         logger.debug("Starting neighborhood cleanup of {}", candidate)
+        // TODO: gather Positive feedbacks
         val positiveFeedbacks = listOf<EntityKeyPair>()
-//                linkingFeedbackService.getLinkingFeedbackEntityKeyPairs(
-//                FeedbackType.Positive, candidate
-//        )
 
         val clearedCount = lqs.deleteNeighborhood(candidate, positiveFeedbacks)
         logger.debug("Cleared {} neighbors from neighborhood of {}", clearedCount, candidate)
@@ -334,19 +279,6 @@ class BackgroundLinkingService(
                 }
         lqs.updateLinkingInformation( linkingId, newMember, scoresAsEsidToEkids )
     }
-
-    /**
-     * @return Null if locked, expiration in millis otherwise.
-     */
-//    private fun refreshExpiration(candidate: EntityDataKey): Long? {
-//        return try {
-//            linkingLocks.lock(candidate)
-//
-//            tryLockCandidateRaw(candidate)
-//        } finally {
-//            linkingLocks.unlock(candidate)
-//        }
-//    }
 
     private fun isLinkingEnabled(): Boolean {
         if (!configuration.backgroundLinkingEnabled) {
