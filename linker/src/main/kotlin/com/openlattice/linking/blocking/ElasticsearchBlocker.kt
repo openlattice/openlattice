@@ -30,6 +30,7 @@ import com.openlattice.conductor.rpc.ConductorElasticsearchApi
 import com.openlattice.data.EntityDataKey
 import com.openlattice.edm.EntitySet
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.linking.BackgroundLinkingService.Companion.histogramify
 import com.openlattice.linking.DataLoader
 import com.openlattice.linking.EntityKeyPair
 import com.openlattice.linking.FeedbackType
@@ -81,14 +82,20 @@ class ElasticsearchBlocker(
         logger.info("Blocking for entity data key {}", entityDataKey)
 
         val sw = Stopwatch.createStarted()
-        
-        val existingEntitySetIds = entitySets.keys.toSet()
-        var blockedEntitySetSearchResults = elasticsearch.executeBlockingSearch(
-                personEntityType.id,
-                getFieldSearches(entity.orElseGet { dataLoader.getEntity(entityDataKey) }),
-                top,
-                false
-        ).filter { existingEntitySetIds.contains(it.key) }
+
+        val existingEntitySetIds = histogramify("eeks.toSet") {
+            entitySets.keys.toSet()
+        }
+        var blockedEntitySetSearchResults = histogramify("blockSearch") {
+            elasticsearch.executeBlockingSearch(
+                    personEntityType.id,
+                    getFieldSearches(entity.orElseGet { dataLoader.getEntity(entityDataKey) }),
+                    top,
+                    false
+            ).filter {
+                existingEntitySetIds.contains(it.key)
+            }
+        }
 
         logger.info(
                 "Entity data key {} blocked to {} elements in {} ms.", entityDataKey,
@@ -115,21 +122,23 @@ class ElasticsearchBlocker(
         sw.reset()
         sw.start()
 
-        val block = Block(
-                entityDataKey,
-                removeNegativeFeedbackFromSearchResult(entityDataKey, blockedEntitySetSearchResults)
-                        .filter { it.value.isNotEmpty() }
-                        .entries
-                        .parallelStream()
-                        .flatMap { entry ->
-                            dataLoader
-                                    .getEntityStream(entry.key, entry.value)
-                                    .stream()
-                                    .map { EntityDataKey(entry.key, it.first) to it.second }
-                        }
-                        .asSequence()
-                        .toMap()
-        )
+        val block = histogramify("finalBlock") {
+            Block(
+                    entityDataKey,
+                    removeNegativeFeedbackFromSearchResult(entityDataKey, blockedEntitySetSearchResults)
+                            .filter { it.value.isNotEmpty() }
+                            .entries
+                            .parallelStream()
+                            .flatMap { entry ->
+                                dataLoader
+                                        .getEntityStream(entry.key, entry.value)
+                                        .stream()
+                                        .map { EntityDataKey(entry.key, it.first) to it.second }
+                            }
+                            .asSequence()
+                            .toMap()
+            )
+        }
 
         logger.info(
                 "Loading {} entities took {} ms.", block.entities.values.map { it.size }.sum(),
@@ -146,15 +155,19 @@ class ElasticsearchBlocker(
     }
 
     private fun removeNegativeFeedbackFromSearchResult(
-            entity: EntityDataKey, searchResult: Map<UUID, Set<UUID>>
+            entity: EntityDataKey,
+            searchResult: Map<UUID, Set<UUID>>
     ): Map<UUID, Set<UUID>> {
         val negFeedbacks = linkingFeedbackService.getLinkingFeedbackEntityKeyPairs(FeedbackType.Negative, entity)
         return searchResult.mapValues {
-            it.value.filter {
+            it.value.filterTo(mutableSetOf()) {
                 // remove pairs which have feedbacks for not matching this entity
                 entityKeyId ->
-                !negFeedbacks.contains(EntityKeyPair(entity, EntityDataKey(it.key, entityKeyId)))
-            }.toSet()
+                !negFeedbacks.contains(
+                        EntityKeyPair(entity,
+                                EntityDataKey(it.key, entityKeyId))
+                )
+            }
         }
     }
 }

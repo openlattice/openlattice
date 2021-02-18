@@ -83,7 +83,7 @@ class BackgroundLinkingService(
         val fullLink: Histogram = metrics.histogram("0linking")
         private val requests: Meter = metrics.meter("links")
 
-        private fun <R> histogramify( histogramName: String, block: () -> R ): R {
+        fun <R> histogramify( histogramName: String, block: () -> R ): R {
             val hist = metrics.histogram(histogramName)
             val sw = Stopwatch.createStarted()
             val ret = block()
@@ -267,7 +267,6 @@ class BackgroundLinkingService(
         }
         fullLink.update(sw.elapsed(TimeUnit.MILLISECONDS))
     }
-
 
     private fun clearNeighborhoods(candidate: EntityDataKey) {
         logger.debug("Starting neighborhood cleanup of {}", candidate)
