@@ -46,7 +46,7 @@ class CollaborationService(
 
         val aclKey = reserveCollaborationIfNotExists(collaboration)
 
-        authorizationManager.setSecurableObjectType(aclKey, SecurableObjectType.EntitySet)
+        authorizationManager.setSecurableObjectType(aclKey, SecurableObjectType.Collaboration)
         authorizationManager.addPermission(aclKey, ownerPrincipal, EnumSet.allOf(Permission::class.java))
 
         collaborationDatabaseManager.createCollaborationDatabase(collaboration.id)

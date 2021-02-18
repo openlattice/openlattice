@@ -100,9 +100,11 @@ import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.organizations.tasks.OrganizationsInitializationDependencies;
 import com.openlattice.organizations.tasks.OrganizationsInitializationTask;
+import com.openlattice.postgres.external.DatabaseQueryManager;
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
 import com.openlattice.postgres.external.ExternalDatabasePermissioner;
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService;
+import com.openlattice.postgres.external.PostgresDatabaseQueryService;
 import com.openlattice.postgres.tasks.PostgresMetaDataPropertiesInitializationDependency;
 import com.openlattice.postgres.tasks.PostgresMetaDataPropertiesInitializationTask;
 import com.openlattice.scheduling.ScheduledTaskService;
@@ -342,14 +344,22 @@ public class ConductorServicesPod {
     }
 
     @Bean
-    public AssemblerConnectionManager assemblerConnectionManager() {
-        return new AssemblerConnectionManager( assemblerConfiguration,
+    public DatabaseQueryManager dbQueryManager() {
+        return new PostgresDatabaseQueryService(
+                assemblerConfiguration,
                 externalDbConnMan,
                 securePrincipalsManager(),
-                dbCredService(),
-                extDatabasePermsManager,
-                eventBus,
-                metricRegistry
+                dbCredService()
+        );
+    }
+
+    @Bean
+    public AssemblerConnectionManager assemblerConnectionManager() {
+        return new AssemblerConnectionManager(
+                externalDbConnMan,
+                securePrincipalsManager(),
+                dbQueryManager(),
+                extDatabasePermsManager
         );
     }
 
@@ -364,7 +374,7 @@ public class ConductorServicesPod {
                 hazelcastInstance,
                 hikariDataSource,
                 assembler(),
-                assemblerConnectionManager(),
+                dbQueryManager(),
                 externalDbConnMan,
                 authorizationManager(),
                 extDatabasePermsManager,

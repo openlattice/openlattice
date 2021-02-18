@@ -5,7 +5,6 @@ import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.openlattice.assembler.Assembler
 import com.openlattice.assembler.AssemblerConfiguration
-import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.DbCredentialService
@@ -16,6 +15,7 @@ import com.openlattice.organizations.OrganizationDatabase
 import com.openlattice.organizations.mapstores.TABLE_ID_INDEX
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.PostgresProjectionService
+import com.openlattice.postgres.external.DatabaseQueryManager
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService
 import com.openlattice.postgres.external.Schemas
@@ -27,7 +27,7 @@ class PostgresCollaborationDatabaseService(
         hazelcast: HazelcastInstance,
         val hds: HikariDataSource,
         val assembler: Assembler,
-        val acm: AssemblerConnectionManager,
+        val dbQueryManager: DatabaseQueryManager,
         val externalDbConnMan: ExternalDatabaseConnectionManager,
         val authorizations: AuthorizationManager,
         val externalDbPermissioner: ExternalDatabasePermissioningService,
@@ -52,13 +52,13 @@ class PostgresCollaborationDatabaseService(
 
     override fun createCollaborationDatabase(collaborationId: UUID) {
         val dbName = ExternalDatabaseConnectionManager.buildDefaultCollaborationDatabaseName(collaborationId)
-        val oid = acm.createAndInitializeCollaborationDatabase(collaborationId, dbName)
+        val oid = dbQueryManager.createAndInitializeCollaborationDatabase(collaborationId, dbName)
 
         organizationDatabases[collaborationId] = OrganizationDatabase(oid, dbName)
     }
 
     override fun deleteCollaborationDatabase(collaborationId: UUID) {
-        acm.dropDatabase(getDatabaseInfo(collaborationId).name)
+        dbQueryManager.dropDatabase(getDatabaseInfo(collaborationId).name)
     }
 
     override fun renameCollaborationDatabase(collaborationId: UUID, newName: String) {
@@ -89,8 +89,8 @@ class PostgresCollaborationDatabaseService(
         }
 
         /* Perform updates on the database */
-        acm.addMembersToCollaboration(collaborationId, orgMemberRoles)
-        acm.createAndInitializeSchemas(collaborationId, schemaNameToPostgresRoles)
+        dbQueryManager.addMembersToCollaboration(collaborationId, orgMemberRoles)
+        dbQueryManager.createAndInitializeSchemas(collaborationId, schemaNameToPostgresRoles)
         organizationIds.forEach { createOrganizationFdw(collaborationId, it) }
     }
 
@@ -126,12 +126,12 @@ class PostgresCollaborationDatabaseService(
             removeTableProjection(collaborationId, organizationId, tableId)
             projectedTables.delete(ProjectedTableKey(tableId, collaborationId))
         }
-        acm.removeMembersFromCollaboration(collaborationId, rolesToRemove)
-        acm.dropSchemas(collaborationId, schemaNames)
+        dbQueryManager.removeMembersFromCollaboration(collaborationId, rolesToRemove)
+        dbQueryManager.dropSchemas(collaborationId, schemaNames)
     }
 
     override fun handleOrganizationDatabaseRename(collaborationId: UUID, organizationId: UUID, oldName: String, newName: String) {
-        acm.renameSchema(collaborationId, oldName, newName)
+        dbQueryManager.renameSchema(collaborationId, oldName, newName)
         PostgresProjectionService.changeDbNameForFdw(
                 externalDbConnMan.connectToOrg(collaborationId),
                 getFdwName(organizationId),
@@ -143,7 +143,7 @@ class PostgresCollaborationDatabaseService(
         val schemaName = organizationDatabases.getValue(organizationId).name
         val usernames = dbCreds.getDbAccounts(members).values.map { it.username }
         collaborationIds.forEach {
-            acm.addMembersToCollabInSchema(it, schemaName, usernames)
+            dbQueryManager.addMembersToCollabInSchema(it, schemaName, usernames)
         }
     }
 
@@ -158,8 +158,8 @@ class PostgresCollaborationDatabaseService(
 
         val roleNamesToRemoveFromDatabase = membersToRemoveFromDatabase.mapNotNull { roleNamesByAclKey[it] }
 
-        acm.removeMembersFromSchemaInCollab(collaborationId, schemaName, roleNamesByAclKey.values)
-        acm.removeMembersFromDatabaseInCollab(collaborationId, roleNamesToRemoveFromDatabase)
+        dbQueryManager.removeMembersFromSchemaInCollab(collaborationId, schemaName, roleNamesByAclKey.values)
+        dbQueryManager.removeMembersFromDatabaseInCollab(collaborationId, roleNamesToRemoveFromDatabase)
     }
 
     override fun initializeTableProjection(collaborationId: UUID, organizationId: UUID, tableId: UUID) {

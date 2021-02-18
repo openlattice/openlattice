@@ -79,9 +79,11 @@ import com.openlattice.organizations.OrganizationMetadataEntitySetsService;
 import com.openlattice.organizations.pods.OrganizationExternalDatabaseConfigurationPod;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
+import com.openlattice.postgres.external.DatabaseQueryManager;
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
 import com.openlattice.postgres.external.ExternalDatabasePermissioner;
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService;
+import com.openlattice.postgres.external.PostgresDatabaseQueryService;
 import com.openlattice.scrunchie.search.ConductorElasticsearchImpl;
 import com.openlattice.transporter.pods.TransporterPod;
 import com.zaxxer.hikari.HikariDataSource;
@@ -199,15 +201,22 @@ public class IndexerServicesPod {
     }
 
     @Bean
-    public AssemblerConnectionManager assemblerConnectionManager() {
-        return new AssemblerConnectionManager(
+    public DatabaseQueryManager dbQueryManager() {
+        return new PostgresDatabaseQueryService(
                 assemblerConfiguration,
                 externalDbConnMan,
                 securePrincipalsManager(),
-                dbcs(),
-                externalDatabasePermissionsManager(),
-                eventBus,
-                metricRegistry
+                dbcs()
+        );
+    }
+
+    @Bean
+    public AssemblerConnectionManager assemblerConnectionManager() {
+        return new AssemblerConnectionManager(
+                externalDbConnMan,
+                securePrincipalsManager(),
+                dbQueryManager(),
+                externalDatabasePermissionsManager()
         );
     }
 
@@ -227,7 +236,7 @@ public class IndexerServicesPod {
                 hazelcastInstance,
                 hikariDataSource,
                 assembler(),
-                assemblerConnectionManager(),
+                dbQueryManager(),
                 externalDbConnMan,
                 authorizationManager(),
                 externalDatabasePermissionsManager(),

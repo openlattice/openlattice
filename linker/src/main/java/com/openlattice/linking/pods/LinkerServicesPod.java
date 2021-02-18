@@ -57,8 +57,10 @@ import com.openlattice.notifications.sms.PhoneNumberService;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.OrganizationMetadataEntitySetsService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
+import com.openlattice.postgres.external.DatabaseQueryManager;
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService;
+import com.openlattice.postgres.external.PostgresDatabaseQueryService;
 import com.openlattice.scrunchie.search.ConductorElasticsearchImpl;
 import com.zaxxer.hikari.HikariDataSource;
 import org.deeplearning4j.nn.modelimport.keras.KerasModelImport;
@@ -165,15 +167,22 @@ public class LinkerServicesPod {
     }
 
     @Bean
-    public AssemblerConnectionManager assemblerConnectionManager() {
-        return new AssemblerConnectionManager(
+    public DatabaseQueryManager dbQueryManager() {
+        return new PostgresDatabaseQueryService(
                 assemblerConfiguration,
                 externalDbConnMan,
                 principalService,
-                dbcs(),
-                extDatabasePermsManager,
-                eventBus,
-                metricRegistry
+                dbcs()
+        );
+    }
+
+    @Bean
+    public AssemblerConnectionManager assemblerConnectionManager() {
+        return new AssemblerConnectionManager(
+                externalDbConnMan,
+                principalService,
+                dbQueryManager(),
+                extDatabasePermsManager
         );
     }
 
@@ -188,7 +197,7 @@ public class LinkerServicesPod {
                 hazelcastInstance,
                 hikariDataSource,
                 assembler(),
-                assemblerConnectionManager(),
+                dbQueryManager(),
                 externalDbConnMan,
                 authorizationManager(),
                 extDatabasePermsManager,

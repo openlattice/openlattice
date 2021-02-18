@@ -100,9 +100,11 @@ import com.openlattice.organizations.pods.OrganizationExternalDatabaseConfigurat
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.PostgresTableManager;
+import com.openlattice.postgres.external.DatabaseQueryManager;
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
 import com.openlattice.postgres.external.ExternalDatabasePermissioner;
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService;
+import com.openlattice.postgres.external.PostgresDatabaseQueryService;
 import com.openlattice.requests.HazelcastRequestsManager;
 import com.openlattice.requests.RequestQueryService;
 import com.openlattice.search.PersistentSearchService;
@@ -373,12 +375,22 @@ public class DatastoreServicesPod {
     }
 
     @Bean
+    public DatabaseQueryManager dbQueryManager() {
+        return new PostgresDatabaseQueryService(
+                assemblerConfiguration,
+                externalDbConnMan,
+                securePrincipalsManager(),
+                dcs()
+        );
+    }
+
+    @Bean
     public CollaborationDatabaseManager collaborationDatabaseManager() {
         return new PostgresCollaborationDatabaseService(
                 hazelcastInstance,
                 hikariDataSource,
                 assembler(),
-                assemblerConnectionManager(),
+                dbQueryManager(),
                 externalDbConnMan,
                 authorizationManager(),
                 externalDatabasePermissionsManager(),
@@ -562,13 +574,10 @@ public class DatastoreServicesPod {
     @Bean
     public AssemblerConnectionManager assemblerConnectionManager() {
         return new AssemblerConnectionManager(
-                assemblerConfiguration,
                 externalDbConnMan,
                 securePrincipalsManager(),
-                dcs(),
-                externalDatabasePermissionsManager(),
-                eventBus,
-                metricRegistry );
+                dbQueryManager(),
+                externalDatabasePermissionsManager() );
     }
 
     @Bean

@@ -141,7 +141,7 @@ class CollaborationController : AuthorizingComponent, CollaborationsApi {
         val collaborationIds = getCollaborationsIncludingOrganization(organizationId).map { it.id }
 
         return collaborationService.getProjectedTableIdsInCollaborationsAndOrganizations(collaborationIds, setOf(organizationId)) {
-            it.value.organizationId
+            it.key.collaborationId
         }
 
     }
