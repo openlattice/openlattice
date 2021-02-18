@@ -134,11 +134,14 @@ class OrganizationMetadataEntitySetsService(
 
         val organizationMetadataEntitySetIds = organizationService.getOrganizationMetadataEntitySetIds(organizationId)
         val createdEntitySets = mutableSetOf<UUID>()
+        val orgAclKeyGrants = mutableListOf<AclKey>()
 
         val organizationMetadataEntitySetId = if (organizationMetadataEntitySetIds.organization == UNINITIALIZED_METADATA_ENTITY_SET_ID) {
             val organizationMetadataEntitySet = buildOrganizationMetadataEntitySet(organizationId)
             val id = entitySetsManager.createEntitySet(adminRole.principal, organizationMetadataEntitySet)
             createdEntitySets.add(id)
+            orgAclKeyGrants.add(AclKey(id))
+            omAuthorizedPropertyTypes.keys.forEach { orgAclKeyGrants.add(AclKey(id, it)) }
             id
         } else {
             organizationMetadataEntitySetIds.organization
@@ -148,6 +151,8 @@ class OrganizationMetadataEntitySetsService(
             val datasetsEntitySet = buildDatasetsEntitySet(organizationId)
             val id = entitySetsManager.createEntitySet(adminRole.principal, datasetsEntitySet)
             createdEntitySets.add(id)
+            orgAclKeyGrants.add(AclKey(id))
+            datasetsAuthorizedPropertyTypes.keys.forEach { orgAclKeyGrants.add(AclKey(id, it)) }
             id
         } else {
             organizationMetadataEntitySetIds.datasets
@@ -157,6 +162,8 @@ class OrganizationMetadataEntitySetsService(
             val columnsEntitySet = buildColumnEntitySet(organizationId)
             val id = entitySetsManager.createEntitySet(adminRole.principal, columnsEntitySet)
             createdEntitySets.add(id)
+            orgAclKeyGrants.add(AclKey(id))
+            columnAuthorizedPropertyTypes.keys.forEach { orgAclKeyGrants.add(AclKey(id, it)) }
             id
         } else {
             organizationMetadataEntitySetIds.columns
@@ -179,7 +186,7 @@ class OrganizationMetadataEntitySetsService(
             val orgPrincipal = organizationService.getOrganizationPrincipal(organizationId)!!.principal
             val orgPrincipalAce = Ace(orgPrincipal, EnumSet.of(Permission.READ))
 
-            authorizationManager.addPermissions(createdEntitySets.map { Acl(AclKey(it), setOf(orgPrincipalAce)) })
+            authorizationManager.addPermissions(orgAclKeyGrants.map { Acl(it, setOf(orgPrincipalAce)) })
         }
     }
 
