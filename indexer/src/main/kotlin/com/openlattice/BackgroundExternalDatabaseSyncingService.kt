@@ -122,7 +122,7 @@ class BackgroundExternalDatabaseSyncingService(
         }
 
         val adminRoleAclKey = organizations.getValue(orgId).adminRoleAclKey
-        val adminRolePrincipal = principalsMapManager.getSecurablePrincipal(adminRoleAclKey).principal
+        val adminRolePrincipal = principalsMapManager.getSecurablePrincipal(adminRoleAclKey)!!.principal
 
         val tableIds = mutableSetOf<UUID>()
         val columnIds = mutableSetOf<UUID>()
