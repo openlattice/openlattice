@@ -23,7 +23,6 @@ import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.organization.OrganizationExternalDatabaseTable
 import com.openlattice.organization.OrganizationExternalDatabaseTableColumnsPair
 import com.openlattice.organizations.mapstores.*
-import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.*
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresColumn.*
@@ -45,7 +44,6 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
-import java.time.OffsetDateTime
 import java.util.*
 import java.util.concurrent.TimeUnit
 
@@ -53,7 +51,7 @@ import java.util.concurrent.TimeUnit
 class ExternalDatabaseManagementService(
         hazelcastInstance: HazelcastInstance,
         private val externalDbManager: ExternalDatabaseConnectionManager,
-        private val securePrincipalsManager: SecurePrincipalsManager,
+        private val principalsMapManager: PrincipalsMapManager,
         private val aclKeyReservations: HazelcastAclKeyReservationService,
         private val authorizationManager: AuthorizationManager,
         private val organizationExternalDatabaseConfiguration: OrganizationExternalDatabaseConfiguration,
@@ -436,11 +434,6 @@ class ExternalDatabaseManagementService(
         updateHBARecords(dbName)
     }
 
-    fun getOrganizationOwners(orgId: UUID): Set<SecurablePrincipal> {
-        val principals = securePrincipalsManager.getAuthorizedPrincipalsOnSecurableObject(AclKey(orgId), EnumSet.of(Permission.OWNER))
-        return securePrincipalsManager.getSecurablePrincipals(principals).toSet()
-    }
-
     /**
      * Revokes all privileges for a user on an organization's database
      * when that user is removed from an organization.
@@ -455,7 +448,7 @@ class ExternalDatabaseManagementService(
     }
 
     fun syncPermissions(
-            orgOwnerAclKeys: List<AclKey>,
+            adminRoleAclKey: AclKey,
             table: OrganizationExternalDatabaseTable,
             maybeColumnId: UUID? = null,
             maybeColumnName: String? = null
@@ -484,18 +477,22 @@ class ExternalDatabaseManagementService(
                     }
         }
 
-        //give organization owners all privileges
-        orgOwnerAclKeys.forEach { orgOwnerAclKey ->
-            privilegesByUser.getOrPut(orgOwnerAclKey) { mutableSetOf() }.addAll(OWNER_PRIVILEGES)
-        }
 
-        return privilegesByUser.map { (securablePrincipalAclKey, privileges) ->
-            val principal = securePrincipalsManager.getSecurablePrincipal(securablePrincipalAclKey).principal
+        // Give organization admin role all privileges
+        privilegesByUser.getOrPut(adminRoleAclKey) { mutableSetOf() }.addAll(OWNER_PRIVILEGES)
+
+
+        // Map privilegesByUser to Acl grants, perform grants, return Acl list
+        val aclKeyToPrincipal = principalsMapManager.getSecurablePrincipals(privilegesByUser.keys).mapValues { it.value.principal }
+
+        val acls = privilegesByUser.mapNotNull { (principalAclKey, privileges) ->
+            val principal = aclKeyToPrincipal[principalAclKey] ?: return@mapNotNull null
             val permissions = getPermissionsFromPrivileges(privileges)
 
-            authorizationManager.addPermission(aclKey, principal, permissions, objectType, OffsetDateTime.MAX)
-            return@map Acl(aclKey, setOf(Ace(principal, permissions, Optional.empty())))
+            Acl(aclKey, setOf(Ace(principal, permissions, Optional.empty())))
         }
+        authorizationManager.addPermissions(acls)
+        return acls
     }
 
     /*PRIVATE FUNCTIONS*/
@@ -562,30 +559,10 @@ class ExternalDatabaseManagementService(
         return "$grantType $privileges (${quote(columnName)}) ON $tableInSchema $toOrFrom $dbUser"
     }
 
-    private fun getDbUsers(principals: Collection<Principal>): Map<Principal, String> {
-
-        val securePrincipals = securePrincipalsManager.getSecurablePrincipals(principals).associateBy { it.aclKey }
-
-        return dbCredentialService.getDbAccounts(securePrincipals.values.map { it.aclKey }.toSet()).entries.associate {
-            securePrincipals.getValue(it.key).principal to it.value.username
-        }
-    }
-
     private fun getDBUser(principalId: String): String {
-        val securePrincipal = securePrincipalsManager.getSecurablePrincipal(principalId)
+        val securePrincipal = principalsMapManager.getSecurablePrincipal(principalId)
         checkState(securePrincipal.principalType == PrincipalType.USER, "Principal must be of type USER")
         return dbCredentialService.getDbUsername(securePrincipal)
-    }
-
-    private fun ensurePermissionsAreValid(acls: List<Acl>) {
-        acls.forEach {
-            it.aces.map { ace -> ace.permissions }.forEach { permissions ->
-                if (!permissions.contains(Permission.OWNER) && !permissions.contains(Permission.READ) && !permissions.contains(Permission.WRITE)) {
-                    throw IllegalStateException("Permissions $permissions (on AclKey ${it.aclKey}) are not valid -- must contain at least one of OWNER, READ, or WRITE.")
-                }
-            }
-        }
-
     }
 
     private fun getPrivilegesFromPermissions(permissions: Set<Permission>): List<String> {
