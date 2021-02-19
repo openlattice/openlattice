@@ -69,7 +69,7 @@ class PostgresLinkingFeedbackService(
     }
 
     @Suppress("UNCHECKED_CAST")
-    fun buildPredicatesForQueries(
+    private fun buildPredicatesForQueries(
             feedbackType: FeedbackType, entity: EntityDataKey
     ): Predicate<EntityKeyPair, Boolean> {
         val entityPredicate = Predicates.or<EntityKeyPair, Boolean>(

@@ -28,7 +28,6 @@ import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicates
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
 import com.openlattice.data.EntityDataKey
-import com.openlattice.edm.EntitySet
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.linking.DataLoader
 import com.openlattice.linking.EntityKeyPair
@@ -65,12 +64,9 @@ class ElasticsearchBlocker(
             Predicates.equal(EntityTypeMapstore.FULLQUALIFIED_NAME_PREDICATE, PersonProperties.PERSON_TYPE_FQN.fullQualifiedNameAsString)
     ).first()
 
-    @Deprecated("Unused")
-    private val entitySetsCache = Suppliers
-            .memoizeWithExpiration({
-                entitySets.values.filter { it.entityTypeId == personEntityType.id }
-                        .map(EntitySet::getId)
-            }, 1000, TimeUnit.MILLISECONDS)
+    private val entitySetKeysCache = Suppliers.memoizeWithExpiration({
+        entitySets.keys.toSet()
+    }, 1, TimeUnit.MINUTES)
 
     @Timed
     override fun block(
@@ -81,14 +77,15 @@ class ElasticsearchBlocker(
         logger.info("Blocking for entity data key {}", entityDataKey)
 
         val sw = Stopwatch.createStarted()
-        
-        val existingEntitySetIds = entitySets.keys.toSet()
+
         var blockedEntitySetSearchResults = elasticsearch.executeBlockingSearch(
-                personEntityType.id,
+                personEntityType.id ,
                 getFieldSearches(entity.orElseGet { dataLoader.getEntity(entityDataKey) }),
                 top,
                 false
-        ).filter { existingEntitySetIds.contains(it.key) }
+        ).filter {
+            entitySetKeysCache.get().contains(it.key)
+        }
 
         logger.info(
                 "Entity data key {} blocked to {} elements in {} ms.", entityDataKey,
@@ -132,31 +129,39 @@ class ElasticsearchBlocker(
         )
 
         logger.info(
-                "Loading {} entities took {} ms.", block.entities.values.map { it.size }.sum(),
+                "Loading {} entities took {} ms.", block.size,
                 sw.elapsed(TimeUnit.MILLISECONDS)
         )
-
-        return block 
-
+        return block
     }
 
     /**
      * Handles rendering an object into field searches for blocking.
      */
     private fun getFieldSearches(entity: Map<UUID, Set<Any>>): Map<UUID, DelegatedStringSet> {
-        return entity.map { it.key to DelegatedStringSet.wrap(it.value.map { it.toString() }.toSet()) }.toMap()
+        return entity.entries.associate { (key, contents) ->
+            key to DelegatedStringSet.wrap(
+                    contents.mapTo(mutableSetOf()) {
+                        it.toString()
+                    }
+            )
+        }
     }
 
     private fun removeNegativeFeedbackFromSearchResult(
-            entity: EntityDataKey, searchResult: Map<UUID, Set<UUID>>
+            entity: EntityDataKey,
+            searchResult: Map<UUID, Set<UUID>>
     ): Map<UUID, Set<UUID>> {
         val negFeedbacks = linkingFeedbackService.getLinkingFeedbackEntityKeyPairs(FeedbackType.Negative, entity)
         return searchResult.mapValues {
-            it.value.filter {
+            it.value.filterTo(mutableSetOf()) {
                 // remove pairs which have feedbacks for not matching this entity
                 entityKeyId ->
-                !negFeedbacks.contains(EntityKeyPair(entity, EntityDataKey(it.key, entityKeyId)))
-            }.toSet()
+                !negFeedbacks.contains(
+                        EntityKeyPair(entity,
+                                EntityDataKey(it.key, entityKeyId))
+                )
+            }
         }
     }
 }
