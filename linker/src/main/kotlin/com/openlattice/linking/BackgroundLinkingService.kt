@@ -134,12 +134,7 @@ class BackgroundLinkingService(
                     )
             )
 
-            listOf(
-                    UUID.fromString("2deb5292-11b5-4874-b4b1-2a5a57804e68"),
-                    UUID.fromString("e9dc56bf-7cf9-4e25-8969-1ac4c1b1e1ec"),
-                    UUID.fromString("9d9a6c3e-fd82-4599-9dcc-a2602e2bd54d"),
-                    UUID.fromString("4e369747-66aa-432f-8aa3-2591cee0fa8d")
-            ).filter {
+            (priorityEntitySets + filteredLinkableEntitySetIds).filter {
                 val es = entitySets[it]
                 if ( es == null ){
                     logger.info("Entityset with id {} doesnt exist", it)
