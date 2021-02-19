@@ -8,15 +8,19 @@ import com.openlattice.edm.EntitySet
 import com.openlattice.edm.processors.GetPartitionsFromEntitySetEntryProcessor
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organizations.processors.OrganizationReadEntryProcessor
-import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresColumn.COUNT
+import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.ID
+import com.openlattice.postgres.PostgresColumn.PARTITIONS
 import com.openlattice.postgres.PostgresTable.ENTITY_SETS
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.StatementHolderSupplier
 import com.openlattice.rhizome.DelegatedIntSet
 import com.zaxxer.hikari.HikariDataSource
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import java.util.*
+import java.util.UUID
 
 
 /**
@@ -27,19 +31,23 @@ import java.util.*
 class PartitionManager @JvmOverloads constructor(
         hazelcastInstance: HazelcastInstance,
         private val hds: HikariDataSource,
-        val numPartitions: Int = 257
+        private val numPartitions: Int = 257
 ) {
     private val DEFAULT_ORG_PARTITION_COUNT = 2
     private val partitionList = mutableListOf<Int>()
     private val entitySets = HazelcastMap.ENTITY_SETS.getMap( hazelcastInstance )
     private val organizations = HazelcastMap.ORGANIZATIONS.getMap( hazelcastInstance )
 
+    companion object {
+        private val logger = LoggerFactory.getLogger(PartitionManager::class.java)
+    }
+
     init {
         setPartitions(numPartitions)
     }
 
     @Synchronized
-    fun setPartitions(partitions: Int) {
+    final fun setPartitions(partitions: Int) {
         //TODO: Support decreasing number of partitions, but this is unlikely to be needed, since decreasing
         //number of citus partitions will automatically have the desired effect.
         partitionList.addAll(partitionList.size until partitions)
@@ -54,7 +62,11 @@ class PartitionManager @JvmOverloads constructor(
     }
 
     fun getEntitySetPartitions(entitySetId: UUID): Set<Int> {
-        return entitySets.executeOnKey(entitySetId, GetPartitionsFromEntitySetEntryProcessor()) as DelegatedIntSet
+        val partitions = entitySets.executeOnKey(entitySetId, GetPartitionsFromEntitySetEntryProcessor())
+        if (partitions.isEmpty()) {
+            logger.error("ERROR: attempting to load partitions for entity set {} but its partition list is empty", entitySetId)
+        }
+        return partitions as DelegatedIntSet
     }
 
     fun getPartitionsByEntitySetId(entitySetIds: Set<UUID>): Map<UUID, Set<Int>> {

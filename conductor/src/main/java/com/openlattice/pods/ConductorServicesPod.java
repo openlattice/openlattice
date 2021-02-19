@@ -185,9 +185,6 @@ public class ConductorServicesPod {
     private ExternalDatabaseConnectionManager externalDbConnMan;
 
     @Inject
-    private ExternalDatabasePermissioningService extDatabasePermsManager;
-
-    @Inject
     private TransporterService transporterService;
 
     @Bean
@@ -353,15 +350,17 @@ public class ConductorServicesPod {
 
     @Bean
     public AssemblerConnectionManager assemblerConnectionManager() {
-        return new AssemblerConnectionManager( assemblerConfiguration,
+        return new AssemblerConnectionManager(
+                assemblerConfiguration,
                 externalDbConnMan,
                 hikariDataSource,
                 securePrincipalsManager(),
                 organizationsManager(),
                 dbCredService(),
-                extDatabasePermsManager,
+                externalDatabasePermissionsManager(),
                 eventBus,
-                metricRegistry );
+                metricRegistry
+        );
     }
 
     @Bean

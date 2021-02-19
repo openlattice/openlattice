@@ -27,7 +27,11 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.nio.ByteBuffer
-import java.util.*
+import java.util.EnumSet
+import java.util.HashMap
+import java.util.LinkedHashSet
+import java.util.Optional
+import java.util.UUID
 import java.util.stream.Stream
 import kotlin.streams.asSequence
 
@@ -40,7 +44,7 @@ class PostgresEntityDatastore(
         private val dataQueryService: PostgresEntityDataQueryService,
         private val edmManager: EdmManager,
         private val entitySetManager: EntitySetManager,
-        private val metricRegistry: MetricRegistry,
+        metricRegistry: MetricRegistry,
         private val eventBus: EventBus,
         private val feedbackQueryService: PostgresLinkingFeedbackService,
         private val linkingQueryService: LinkingQueryService

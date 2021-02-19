@@ -11,14 +11,14 @@ import com.zaxxer.hikari.HikariDataSource
 import org.springframework.stereotype.Component
 import java.sql.PreparedStatement
 import java.sql.ResultSet
-import java.util.*
+import java.util.UUID
 
 /**
  * @author Drew Bailey (drew@openlattice.com)
  */
 @Component
 class ExternalPermissionRolesMapstore(
-        val hds: HikariDataSource
+        hds: HikariDataSource
 ) : AbstractBasePostgresMapstore<AccessTarget, UUID>(
         HazelcastMap.EXTERNAL_PERMISSION_ROLES, PostgresTable.EXTERNAL_PERMISSION_ROLES, hds
 ) {

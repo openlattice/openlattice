@@ -65,7 +65,7 @@ class HazelcastQueuePod {
     @Bean
     fun linkingQueueConfigurer(): QueueConfigurer {
         return QueueConfigurer(HazelcastQueue.LINKING_CANDIDATES.name) { config ->
-            config.setMaxSize(1_000).backupCount = 1
+            config.setMaxSize(10_000).backupCount = 1
         }
     }
 
