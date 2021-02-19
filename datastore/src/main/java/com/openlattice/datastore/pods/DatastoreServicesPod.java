@@ -671,7 +671,7 @@ public class DatastoreServicesPod {
         return new ExternalDatabaseManagementService(
                 hazelcastInstance,
                 externalDbConnMan,
-                securePrincipalsManager(),
+                principalsMapManager(),
                 aclKeyReservationService(),
                 authorizationManager(),
                 organizationExternalDatabaseConfiguration,
