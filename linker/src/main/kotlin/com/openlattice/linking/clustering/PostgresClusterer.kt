@@ -24,8 +24,8 @@ class PostgresClusterer(
             blockKey: EntityDataKey,
             identifiedCluster: KeyedCluster
     ): ScoredCluster {
-        val block = Block(blockKey, loader.getEntities(
-                BackgroundLinkingService.collectKeys(identifiedCluster.cluster) + blockKey)
+        val block = Block(blockKey, loader.getEntities(BackgroundLinkingService.collectKeys(identifiedCluster.cluster) + blockKey)
+
         )
         //At some point, we may want to skip recomputing matches for existing cluster elements as an optimization.
         //Since we're freshly loading entities it's not too bad to recompute everything.

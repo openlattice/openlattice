@@ -29,7 +29,6 @@ import com.hazelcast.query.Predicates
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
 import com.openlattice.data.EntityDataKey
 import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.linking.BackgroundLinkingService.Companion.histogramify
 import com.openlattice.linking.DataLoader
 import com.openlattice.linking.EntityKeyPair
 import com.openlattice.linking.FeedbackType
@@ -79,15 +78,13 @@ class ElasticsearchBlocker(
 
         val sw = Stopwatch.createStarted()
 
-        var blockedEntitySetSearchResults = histogramify("blockSearch") {
-            elasticsearch.executeBlockingSearch(
-                    personEntityType.id ,
-                    getFieldSearches(entity.orElseGet { dataLoader.getEntity(entityDataKey) }),
-                    top,
-                    false
-            ).filter {
-                entitySetKeysCache.get().contains(it.key)
-            }
+        var blockedEntitySetSearchResults = elasticsearch.executeBlockingSearch(
+                personEntityType.id ,
+                getFieldSearches(entity.orElseGet { dataLoader.getEntity(entityDataKey) }),
+                top,
+                false
+        ).filter {
+            entitySetKeysCache.get().contains(it.key)
         }
 
         logger.info(
@@ -132,7 +129,7 @@ class ElasticsearchBlocker(
         )
 
         logger.info(
-                "Loading {} entities took {} ms.", block.entities.values.map { it.size }.sum(),
+                "Loading {} entities took {} ms.", block.size,
                 sw.elapsed(TimeUnit.MILLISECONDS)
         )
         return block

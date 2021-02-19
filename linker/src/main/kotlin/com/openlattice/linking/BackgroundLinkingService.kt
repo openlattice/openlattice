@@ -22,7 +22,6 @@
 package com.openlattice.linking
 
 import com.codahale.metrics.Histogram
-import com.codahale.metrics.Meter
 import com.codahale.metrics.MetricRegistry
 import com.codahale.metrics.Snapshot
 import com.google.common.base.Stopwatch
@@ -80,8 +79,7 @@ class BackgroundLinkingService(
         }
 
         private val metrics: MetricRegistry = MetricRegistry()
-        val fullLink: Histogram = metrics.histogram("0linking")
-        private val requests: Meter = metrics.meter("links")
+        val fullLink: Histogram = metrics.histogram("linking")
 
         fun <R> histogramify( histogramName: String, block: () -> R ): R {
             val hist = metrics.histogram(histogramName)
@@ -118,10 +116,8 @@ class BackgroundLinkingService(
     @Suppress("UNUSED")
     @Scheduled(fixedRate = LINKING_RATE)
     fun enqueue() {
-        val linkedInSession = requests.count
-        val currentHourlyRate = requests.fifteenMinuteRate * 60 * 60
-        val timeLeft = candidates.size / currentHourlyRate
-        logger.info("$linkedInSession entities linked since last startup. That's a rate of $currentHourlyRate per hour. The current queue will be run through in $timeLeft hours")
+        val linkedInSession = fullLink.snapshot.size()
+        logger.info("$linkedInSession entities linked since last startup.")
 
         metrics.histograms.forEach { (name, histogram) ->
             printHistogram(name, histogram)
@@ -190,7 +186,6 @@ class BackgroundLinkingService(
                     try {
                         logger.info("Linking {}", candidate)
                         link(candidate)
-                        requests.mark()
                         logger.info("Finished linking {}", candidate)
                     } catch (ex: Exception) {
                         logger.error("Unable to link {}.", candidate, ex)
@@ -220,9 +215,7 @@ class BackgroundLinkingService(
         //TODO: if we have positive feedbacks on entity, we use its linking id and match them together
         // Run standard blocking + clustering
         val sw = Stopwatch.createStarted()
-        val initialBlock = histogramify("initialBlocking") {
-             blocker.block(candidate)
-        }
+        val initialBlock = blocker.block(candidate)
 
         logger.info(
                 "Blocking ({}, {}) took {} ms.",
@@ -245,12 +238,10 @@ class BackgroundLinkingService(
         //Decision that needs to be made is whether to start new cluster or merge into existing cluster.
         try {
             val (linkingId, scores) = lqs.lockClustersDoWorkAndCommit( candidate, dataKeys) { clusters ->
-                val maybeBestCluster = histogramify("creatingClusters") {
-                    clusters.asSequence()
+                val maybeBestCluster = clusters.asSequence()
                             .map { cluster -> clusterer.cluster(candidate, KeyedCluster.fromEntry(cluster)) }
                             .filter { it.score > MINIMUM_SCORE }
                             .maxBy { it.score }
-                }
 
                 if ( maybeBestCluster != null ) {
                     return@lockClustersDoWorkAndCommit Triple(maybeBestCluster.clusterId, maybeBestCluster.cluster, false)
