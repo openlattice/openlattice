@@ -448,51 +448,51 @@ class ExternalDatabaseManagementService(
     }
 
     fun syncPermissions(
-            adminRoleAclKey: AclKey,
+            adminRolePrincipal: Principal,
             table: OrganizationExternalDatabaseTable,
+            columns: Set<OrganizationExternalDatabaseColumn>,
             maybeColumnId: UUID? = null,
             maybeColumnName: String? = null
     ): List<Acl> {
-        val privilegesByUser = mutableMapOf<AclKey, MutableSet<PostgresPrivileges>>()
+        val columnNameToAclKey = columns.associate { it.name to it.getAclKey() }
+        val aclKeysToGrant = mutableSetOf(AclKey(table.id)) + columnNameToAclKey.values
 
-        val aclKey = if (maybeColumnId == null) AclKey(table.id) else AclKey(table.id, maybeColumnId)
-        val (sql, objectType) = getPrivilegesFields(table.schema, table.name, maybeColumnName)
-
-        //if column objects, sync postgres privileges
-        if (maybeColumnId != null) {
-
-            val usernamesToPrivileges = BasePostgresIterable(
-                    StatementHolderSupplier(externalDbManager.connectToOrg(table.organizationId), sql)
-            ) { rs ->
-                user(rs) to PostgresPrivileges.valueOf(privilegeType(rs).toUpperCase())
-            }.toMap()
-
-            val usernamesToAclKeys = dbCredentialService.getSecurablePrincipalAclKeysFromUsernames(usernamesToPrivileges.keys)
-
-            usernamesToPrivileges
-                    .forEach { (username, privileges) ->
-                        usernamesToAclKeys[username]?.let { aclKey ->
-                            privilegesByUser.getOrPut(aclKey) { mutableSetOf() }.add(privileges)
-                        }
-                    }
+        // Load any existing privileges on columns
+        val columnPrivilegesSql = getPrivilegesOnColumnsSql(table.schema, table.name, columns.map { it.name })
+        val orgHDS = externalDbManager.connectToOrg(table.organizationId)
+        val columnToUserToPrivileges = BasePostgresIterable(StatementHolderSupplier(orgHDS, columnPrivilegesSql)) { rs ->
+            columnName(rs) to (user(rs) to PostgresPrivileges.valueOf(privilegeType(rs).toUpperCase()))
         }
+                .groupBy { columnNameToAclKey.getValue(it.first) }
+                .mapValues {
+                    it.value.map { pair -> pair.second }
+                            .groupBy { (username, _) -> username }
+                            .mapValues { entry -> entry.value.map { pair -> pair.second }.toSet() }
+                }
 
 
-        // Give organization admin role all privileges
-        privilegesByUser.getOrPut(adminRoleAclKey) { mutableSetOf() }.addAll(OWNER_PRIVILEGES)
+        // Map username -> Principal
+        val usernamesToAclKeys = dbCredentialService.getSecurablePrincipalAclKeysFromUsernames(columnToUserToPrivileges.flatMap {
+            it.value.keys
+        })
+        val aclKeyToPrincipal = principalsMapManager.getSecurablePrincipals(usernamesToAclKeys.values.toSet())
+        val usernameToPrincipal = usernamesToAclKeys.mapValues { aclKeyToPrincipal[it.value]?.principal }
 
 
-        // Map privilegesByUser to Acl grants, perform grants, return Acl list
-        val aclKeyToPrincipal = principalsMapManager.getSecurablePrincipals(privilegesByUser.keys).mapValues { it.value.principal }
+        // Compute set of Acl grants based on existing postgres grants + ownership for admin role, and perform grants
+        val adminRoleAce = Ace(adminRolePrincipal, EnumSet.allOf(Permission::class.java))
+        val aclGrants = mutableListOf<Acl>()
+        aclKeysToGrant.forEach { objAclKey ->
+            val aces = (columnToUserToPrivileges[objAclKey] ?: mutableMapOf()).mapNotNull { (username, privileges) ->
+                val principal = usernameToPrincipal[username] ?: return@mapNotNull null
+                Ace(principal, getPermissionsFromPrivileges(privileges))
+            } + adminRoleAce
 
-        val acls = privilegesByUser.mapNotNull { (principalAclKey, privileges) ->
-            val principal = aclKeyToPrincipal[principalAclKey] ?: return@mapNotNull null
-            val permissions = getPermissionsFromPrivileges(privileges)
-
-            Acl(aclKey, setOf(Ace(principal, permissions, Optional.empty())))
+            aclGrants.add(Acl(objAclKey, aces))
         }
-        authorizationManager.addPermissions(acls)
-        return acls
+        authorizationManager.addPermissions(aclGrants)
+
+        return aclGrants
     }
 
     /*PRIVATE FUNCTIONS*/
@@ -596,19 +596,6 @@ class ExternalDatabaseManagementService(
             permissions.add(Permission.WRITE)
 
         return permissions
-    }
-
-    private fun getPrivilegesFields(tableSchema: String, tableName: String, maybeColumnName: String?): Pair<String, SecurableObjectType> {
-        var columnCondition = ""
-        var grantsTableName = "information_schema.role_table_grants"
-        var objectType = SecurableObjectType.OrganizationExternalDatabaseTable
-        if (maybeColumnName != null) {
-            columnCondition = "AND column_name = '$maybeColumnName'"
-            grantsTableName = "information_schema.role_column_grants"
-            objectType = SecurableObjectType.OrganizationExternalDatabaseColumn
-        }
-        val sql = getCurrentUsersPrivilegesSql(tableSchema, tableName, grantsTableName, columnCondition)
-        return Pair(sql, objectType)
     }
 
     private fun updateHBARecords(dbName: String) {
@@ -739,12 +726,16 @@ class ExternalDatabaseManagementService(
         """.trimIndent()
     }
 
-    private fun getCurrentUsersPrivilegesSql(tableSchema: String, tableName: String, grantsTableName: String, columnCondition: String): String {
-        return "SELECT grantee AS user, privilege_type " +
-                "FROM $grantsTableName " +
-                "WHERE table_name = '$tableName' " +
-                "AND table_schema = '$tableSchema' " +
-                columnCondition
+    private fun getPrivilegesOnColumnsSql(tableSchema: String, tableName: String, columnNames: List<String>): String {
+        val colNamesSql = columnNames.joinToString { quote(it) }
+
+        return """
+            SELECT grantee AS user, privilege_type, column_name
+            FROM information_schema.role_column_grants
+            WHERE table_name = '$tableName' 
+            AND table_schema = '$tableSchema'
+            AND column_name = ANY('{$colNamesSql}')
+        """.trimIndent()
     }
 
     private fun getReloadConfigSql(): String {

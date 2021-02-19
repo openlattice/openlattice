@@ -203,7 +203,8 @@ public class IndexerPostConfigurationServicesPod {
                 ares,
                 indexerConfiguration,
                 organizationMetadataEntitySetsService,
-                reservationService );
+                reservationService,
+                principalsMapManager );
     }
 
     @Bean

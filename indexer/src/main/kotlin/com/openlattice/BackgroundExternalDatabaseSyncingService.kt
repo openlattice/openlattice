@@ -10,9 +10,7 @@ import com.openlattice.auditing.AuditEventType
 import com.openlattice.auditing.AuditRecordEntitySetsManager
 import com.openlattice.auditing.AuditableEvent
 import com.openlattice.auditing.AuditingManager
-import com.openlattice.authorization.Acl
-import com.openlattice.authorization.AclKey
-import com.openlattice.authorization.HazelcastAclKeyReservationService
+import com.openlattice.authorization.*
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastMap.Companion.ORGANIZATION_DATABASES
 import com.openlattice.hazelcast.HazelcastMap.Companion.ORGANIZATION_EXTERNAL_DATABASE_COLUMN
@@ -43,7 +41,8 @@ class BackgroundExternalDatabaseSyncingService(
         private val ares: AuditRecordEntitySetsManager,
         private val indexerConfiguration: IndexerConfiguration,
         private val organizationMetadataEntitySetsService: OrganizationMetadataEntitySetsService,
-        private val reservationService: HazelcastAclKeyReservationService
+        private val reservationService: HazelcastAclKeyReservationService,
+        private val principalsMapManager: PrincipalsMapManager
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(BackgroundExternalDatabaseSyncingService::class.java)
@@ -123,26 +122,46 @@ class BackgroundExternalDatabaseSyncingService(
         }
 
         val adminRoleAclKey = organizations.getValue(orgId).adminRoleAclKey
+        val adminRolePrincipal = principalsMapManager.getSecurablePrincipal(adminRoleAclKey).principal
 
-        val tablesToCols = edms.getColumnNamesByTableName(dbName).associate { (oid, tableName, schemaName, _) ->
+        val tableIds = mutableSetOf<UUID>()
+        val columnIds = mutableSetOf<UUID>()
 
-            val table = getOrCreateTable(orgId, oid, tableName, schemaName, adminRoleAclKey)
-            val columns = syncTableColumns(table, adminRoleAclKey)
+        edms.getColumnNamesByTableName(dbName).forEach { (oid, tableName, schemaName, _) ->
+            val table = getOrCreateTable(orgId, oid, tableName, schemaName)
+            val columns = syncTableColumns(table)
 
-            extDbPermsService.initializeExternalTablePermissions(
-                    orgId,
-                    table,
-                    columns
-            )
-            table.id to columns
+            initializeTablePermissions(orgId, table, columns, adminRolePrincipal)
+
+            tableIds.add(table.id)
+            columnIds.addAll(columns.map { it.id })
         }
 
-        removeNonexistentTablesAndColumnsForOrg(orgId, tablesToCols.keys, tablesToCols.flatMap {
-            it.value.map { col -> col.id }
-        }.toSet())
+        removeNonexistentTablesAndColumnsForOrg(orgId, tableIds, columnIds)
     }
 
-    private fun getOrCreateTable(orgId: UUID, oid: Int, tableName: String, schemaName: String, adminRoleAclKey: AclKey): OrganizationExternalDatabaseTable {
+    private fun initializeTablePermissions(
+            organizationId: UUID,
+            table: OrganizationExternalDatabaseTable,
+            columns: Set<OrganizationExternalDatabaseColumn>,
+            adminRolePrincipal: Principal
+    ) {
+        // initialize database permissions
+        extDbPermsService.initializeExternalTablePermissions(
+                organizationId,
+                table,
+                columns
+        )
+        edms.executePrivilegesUpdate(Action.ADD, columns.map { Acl(it.getAclKey(), listOf(Ace(adminRolePrincipal, EnumSet.allOf(Permission::class.java)))) })
+
+        // initialize OL permissions
+        val acls = edms.syncPermissions(adminRolePrincipal, table, columns)
+
+        // audit
+        recordAuditableEvents(acls, AuditEventType.ADD_PERMISSION)
+    }
+
+    private fun getOrCreateTable(orgId: UUID, oid: Int, tableName: String, schemaName: String): OrganizationExternalDatabaseTable {
         val table = OrganizationExternalDatabaseTable(
                 Optional.empty(),
                 tableName,
@@ -158,32 +177,26 @@ class BackgroundExternalDatabaseSyncingService(
             return organizationExternalDatabaseTables.getValue(reservationService.getId(uniqueName))
         }
 
-        createSecurableTableObject(adminRoleAclKey, orgId, table)
+        createSecurableTableObject(orgId, table)
 
         return table
     }
 
     private fun createSecurableTableObject(
-            adminRoleAclKey: AclKey,
             orgId: UUID,
             table: OrganizationExternalDatabaseTable
     ): UUID {
         val newTableId = edms.createOrganizationExternalDatabaseTable(orgId, table)
 
-        //add table-level permissions
-        val acls = edms.syncPermissions(adminRoleAclKey, table)
-
         organizationMetadataEntitySetsService.addDataset(orgId, table)
 
         //create audit entity set and audit permissions
         ares.createAuditEntitySetForExternalDBTable(table)
-        val events = createAuditableEvents(acls, AuditEventType.ADD_PERMISSION)
-        auditingManager.recordEvents(events)
 
         return newTableId
     }
 
-    private fun syncTableColumns(table: OrganizationExternalDatabaseTable, adminRoleAclKey: AclKey): Set<OrganizationExternalDatabaseColumn> {
+    private fun syncTableColumns(table: OrganizationExternalDatabaseTable): Set<OrganizationExternalDatabaseColumn> {
         val tableCols = edms.getColumnMetadata(table)
         val tableColNames = tableCols.map { it.getUniqueName() }.toSet()
 
@@ -198,7 +211,7 @@ class BackgroundExternalDatabaseSyncingService(
                 updateColumns(cols, existingColumnIdsByName)
 
             } else {
-                createColumns(table, cols, adminRoleAclKey)
+                createColumns(table, cols)
 
             }
         }.toSet()
@@ -230,10 +243,9 @@ class BackgroundExternalDatabaseSyncingService(
 
     private fun createColumns(
             table: OrganizationExternalDatabaseTable,
-            columns: List<OrganizationExternalDatabaseColumn>,
-            adminRoleAclKey: AclKey
+            columns: List<OrganizationExternalDatabaseColumn>
     ): List<OrganizationExternalDatabaseColumn> {
-        createSecurableColumnObjects(columns, adminRoleAclKey, table)
+        createSecurableColumnObjects(columns, table)
 
         return columns
     }
@@ -285,7 +297,6 @@ class BackgroundExternalDatabaseSyncingService(
 
     private fun createSecurableColumnObjects(
             columns: List<OrganizationExternalDatabaseColumn>,
-            adminRoleAclKey: AclKey,
             table: OrganizationExternalDatabaseTable
     ): Int {
         var totalSynced = 0
@@ -297,34 +308,14 @@ class BackgroundExternalDatabaseSyncingService(
         )
 
         columns.forEach { column ->
-            createSecurableColumnObject(adminRoleAclKey, table, column)
+            edms.createOrganizationExternalDatabaseColumn(table.organizationId, column)
             totalSynced++
         }
         return totalSynced
     }
 
-    private fun createSecurableColumnObject(
-            adminRoleAclKey: AclKey,
-            table: OrganizationExternalDatabaseTable,
-            column: OrganizationExternalDatabaseColumn
-    ) {
-        val newColumnId = edms.createOrganizationExternalDatabaseColumn(table.organizationId, column)
-
-        //add and audit column-level permissions and postgres privileges
-        val acls = edms.syncPermissions(
-                adminRoleAclKey,
-                table,
-                newColumnId,
-                column.name
-        )
-
-
-        val events = createAuditableEvents(acls, AuditEventType.ADD_PERMISSION)
-        auditingManager.recordEvents(events)
-    }
-
-    private fun createAuditableEvents(acls: List<Acl>, eventType: AuditEventType): List<AuditableEvent> {
-        return acls.map {
+    private fun recordAuditableEvents(acls: List<Acl>, eventType: AuditEventType) {
+        val events = acls.map {
             AuditableEvent(
                     IdConstants.SYSTEM_ID.id,
                     AclKey(it.aclKey),
@@ -336,6 +327,7 @@ class BackgroundExternalDatabaseSyncingService(
                     Optional.empty()
             )
         }.toList()
+        auditingManager.recordEvents(events)
     }
 
     private fun tryLockOrganization(orgId: UUID): Boolean {
