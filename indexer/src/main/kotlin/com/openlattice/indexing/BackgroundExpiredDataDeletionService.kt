@@ -2,10 +2,8 @@ package com.openlattice.indexing
 
 import com.google.common.base.Stopwatch
 import com.google.common.collect.ImmutableMap
-import com.google.common.collect.Iterables
 import com.hazelcast.config.IndexType
 import com.hazelcast.core.HazelcastInstance
-import com.hazelcast.query.Predicates
 import com.hazelcast.query.QueryConstants
 import com.openlattice.IdConstants
 import com.openlattice.auditing.AuditEventType
@@ -14,8 +12,8 @@ import com.openlattice.auditing.AuditingManager
 import com.openlattice.authorization.AclKey
 import com.openlattice.data.DataDeletionManager
 import com.openlattice.data.DataGraphManager
-import com.openlattice.data.storage.DataDeletionService.Companion.MAX_BATCH_SIZE
 import com.openlattice.datastore.services.EdmManager
+import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
@@ -41,14 +39,15 @@ class BackgroundExpiredDataDeletionService(
         private val indexerConfiguration: IndexerConfiguration,
         private val auditingManager: AuditingManager,
         private val dataGraphService: DataGraphManager,
-        private val deletionManager: DataDeletionManager
+        private val deletionManager: DataDeletionManager,
+        private val entitySetManager: EntitySetManager
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(BackgroundExpiredDataDeletionService::class.java)!!
     }
 
     private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
-    private val expirationLocks = HazelcastMap.EXPIRATION_LOCKS.getMap(hazelcastInstance)
+    private val expirationLocks = HazelcastMap.BACKGROUND_EXPIRED_DATA_DELETION_LOCKS.getMap(hazelcastInstance)
 
     @Inject
     private lateinit var edm: EdmManager
@@ -58,17 +57,6 @@ class BackgroundExpiredDataDeletionService(
     }
 
     private val taskLock = ReentrantLock()
-
-    @Suppress("UNCHECKED_CAST", "UNUSED")
-    @Scheduled(fixedRate = MAX_DURATION_MILLIS)
-    fun scavengeExpirationLocks() {
-        expirationLocks.removeAll(
-                Predicates.lessThan(
-                        QueryConstants.THIS_ATTRIBUTE_NAME.value(),
-                        System.currentTimeMillis()
-                )
-        )
-    }
 
     @Suppress("UNUSED")
     @Scheduled(fixedRate = DATA_DELETION_RATE)
@@ -89,11 +77,12 @@ class BackgroundExpiredDataDeletionService(
                             .parallelStream()
                             .filter { !it.isLinking }
                             .mapToInt {
-                                deleteExpiredData(
-                                        it, edm.getPropertyTypesAsMap(
-                                        edm.getEntityType(it.entityTypeId).properties
-                                )
-                                )
+                                try {
+                                    deleteExpiredData(it)
+                                } catch (e: Exception) {
+                                    logger.error("An error occurred while trying to delete expired data for entity set {}", it.id, e)
+                                    0
+                                }
                             }
                             .sum()
 
@@ -125,12 +114,14 @@ class BackgroundExpiredDataDeletionService(
         ).toMutableSet()
     }
 
-    private fun deleteExpiredData(entitySet: EntitySet, propertyTypes: Map<UUID, PropertyType>): Int {
+    private fun deleteExpiredData(entitySet: EntitySet): Int {
         logger.info(
                 "Starting deletion of expired data for entity set {} with id {}",
                 entitySet.name,
                 entitySet.id
         )
+
+        val propertyTypes = entitySetManager.getPropertyTypesForEntitySet(entitySet.id)
 
         var totalDeletedEntitiesCount = 0
 
@@ -171,15 +162,15 @@ class BackgroundExpiredDataDeletionService(
             idsBatch = getBatchOfExpiringEkids(entitySet, expirationPT)
         }
 
-    return totalDeletedEntitiesCount
-}
+        return totalDeletedEntitiesCount
+    }
 
-private fun tryLockEntitySet(entitySet: EntitySet): Boolean {
-    return expirationLocks.putIfAbsent(entitySet.id, System.currentTimeMillis() + MAX_DURATION_MILLIS) == null
-}
+    private fun tryLockEntitySet(entitySet: EntitySet): Boolean {
+        return expirationLocks.putIfAbsent(entitySet.id, System.currentTimeMillis() + MAX_DURATION_MILLIS) == null
+    }
 
-private fun deleteIndexingLock(entitySet: EntitySet) {
-    expirationLocks.delete(entitySet.id)
-}
+    private fun deleteIndexingLock(entitySet: EntitySet) {
+        expirationLocks.delete(entitySet.id)
+    }
 
 }

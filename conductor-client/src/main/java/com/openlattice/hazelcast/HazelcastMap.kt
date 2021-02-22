@@ -30,12 +30,7 @@ import com.openlattice.assembler.EntitySetAssemblyKey
 import com.openlattice.assembler.MaterializedEntitySet
 import com.openlattice.assembler.OrganizationAssembly
 import com.openlattice.auditing.AuditRecordEntitySetConfiguration
-import com.openlattice.authorization.AccessTarget
-import com.openlattice.authorization.AceKey
-import com.openlattice.authorization.AceValue
-import com.openlattice.authorization.AclKey
-import com.openlattice.authorization.AclKeySet
-import com.openlattice.authorization.SecurablePrincipal
+import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.codex.Base64Media
 import com.openlattice.collections.CollectionTemplateKey
@@ -46,11 +41,7 @@ import com.openlattice.directory.MaterializedViewAccount
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetPropertyKey
 import com.openlattice.edm.set.EntitySetPropertyMetadata
-import com.openlattice.edm.type.AssociationType
-import com.openlattice.edm.type.EntityType
-import com.openlattice.edm.type.EntityTypePropertyKey
-import com.openlattice.edm.type.EntityTypePropertyMetadata
-import com.openlattice.edm.type.PropertyType
+import com.openlattice.edm.type.*
 import com.openlattice.ids.Range
 import com.openlattice.linking.EntityKeyPair
 import com.openlattice.notifications.sms.SmsEntitySetInformation
@@ -59,9 +50,7 @@ import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.organization.OrganizationExternalDatabaseTable
 import com.openlattice.organizations.Organization
 import com.openlattice.organizations.OrganizationDatabase
-import com.openlattice.organizations.PrincipalSet
 import com.openlattice.organizations.SortedPrincipalSet
-import com.openlattice.postgres.PostgresAuthenticationRecord
 import com.openlattice.postgres.mapstores.TypedMapIdentifier
 import com.openlattice.requests.Status
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet
@@ -100,6 +89,9 @@ class HazelcastMap<K, V> internal constructor(val name: String) : TypedMapIdenti
         private val instanceChecker = UniqueInstanceManager(HazelcastMap::class.java)
 
         // When adding new entries to this list, please make sure to keep it sorted and keep the name in sync
+
+        // @formatter:off
+
         @JvmField val ACL_KEYS = HazelcastMap<String, UUID>("ACL_KEYS")
         @JvmField val ALLOWED_EMAIL_DOMAINS = HazelcastMap<UUID, DelegatedStringSet>("ALLOWED_EMAIL_DOMAINS")
         @JvmField val APP_CONFIGS = HazelcastMap<AppConfigKey, AppTypeSetting>("APP_CONFIGS")
@@ -107,6 +99,8 @@ class HazelcastMap<K, V> internal constructor(val name: String) : TypedMapIdenti
         @JvmField val ASSEMBLIES = HazelcastMap<UUID, OrganizationAssembly>("ASSEMBLIES")
         @JvmField val ASSOCIATION_TYPES = HazelcastMap<UUID, AssociationType>("ASSOCIATION_TYPES")
         @JvmField val AUDIT_RECORD_ENTITY_SETS = HazelcastMap<AclKey, AuditRecordEntitySetConfiguration>("AUDIT_RECORD_ENTITY_SETS")
+        @JvmField val BACKGROUND_EXPIRED_DATA_DELETION_LOCKS = HazelcastMap<UUID, Long>("BACKGROUND_EXPIRED_DATA_DELETION_LOCKS")
+        @JvmField val BACKGROUND_ORGANIZATION_DATABASE_SYNCING_LOCKS = HazelcastMap<UUID, Long>("BACKGROUND_ORGANIZATION_DATABASE_SYNCING_LOCKS")
         @JvmField val CODEX_LOCKS = HazelcastMap<SmsInformationKey, Long>("CODEX_LOCKS")
         @JvmField val CODEX_MEDIA = HazelcastMap<UUID, Base64Media>("CODEX_MEDIA")
         @JvmField val DB_CREDS = HazelcastMap<AclKey, MaterializedViewAccount>("DB_CREDS")
@@ -118,9 +112,7 @@ class HazelcastMap<K, V> internal constructor(val name: String) : TypedMapIdenti
         @JvmField val ENTITY_TYPE_COLLECTIONS = HazelcastMap<UUID, EntityTypeCollection>("ENTITY_TYPE_COLLECTIONS")
         @JvmField val ENTITY_TYPE_PROPERTY_METADATA = HazelcastMap<EntityTypePropertyKey, EntityTypePropertyMetadata>("ENTITY_TYPE_PROPERTY_METADATA")
         @JvmField val ENTITY_TYPES = HazelcastMap<UUID, EntityType>("ENTITY_TYPES")
-        @JvmField val EXPIRATION_LOCKS = HazelcastMap<UUID, Long>("EXPIRATION_LOCKS")
         @JvmField val EXTERNAL_PERMISSION_ROLES = HazelcastMap<AccessTarget, UUID>("EXTERNAL_PERMISSION_ROLES")
-        @JvmField val HBA_AUTHENTICATION_RECORDS = HazelcastMap<String, PostgresAuthenticationRecord>("HBA_AUTHENTICATION_RECORDS")
         @JvmField val ID_GENERATION = HazelcastMap<Long, Range>("ID_GENERATION")
         @JvmField val INDEXING_JOBS = HazelcastMap<UUID, DelegatedUUIDSet>("INDEXING_JOBS")
         @JvmField val INDEXING_LOCKS = HazelcastMap<UUID, Long>("INDEXING_LOCKS")
@@ -136,13 +128,10 @@ class HazelcastMap<K, V> internal constructor(val name: String) : TypedMapIdenti
         @JvmField val LONG_IDS = HazelcastMap<String, Long>("LONG_IDS")
         @JvmField val MATERIALIZED_ENTITY_SETS = HazelcastMap<EntitySetAssemblyKey, MaterializedEntitySet>("MATERIALIZED_ENTITY_SETS")
         @JvmField val NAMES = HazelcastMap<UUID, String>("NAMES")
-        @JvmField val ORGANIZATION_APPS = HazelcastMap<UUID, DelegatedUUIDSet>("ORGANIZATION_APPS")
         @JvmField val ORGANIZATION_DATABASES = HazelcastMap<UUID, OrganizationDatabase>("ORGANIZATION_DATABASES")
         @JvmField val ORGANIZATION_EXTERNAL_DATABASE_COLUMN = HazelcastMap<UUID, OrganizationExternalDatabaseColumn>("ORGANIZATION_EXTERNAL_DATABASE_COLUMN")
         @JvmField val ORGANIZATION_EXTERNAL_DATABASE_TABLE = HazelcastMap<UUID, OrganizationExternalDatabaseTable>("ORGANIZATION_EXTERNAL_DATABASE_TABLE")
         @JvmField val ORGANIZATIONS = HazelcastMap<UUID, Organization>("ORGANIZATIONS")
-        @JvmField val ORGANIZATIONS_DESCRIPTIONS = HazelcastMap<UUID, String>("ORGANIZATIONS_DESCRIPTIONS")
-        @JvmField val ORGANIZATIONS_MEMBERS = HazelcastMap<UUID, PrincipalSet>("ORGANIZATIONS_MEMBERS")
         @JvmField val PERMISSIONS = HazelcastMap<AceKey, AceValue>("PERMISSIONS")
         @JvmField val PRINCIPAL_TREES = HazelcastMap<AclKey, AclKeySet>("PRINCIPAL_TREES")
         @JvmField val PRINCIPALS = HazelcastMap<AclKey, SecurablePrincipal>("PRINCIPALS")
@@ -157,6 +146,8 @@ class HazelcastMap<K, V> internal constructor(val name: String) : TypedMapIdenti
         @JvmField val SMS_INFORMATION = HazelcastMap<SmsInformationKey, SmsEntitySetInformation>("SMS_INFORMATION")
         @JvmField val TRANSPORTER_DB_COLUMNS = HazelcastMap<UUID, TransporterColumnSet>("TRANSPORTER_DB_COLUMNS")
         @JvmField val USERS = HazelcastMap<String, User>("USERS")
+
+        // @formatter:on
 
         @JvmStatic
         fun values(): Array<HazelcastMap<*, *>> {
