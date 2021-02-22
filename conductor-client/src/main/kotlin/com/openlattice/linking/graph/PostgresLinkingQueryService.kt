@@ -55,9 +55,11 @@ import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.openlattice.postgres.streams.StatementHolder
 import com.openlattice.postgres.streams.StatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
+import org.slf4j.LoggerFactory
 import java.sql.Array
 import java.sql.Connection
-import java.util.*
+import java.util.LinkedHashSet
+import java.util.UUID
 
 
 /**
@@ -69,6 +71,10 @@ class PostgresLinkingQueryService(
         private val hds: HikariDataSource,
         private val partitionManager: PartitionManager
 ) : LinkingQueryService {
+
+    companion object {
+        private val logger = LoggerFactory.getLogger(PostgresLinkingQueryService::class.java)
+    }
 
     override fun lockClustersForUpdates(clusters: Set<UUID>): Connection {
         val connection = hds.connection
@@ -308,13 +314,13 @@ class PostgresLinkingQueryService(
                 if (positiveFeedbacks.isNotEmpty()) " AND NOT ( ${buildFilterEntityKeyPairs(
                         positiveFeedbacks
                 )} )" else ""
-        hds.connection.use {
-            it.prepareStatement(deleteNeighborHoodSql).use {
-                it.setObject(1, entity.entitySetId)
-                it.setObject(2, entity.entityKeyId)
-                it.setObject(3, entity.entitySetId)
-                it.setObject(4, entity.entityKeyId)
-                return it.executeUpdate()
+        hds.connection.use { conn ->
+            conn.prepareStatement(deleteNeighborHoodSql).use { ps ->
+                ps.setObject(1, entity.entitySetId)
+                ps.setObject(2, entity.entityKeyId)
+                ps.setObject(3, entity.entitySetId)
+                ps.setObject(4, entity.entityKeyId)
+                return ps.executeUpdate()
             }
         }
     }

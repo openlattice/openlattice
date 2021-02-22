@@ -60,7 +60,7 @@ apply plugin: 'license-report'
 
 def INDEXER_XMS = "$System.env.INDEXER_XMS"
 def INDEXER_XMX = "$System.env.INDEXER_XMX"
-def INDEXER_ARGS = "$System.env.CONDUCTOR_ARGS"
+def INDEXER_ARGS = "$System.env.INDEXER_ARGS"
 def PARALLEL = "$System.env.PARALLELISM"
 def GC = "$System.env.GC"
 
@@ -189,12 +189,7 @@ eclipse.classpath.plusConfigurations += [configurations.provided]
 
 tasks.withType(JavaCompile) {
     options.compilerArgs+= [ "--add-modules", "java.se",
-                             "--add-exports","java.base/jdk.internal.ref=ALL-UNNAMED",
-                             "--add-opens","java.base/java.lang=ALL-UNNAMED",
-                             "--add-opens","java.base/java.nio=ALL-UNNAMED",
-                             "--add-opens","java.base/sun.nio.ch=ALL-UNNAMED",
-                             "--add-opens","java.management/sun.management=ALL-UNNAMED",
-                             "--add-opens","jdk.management/com.sun.management.internal=ALL-UNNAMED"]
+                             "--add-exports","java.base/jdk.internal.ref=ALL-UNNAMED"]
 }
 
 tasks.withType(Test) {

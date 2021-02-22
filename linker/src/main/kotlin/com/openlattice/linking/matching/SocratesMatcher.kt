@@ -25,8 +25,8 @@ import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Stopwatch
 import com.openlattice.data.EntityDataKey
 import com.openlattice.linking.EntityKeyPair
-import com.openlattice.linking.Matcher
 import com.openlattice.linking.PostgresLinkingFeedbackService
+import com.openlattice.linking.blocking.Block
 import com.openlattice.linking.util.PersonMetric
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -34,7 +34,7 @@ import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
 import org.nd4j.linalg.factory.Nd4j
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
-import java.util.*
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 const val THRESHOLD = 0.9
@@ -62,14 +62,12 @@ class SocratesMatcher(
      * @return block The resulting block around the entity data key in block.first
      */
     @Timed
-    override fun initialize(
-            block: Pair<EntityDataKey, Map<EntityDataKey, Map<UUID, Set<Any>>>>
-    ): Pair<EntityDataKey, MutableMap<EntityDataKey, MutableMap<EntityDataKey, Double>>> {
+    override fun initialize( block: Block ): PairwiseMatch {
         val model = localModel.get()
 
-        val entityDataKey = block.first
+        val entityDataKey = block.entityDataKey
         // negative feedbacks are already filtered out when blocking
-        val entities = block.second
+        val entities = block.entities
 
         // extract properties and features for all entities in block
         val firstProperties = extractProperties(entities.getValue(entityDataKey))
@@ -83,7 +81,7 @@ class SocratesMatcher(
         val featureMatrix = extractedFeatures.map { it.value }.toTypedArray()
         val scores = computeScore(model, featureMatrix).toTypedArray()
         val matchedEntities = featureKeys.zip(scores).toMap().toMutableMap()
-        val initializedBlock = entityDataKey to mutableMapOf(entityDataKey to matchedEntities)
+        val initializedBlock = PairwiseMatch(entityDataKey, mutableMapOf(entityDataKey to matchedEntities))
 
         // trim low scores
         trimAndMerge(initializedBlock)
@@ -97,109 +95,131 @@ class SocratesMatcher(
      * @return All pairs of entities in the block scored by the current model.
      */
     @Timed
-    override fun match(
-            block: Pair<EntityDataKey, Map<EntityDataKey, Map<UUID, Set<Any>>>>
-    ): Pair<EntityDataKey, MutableMap<EntityDataKey, MutableMap<EntityDataKey, Double>>> {
+    override fun match( block: Block): PairwiseMatch {
         val sw = Stopwatch.createStarted()
-
-        val entityDataKey = block.first
 
         val positiveFeedbacks = mutableSetOf<EntityKeyPair>()
         // filter out positive matches from feedback to avoid computation of scores
         // negative feedbacks are already filter out when blocking
-        val entities = block.second.mapValues { entity ->
-            block.second.keys.filter {
-                val entityPair = EntityKeyPair(entity.key, it)
-                val feedback = linkingFeedbackService.getLinkingFeedback(entityPair)
-                if (feedback != null) {
-                    if (feedback.linked) {
-                        positiveFeedbacks.add(entityPair)
-                        return@filter false
-                    }
-                }
-                return@filter true
-            }
-        }.filter { !it.value.isEmpty() }
+        val entities = block.entities
 
-        val results = computeResults(block.second, entities, positiveFeedbacks)
+        // get feedbacks in bulk
+//        val entityPairs = entities.flatMapTo(mutableSetOf()) { entity ->
+//            entities.keys.mapTo(mutableSetOf()) {
+//                EntityKeyPair(entity.key, it)
+//            }
+//        }
+//        val feedbacks = linkingFeedbackService.getLinkingFeedbacks(entityPairs)
+
+        // filter out feedbacks
+        val filteredEntities = entities.mapValues { entity ->
+//            entities.keys.filter {
+//                val entityPair = EntityKeyPair(entity.key, it)
+//                val linked = feedbacks[entityPair]
+//                if (linked != null && linked) {
+//                    positiveFeedbacks.add(entityPair)
+//                    return@filter false
+//                }
+//                return@filter true
+//            }
+            entities.keys
+        }.filter {
+            it.value.isNotEmpty()
+        }
+
+        val results = computeResults(entities, filteredEntities, positiveFeedbacks)
 
         // from list of results to expected output
-        val matchedEntities =
-                results.groupBy { it.lhs }
-                        .mapValues { x ->
-                            x.value.groupBy { it.rhs }
-                                    .mapValues { y -> y.value[0].score }
-                                    .toMutableMap()
-                        }.toMutableMap()
+        val matchedEntities = results.groupBy { it.lhs }
+                .mapValues { x ->
+                    x.value.groupBy { it.rhs }
+                            .mapValues { y -> y.value[0].score }
+                            .toMutableMap()
+                }.toMutableMap()
 
         logger.info(
                 "Matching block {} with {} elements took {} ms",
-                block.first, block.second.values.map { it.size }.sum(),
+                block.entityDataKey, block.size,
                 sw.elapsed(TimeUnit.MILLISECONDS)
         )
 
-        return entityDataKey to matchedEntities
+        return PairwiseMatch(block.entityDataKey, matchedEntities)
 
     }
 
+    /**
+     * Looks like currently the speed limiting factor
+     */
     private fun computeResults(
             entityValues: Map<EntityDataKey, Map<UUID, Set<Any>>>,
-            entities: Map<EntityDataKey, List<EntityDataKey>>,
+            entities: Map<EntityDataKey, Set<EntityDataKey>>,
             positiveFeedbacks: Set<EntityKeyPair>
     ): List<ResultSet> {
-        val positiveMatches = positiveFeedbacks.map { ResultSet(it.first, it.second, 1.0) } +
-                positiveFeedbacks.map { ResultSet(it.second, it.first, 1.0) }
+        val positiveMatches = positiveFeedbacks.flatMap {
+            listOf(
+                    ResultSet(it.first, it.second, 1.0),
+                    ResultSet(it.second, it.first, 1.0)
+            )
+        }
 
         // all entities have positive feedback
         if (entities.isEmpty()) {
             logger.info("All entities have positive feedback")
             return positiveMatches
-        } else {
-            val sw = Stopwatch.createStarted()
+        }
+        val sw = Stopwatch.createStarted()
 
-            // extract properties
-            val extractedProperties = entityValues.map { it.key to extractProperties(it.value) }.toMap()
+        // extract properties
+        val extractedProperties = entityValues.mapValues { extractProperties(it.value) }
 
-            // extract features for all entities in block
-            val extractedFeatures = entities.mapValues { neighborhood ->
-                val selfProperties = extractedProperties.getValue(neighborhood.key)
-                neighborhood.value.map { dst ->
-                    val otherProperties = extractedProperties.getValue(dst)
-                    dst to extractFeatures(selfProperties, otherProperties)
-                }.toMap()
+        val propsExtractionSw = sw.elapsed(TimeUnit.MILLISECONDS)
+
+        // extract features for all entities in block
+        val extractedFeatures = entities.mapValues { (edk, neighbors) ->
+            val selfProperties = extractedProperties.getValue(edk)
+            val neighborExtractedProperties = neighbors.associateWith {
+                extractedProperties.getValue(it)
             }
-
-            // transform features to matrix and compute scores
-            val featureMatrix = extractedFeatures
-                    .flatMap { (_, features) -> features.map { it.value } }
-                    .toTypedArray()
-
-            // extract list of keys (instead of map)
-            val featureKeys = extractedFeatures.flatMap { (entityDataKey1, features) ->
-                features.map {
-                    entityDataKey1 to it.key
-                }
-            }
-
-            val featureExtractionSW = sw.elapsed(TimeUnit.MILLISECONDS)
-
-            // get scores from matrix
-            val scores = computeScore(localModel.get(), featureMatrix)
-
-            // collect and combine keys and scores
-            val results = scores.zip(featureKeys).map {
-                ResultSet(it.second.first, it.second.second, it.first)
-            }.plus(positiveMatches)
-
-
-            logger.info(
-                    "Feature extraction took {} ms, matching took {} ms",
-                    featureExtractionSW,
-                    sw.elapsed(TimeUnit.MILLISECONDS) - featureExtractionSW
-            )
-            return results
+            extractFeaturesBulk(selfProperties, neighborExtractedProperties)
         }
 
+        val blockFeatureExtraction = sw.elapsed(TimeUnit.MILLISECONDS)
+
+        // transform features to matrix and compute scores
+        val featureMatrix = extractedFeatures
+                .flatMap { (_, features) -> features.map { it.value } }
+                .toTypedArray()
+
+        // extract list of keys (instead of map)
+        val featureKeys = extractedFeatures.flatMap { (entityDataKey1, features) ->
+            features.map {
+                entityDataKey1 to it.key
+            }
+        }
+
+        val featureExtractionSW = sw.elapsed(TimeUnit.MILLISECONDS)
+
+        // get scores from matrix
+        val scores = computeScore(localModel.get(), featureMatrix)
+
+        // collect and combine keys and scores
+        val results = scores.zip(featureKeys).map {
+            ResultSet(it.second.first, it.second.second, it.first)
+        }.plus(positiveMatches)
+
+        val bfTime = blockFeatureExtraction - propsExtractionSw
+        val fblTime = featureExtractionSW - blockFeatureExtraction
+
+        if (propsExtractionSw > 500){
+            logger.error("Property extraction: $propsExtractionSw ms")
+        }
+        if (bfTime > 500){
+            logger.error("Block feature extraction: $bfTime ms")
+        }
+        if (fblTime > 500){
+            logger.error("final transforms: $fblTime ms")
+        }
+        return results
     }
 
     private fun computeScore(
@@ -211,22 +231,32 @@ class SocratesMatcher(
         return scores
     }
 
+    fun extractFeaturesBulk(
+            lhs: Map<UUID, DelegatedStringSet>,
+            rhs: Map<EntityDataKey, Map<UUID, DelegatedStringSet>>
+    ): Map<EntityDataKey, DoubleArray> {
+        return PersonMetric.pDistanceBulk(lhs, rhs, fqnToIdMap)
+    }
+
     override fun extractFeatures(
-            lhs: Map<UUID, DelegatedStringSet>, rhs: Map<UUID, DelegatedStringSet>
+            lhs: Map<UUID, DelegatedStringSet>,
+            rhs: Map<UUID, DelegatedStringSet>
     ): DoubleArray {
         return PersonMetric.pDistance(lhs, rhs, fqnToIdMap).map { it * 100.0 }.toDoubleArray()
     }
 
     override fun extractProperties(entity: Map<UUID, Set<Any>>): Map<UUID, DelegatedStringSet> {
-        return entity.map { it.key to DelegatedStringSet.wrap(it.value.map(Any::toString).toSet()) }.toMap()
+        return entity.mapValues { ( _, properties ) ->
+            DelegatedStringSet.wrap( properties.mapTo(mutableSetOf()) { it.toString() } )
+        }
     }
 
     @Timed
     override fun trimAndMerge(
-            matchedBlock: Pair<EntityDataKey, MutableMap<EntityDataKey, MutableMap<EntityDataKey, Double>>>
+            matchedBlock: PairwiseMatch
     ) {
         //Trim non-center matching thigns.
-        matchedBlock.second[matchedBlock.first] = matchedBlock.second[matchedBlock.first]?.filter {
+        matchedBlock.matches[matchedBlock.candidate] = matchedBlock.matches[matchedBlock.candidate]?.filter {
             it.value > THRESHOLD
         }?.toMutableMap() ?: mutableMapOf()
     }

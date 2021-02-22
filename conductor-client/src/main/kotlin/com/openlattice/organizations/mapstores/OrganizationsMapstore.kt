@@ -2,7 +2,11 @@ package com.openlattice.organizations.mapstores
 
 import com.dataloom.mappers.ObjectMappers
 import com.fasterxml.jackson.module.kotlin.readValue
-import com.hazelcast.config.*
+import com.hazelcast.config.InMemoryFormat
+import com.hazelcast.config.IndexConfig
+import com.hazelcast.config.IndexType
+import com.hazelcast.config.MapConfig
+import com.hazelcast.config.MapStoreConfig
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.organizations.Organization
@@ -15,7 +19,7 @@ import com.zaxxer.hikari.HikariDataSource
 import org.springframework.stereotype.Component
 import java.sql.PreparedStatement
 import java.sql.ResultSet
-import java.util.*
+import java.util.UUID
 
 const val CONNECTIONS_INDEX = "connections[any]"
 const val MEMBERS_INDEX = "members[any]"
@@ -26,7 +30,9 @@ const val DOMAINS_INDEX = "emailDomains[any]"
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 @Component
-class OrganizationsMapstore(val hds: HikariDataSource) : AbstractBasePostgresMapstore<UUID, Organization>(
+class OrganizationsMapstore(
+        hds: HikariDataSource
+) : AbstractBasePostgresMapstore<UUID, Organization>(
         HazelcastMap.ORGANIZATIONS, ORGANIZATIONS, hds
 ) {
     private val mapper = ObjectMappers.newJsonMapper()

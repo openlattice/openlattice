@@ -28,6 +28,7 @@ import com.openlattice.auditing.AuditingManager;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.DbCredentialService;
 import com.openlattice.authorization.HazelcastAclKeyReservationService;
+import com.openlattice.authorization.PrincipalsMapManager;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.DataDeletionManager;
 import com.openlattice.data.DataGraphManager;
@@ -110,10 +111,13 @@ public class IndexerPostConfigurationServicesPod {
     private OrganizationExternalDatabaseConfiguration organizationExternalDatabaseConfiguration;
 
     @Inject
-    private DbCredentialService                       dbcs;
+    private DbCredentialService dbcs;
 
     @Inject
     public AuthorizationManager authorizationManager;
+
+    @Inject
+    public PrincipalsMapManager principalsMapManager;
 
     @Inject
     public SecurePrincipalsManager securePrincipalsManager;
@@ -179,7 +183,7 @@ public class IndexerPostConfigurationServicesPod {
         return new ExternalDatabaseManagementService(
                 hazelcastInstance,
                 externalDbConnMan,
-                securePrincipalsManager,
+                principalsMapManager,
                 aclKeyReservationService,
                 authorizationManager,
                 organizationExternalDatabaseConfiguration,
@@ -199,7 +203,8 @@ public class IndexerPostConfigurationServicesPod {
                 ares,
                 indexerConfiguration,
                 organizationMetadataEntitySetsService,
-                reservationService );
+                reservationService,
+                principalsMapManager );
     }
 
     @Bean
