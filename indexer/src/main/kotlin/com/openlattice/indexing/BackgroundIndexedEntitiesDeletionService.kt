@@ -47,7 +47,6 @@ import java.util.concurrent.locks.ReentrantLock
 const val DELETE_SIZE = 10_000
 const val DELETE_EXPIRATION_MILLIS = 60_000L
 const val DELETE_RATE = 30_000L
-const val DELETE_FETCH_SIZE = 128_000
 
 /**
  * Background service to delete entities from ids table, which have been hard deleted and already processed by
@@ -125,12 +124,14 @@ class BackgroundIndexedEntitiesDeletionService(
         logger.info("Starting entity deletion for entity set ${entitySet.name} with id ${entitySet.id}")
 
         val esw = Stopwatch.createStarted()
-        val deletableIds = getDeletedIds(entitySet)
+        var deletableIds = getDeletedIdsBatch(entitySet).toSet()
 
         var deleteCount = 0
-        deletableIds.asSequence().chunked(DELETE_SIZE).forEach {
+
+        while (deletableIds.isNotEmpty()) {
             updateExpiration(entitySet.id)
-            deleteCount += dataQueryService.deleteEntities(entitySet.id, it.toSet()).numUpdates
+            deleteCount += dataQueryService.deleteEntities(entitySet.id, deletableIds).numUpdates
+            deletableIds = getDeletedIdsBatch(entitySet).toSet()
         }
 
         logger.info(
@@ -144,9 +145,9 @@ class BackgroundIndexedEntitiesDeletionService(
     /**
      * Select all ids, which have been hard deleted and already un-indexed.
      */
-    private fun getDeletedIds(entitySet: EntitySet): BasePostgresIterable<UUID> {
+    private fun getDeletedIdsBatch(entitySet: EntitySet): BasePostgresIterable<UUID> {
         return BasePostgresIterable(
-                PreparedStatementHolderSupplier(hds, selectDeletedIds, DELETE_FETCH_SIZE) {
+                PreparedStatementHolderSupplier(hds, selectDeletedIdsBatch) {
                     val partitionsArray = PostgresArrays.createIntArray(it.connection, entitySet.partitions)
                     it.setObject(1, entitySet.id)
                     it.setArray(2, partitionsArray)
@@ -158,20 +159,21 @@ class BackgroundIndexedEntitiesDeletionService(
     // get all ids where version = 0 and either
     // a: last_index >= last_write
     // b: last_link_index >= last_write and linking_id is not null
-    private val selectDeletedIds =
-            // @formatter:off
-            "SELECT ${ID.name} " +
-            "FROM ${IDS.name} " +
-            "WHERE " +
-                "${ENTITY_SET_ID.name} = ? AND " +
-                "${PARTITION.name} = ANY(?) AND " +
-                "${VERSION.name} = 0 AND " +
-                "( " +
-                    "(${LAST_INDEX.name} >= ${LAST_WRITE.name}) " +
-                    "OR " +
-                    "(${LAST_LINK_INDEX.name} >= ${LAST_WRITE.name} AND ${LINKING_ID.name} IS NOT NULL) " +
-                ")"
-            // @formatter:on
+    private val selectDeletedIdsBatch =
+            """
+                SELECT ${ID.name}
+                FROM ${IDS.name}
+                WHERE
+                  ${ENTITY_SET_ID.name} = ? AND
+                  ${PARTITION.name} = ANY(?) AND
+                  ${VERSION.name} = 0 AND
+                  (
+                    (${LAST_INDEX.name} >= ${LAST_WRITE.name})
+                    OR
+                    (${LAST_LINK_INDEX.name} >= ${LAST_WRITE.name} AND ${LINKING_ID.name} IS NOT NULL)
+                  )
+                  LIMIT $DELETE_SIZE
+            """.trimIndent()
 
     private fun tryLockEntitySet(entitySetId: UUID): Boolean {
         return deletionLocks.putIfAbsent(entitySetId, System.currentTimeMillis() + DELETE_EXPIRATION_MILLIS) == null
