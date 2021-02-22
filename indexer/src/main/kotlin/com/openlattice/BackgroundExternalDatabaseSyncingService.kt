@@ -56,7 +56,7 @@ class BackgroundExternalDatabaseSyncingService(
     private val organizationDatabases = ORGANIZATION_DATABASES.getMap(hazelcastInstance)
 
     private val organizations = HazelcastMap.ORGANIZATIONS.getMap(hazelcastInstance)
-    private val expirationLocks = HazelcastMap.EXPIRATION_LOCKS.getMap(hazelcastInstance)
+    private val expirationLocks = HazelcastMap.BACKGROUND_ORGANIZATION_DATABASE_SYNCING_LOCKS.getMap(hazelcastInstance)
 
 
     init {
@@ -64,17 +64,6 @@ class BackgroundExternalDatabaseSyncingService(
     }
 
     private val taskLock = ReentrantLock()
-
-    @Suppress("UNCHECKED_CAST", "UNUSED")
-    @Scheduled(fixedRate = MAX_DURATION_MILLIS)
-    fun scavengeExpirationLocks() {
-        expirationLocks.removeAll(
-                Predicates.lessThan(
-                        QueryConstants.THIS_ATTRIBUTE_NAME.value(),
-                        System.currentTimeMillis()
-                )
-        )
-    }
 
     @Suppress("UNUSED")
     @Scheduled(fixedDelay = SCAN_RATE)
@@ -100,7 +89,11 @@ class BackgroundExternalDatabaseSyncingService(
 
             lockedOrganizationIds
                     .forEach {
-                        syncOrganizationDatabases(it)
+                        try {
+                            syncOrganizationDatabases(it)
+                        } catch (e: Exception) {
+                            logger.error("An error occurred when trying to sync database for org {}", it, e)
+                        }
                     }
 
             lockedOrganizationIds.forEach(this::deleteLock)
