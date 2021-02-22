@@ -13,4 +13,3 @@ data class Block(
 ) {
     val size = entities.values.map { it.size }.sum()
 }
-
