@@ -77,10 +77,10 @@ class SocratesMatcher(
         }
 
         // transform features to matrix and compute scores
-        val featureKeys = extractedFeatures.map { it.key }.toTypedArray()
-        val featureMatrix = extractedFeatures.map { it.value }.toTypedArray()
-        val scores = computeScore(model, featureMatrix).toTypedArray()
-        val matchedEntities = featureKeys.zip(scores).toMap().toMutableMap()
+        val featureMatrix = extractedFeatures.values.toTypedArray()
+        val scores = computeScore(model, featureMatrix).asIterable()
+
+        val matchedEntities = extractedFeatures.keys.zip(scores).toMap(mutableMapOf())
         val initializedBlock = PairwiseMatch(entityDataKey, mutableMapOf(entityDataKey to matchedEntities))
 
         // trim low scores
@@ -223,7 +223,8 @@ class SocratesMatcher(
     }
 
     private fun computeScore(
-            model: MultiLayerNetwork, features: Array<DoubleArray>
+            model: MultiLayerNetwork,
+            features: Array<DoubleArray>
     ): DoubleArray {
         val sw = Stopwatch.createStarted()
         val scores = model.getModelScore(features)
@@ -256,9 +257,12 @@ class SocratesMatcher(
             matchedBlock: PairwiseMatch
     ) {
         //Trim non-center matching thigns.
-        matchedBlock.matches[matchedBlock.candidate] = matchedBlock.matches[matchedBlock.candidate]?.filter {
+        val filtered = matchedBlock.matches.getOrDefault(
+                matchedBlock.candidate, mutableMapOf()
+        ).filterTo(mutableMapOf()) {
             it.value > THRESHOLD
-        }?.toMutableMap() ?: mutableMapOf()
+        }
+        matchedBlock.matches[matchedBlock.candidate] = filtered
     }
 }
 

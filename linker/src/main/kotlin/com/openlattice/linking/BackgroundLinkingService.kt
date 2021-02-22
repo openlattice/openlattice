@@ -23,6 +23,7 @@ package com.openlattice.linking
 
 import com.codahale.metrics.Histogram
 import com.codahale.metrics.MetricRegistry
+import com.codahale.metrics.MetricRegistry.name
 import com.codahale.metrics.Snapshot
 import com.google.common.base.Stopwatch
 import com.google.common.collect.Sets
@@ -79,14 +80,14 @@ class BackgroundLinkingService(
             return m.keys + m.values.flatMap { it.keys }
         }
 
-        private val metrics: MetricRegistry = MetricRegistry()
+        val metrics: MetricRegistry = MetricRegistry()
 
         inline fun <R> MetricRegistry.histogramify(
                 clazz: Class<*>,
                 vararg names: String,
                 block: (Logger, Stopwatch) -> R
         ): R {
-            val hist = histogram(MetricRegistry.name(clazz, *names))
+            val hist = histogram(name(clazz, *names))
             val logger = logger //loggers.getOrPut(clazz) { LoggerFactory.getLogger(clazz) }
             val sw = Stopwatch.createStarted()
             val ret = block(logger, sw)
@@ -121,7 +122,7 @@ class BackgroundLinkingService(
     @Suppress("UNUSED")
     @Scheduled(fixedRate = LINKING_RATE)
     fun enqueue() {
-        val linkedInSession = metrics.histogram("linking").count
+        val linkedInSession = metrics.histogram(name(BackgroundLinkingService::class.java, "linking")).count
         logger.info("$linkedInSession entities linked since last startup.")
 
         metrics.histograms.forEach { (name, histogram) ->
@@ -253,12 +254,8 @@ class BackgroundLinkingService(
             log.info("Initialization took {} ms", time )
             init
         }
-        val dataKeys = metrics.histogramify(
-                BackgroundLinkingService::class.java,
-                "collectKeysInitializedBlock"
-        ) { _, _ ->
-            collectKeys(initializedBlock.matches)
-        }
+
+        val dataKeys = collectKeys(initializedBlock.matches)
 
         //Decision that needs to be made is whether to start new cluster or merge into existing cluster.
         try {
@@ -267,26 +264,22 @@ class BackgroundLinkingService(
                             .map { cluster ->
                                 metrics.histogramify(
                                         BackgroundLinkingService::class.java,
-                                        "clusterer.cluster"
+                                        "clusterer","cluster"
                                 ) { _, _ ->
                                     clusterer.cluster(candidate, KeyedCluster.fromEntry(cluster))
                                 }
                             }.filter { it.score > MINIMUM_SCORE }
                             .maxBy { it.score }
 
-                if ( maybeBestCluster != null ) {
-                    return@lockClustersDoWorkAndCommit Triple(maybeBestCluster.clusterId, maybeBestCluster.cluster, false)
+                return@lockClustersDoWorkAndCommit if ( maybeBestCluster != null ) {
+                    Triple(maybeBestCluster.clusterId, maybeBestCluster.cluster, false)
+                } else {
+                    val linkingId = ids.reserveLinkingIds(1).first()
+                    val block = Block(candidate, mapOf(candidate to elem))
+                    val cluster = matcher.match(block).matches
+                    //TODO: When creating new cluster do we really need to re-match or can we assume score of 1.0?
+                    Triple(linkingId, cluster, true)
                 }
-                val linkingId = ids.reserveLinkingIds(1).first()
-                val block = Block(candidate, mapOf(candidate to elem))
-                val cluster = metrics.histogramify(
-                        BackgroundLinkingService::class.java,
-                        "matcherMatchBlock"
-                ) { _, _ ->
-                    matcher.match(block).matches
-                }
-                //TODO: When creating new cluster do we really need to re-match or can we assume score of 1.0?
-                return@lockClustersDoWorkAndCommit Triple(linkingId, cluster, true)
             }
             metrics.histogramify(
                     BackgroundLinkingService::class.java,
