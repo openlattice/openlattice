@@ -161,7 +161,7 @@ class HazelcastOrganizationService(
         organizationMetadataEntitySetsService.initializeOrganizationMetadataEntitySets(adminRole)
 
         if (creatorPrincipal.type == PrincipalType.USER) {
-            val userAclKey = securePrincipalsManager.getSecurablePrincipal(creatorPrincipal.id).aclKey
+            val userAclKey = securePrincipalsManager.lookup(creatorPrincipal)
 
             addMembers(organization.id, setOf(creatorPrincipal), mapOf())
             securePrincipalsManager.addPrincipalToPrincipal(organization.adminRoleAclKey, userAclKey)
