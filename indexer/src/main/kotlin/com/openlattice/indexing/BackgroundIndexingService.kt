@@ -206,7 +206,7 @@ class BackgroundIndexingService(
             reindexAll: Boolean = false,
             indexTombstoned: Boolean = false
     ): Int {
-        logger.info(
+        logger.debug(
                 "Starting indexing for entity set {} with id {}",
                 entitySet.name,
                 entitySet.id
@@ -229,7 +229,7 @@ class BackgroundIndexingService(
                     }
                 }
 
-        logger.info(
+        logger.debug(
                 "Finished indexing {} elements from entity set {} in {} ms",
                 indexCount,
                 entitySet.name,
@@ -253,7 +253,7 @@ class BackgroundIndexingService(
                 EnumSet.of(MetadataOption.LAST_WRITE)
         ).toMap()
 
-        logger.info("Loading data for indexEntities took {} ms", esb.elapsed(TimeUnit.MILLISECONDS))
+        logger.debug("Loading data for indexEntities took {} ms", esb.elapsed(TimeUnit.MILLISECONDS))
 
         if (entitiesById.size != batchToIndex.size) {
             logger.error(
@@ -275,7 +275,7 @@ class BackgroundIndexingService(
             batchToIndex.size
         }
 
-        logger.info(
+        logger.debug(
                 "Indexed batch of {} elements for {} ({}) in {} ms",
                 indexCount,
                 entitySet.name,
@@ -304,7 +304,7 @@ class BackgroundIndexingService(
                 batchToIndex.size
             }
 
-            logger.info(
+            logger.debug(
                     "Un-indexed batch of {} elements for {} ({}) in {} ms",
                     indexCount,
                     entitySet.name,

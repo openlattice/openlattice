@@ -26,6 +26,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import java.time.OffsetDateTime
 import java.util.*
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 
 /**
@@ -107,6 +108,8 @@ class BackgroundExternalDatabaseSyncingService(
     }
 
     private fun syncOrganizationDatabases(orgId: UUID) {
+        val sw = Stopwatch.createStarted()
+        logger.info("About to sync database for organization {}", orgId)
         val dbName = organizationDatabases[orgId]?.name
 
         if (dbName == null) {
@@ -131,6 +134,8 @@ class BackgroundExternalDatabaseSyncingService(
         }
 
         removeNonexistentTablesAndColumnsForOrg(orgId, tableIds, columnIds)
+
+        logger.info("Finished syncing database for organization {} in {} seconds", orgId, sw.elapsed(TimeUnit.SECONDS))
     }
 
     private fun initializeTablePermissions(
