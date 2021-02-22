@@ -104,9 +104,19 @@ public class PersonProperties {
     }
 
     public static int valueIsPresent( Map<UUID, DelegatedStringSet> entity, UUID propertyTypeId ) {
-        if ( !entity.containsKey( propertyTypeId )
-                || entity.get( propertyTypeId ).stream().noneMatch( StringUtils::isNotBlank ) ) { return 0; }
-        return 1;
+        if ( !entity.containsKey( propertyTypeId ) ) {
+            return 0;
+        }
+        var value = entity.get( propertyTypeId );
+        if (value.isEmpty()) {
+            return 0;
+        }
+        for ( String pt : value ) {
+            if ( !pt.isBlank() ) {
+                return 1;
+            }
+        }
+        return 0;
     }
 
     public static DelegatedStringSet getFirstName(
@@ -220,15 +230,18 @@ public class PersonProperties {
             Map<UUID, DelegatedStringSet> entity,
             Map<FullQualifiedName, UUID> fqnToIdMap ) {
         DelegatedStringSet dobStrings = getValuesAsSet( entity, fqnToIdMap.get( DOB_FQN ) );
-        if ( dobStrings.isEmpty() ) { return dobStrings; }
+        if ( dobStrings.isEmpty() ) {
+            return dobStrings;
+        }
         DelegatedStringSet values = new DelegatedStringSet( Sets.newHashSet() );
         for ( String dobUnparsed : dobStrings ) {
             if ( dobUnparsed != null ) {
-                if ( StringUtils.isEmpty( dobUnparsed ) ) { values.add( "" ); } else {
+                if ( StringUtils.isEmpty( dobUnparsed ) ) {
+                    values.add( "" );
+                } else {
                     try {
                         LocalDate dt = LocalDate.parse( dobUnparsed );
-                        String dobParsed = dd.format( dt.getDayOfMonth() ) + dd.format( dt.getMonthValue() ) + String
-                                .valueOf( dt.getYear() );
+                        String dobParsed = dd.format( dt.getDayOfMonth() ) + dd.format( dt.getMonthValue() ) + dt.getYear();
                         values.add( dobParsed );
                     } catch ( Exception e ) {
                         logger.error( "Unable to parse date string" );
@@ -281,7 +294,4 @@ public class PersonProperties {
         return 0;
 
     }
-//        logger.info(proba);
-
-
 }

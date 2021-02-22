@@ -19,10 +19,11 @@
  *
  */
 
-package com.openlattice.linking
+package com.openlattice.linking.blocking
 
 import com.openlattice.data.EntityDataKey
-import java.util.*
+import java.util.Optional
+import java.util.UUID
 
 /**
  *
@@ -30,22 +31,6 @@ import java.util.*
  *
  */
 interface Blocker {
-    /**
-     * Retrieves the top 50 matches per entity set. This can be a large number of search results 1000 * # entity sets.
-     * @param entitySetId The entity set id of the entity upon which to perform blocking.
-     * @param entityKeyId The entity key id of the entity upon which to perform blocking.
-     *
-     * @return A block of potentially matching objects as a mapping from entity data keys to entity properties
-     */
-    fun block(
-            entitySetId: UUID,
-            entityKeyId: UUID,
-            entity: Optional<Map<UUID, Set<Any>>> = Optional.empty(),
-            top: Int = 50
-    ): Pair<EntityDataKey,Map<EntityDataKey, Map<UUID, Set<Any>>>> {
-        return block(EntityDataKey(entitySetId, entityKeyId), entity, top)
-    }
-
     /**
      * Retrieves the top 50 matches per entity set. This can be a large number of search results 1000 * # entity sets.
      *
@@ -57,6 +42,6 @@ interface Blocker {
             entityDataKey: EntityDataKey,
             entity: Optional<Map<UUID, Set<Any>>> = Optional.empty(),
             top: Int = 50
-    ): Pair<EntityDataKey,Map<EntityDataKey, Map<UUID, Set<Any>>>>
+    ): Block
 
 }

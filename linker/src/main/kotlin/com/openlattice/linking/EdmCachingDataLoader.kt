@@ -31,8 +31,8 @@ import com.openlattice.linking.util.PersonProperties
 import com.openlattice.postgres.mapstores.EntityTypeMapstore
 import com.openlattice.postgres.streams.BasePostgresIterable
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
-import java.util.UUID
 import java.util.Optional
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 /**
@@ -62,13 +62,17 @@ class EdmCachingDataLoader(
     }
 
     override fun getEntities(dataKeys: Set<EntityDataKey>): Map<EntityDataKey, Map<UUID, Set<Any>>> {
-        return dataKeys
-                .groupBy({ it.entitySetId }, { it.entityKeyId })
-                .mapValues { it.value.toSet() }
-                .flatMap { edkp ->
-                    getEntityStream(edkp.key, edkp.value).map { EntityDataKey(edkp.key, it.first) to it.second}
+        val entitiesByEDK = mutableMapOf<EntityDataKey, Map<UUID, Set<Any>>>()
+        dataKeys.groupBy({ it.entitySetId }, { it.entityKeyId })
+                .forEach { (entitySetId, entityKeyIds) ->
+                    val entitiesById = getEntityStream(entitySetId, entityKeyIds.toSet())
+                    entitiesByEDK.putAll(
+                            entitiesById.associate {
+                                EntityDataKey(entitySetId, it.first) to it.second
+                            }
+                    )
                 }
-                .toMap()
+        return entitiesByEDK
     }
 
     override fun getEntityStream(

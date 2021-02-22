@@ -41,10 +41,19 @@ import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EntitySetManager;
 import com.openlattice.ids.HazelcastIdGenerationService;
-import com.openlattice.linking.*;
+import com.openlattice.linking.BackgroundLinkingService;
+import com.openlattice.linking.DataLoader;
+import com.openlattice.linking.EdmCachingDataLoader;
+import com.openlattice.linking.LinkingConfiguration;
+import com.openlattice.linking.LinkingQueryService;
+import com.openlattice.linking.PostgresLinkingFeedbackService;
+import com.openlattice.linking.blocking.Blocker;
 import com.openlattice.linking.blocking.ElasticsearchBlocker;
+import com.openlattice.linking.clustering.Clusterer;
+import com.openlattice.linking.clustering.PostgresClusterer;
 import com.openlattice.linking.controllers.RealtimeLinkingController;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
+import com.openlattice.linking.matching.Matcher;
 import com.zaxxer.hikari.HikariDataSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -105,6 +114,9 @@ public class LinkerPostConfigurationServicesPod {
     @Inject
     private HealthCheckRegistry healthCheckRegistry;
 
+    @Inject
+    private PostgresLinkingFeedbackService postgresLinkingFeedbackQueryService;
+
     @Bean
     public HazelcastIdGenerationService idGeneration() {
         return new HazelcastIdGenerationService( hazelcastClientProvider );
@@ -139,7 +151,7 @@ public class LinkerPostConfigurationServicesPod {
         return new ElasticsearchBlocker(
                 elasticsearchApi,
                 dataLoader(),
-                postgresLinkingFeedbackQueryService(),
+                postgresLinkingFeedbackQueryService,
                 hazelcastInstance );
     }
 
@@ -156,7 +168,7 @@ public class LinkerPostConfigurationServicesPod {
                 entitySetManager,
                 metricRegistry,
                 eventBus,
-                postgresLinkingFeedbackQueryService(),
+                postgresLinkingFeedbackQueryService,
                 lqs()
         );
     }
@@ -173,20 +185,23 @@ public class LinkerPostConfigurationServicesPod {
                 blocker(),
                 matcher,
                 idService(),
-                dataLoader(),
+                clusterer(),
                 lqs(),
-                postgresLinkingFeedbackQueryService(),
+                postgresLinkingFeedbackQueryService,
                 edm.getEntityTypeUuids( linkingConfiguration.getEntityTypes() ),
                 linkingConfiguration );
     }
 
     @Bean
-    public RealtimeLinkingController realtimeLinkingController() {
-        return new RealtimeLinkingController( linkingConfiguration, edm );
+    public Clusterer clusterer() {
+        return new PostgresClusterer(
+                dataLoader(),
+                matcher
+        );
     }
 
     @Bean
-    public PostgresLinkingFeedbackService postgresLinkingFeedbackQueryService() {
-        return new PostgresLinkingFeedbackService( hikariDataSource, hazelcastInstance );
+    public RealtimeLinkingController realtimeLinkingController() {
+        return new RealtimeLinkingController( linkingConfiguration, edm );
     }
 }
