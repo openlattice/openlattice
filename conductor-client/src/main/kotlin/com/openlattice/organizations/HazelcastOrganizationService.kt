@@ -146,7 +146,7 @@ class HazelcastOrganizationService(
          */
 
         check(ALLOWED_ORG_CREATOR_PRINCIPAL_TYPES.contains(creatorPrincipal.type)) {
-            "Error creating org ${organization.title} -- only users and roles can create organizations."
+            "Error creating org ${organization.title} -- only $ALLOWED_ORG_CREATOR_PRINCIPAL_TYPES can create organizations."
         }
 
         initializeOrganizationPrincipal(creatorPrincipal, organization)
