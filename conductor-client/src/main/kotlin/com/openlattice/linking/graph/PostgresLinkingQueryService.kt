@@ -475,8 +475,8 @@ private val ENTITY_KEY_IDS_NEEDING_LINKING = """
             AND ( ${LAST_INDEX.name} >= ${LAST_WRITE.name} )
             AND ( ${LAST_INDEX.name} > '-infinity'::timestamptz )
             AND ${VERSION.name} > 0
-        LIMIT ?
         ORDER BY ${VERSION.name} DESC
+        LIMIT ?
         """.trimIndent()
 
 private val ENTITY_KEY_IDS_NOT_LINKED = "SELECT ${ENTITY_SET_ID.name},${ID.name} " +
