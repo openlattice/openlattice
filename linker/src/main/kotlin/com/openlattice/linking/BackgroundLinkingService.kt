@@ -80,7 +80,6 @@ class BackgroundLinkingService(
         }
 
         private val metrics: MetricRegistry = MetricRegistry()
-        val fullLink: Histogram = metrics.histogram("linking")
 
         inline fun <R> MetricRegistry.histogramify(
                 clazz: Class<*>,
@@ -122,7 +121,7 @@ class BackgroundLinkingService(
     @Suppress("UNUSED")
     @Scheduled(fixedRate = LINKING_RATE)
     fun enqueue() {
-        val linkedInSession = fullLink.snapshot.size()
+        val linkedInSession = metrics.histogram("linking").count
         logger.info("$linkedInSession entities linked since last startup.")
 
         metrics.histograms.forEach { (name, histogram) ->
@@ -230,8 +229,8 @@ class BackgroundLinkingService(
                 "initialBlocking"
         ) { log, sw ->
             val block = blocker.block(candidate)
-            val time = sw.stop().elapsed(TimeUnit.MILLISECONDS)
-            logger.info(
+            val time = sw.elapsed(TimeUnit.MILLISECONDS)
+            log.info(
                     "Blocking ({}, {}) took {} ms.",
                     candidate.entitySetId,
                     candidate.entityKeyId,
@@ -250,7 +249,7 @@ class BackgroundLinkingService(
         ) { log, sw ->
             log.info("Initializing matching for block {}", candidate)
             val init = matcher.initialize(initialBlock)
-            val time = sw.stop().elapsed(TimeUnit.MILLISECONDS)
+            val time = sw.elapsed(TimeUnit.MILLISECONDS)
             log.info("Initialization took {} ms", time )
             init
         }
