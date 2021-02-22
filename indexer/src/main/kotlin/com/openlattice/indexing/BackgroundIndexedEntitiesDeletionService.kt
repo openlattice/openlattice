@@ -23,7 +23,6 @@ package com.openlattice.indexing
 import com.google.common.base.Stopwatch
 import com.hazelcast.config.IndexType
 import com.hazelcast.core.HazelcastInstance
-import com.hazelcast.query.Predicates
 import com.hazelcast.query.QueryConstants
 import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.edm.EntitySet
@@ -64,26 +63,15 @@ class BackgroundIndexedEntitiesDeletionService(
         private val logger = LoggerFactory.getLogger(BackgroundIndexedEntitiesDeletionService::class.java)
     }
 
-    private val entitySets = HazelcastMap.ENTITY_SETS.getMap( hazelcastInstance )
+    private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
 
-    private val deletionLocks = HazelcastMap.DELETION_LOCKS.getMap( hazelcastInstance )
+    private val deletionLocks = HazelcastMap.DELETION_LOCKS.getMap(hazelcastInstance)
 
     init {
         deletionLocks.addIndex(IndexType.SORTED, QueryConstants.THIS_ATTRIBUTE_NAME.value())
     }
 
     private val taskLock = ReentrantLock()
-
-    @Suppress("UNCHECKED_CAST", "UNUSED")
-    @Scheduled(fixedRate = DELETE_EXPIRATION_MILLIS)
-    fun scavengeIndexingLocks() {
-        deletionLocks.removeAll(
-                Predicates.lessThan(
-                        QueryConstants.THIS_ATTRIBUTE_NAME.value(),
-                        System.currentTimeMillis()
-                )
-        )
-    }
 
     @Suppress("UNUSED")
     @Scheduled(fixedRate = DELETE_RATE)
@@ -111,7 +99,14 @@ class BackgroundIndexedEntitiesDeletionService(
 
             val totalDeleted = lockedEntitySets
                     .parallelStream()
-                    .mapToInt { deleteIndexedEntities(it) }
+                    .mapToInt {
+                        try {
+                            deleteIndexedEntities(it)
+                        } catch (e: Exception) {
+                            logger.error("An error occurred while deleting indexed entities for entity set {}", it.id, e)
+                            0
+                        }
+                    }
                     .sum()
 
             lockedEntitySets.forEach { deleteDeletionLock(it.id) }
