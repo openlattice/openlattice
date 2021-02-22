@@ -218,7 +218,11 @@ class PostgresLinkingQueryService(
         }
     }
 
-    override fun updateLinkingInformation(linkingId: UUID, newMember: EntityDataKey, cluster: Map<UUID, LinkedHashSet<UUID>>) {
+    override fun updateLinkingInformation(
+            linkingId: UUID,
+            newMember: EntityDataKey,
+            cluster: Map<UUID, LinkedHashSet<UUID>>
+    ) {
         val entitySetPartitions = partitionManager.getEntitySetPartitions(newMember.entitySetId).toList()
         val partition = getPartition(newMember.entityKeyId, entitySetPartitions)
         hds.connection.use { connection ->
@@ -462,15 +466,18 @@ private val UPDATE_LINKED_ENTITIES_SQL = """
         WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ? AND ${PARTITION.name} = ?
 """.trimIndent()
 
-private val ENTITY_KEY_IDS_NEEDING_LINKING = "SELECT ${ENTITY_SET_ID.name},${ID.name} " +
-        "FROM ${IDS.name} " +
-        "WHERE ${PARTITION.name} = ANY(?) " +
-            "AND ${ENTITY_SET_ID.name} = ? " +
-            "AND ${LAST_LINK.name} < ${LAST_WRITE.name} " +
-            "AND ( ${LAST_INDEX.name} >= ${LAST_WRITE.name} ) " +
-            "AND ( ${LAST_INDEX.name} > '-infinity'::timestamptz ) " +
-            "AND ${VERSION.name} > 0 " +
-        "LIMIT ?"
+private val ENTITY_KEY_IDS_NEEDING_LINKING = """
+        SELECT ${ENTITY_SET_ID.name},${ID.name}
+        FROM ${IDS.name}
+        WHERE ${PARTITION.name} = ANY(?)
+            AND ${ENTITY_SET_ID.name} = ?
+            AND ${LAST_LINK.name} < ${LAST_WRITE.name}
+            AND ( ${LAST_INDEX.name} >= ${LAST_WRITE.name} )
+            AND ( ${LAST_INDEX.name} > '-infinity'::timestamptz )
+            AND ${VERSION.name} > 0
+        LIMIT ?
+        ORDER BY ${VERSION.name} DESC
+        """.trimIndent()
 
 private val ENTITY_KEY_IDS_NOT_LINKED = "SELECT ${ENTITY_SET_ID.name},${ID.name} " +
         "FROM ${IDS.name} " +

@@ -57,6 +57,10 @@ class EdmCachingDataLoader(
             TimeUnit.MILLISECONDS
     )
 
+    private val linkingPropertyTypes = propertyTypes.getAll(personEntityType.properties).filter{
+        it.value.datatype != EdmPrimitiveTypeKind.Binary && PersonProperties.FQNS.contains(it.value.type)
+    }
+
     override fun getEntity(dataKey: EntityDataKey): Map<UUID, Set<Any>> {
         return getEntities(setOf(dataKey)).entries.first().value
     }
@@ -81,6 +85,38 @@ class EdmCachingDataLoader(
         return dataQueryService.getEntitySetWithPropertyTypeIdsIterable(
                 mapOf(entitySetId to Optional.of(entityKeyIds)),
                 mapOf(entitySetId to authorizedPropertyTypesCache.get())
+        )
+    }
+
+    override fun getLinkingEntity(dataKey: EntityDataKey): Map<UUID, Set<Any>> {
+        val esid = dataKey.entitySetId
+        return dataQueryService.getEntitySetWithPropertyTypeIdsIterable(
+                mapOf(esid to Optional.of(setOf(dataKey.entityKeyId))),
+                mapOf(esid to linkingPropertyTypes)
+        ).first().second
+    }
+
+    override fun getLinkingEntities(dataKeys: Set<EntityDataKey>): Map<EntityDataKey, Map<UUID, Set<Any>>> {
+        val entitiesByEDK = mutableMapOf<EntityDataKey, Map<UUID, Set<Any>>>()
+        dataKeys.groupBy({ it.entitySetId }, { it.entityKeyId })
+                .forEach { (entitySetId, entityKeyIds) ->
+                    val entitiesById = getLinkingEntityStream(entitySetId, entityKeyIds.toSet())
+                    entitiesByEDK.putAll(
+                            entitiesById.associate {
+                                EntityDataKey(entitySetId, it.first) to it.second
+                            }
+                    )
+                }
+        return entitiesByEDK
+    }
+
+    override fun getLinkingEntityStream(
+            entitySetId: UUID,
+            entityKeyIds: Set<UUID>
+    ): BasePostgresIterable<Pair<UUID, Map<UUID, Set<Any>>>> {
+        return dataQueryService.getEntitySetWithPropertyTypeIdsIterable(
+                mapOf(entitySetId to Optional.of(entityKeyIds)),
+                mapOf(entitySetId to linkingPropertyTypes)
         )
     }
 

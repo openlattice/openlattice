@@ -112,7 +112,7 @@ class SocratesMatcher(
 //        val feedbacks = linkingFeedbackService.getLinkingFeedbacks(entityPairs)
 
         // filter out feedbacks
-        val filteredEntities = entities.mapValues { entity ->
+        val filteredEntities = entities.mapValues { _ ->
 //            entities.keys.filter {
 //                val entityPair = EntityKeyPair(entity.key, it)
 //                val linked = feedbacks[entityPair]

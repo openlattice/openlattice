@@ -38,7 +38,6 @@ import com.openlattice.postgres.mapstores.EntityTypeMapstore
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
-import java.util.Optional
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 import kotlin.streams.asSequence
@@ -71,7 +70,6 @@ class ElasticsearchBlocker(
     @Timed
     override fun block(
             entityDataKey: EntityDataKey,
-            entity: Optional<Map<UUID, Set<Any>>>,
             top: Int
     ): Block {
         logger.info("Blocking for entity data key {}", entityDataKey)
@@ -80,7 +78,7 @@ class ElasticsearchBlocker(
 
         var blockedEntitySetSearchResults = elasticsearch.executeBlockingSearch(
                 personEntityType.id ,
-                getFieldSearches(entity.orElseGet { dataLoader.getEntity(entityDataKey) }),
+                getFieldSearches(dataLoader.getLinkingEntity(entityDataKey)),
                 top,
                 false
         ).filter {
@@ -120,7 +118,7 @@ class ElasticsearchBlocker(
                         .parallelStream()
                         .flatMap { entry ->
                             dataLoader
-                                    .getEntityStream(entry.key, entry.value)
+                                    .getLinkingEntityStream(entry.key, entry.value)
                                     .stream()
                                     .map { EntityDataKey(entry.key, it.first) to it.second }
                         }

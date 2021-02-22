@@ -272,7 +272,6 @@ class BackgroundLinkingService(
         val scoresAsEsidToEkids = (collectKeys(scores) + newMember)
                 .groupBy { edk -> edk.entitySetId }
                 .mapValues { (_, edks) ->
-
                     Sets.newLinkedHashSet(edks.map { it.entityKeyId })
                 }
         lqs.updateLinkingInformation( linkingId, newMember, scoresAsEsidToEkids )
