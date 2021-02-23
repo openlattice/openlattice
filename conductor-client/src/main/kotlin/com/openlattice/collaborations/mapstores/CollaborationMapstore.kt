@@ -37,11 +37,13 @@ open class CollaborationMapstore(hds: HikariDataSource) : AbstractBasePostgresMa
 
         var index = bind(ps, key)
 
+        // insert
         ps.setString(index++, value.name)
         ps.setString(index++, value.title)
         ps.setString(index++, value.description)
         ps.setArray(index++, orgsArray)
 
+        // update
         ps.setString(index++, value.name)
         ps.setString(index++, value.title)
         ps.setString(index++, value.description)
