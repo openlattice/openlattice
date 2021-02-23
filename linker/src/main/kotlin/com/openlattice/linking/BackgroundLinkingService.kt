@@ -21,10 +21,10 @@
 
 package com.openlattice.linking
 
-import com.codahale.metrics.Histogram
 import com.codahale.metrics.MetricRegistry
 import com.codahale.metrics.MetricRegistry.name
-import com.codahale.metrics.Snapshot
+import com.codahale.metrics.Slf4jReporter
+import com.geekbeast.metrics.time
 import com.google.common.base.Stopwatch
 import com.google.common.collect.Sets
 import com.google.common.util.concurrent.ListeningExecutorService
@@ -82,35 +82,14 @@ class BackgroundLinkingService(
 
         val metrics: MetricRegistry = MetricRegistry()
 
-        inline fun <R> MetricRegistry.histogramify(
-                clazz: Class<*>,
-                vararg names: String,
-                block: (Logger, Stopwatch) -> R
-        ): R {
-            val hist = histogram(name(clazz, *names))
-            val logger = logger //loggers.getOrPut(clazz) { LoggerFactory.getLogger(clazz) }
-            val sw = Stopwatch.createStarted()
-            val ret = block(logger, sw)
-            hist.update(sw.stop().elapsed(TimeUnit.MILLISECONDS))
-            return ret
-        }
-
-        fun printHistogram(name: String, histogram: Histogram) {
-            val snapshot: Snapshot = histogram.snapshot
-            logger.error("""
-                         [$name] stats
-                         count = ${histogram.count}
-                           min = ${snapshot.min}
-                           max = ${snapshot.max}
-                          mean = ${snapshot.mean}
-                        stddev = ${snapshot.stdDev}
-                        median = ${snapshot.median}
-                          75%% <= ${snapshot.get75thPercentile()}
-                          95%% <= ${snapshot.get95thPercentile()}
-                          98%% <= ${snapshot.get98thPercentile()}
-                          99%% <= ${snapshot.get99thPercentile()}
-                        99.9%% <= ${snapshot.get999thPercentile()}
-            """.trimIndent())
+        init {
+            val metReporter = Slf4jReporter.forRegistry(metrics)
+                    .outputTo(logger)
+                    .withLoggingLevel(Slf4jReporter.LoggingLevel.INFO)
+                    .convertRatesTo(TimeUnit.HOURS)
+                    .convertDurationsTo(TimeUnit.MILLISECONDS)
+                    .build()
+            metReporter.start(5, TimeUnit.MINUTES)
         }
     }
 
@@ -125,9 +104,6 @@ class BackgroundLinkingService(
         val linkedInSession = metrics.histogram(name(BackgroundLinkingService::class.java, "linking")).count
         logger.info("$linkedInSession entities linked since last startup.")
 
-        metrics.histograms.forEach { (name, histogram) ->
-            printHistogram(name, histogram)
-        }
         if ( candidates.isNotEmpty() ){
             logger.info("Linking queue still has candidates on it, not adding more at the moment")
             return
@@ -186,10 +162,10 @@ class BackgroundLinkingService(
                     logger.info("candidate freshly locked for linking: {}", candidate)
                     try {
                         logger.info("Linking {}", candidate)
-                        metrics.histogramify(
+                        metrics.time(
                                 BackgroundLinkingService::class.java,
                                 "linking"
-                        ) { _, _ ->
+                        ) { _, _->
                             link(candidate)
                         }
                         logger.info("Finished linking {}", candidate)
@@ -220,58 +196,29 @@ class BackgroundLinkingService(
         clearNeighborhoods(candidate)
         //TODO: if we have positive feedbacks on entity, we use its linking id and match them together
         // Run standard blocking + clustering
-        val initialBlock = metrics.histogramify(
-                BackgroundLinkingService::class.java,
-                "initialBlocking"
-        ) { log, sw ->
-            val block = blocker.block(candidate)
-            val time = sw.elapsed(TimeUnit.MILLISECONDS)
-            log.info(
-                    "Blocking ({}, {}) took {} ms.",
-                    candidate.entitySetId,
-                    candidate.entityKeyId,
-                    time
-            )
-            block
-        }
+        val sw = Stopwatch.createStarted()
+        val initialBlock = blocker.block(candidate)
+        logger.info(
+                "Blocking ({}, {}) took {} ms.",
+                candidate.entitySetId,
+                candidate.entityKeyId,
+                sw.elapsed(TimeUnit.MILLISECONDS)
+        )
 
+        logger.info("Initializing matching for block {}", candidate)
         // initialize
-        val initializedBlock = metrics.histogramify(
-                BackgroundLinkingService::class.java,
-                "matcherInitialize"
-        ) { log, sw ->
-            log.info("Initializing matching for block {}", candidate)
-            val init = matcher.initialize(initialBlock)
-            log.info("Initialization took {} ms", sw.elapsed(TimeUnit.MILLISECONDS))
-            init
-        }
+        val initializedBlock = matcher.initialize(initialBlock)
+        logger.info("Initialization took {} ms", sw.elapsed(TimeUnit.MILLISECONDS))
 
         val dataKeys = collectKeys(initializedBlock.matches)
 
         //Decision that needs to be made is whether to start new cluster or merge into existing cluster.
+        // v TODO v Getting Arithmetic exceptions in here
         try {
             val (linkingId, scores) = lqs.lockClustersDoWorkAndCommit(candidate, dataKeys) { clusters ->
-//                metrics.histogramify(
-//                        BackgroundLinkingService::class.java,
-//                        "clusterer","clusters", "count"
-//                ) { _, _ ->
-//                    clusters.size
-//                }
                 val maybeBestCluster = clusters.asSequence()
-                        .map { cluster ->
-//                            metrics.histogramify(
-//                                    BackgroundLinkingService::class.java,
-//                                    "clusterer","cluster", "size"
-//                            ) { _, _ ->
-//                                cluster.value.size
-//                            }
-                            metrics.histogramify(
-                                    BackgroundLinkingService::class.java,
-                                    "clusterer", "cluster"
-                            ) { _, _ ->
-                                clusterer.cluster(candidate, KeyedCluster.fromEntry(cluster))
-                            }
-                        }.filter { it.score > MINIMUM_SCORE }
+                        .map { clusterer.cluster(candidate, KeyedCluster.fromEntry(it)) }
+                        .filter { it.score > MINIMUM_SCORE }
                         .maxBy { it.score }
                 return@lockClustersDoWorkAndCommit if (maybeBestCluster != null) {
                     Triple(maybeBestCluster.clusterId, maybeBestCluster.cluster, false)
