@@ -22,7 +22,6 @@
 package com.openlattice.linking
 
 import com.codahale.metrics.MetricRegistry
-import com.codahale.metrics.MetricRegistry.name
 import com.codahale.metrics.Slf4jReporter
 import com.geekbeast.metrics.time
 import com.google.common.base.Stopwatch
@@ -101,9 +100,6 @@ class BackgroundLinkingService(
     @Suppress("UNUSED")
     @Scheduled(fixedRate = LINKING_RATE)
     fun enqueue() {
-        val linkedInSession = metrics.histogram(name(BackgroundLinkingService::class.java, "linking")).count
-        logger.info("$linkedInSession entities linked since last startup.")
-
         if ( candidates.isNotEmpty() ){
             logger.info("Linking queue still has candidates on it, not adding more at the moment")
             return
