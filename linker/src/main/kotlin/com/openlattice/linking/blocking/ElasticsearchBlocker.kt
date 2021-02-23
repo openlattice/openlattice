@@ -77,8 +77,12 @@ class ElasticsearchBlocker(
 
         val sw = Stopwatch.createStarted()
 
+        val loadedCandidateData = dataLoader.getLinkingEntity(entityDataKey)
+        if (isEntityEmpty(loadedCandidateData)) { // has no relevant data
+            // we done
+        }
         var blockedEntitySetSearchResults = elasticsearch.executeBlockingSearch(
-                personEntityType.id ,
+                personEntityType.id,
                 getFieldSearches(dataLoader.getLinkingEntity(entityDataKey)),
                 top,
                 false
@@ -111,36 +115,33 @@ class ElasticsearchBlocker(
         sw.reset()
         sw.start()
 
-        val negative = BackgroundLinkingService.metrics.histogramify(
-                this::class.java,
-                "block", "removeNegativeFeedback", "get"
-        ) { log, sw ->
-            removeNegativeFeedbackFromSearchResult(entityDataKey, blockedEntitySetSearchResults)
-        }
+        val negative = removeNegativeFeedbackFromSearchResult(entityDataKey, blockedEntitySetSearchResults)
 
-        val block = BackgroundLinkingService.metrics.histogramify(
+        return BackgroundLinkingService.metrics.histogramify(
                 this::class.java,
                 "block", "removeNegativeFeedback", "transform"
-        ) { log, sw ->
-         val blck = Block(
-                entityDataKey,
-                negative
-                        .filter { it.value.isNotEmpty() }
-                        .entries
-                        .flatMap { entry ->
-                            dataLoader.getLinkingEntityStream(entry.key, entry.value).map {
-                                EntityDataKey(entry.key, it.first) to it.second
-                            }
-                        }.toMap()
-        )
+        ) { _, sw2 ->
+            val blck = Block(
+                    entityDataKey,
+                    negative
+                            .filter { it.value.isNotEmpty() }
+                            .entries
+                            .flatMap { entry ->
+                                dataLoader.getLinkingEntityStream(entry.key, entry.value).map {
+                                    EntityDataKey(entry.key, it.first) to it.second
+                                }
+                            }.toMap()
+            )
             logger.info(
                     "Loading {} entities took {} ms.", blck.size,
-                    sw.elapsed(TimeUnit.MILLISECONDS)
+                    sw2.elapsed(TimeUnit.MILLISECONDS)
             )
             blck
         }
+    }
 
-        return block
+    private fun isEntityEmpty(candidateData: Map<UUID, Set<Any>>): Boolean {
+
     }
 
     /**
