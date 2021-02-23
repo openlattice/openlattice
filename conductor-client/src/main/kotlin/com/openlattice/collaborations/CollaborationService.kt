@@ -88,6 +88,12 @@ class CollaborationService(
         }
     }
 
+    fun handleOrganizationDeleted(organizationId: UUID) {
+        getCollaborationIdsIncludingOrg(organizationId).forEach {
+            removeOrganizationIdsFromCollaboration(it, setOf(organizationId))
+        }
+    }
+
     fun handleMembersAdddedToOrg(organizationId: UUID, newMembers: Set<AclKey>) {
         val collaborationIds = getCollaborationIdsIncludingOrg(organizationId)
 

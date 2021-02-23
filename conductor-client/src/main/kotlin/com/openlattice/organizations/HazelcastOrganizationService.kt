@@ -21,7 +21,11 @@ import com.openlattice.notifications.sms.PhoneNumberService
 import com.openlattice.notifications.sms.SmsEntitySetInformation
 import com.openlattice.organization.OrganizationPrincipal
 import com.openlattice.organization.roles.Role
-import com.openlattice.organizations.events.*
+import com.openlattice.organizations.events.MembersAddedToOrganizationEvent
+import com.openlattice.organizations.events.MembersRemovedFromOrganizationEvent
+import com.openlattice.organizations.events.OrganizationCreatedEvent
+import com.openlattice.organizations.events.OrganizationDeletedEvent
+import com.openlattice.organizations.events.OrganizationUpdatedEvent
 import com.openlattice.organizations.mapstores.CONNECTIONS_INDEX
 import com.openlattice.organizations.mapstores.MEMBERS_INDEX
 import com.openlattice.organizations.processors.OrganizationEntryProcessor
@@ -261,6 +265,7 @@ class HazelcastOrganizationService(
         eventBus.post(OrganizationDeletedEvent(organizationId))
 
         appConfigsMapstore.removeAll(Predicates.equal(AppConfigMapstore.ORGANIZATION_ID, organizationId))
+        collaborationService.handleOrganizationDeleted(organizationId)
         changeEntitySetsAndCollectionsOrganizationId(organizationId, IdConstants.GLOBAL_ORGANIZATION_ID.id)
     }
 
