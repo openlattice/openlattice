@@ -137,7 +137,7 @@ class HazelcastOrganizationService(
     }
 
     @Timed
-    fun createOrganization(principal: Principal, organization: Organization) {
+    fun createOrganization(creatorPrincipal: Principal, organization: Organization): UUID {
         /*
          * Roles shouldn't be members of an organizations.
          *
@@ -146,33 +146,33 @@ class HazelcastOrganizationService(
          *
          * In order to function roles must have READ access on the organization and
          */
-        val membersToAdd = when (principal.type) {
-            PrincipalType.USER ->
-                //Add the organization principal to the creator marking them as a member of the organization
-                setOf(principal)
-            PrincipalType.ROLE ->
-                //For a role we ensure that it has
-                setOf()
-            else -> throw IllegalStateException("Only users and roles can create organizations.")
-        }//Fall through by design
 
-        initializeOrganizationPrincipal(principal, organization)
+        check(ALLOWED_ORG_CREATOR_PRINCIPAL_TYPES.contains(creatorPrincipal.type)) {
+            "Error creating org ${organization.title} -- only $ALLOWED_ORG_CREATOR_PRINCIPAL_TYPES can create organizations."
+        }
+
+        initializeOrganizationPrincipal(creatorPrincipal, organization)
         initializeOrganization(organization)
 
         // set up organization database
         val orgDatabase = assembler.createOrganizationAndReturnOid(organization.id)
         organizationDatabases.set(organization.id, orgDatabase)
 
-        val adminRole = initializeOrganizationAdminRole(principal, organization.adminRoleAclKey, organization)
+        val adminRole = initializeOrganizationAdminRole(creatorPrincipal, organization.adminRoleAclKey, organization)
 
         organizationMetadataEntitySetsService.initializeOrganizationMetadataEntitySets(adminRole)
 
-        if (membersToAdd.isNotEmpty()) {
-            addMembers(organization.getAclKey().first(), membersToAdd, mapOf())
+        if (creatorPrincipal.type == PrincipalType.USER) {
+            val userAclKey = securePrincipalsManager.lookup(creatorPrincipal)
+
+            addMembers(organization.id, setOf(creatorPrincipal), mapOf())
+            securePrincipalsManager.addPrincipalToPrincipal(organization.adminRoleAclKey, userAclKey)
         }
 
         eventBus.post(OrganizationCreatedEvent(organization))
         setSmsEntitySetInformation(organization.smsEntitySetInfo)
+
+        return organization.id
     }
 
     private fun initializeOrganization(organization: Organization) {
@@ -704,6 +704,8 @@ class HazelcastOrganizationService(
     companion object {
 
         private val logger = LoggerFactory.getLogger(HazelcastOrganizationService::class.java)
+
+        private val ALLOWED_ORG_CREATOR_PRINCIPAL_TYPES = setOf(PrincipalType.USER, PrincipalType.ROLE)
 
         private fun constructOrganizationAdminRolePrincipalTitle(organization: SecurablePrincipal): String {
             return organization.name + " - ADMIN"

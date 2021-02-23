@@ -109,15 +109,10 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
     @PostMapping(value = ["", "/"], consumes = [MediaType.APPLICATION_JSON_VALUE])
     override fun createOrganizationIfNotExists(@RequestBody organization: Organization): UUID {
         Preconditions.checkArgument(
-                organization.connections.isEmpty() || isAdmin(),
+                organization.connections.isEmpty() || isAdmin,
                 "Must be admin to specify auto-enrollments"
         )
-        organizations.createOrganization(Principals.getCurrentUser(), organization)
-        securableObjectTypes.createSecurableObjectType(
-                AclKey(organization.id),
-                SecurableObjectType.Organization
-        )
-        return organization.id
+        return organizations.createOrganization(Principals.getCurrentUser(), organization)
     }
 
     @Timed
