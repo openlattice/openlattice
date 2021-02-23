@@ -29,14 +29,16 @@ import com.hazelcast.query.Predicates
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
 import com.openlattice.data.EntityDataKey
 import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.linking.*
-import com.openlattice.linking.BackgroundLinkingService.Companion.histogramify
+import com.openlattice.linking.DataLoader
+import com.openlattice.linking.EntityKeyPair
+import com.openlattice.linking.FeedbackType
+import com.openlattice.linking.PostgresLinkingFeedbackService
 import com.openlattice.linking.util.PersonProperties
 import com.openlattice.postgres.mapstores.EntityTypeMapstore
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
-import java.util.*
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 
@@ -118,27 +120,22 @@ class ElasticsearchBlocker(
 
         val filteredSearchResults = removeNegativeFeedbackFromSearchResult(entityDataKey, blockedEntitySetSearchResults)
 
-        return BackgroundLinkingService.metrics.histogramify(
-                this::class.java,
-                "block", "removeNegativeFeedback", "transform"
-        ) { _, sw2 ->
-            val blck = Block(
-                    entityDataKey,
-                    filteredSearchResults.entries
-                            .filter { it.value.isNotEmpty() }
-                            .flatMap { entry ->
-                                dataLoader.getLinkingEntityStream(entry.key, entry.value)
-                                        .filter { !isEntityEmpty(it.second) }
-                                        .map { EntityDataKey(entry.key, it.first) to it.second }
-                                        .filter { it.second.isNotEmpty() }
-                            }.toMap()
-            )
-            logger.info(
-                    "Loading {} entities took {} ms.", blck.size,
-                    sw2.elapsed(TimeUnit.MILLISECONDS)
-            )
-            blck
-        }
+        val block = Block(
+                entityDataKey,
+                filteredSearchResults.entries
+                        .filter { it.value.isNotEmpty() }
+                        .flatMap { entry ->
+                            dataLoader.getLinkingEntityStream(entry.key, entry.value)
+                                    .filter { !isEntityEmpty(it.second) }
+                                    .map { EntityDataKey(entry.key, it.first) to it.second }
+                                    .filter { it.second.isNotEmpty() }
+                        }.toMap()
+        )
+        logger.info(
+                "Loading {} entities took {} ms.", block.size,
+                sw.elapsed(TimeUnit.MILLISECONDS)
+        )
+        return block
     }
 
     private fun isEntityEmpty(candidateData: Map<UUID, Set<Any>>): Boolean {
