@@ -217,12 +217,7 @@ class BackgroundLinkingService(
      * @param candidate The data key for the entity to perform linking upon.
      */
     private fun link(candidate: EntityDataKey) {
-        metrics.histogramify(
-                BackgroundLinkingService::class.java,
-                "clearNeighborhoods"
-        ) { _, _ ->
-            clearNeighborhoods(candidate)
-        }
+        clearNeighborhoods(candidate)
         //TODO: if we have positive feedbacks on entity, we use its linking id and match them together
         // Run standard blocking + clustering
         val initialBlock = metrics.histogramify(
@@ -259,17 +254,28 @@ class BackgroundLinkingService(
         //Decision that needs to be made is whether to start new cluster or merge into existing cluster.
         try {
             val (linkingId, scores) = lqs.lockClustersDoWorkAndCommit( candidate, dataKeys) { clusters ->
+                metrics.histogramify(
+                        BackgroundLinkingService::class.java,
+                        "clusterer","clusters", "count"
+                ) { _, _ ->
+                    clusters.size
+                }
                 val maybeBestCluster = clusters.asSequence()
-                            .map { cluster ->
-                                metrics.histogramify(
-                                        BackgroundLinkingService::class.java,
-                                        "clusterer","cluster"
-                                ) { _, _ ->
-                                    clusterer.cluster(candidate, KeyedCluster.fromEntry(cluster))
-                                }
-                            }.filter { it.score > MINIMUM_SCORE }
-                            .maxBy { it.score }
-
+                        .map { cluster ->
+                            metrics.histogramify(
+                                    BackgroundLinkingService::class.java,
+                                    "clusterer","cluster", "size"
+                            ) { _, _ ->
+                                cluster.value.size
+                            }
+                            metrics.histogramify(
+                                    BackgroundLinkingService::class.java,
+                                    "clusterer","cluster"
+                            ) { _, _ ->
+                                clusterer.cluster(candidate, KeyedCluster.fromEntry(cluster))
+                            }
+                        }.filter { it.score > MINIMUM_SCORE }
+                        .maxBy { it.score }
                 return@lockClustersDoWorkAndCommit if ( maybeBestCluster != null ) {
                     Triple(maybeBestCluster.clusterId, maybeBestCluster.cluster, false)
                 } else {

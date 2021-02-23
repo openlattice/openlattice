@@ -144,7 +144,6 @@ class SocratesMatcher(
         )
 
         return PairwiseMatch(block.entityDataKey, matchedEntities)
-
     }
 
     /**
@@ -210,13 +209,13 @@ class SocratesMatcher(
         val bfTime = blockFeatureExtraction - propsExtractionSw
         val fblTime = featureExtractionSW - blockFeatureExtraction
 
-        if (propsExtractionSw > 500){
+        if (propsExtractionSw > 300){
             logger.error("Property extraction: $propsExtractionSw ms")
         }
-        if (bfTime > 500){
+        if (bfTime > 300){
             logger.error("Block feature extraction: $bfTime ms")
         }
-        if (fblTime > 500){
+        if (fblTime > 300){
             logger.error("final transforms: $fblTime ms")
         }
         return results
