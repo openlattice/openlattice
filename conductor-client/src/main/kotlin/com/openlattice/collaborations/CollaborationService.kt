@@ -34,7 +34,6 @@ class CollaborationService(
 
     fun getCollaborations(ids: Set<UUID>): Map<UUID, Collaboration> {
         return collaborations.getAll(ids)
-
     }
 
     fun getCollaboration(id: UUID): Collaboration {
@@ -72,7 +71,6 @@ class CollaborationService(
 
     fun removeOrganizationIdsFromCollaboration(id: UUID, organizationIds: Set<UUID>) {
         ensureValidCollaborationId(id)
-
         removeReadOnCollaborationFromOrganizations(id, organizationIds)
     }
 

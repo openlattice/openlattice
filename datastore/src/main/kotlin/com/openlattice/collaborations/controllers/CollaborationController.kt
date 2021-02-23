@@ -143,7 +143,6 @@ class CollaborationController : AuthorizingComponent, CollaborationsApi {
         return collaborationService.getProjectedTableIdsInCollaborationsAndOrganizations(collaborationIds, setOf(organizationId)) {
             it.key.collaborationId
         }
-
     }
 
     @Timed
