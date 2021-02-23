@@ -29,18 +29,14 @@ import com.hazelcast.query.Predicates
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
 import com.openlattice.data.EntityDataKey
 import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.linking.BackgroundLinkingService
+import com.openlattice.linking.*
 import com.openlattice.linking.BackgroundLinkingService.Companion.histogramify
-import com.openlattice.linking.DataLoader
-import com.openlattice.linking.EntityKeyPair
-import com.openlattice.linking.FeedbackType
-import com.openlattice.linking.PostgresLinkingFeedbackService
 import com.openlattice.linking.util.PersonProperties
 import com.openlattice.postgres.mapstores.EntityTypeMapstore
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
-import java.util.UUID
+import java.util.*
 import java.util.concurrent.TimeUnit
 
 
@@ -57,12 +53,15 @@ class ElasticsearchBlocker(
         hazelcast: HazelcastInstance
 ) : Blocker {
 
-    private val entitySets = HazelcastMap.ENTITY_SETS.getMap( hazelcast )
-    private val entityTypes = HazelcastMap.ENTITY_TYPES.getMap( hazelcast )
+    private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcast)
+    private val entityTypes = HazelcastMap.ENTITY_TYPES.getMap(hazelcast)
+    private val propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap(hazelcast)
 
     private val personEntityType = entityTypes.values(
             Predicates.equal(EntityTypeMapstore.FULLQUALIFIED_NAME_PREDICATE, PersonProperties.PERSON_TYPE_FQN.fullQualifiedNameAsString)
     ).first()
+    private val personLinkingPropertyTypeIds = propertyTypes.getAll(personEntityType.properties).values
+            .filter { PersonProperties.FQNS.contains(it.type) }.map { it.id }.toSet()
 
     private val entitySetKeysCache = Suppliers.memoizeWithExpiration({
         entitySets.keys.toSet()
@@ -78,12 +77,14 @@ class ElasticsearchBlocker(
         val sw = Stopwatch.createStarted()
 
         val loadedCandidateData = dataLoader.getLinkingEntity(entityDataKey)
+
         if (isEntityEmpty(loadedCandidateData)) { // has no relevant data
-            // we done
+            return Block(entityDataKey, mapOf())
         }
+
         var blockedEntitySetSearchResults = elasticsearch.executeBlockingSearch(
                 personEntityType.id,
-                getFieldSearches(dataLoader.getLinkingEntity(entityDataKey)),
+                getFieldSearches(loadedCandidateData),
                 top,
                 false
         ).filter {
@@ -115,7 +116,7 @@ class ElasticsearchBlocker(
         sw.reset()
         sw.start()
 
-        val negative = removeNegativeFeedbackFromSearchResult(entityDataKey, blockedEntitySetSearchResults)
+        val filteredSearchResults = removeNegativeFeedbackFromSearchResult(entityDataKey, blockedEntitySetSearchResults)
 
         return BackgroundLinkingService.metrics.histogramify(
                 this::class.java,
@@ -123,13 +124,13 @@ class ElasticsearchBlocker(
         ) { _, sw2 ->
             val blck = Block(
                     entityDataKey,
-                    negative
+                    filteredSearchResults.entries
                             .filter { it.value.isNotEmpty() }
-                            .entries
                             .flatMap { entry ->
-                                dataLoader.getLinkingEntityStream(entry.key, entry.value).map {
-                                    EntityDataKey(entry.key, it.first) to it.second
-                                }
+                                dataLoader.getLinkingEntityStream(entry.key, entry.value)
+                                        .filter { !isEntityEmpty(it.second) }
+                                        .map { EntityDataKey(entry.key, it.first) to it.second }
+                                        .filter { it.second.isNotEmpty() }
                             }.toMap()
             )
             logger.info(
@@ -141,7 +142,10 @@ class ElasticsearchBlocker(
     }
 
     private fun isEntityEmpty(candidateData: Map<UUID, Set<Any>>): Boolean {
-
+        return personLinkingPropertyTypeIds.any {
+            val data = candidateData[it]
+            data != null && data.isNotEmpty()
+        }
     }
 
     /**
