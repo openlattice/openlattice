@@ -250,8 +250,7 @@ class BackgroundLinkingService(
         ) { log, sw ->
             log.info("Initializing matching for block {}", candidate)
             val init = matcher.initialize(initialBlock)
-            val time = sw.elapsed(TimeUnit.MILLISECONDS)
-            log.info("Initialization took {} ms", time )
+            log.info("Initialization took {} ms", sw.elapsed(TimeUnit.MILLISECONDS))
             init
         }
 
@@ -281,12 +280,7 @@ class BackgroundLinkingService(
                     Triple(linkingId, cluster, true)
                 }
             }
-            metrics.histogramify(
-                    BackgroundLinkingService::class.java,
-                    "insertMatches"
-            ) { _, _ ->
-                insertMatches(linkingId, candidate, Cluster(scores))
-            }
+            insertMatches(linkingId, candidate, Cluster(scores))
         } catch (ex: Exception) {
             logger.error("An error occurred while performing linking.", ex)
             throw IllegalStateException("Error occured while performing linking.", ex)

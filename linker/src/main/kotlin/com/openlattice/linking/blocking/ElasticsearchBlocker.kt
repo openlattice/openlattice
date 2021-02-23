@@ -29,6 +29,8 @@ import com.hazelcast.query.Predicates
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
 import com.openlattice.data.EntityDataKey
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.linking.BackgroundLinkingService
+import com.openlattice.linking.BackgroundLinkingService.Companion.histogramify
 import com.openlattice.linking.DataLoader
 import com.openlattice.linking.EntityKeyPair
 import com.openlattice.linking.FeedbackType
@@ -40,7 +42,6 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.util.UUID
 import java.util.concurrent.TimeUnit
-import kotlin.streams.asSequence
 
 
 private val logger = LoggerFactory.getLogger(ElasticsearchBlocker::class.java)
@@ -110,26 +111,35 @@ class ElasticsearchBlocker(
         sw.reset()
         sw.start()
 
-        val block = Block(
+        val negative = BackgroundLinkingService.metrics.histogramify(
+                this::class.java,
+                "block", "removeNegativeFeedback", "get"
+        ) { log, sw ->
+            removeNegativeFeedbackFromSearchResult(entityDataKey, blockedEntitySetSearchResults)
+        }
+
+        val block = BackgroundLinkingService.metrics.histogramify(
+                this::class.java,
+                "block", "removeNegativeFeedback", "transform"
+        ) { log, sw ->
+         val blck = Block(
                 entityDataKey,
-                removeNegativeFeedbackFromSearchResult(entityDataKey, blockedEntitySetSearchResults)
+                negative
                         .filter { it.value.isNotEmpty() }
                         .entries
-                        .parallelStream()
                         .flatMap { entry ->
-                            dataLoader
-                                    .getLinkingEntityStream(entry.key, entry.value)
-                                    .stream()
-                                    .map { EntityDataKey(entry.key, it.first) to it.second }
-                        }
-                        .asSequence()
-                        .toMap()
+                            dataLoader.getLinkingEntityStream(entry.key, entry.value).map {
+                                EntityDataKey(entry.key, it.first) to it.second
+                            }
+                        }.toMap()
         )
+            logger.info(
+                    "Loading {} entities took {} ms.", blck.size,
+                    sw.elapsed(TimeUnit.MILLISECONDS)
+            )
+            blck
+        }
 
-        logger.info(
-                "Loading {} entities took {} ms.", block.size,
-                sw.elapsed(TimeUnit.MILLISECONDS)
-        )
         return block
     }
 

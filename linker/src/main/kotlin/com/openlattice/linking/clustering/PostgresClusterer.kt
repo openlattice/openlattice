@@ -25,18 +25,11 @@ class PostgresClusterer(
             blockKey: EntityDataKey,
             identifiedCluster: KeyedCluster
     ): ScoredCluster {
-        val linkingEntities = BackgroundLinkingService.metrics.histogramify(
-                BackgroundLinkingService::class.java,
-                "cluster","loader","getLinkingEntities"
-        ) { _, _ ->
-             loader.getLinkingEntities(
-                    BackgroundLinkingService.collectKeys(identifiedCluster.cluster) + blockKey
-            )
-        }
-
         val block = Block(
                 blockKey,
-                linkingEntities
+                loader.getLinkingEntities(
+                        BackgroundLinkingService.collectKeys(identifiedCluster.cluster) + blockKey
+                )
         )
         //At some point, we may want to skip recomputing matches for existing cluster elements as an optimization.
         //Since we're freshly loading entities it's not too bad to recompute everything.
@@ -48,13 +41,7 @@ class PostgresClusterer(
             matcher.match(block)
         }
         val matchedCluster = Cluster(matchedBlock.matches)
-
-        val score = BackgroundLinkingService.metrics.histogramify(
-                BackgroundLinkingService::class.java,
-                "cluster","scoreCluster"
-        ) { _, _ ->
-            scoreCluster(matchedCluster)
-        }
+        val score = scoreCluster(matchedCluster)
         return ScoredCluster(identifiedCluster.id, matchedCluster, score)
     }
 }
