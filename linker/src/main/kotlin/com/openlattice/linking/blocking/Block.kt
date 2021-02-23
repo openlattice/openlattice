@@ -1,7 +1,7 @@
 package com.openlattice.linking.blocking
 
 import com.openlattice.data.EntityDataKey
-import java.util.UUID
+import java.util.*
 
 /**
  * @author Drew Bailey (drew@openlattice.com)
@@ -12,4 +12,11 @@ data class Block(
         val entities: Map<EntityDataKey, Map<UUID, Set<Any>>>
 ) {
     val size = entities.values.map { it.size }.sum()
+
+    companion object {
+        fun emptyBlock(edk: EntityDataKey): Block {
+            return Block(edk, mapOf(edk to mapOf()))
+        }
+    }
+
 }

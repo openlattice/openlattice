@@ -38,7 +38,7 @@ import com.openlattice.postgres.mapstores.EntityTypeMapstore
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
-import java.util.UUID
+import java.util.*
 import java.util.concurrent.TimeUnit
 
 
@@ -81,7 +81,7 @@ class ElasticsearchBlocker(
         val loadedCandidateData = dataLoader.getLinkingEntity(entityDataKey)
 
         if (isEntityEmpty(loadedCandidateData)) { // has no relevant data
-            return Block(entityDataKey, mapOf())
+            return Block.emptyBlock(entityDataKey)
         }
 
         var blockedEntitySetSearchResults = elasticsearch.executeBlockingSearch(

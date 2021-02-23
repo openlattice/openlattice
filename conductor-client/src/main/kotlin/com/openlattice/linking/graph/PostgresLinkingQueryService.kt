@@ -58,8 +58,7 @@ import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import java.sql.Array
 import java.sql.Connection
-import java.util.LinkedHashSet
-import java.util.UUID
+import java.util.*
 
 
 /**
@@ -165,6 +164,10 @@ class PostgresLinkingQueryService(
     override fun getClustersForIds(
             dataKeys: Set<EntityDataKey>
     ): Map<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>> {
+        if (dataKeys.isEmpty()) {
+            return mapOf()
+        }
+
         return BasePostgresIterable(StatementHolderSupplier(hds, buildClusterContainingSql(dataKeys))) {
             val linkingId = ResultSetAdapters.linkingId(it)
             val src = ResultSetAdapters.srcEntityDataKey(it)
@@ -315,9 +318,11 @@ class PostgresLinkingQueryService(
 
     override fun deleteNeighborhood(entity: EntityDataKey, positiveFeedbacks: Collection<EntityKeyPair>): Int {
         val deleteNeighborHoodSql = DELETE_NEIGHBORHOOD_SQL +
-                if (positiveFeedbacks.isNotEmpty()) " AND NOT ( ${buildFilterEntityKeyPairs(
-                        positiveFeedbacks
-                )} )" else ""
+                if (positiveFeedbacks.isNotEmpty()) " AND NOT ( ${
+                    buildFilterEntityKeyPairs(
+                            positiveFeedbacks
+                    )
+                } )" else ""
         hds.connection.use { conn ->
             conn.prepareStatement(deleteNeighborHoodSql).use { ps ->
                 ps.setObject(1, entity.entitySetId)
@@ -404,19 +409,27 @@ internal fun buildClusterContainingSql(dataKeys: Set<EntityDataKey>): String {
 
 internal fun buildFilterEntityKeyPairs(entityKeyPairs: Collection<EntityKeyPair>): String {
     return entityKeyPairs.joinToString(" OR ") {
-        "( (${SRC_ENTITY_SET_ID.name} = ${uuidString(
-                it.first.entitySetId
-        )} AND ${SRC_ENTITY_KEY_ID.name} = ${uuidString(it.first.entityKeyId)} " +
-                "AND ${DST_ENTITY_SET_ID.name} = ${uuidString(
-                        it.second.entitySetId
-                )} AND ${DST_ENTITY_KEY_ID.name} = ${uuidString(it.second.entityKeyId)})" +
+        "( (${SRC_ENTITY_SET_ID.name} = ${
+            uuidString(
+                    it.first.entitySetId
+            )
+        } AND ${SRC_ENTITY_KEY_ID.name} = ${uuidString(it.first.entityKeyId)} " +
+                "AND ${DST_ENTITY_SET_ID.name} = ${
+                    uuidString(
+                            it.second.entitySetId
+                    )
+                } AND ${DST_ENTITY_KEY_ID.name} = ${uuidString(it.second.entityKeyId)})" +
                 " OR " +
-                "(${SRC_ENTITY_SET_ID.name} = ${uuidString(
-                        it.second.entitySetId
-                )} AND ${SRC_ENTITY_KEY_ID.name} = ${uuidString(it.second.entityKeyId)} " +
-                "AND ${DST_ENTITY_SET_ID.name} = ${uuidString(
-                        it.first.entitySetId
-                )} AND ${DST_ENTITY_KEY_ID.name} = ${uuidString(it.first.entityKeyId)}) )"
+                "(${SRC_ENTITY_SET_ID.name} = ${
+                    uuidString(
+                            it.second.entitySetId
+                    )
+                } AND ${SRC_ENTITY_KEY_ID.name} = ${uuidString(it.second.entityKeyId)} " +
+                "AND ${DST_ENTITY_SET_ID.name} = ${
+                    uuidString(
+                            it.first.entitySetId
+                    )
+                } AND ${DST_ENTITY_KEY_ID.name} = ${uuidString(it.first.entityKeyId)}) )"
     }
 }
 

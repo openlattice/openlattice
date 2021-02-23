@@ -235,9 +235,6 @@ class BackgroundLinkingService(
             block
         }
 
-        //block contains element being blocked
-        val elem = initialBlock.entities.getValue(candidate)
-
         // initialize
         val initializedBlock = metrics.histogramify(
                 BackgroundLinkingService::class.java,
@@ -253,34 +250,34 @@ class BackgroundLinkingService(
 
         //Decision that needs to be made is whether to start new cluster or merge into existing cluster.
         try {
-            val (linkingId, scores) = lqs.lockClustersDoWorkAndCommit( candidate, dataKeys) { clusters ->
-                metrics.histogramify(
-                        BackgroundLinkingService::class.java,
-                        "clusterer","clusters", "count"
-                ) { _, _ ->
-                    clusters.size
-                }
+            val (linkingId, scores) = lqs.lockClustersDoWorkAndCommit(candidate, dataKeys) { clusters ->
+//                metrics.histogramify(
+//                        BackgroundLinkingService::class.java,
+//                        "clusterer","clusters", "count"
+//                ) { _, _ ->
+//                    clusters.size
+//                }
                 val maybeBestCluster = clusters.asSequence()
                         .map { cluster ->
+//                            metrics.histogramify(
+//                                    BackgroundLinkingService::class.java,
+//                                    "clusterer","cluster", "size"
+//                            ) { _, _ ->
+//                                cluster.value.size
+//                            }
                             metrics.histogramify(
                                     BackgroundLinkingService::class.java,
-                                    "clusterer","cluster", "size"
-                            ) { _, _ ->
-                                cluster.value.size
-                            }
-                            metrics.histogramify(
-                                    BackgroundLinkingService::class.java,
-                                    "clusterer","cluster"
+                                    "clusterer", "cluster"
                             ) { _, _ ->
                                 clusterer.cluster(candidate, KeyedCluster.fromEntry(cluster))
                             }
                         }.filter { it.score > MINIMUM_SCORE }
                         .maxBy { it.score }
-                return@lockClustersDoWorkAndCommit if ( maybeBestCluster != null ) {
+                return@lockClustersDoWorkAndCommit if (maybeBestCluster != null) {
                     Triple(maybeBestCluster.clusterId, maybeBestCluster.cluster, false)
                 } else {
                     val linkingId = ids.reserveLinkingIds(1).first()
-                    val block = Block(candidate, mapOf(candidate to elem))
+                    val block = Block(candidate, mapOf(candidate to initialBlock.entities.getValue(candidate)))
                     val cluster = matcher.match(block).matches
                     //TODO: When creating new cluster do we really need to re-match or can we assume score of 1.0?
                     Triple(linkingId, cluster, true)
