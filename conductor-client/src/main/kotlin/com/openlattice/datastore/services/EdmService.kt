@@ -27,6 +27,7 @@ import com.openlattice.postgres.mapstores.AssociationTypeMapstore
 import com.openlattice.postgres.mapstores.EntitySetMapstore
 import com.openlattice.postgres.mapstores.EntityTypeMapstore
 import com.openlattice.postgres.mapstores.EntityTypePropertyMetadataMapstore
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.commons.lang3.tuple.Pair
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
@@ -38,6 +39,7 @@ import javax.inject.Inject
 import kotlin.collections.LinkedHashSet
 
 @Suppress("UnstableApiUsage")
+@SuppressFBWarnings("RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE")
 @Service
 class EdmService(
         hazelcastInstance: HazelcastInstance,
