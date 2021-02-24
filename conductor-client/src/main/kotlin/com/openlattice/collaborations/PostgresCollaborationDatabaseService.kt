@@ -55,6 +55,7 @@ class PostgresCollaborationDatabaseService(
 
     override fun deleteCollaborationDatabase(collaborationId: UUID) {
         dbQueryManager.dropDatabase(getDatabaseInfo(collaborationId).name)
+        organizationDatabases.delete(collaborationId)
     }
 
     override fun renameCollaborationDatabase(collaborationId: UUID, newName: String) {
