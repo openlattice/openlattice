@@ -410,27 +410,23 @@ internal fun buildClusterContainingSql(dataKeys: Set<EntityDataKey>): String {
 
 internal fun buildFilterEntityKeyPairs(entityKeyPairs: Collection<EntityKeyPair>): String {
     return entityKeyPairs.joinToString(" OR ") {
-        "( (${SRC_ENTITY_SET_ID.name} = ${
-            uuidString(
-                    it.first.entitySetId
-            )
-        } AND ${SRC_ENTITY_KEY_ID.name} = ${uuidString(it.first.entityKeyId)} " +
-                "AND ${DST_ENTITY_SET_ID.name} = ${
-                    uuidString(
-                            it.second.entitySetId
-                    )
-                } AND ${DST_ENTITY_KEY_ID.name} = ${uuidString(it.second.entityKeyId)})" +
-                " OR " +
-                "(${SRC_ENTITY_SET_ID.name} = ${
-                    uuidString(
-                            it.second.entitySetId
-                    )
-                } AND ${SRC_ENTITY_KEY_ID.name} = ${uuidString(it.second.entityKeyId)} " +
-                "AND ${DST_ENTITY_SET_ID.name} = ${
-                    uuidString(
-                            it.first.entitySetId
-                    )
-                } AND ${DST_ENTITY_KEY_ID.name} = ${uuidString(it.first.entityKeyId)}) )"
+        val firstEsidString = uuidString(it.first.entitySetId)
+        val firstEkidString = uuidString(it.first.entityKeyId)
+        val secondEsidString = uuidString(it.second.entitySetId)
+        val secondEkidString = uuidString(it.second.entityKeyId)
+        """
+        ( 
+            (${SRC_ENTITY_SET_ID.name} = $firstEsidString 
+                AND ${SRC_ENTITY_KEY_ID.name} = $firstEkidString
+                AND ${DST_ENTITY_SET_ID.name} = $secondEsidString
+                AND ${DST_ENTITY_KEY_ID.name} = $secondEkidString
+            ) OR (  ${SRC_ENTITY_SET_ID.name} = $secondEsidString
+                AND ${SRC_ENTITY_KEY_ID.name} = $secondEkidString
+                AND ${DST_ENTITY_SET_ID.name} = $firstEsidString
+                AND ${DST_ENTITY_KEY_ID.name} = $firstEkidString
+            ) 
+        )
+        """.trimIndent()
     }
 }
 
