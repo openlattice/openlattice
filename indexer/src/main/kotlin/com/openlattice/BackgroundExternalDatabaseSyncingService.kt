@@ -26,6 +26,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import java.time.OffsetDateTime
 import java.util.*
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 
 /**
@@ -56,7 +57,7 @@ class BackgroundExternalDatabaseSyncingService(
     private val organizationDatabases = ORGANIZATION_DATABASES.getMap(hazelcastInstance)
 
     private val organizations = HazelcastMap.ORGANIZATIONS.getMap(hazelcastInstance)
-    private val expirationLocks = HazelcastMap.EXPIRATION_LOCKS.getMap(hazelcastInstance)
+    private val expirationLocks = HazelcastMap.BACKGROUND_ORGANIZATION_DATABASE_SYNCING_LOCKS.getMap(hazelcastInstance)
 
 
     init {
@@ -64,17 +65,6 @@ class BackgroundExternalDatabaseSyncingService(
     }
 
     private val taskLock = ReentrantLock()
-
-    @Suppress("UNCHECKED_CAST", "UNUSED")
-    @Scheduled(fixedRate = MAX_DURATION_MILLIS)
-    fun scavengeExpirationLocks() {
-        expirationLocks.removeAll(
-                Predicates.lessThan(
-                        QueryConstants.THIS_ATTRIBUTE_NAME.value(),
-                        System.currentTimeMillis()
-                )
-        )
-    }
 
     @Suppress("UNUSED")
     @Scheduled(fixedDelay = SCAN_RATE)
@@ -100,7 +90,11 @@ class BackgroundExternalDatabaseSyncingService(
 
             lockedOrganizationIds
                     .forEach {
-                        syncOrganizationDatabases(it)
+                        try {
+                            syncOrganizationDatabases(it)
+                        } catch (e: Exception) {
+                            logger.error("An error occurred when trying to sync database for org {}", it, e)
+                        }
                     }
 
             lockedOrganizationIds.forEach(this::deleteLock)
@@ -114,6 +108,8 @@ class BackgroundExternalDatabaseSyncingService(
     }
 
     private fun syncOrganizationDatabases(orgId: UUID) {
+        val sw = Stopwatch.createStarted()
+        logger.info("About to sync database for organization {}", orgId)
         val dbName = organizationDatabases[orgId]?.name
 
         if (dbName == null) {
@@ -138,6 +134,8 @@ class BackgroundExternalDatabaseSyncingService(
         }
 
         removeNonexistentTablesAndColumnsForOrg(orgId, tableIds, columnIds)
+
+        logger.info("Finished syncing database for organization {} in {} seconds", orgId, sw.elapsed(TimeUnit.SECONDS))
     }
 
     private fun initializeTablePermissions(
