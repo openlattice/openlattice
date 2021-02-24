@@ -35,6 +35,9 @@ import com.openlattice.authorization.securable.AbstractSecurableType;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.codex.Base64Media;
 import com.openlattice.codex.MessageRequest;
+import com.openlattice.collaborations.Collaboration;
+import com.openlattice.collaborations.ProjectedTableKey;
+import com.openlattice.collaborations.ProjectedTableMetadata;
 import com.openlattice.collections.CollectionTemplateType;
 import com.openlattice.collections.EntitySetCollection;
 import com.openlattice.collections.EntityTypeCollection;
@@ -472,7 +475,6 @@ public final class TestDataFactory {
         );
     }
 
-
     public static Role role() {
         return new Role(
                 Optional.of( UUID.randomUUID() ),
@@ -857,6 +859,24 @@ public final class TestDataFactory {
 
     public static OrganizationDatabase organizationDatabase() {
         return new OrganizationDatabase( r.nextInt(), randomAlphanumeric( 10 ) );
+    }
+
+    public static Collaboration collaboration() {
+        return new Collaboration(
+                UUID.randomUUID(),
+                randomAlphanumeric( 10 ),
+                randomAlphanumeric( 10 ),
+                randomAlphanumeric( 10 ),
+                Sets.newHashSet( UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID() )
+        );
+    }
+
+    public static ProjectedTableKey projectedTableKey() {
+        return new ProjectedTableKey( UUID.randomUUID(), UUID.randomUUID() );
+    }
+
+    public static ProjectedTableMetadata projectedTableMetadata() {
+        return new ProjectedTableMetadata( UUID.randomUUID(), randomAlphanumeric( 10 ) );
     }
 
 }

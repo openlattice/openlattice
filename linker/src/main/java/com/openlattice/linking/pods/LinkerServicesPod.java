@@ -32,15 +32,10 @@ import com.openlattice.assembler.AssemblerConnectionManager;
 import com.openlattice.assembler.pods.AssemblerConfigurationPod;
 import com.openlattice.auditing.AuditingConfiguration;
 import com.openlattice.auditing.pods.AuditingConfigurationPod;
-import com.openlattice.authorization.AuthorizationManager;
-import com.openlattice.authorization.DbCredentialService;
-import com.openlattice.authorization.HazelcastAclKeyReservationService;
-import com.openlattice.authorization.HazelcastAuthorizationService;
-import com.openlattice.authorization.HazelcastPrincipalsMapManager;
-import com.openlattice.authorization.HazelcastSecurableObjectResolveTypeService;
-import com.openlattice.authorization.Principals;
-import com.openlattice.authorization.PrincipalsMapManager;
-import com.openlattice.authorization.SecurableObjectResolveTypeService;
+import com.openlattice.authorization.*;
+import com.openlattice.collaborations.CollaborationDatabaseManager;
+import com.openlattice.collaborations.CollaborationService;
+import com.openlattice.collaborations.PostgresCollaborationDatabaseService;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datastore.services.EdmManager;
@@ -63,9 +58,11 @@ import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.OrganizationMetadataEntitySetsService;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
+import com.openlattice.postgres.external.DatabaseQueryManager;
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
 import com.openlattice.postgres.external.ExternalDatabasePermissioner;
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService;
+import com.openlattice.postgres.external.PostgresDatabaseQueryService;
 import com.openlattice.scrunchie.search.ConductorElasticsearchImpl;
 import com.zaxxer.hikari.HikariDataSource;
 import org.deeplearning4j.nn.modelimport.keras.KerasModelImport;
@@ -187,23 +184,53 @@ public class LinkerServicesPod {
     }
 
     @Bean
-    public AssemblerConnectionManager assemblerConnectionManager() {
-        return new AssemblerConnectionManager(
+    public DatabaseQueryManager dbQueryManager() {
+        return new PostgresDatabaseQueryService(
                 assemblerConfiguration,
                 externalDbConnMan,
-                hikariDataSource,
                 principalService(),
-                organizationsManager(),
-                dbcs(),
-                externalDatabasePermissionsManager(),
-                eventBus,
-                metricRegistry
+                dbcs()
+        );
+    }
+
+    @Bean
+    public AssemblerConnectionManager assemblerConnectionManager() {
+        return new AssemblerConnectionManager(
+                externalDbConnMan,
+                principalService(),
+                dbQueryManager(),
+                externalDatabasePermissionsManager()
         );
     }
 
     @Bean
     public PhoneNumberService phoneNumberService() {
         return new PhoneNumberService( hazelcastInstance );
+    }
+
+    @Bean
+    public CollaborationDatabaseManager collaborationDatabaseManager() {
+        return new PostgresCollaborationDatabaseService(
+                hazelcastInstance,
+                dbQueryManager(),
+                externalDbConnMan,
+                authorizationManager(),
+                externalDatabasePermissionsManager(),
+                principalService(),
+                dbcs(),
+                assemblerConfiguration
+        );
+    }
+
+    @Bean
+    public CollaborationService collaborationService() {
+        return new CollaborationService(
+                hazelcastInstance,
+                aclKeyReservationService(),
+                authorizationManager(),
+                principalService(),
+                collaborationDatabaseManager()
+        );
     }
 
     @Bean
@@ -216,7 +243,8 @@ public class LinkerServicesPod {
                 phoneNumberService(),
                 partitionManager(),
                 assembler(),
-                organizationMetadataEntitySetsService() );
+                organizationMetadataEntitySetsService(),
+                collaborationService() );
     }
 
     @Bean
@@ -236,7 +264,7 @@ public class LinkerServicesPod {
 
     @Bean
     public PostgresTypeManager entityTypeManager() {
-        return new PostgresTypeManager( hikariDataSource , hazelcastInstance );
+        return new PostgresTypeManager( hikariDataSource, hazelcastInstance );
     }
 
     @Bean
@@ -311,7 +339,7 @@ public class LinkerServicesPod {
 
     @Bean
     public PrincipalsMapManager principalsMapManager() {
-        return new HazelcastPrincipalsMapManager(hazelcastInstance, aclKeyReservationService());
+        return new HazelcastPrincipalsMapManager( hazelcastInstance, aclKeyReservationService() );
     }
 
     @PostConstruct

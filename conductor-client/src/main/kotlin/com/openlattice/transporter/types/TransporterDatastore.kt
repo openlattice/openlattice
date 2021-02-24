@@ -9,6 +9,7 @@ import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.Action
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.PropertyTypeIdFqn
+import com.openlattice.postgres.PostgresProjectionService
 import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.TableColumn
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
@@ -16,7 +17,6 @@ import com.openlattice.postgres.external.ExternalDatabasePermissioningService
 import com.openlattice.postgres.external.Schemas
 import com.openlattice.transporter.*
 import com.zaxxer.hikari.HikariDataSource
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.util.*
@@ -33,9 +33,6 @@ class TransporterDatastore(
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(TransporterDatastore::class.java)
-
-        // 0 = whole string, 1 = prefix, 2 = hostname, 3 = port, 4 = database
-        private val PAT = Regex("""([\w:]+)://([\w_.]*):(\d+)/(\w+)""")
 
         // database in atlas where the data is transported
         const val TRANSPORTER_DB_NAME = "transporter"
@@ -55,7 +52,7 @@ class TransporterDatastore(
         if (rhizome.postgresConfiguration.isPresent) {
             initializeFDW(rhizome.postgresConfiguration.get())
         }
-        val sp = ensureSearchPath(transporterHds)
+        val sp = PostgresProjectionService.loadSearchPathForCurrentUser(transporterHds)
         if (!sp.contains(Schemas.ENTERPRISE_FDW_SCHEMA.label)) {
             logger.error("bad search path: {}", sp)
         }
@@ -135,7 +132,7 @@ class TransporterDatastore(
             orgDatasource: HikariDataSource,
             organizationId: UUID
     ) {
-        createFdwBetweenDatabases(
+        PostgresProjectionService.createFdwBetweenDatabases(
                 orgDatasource,
                 assemblerConfiguration.server.getProperty("username"),
                 assemblerConfiguration.server.getProperty("password"),
@@ -149,80 +146,8 @@ class TransporterDatastore(
         )
     }
 
-    /**
-     * Create FDW between [localSchema] and [remoteDb]
-     */
-    @SuppressFBWarnings(
-            value = ["SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE"],
-            justification = "Only internal values provided to SQL update statment"
-    )
-    private fun createFdwBetweenDatabases(
-            localDbDatasource: HikariDataSource,
-            remoteUser: String,
-            remotePassword: String,
-            remoteDbJdbc: String,
-            localUsername: String,
-            localSchema: Schemas,
-            fdwName: String
-    ) {
-        var searchPath = ensureSearchPath(localDbDatasource)
-        if (!searchPath.contains(localSchema.label)) {
-            searchPath = "$searchPath, $localSchema"
-        }
-
-        localDbDatasource.connection.use { conn ->
-            conn.autoCommit = false
-            val st = conn.createStatement()
-            st.executeQuery("select count(*) from information_schema.foreign_tables where foreign_table_schema = '$localSchema'").use { rs ->
-                if (rs.next() && rs.getInt(1) > 0) {
-                    // don't bother if it's already there
-                    logger.info("fdw already exists, not re-creating")
-                    return
-                }
-            }
-
-            val match = PAT.matchEntire(remoteDbJdbc)
-                    ?: throw IllegalArgumentException("Invalid jdbc url: $remoteDbJdbc")
-            val remoteHostname = match.groupValues[2]
-            val remotePort = match.groupValues[3].toInt()
-            val remoteDbname = match.groupValues[4]
-            logger.info("Configuring fdw from {} to {}", localDbDatasource.jdbcUrl, remoteDbJdbc)
-
-            """
-                |create extension if not exists postgres_fdw;
-                |create server if not exists $fdwName foreign data wrapper postgres_fdw options (host '$remoteHostname', dbname '$remoteDbname', port '$remotePort');
-                |create user mapping if not exists for $localUsername server $fdwName options (user '$remoteUser', password '$remotePassword');
-                |create schema if not exists $localSchema;
-                |alter user $localUsername set search_path to $searchPath;
-                |set search_path to $searchPath;
-            """.trimMargin()
-                    .split("\n")
-                    .forEach { sql ->
-                        logger.info("running {}", sql)
-                        st.execute(sql)
-                    }
-            conn.commit()
-        }
-    }
-
-    private fun ensureSearchPath(dataSource: HikariDataSource): String {
-        logger.info("checking search path for current user")
-        dataSource.connection.use { conn ->
-            conn.createStatement().executeQuery("show search_path").use {
-                it.next()
-                val searchPath = it.getString(1)
-                logger.info(searchPath)
-                if (searchPath == null) {
-                    logger.error("bad search path: {}", searchPath)
-                    return ""
-                }
-                return searchPath
-            }
-        }
-    }
-
     private fun initializeFDW(rhizomeConfig: PostgresConfiguration) {
-        createFdwBetweenDatabases(
+        PostgresProjectionService.createFdwBetweenDatabases(
                 transporterHds,
                 rhizomeConfig.hikariConfiguration.getProperty("username"),
                 rhizomeConfig.hikariConfiguration.getProperty("password"),

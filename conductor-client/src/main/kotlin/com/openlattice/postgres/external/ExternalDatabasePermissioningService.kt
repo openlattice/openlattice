@@ -71,6 +71,16 @@ interface ExternalDatabasePermissioningService {
     )
 
     /**
+     * Initializes permissions on [columns] for [table] view in collaboration database for [collaborationId]
+     */
+    fun initializeProjectedTableViewPermissions(
+            collaborationId: UUID,
+            schema: String,
+            table: OrganizationExternalDatabaseTable,
+            columns: Set<OrganizationExternalDatabaseColumn>
+    )
+
+    /**
      * Updates permissions on [columns] for [table] in org database for [organizationId]
      */
     fun updateExternalTablePermissions(
