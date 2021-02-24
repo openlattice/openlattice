@@ -18,7 +18,8 @@ enum class Schemas(val label: String) {
     TRANSPORTER_SCHEMA("transporter"),
     ASSEMBLED_ENTITY_SETS("entitysets"),
     ENTERPRISE_FDW_SCHEMA("ol"),
-    STAGING_SCHEMA("staging");
+    STAGING_SCHEMA("staging"),
+    PROJECTIONS_SCHEMA("projections");
 
     override fun toString(): String {
         return label
