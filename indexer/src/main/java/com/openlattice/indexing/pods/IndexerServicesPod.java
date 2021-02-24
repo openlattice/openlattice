@@ -41,6 +41,9 @@ import com.openlattice.auditing.LocalAuditingService;
 import com.openlattice.auditing.S3AuditingService;
 import com.openlattice.auditing.pods.AuditingConfigurationPod;
 import com.openlattice.authorization.*;
+import com.openlattice.collaborations.CollaborationDatabaseManager;
+import com.openlattice.collaborations.CollaborationService;
+import com.openlattice.collaborations.PostgresCollaborationDatabaseService;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.DataDeletionManager;
 import com.openlattice.data.DataGraphManager;
@@ -76,9 +79,11 @@ import com.openlattice.organizations.OrganizationMetadataEntitySetsService;
 import com.openlattice.organizations.pods.OrganizationExternalDatabaseConfigurationPod;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
+import com.openlattice.postgres.external.DatabaseQueryManager;
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
 import com.openlattice.postgres.external.ExternalDatabasePermissioner;
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService;
+import com.openlattice.postgres.external.PostgresDatabaseQueryService;
 import com.openlattice.scrunchie.search.ConductorElasticsearchImpl;
 import com.openlattice.transporter.pods.TransporterPod;
 import com.zaxxer.hikari.HikariDataSource;
@@ -158,7 +163,7 @@ public class IndexerServicesPod {
 
     @Bean
     public PrincipalsMapManager principalsMapManager() {
-        return new HazelcastPrincipalsMapManager(hazelcastInstance, aclKeyReservationService());
+        return new HazelcastPrincipalsMapManager( hazelcastInstance, aclKeyReservationService() );
     }
 
     @Bean
@@ -196,17 +201,22 @@ public class IndexerServicesPod {
     }
 
     @Bean
-    public AssemblerConnectionManager assemblerConnectionManager() {
-        return new AssemblerConnectionManager(
+    public DatabaseQueryManager dbQueryManager() {
+        return new PostgresDatabaseQueryService(
                 assemblerConfiguration,
                 externalDbConnMan,
-                hikariDataSource,
                 securePrincipalsManager(),
-                organizationsManager(),
-                dbcs(),
-                externalDatabasePermissionsManager(),
-                eventBus,
-                metricRegistry
+                dbcs()
+        );
+    }
+
+    @Bean
+    public AssemblerConnectionManager assemblerConnectionManager() {
+        return new AssemblerConnectionManager(
+                externalDbConnMan,
+                securePrincipalsManager(),
+                dbQueryManager(),
+                externalDatabasePermissionsManager()
         );
     }
 
@@ -221,6 +231,31 @@ public class IndexerServicesPod {
     }
 
     @Bean
+    public CollaborationDatabaseManager collaborationDatabaseManager() {
+        return new PostgresCollaborationDatabaseService(
+                hazelcastInstance,
+                dbQueryManager(),
+                externalDbConnMan,
+                authorizationManager(),
+                externalDatabasePermissionsManager(),
+                securePrincipalsManager(),
+                dbcs(),
+                assemblerConfiguration
+        );
+    }
+
+    @Bean
+    public CollaborationService collaborationService() {
+        return new CollaborationService(
+                hazelcastInstance,
+                aclKeyReservationService(),
+                authorizationManager(),
+                securePrincipalsManager(),
+                collaborationDatabaseManager()
+        );
+    }
+
+    @Bean
     public HazelcastOrganizationService organizationsManager() {
         return new HazelcastOrganizationService(
                 hazelcastInstance,
@@ -230,7 +265,8 @@ public class IndexerServicesPod {
                 phoneNumberService(),
                 partitionManager(),
                 assembler(),
-                organizationMetadataEntitySetsService() );
+                organizationMetadataEntitySetsService(),
+                collaborationService() );
     }
 
     @Bean

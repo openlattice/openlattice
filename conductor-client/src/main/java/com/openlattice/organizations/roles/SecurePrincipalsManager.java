@@ -91,6 +91,8 @@ public interface SecurePrincipalsManager {
 
     @Nonnull SecurablePrincipal getSecurablePrincipal( String principalId );
 
+    Map<AclKey, SecurablePrincipal> getSecurablePrincipals( Set<AclKey> aclKeys );
+
     Collection<SecurablePrincipal> getAllPrincipalsWithPrincipal( AclKey aclKey );
 
     Collection<SecurablePrincipal> getParentPrincipalsOfPrincipal( AclKey aclKey );
@@ -98,6 +100,8 @@ public interface SecurePrincipalsManager {
     Map<AclKey, Collection<SecurablePrincipal>> getParentPrincipalsOfPrincipals( Set<AclKey> aclKeys );
 
     Map<UUID, Set<SecurablePrincipal>> getOrganizationMembers( Set<UUID> organizationIds );
+
+    Set<Principal> getOrganizationMemberPrincipals( UUID organizationId );
 
     boolean principalHasChildPrincipal( AclKey parent, AclKey child );
 

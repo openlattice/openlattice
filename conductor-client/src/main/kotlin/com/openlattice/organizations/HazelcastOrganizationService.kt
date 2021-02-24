@@ -12,6 +12,7 @@ import com.openlattice.assembler.Assembler
 import com.openlattice.assembler.PostgresDatabases
 import com.openlattice.authorization.*
 import com.openlattice.authorization.mapstores.PrincipalMapstore
+import com.openlattice.collaborations.CollaborationService
 import com.openlattice.collections.mapstores.EntitySetCollectionMapstore
 import com.openlattice.controllers.exceptions.ResourceNotFoundException
 import com.openlattice.data.storage.partitions.PartitionManager
@@ -20,7 +21,11 @@ import com.openlattice.notifications.sms.PhoneNumberService
 import com.openlattice.notifications.sms.SmsEntitySetInformation
 import com.openlattice.organization.OrganizationPrincipal
 import com.openlattice.organization.roles.Role
-import com.openlattice.organizations.events.*
+import com.openlattice.organizations.events.MembersAddedToOrganizationEvent
+import com.openlattice.organizations.events.MembersRemovedFromOrganizationEvent
+import com.openlattice.organizations.events.OrganizationCreatedEvent
+import com.openlattice.organizations.events.OrganizationDeletedEvent
+import com.openlattice.organizations.events.OrganizationUpdatedEvent
 import com.openlattice.organizations.mapstores.CONNECTIONS_INDEX
 import com.openlattice.organizations.mapstores.MEMBERS_INDEX
 import com.openlattice.organizations.processors.OrganizationEntryProcessor
@@ -68,7 +73,8 @@ class HazelcastOrganizationService(
         private val phoneNumbers: PhoneNumberService,
         private val partitionManager: PartitionManager,
         private val assembler: Assembler,
-        private val organizationMetadataEntitySetsService: OrganizationMetadataEntitySetsService
+        private val organizationMetadataEntitySetsService: OrganizationMetadataEntitySetsService,
+        private val collaborationService: CollaborationService
 ) {
     init {
         organizationMetadataEntitySetsService.organizationService = this
@@ -259,6 +265,7 @@ class HazelcastOrganizationService(
         eventBus.post(OrganizationDeletedEvent(organizationId))
 
         appConfigsMapstore.removeAll(Predicates.equal(AppConfigMapstore.ORGANIZATION_ID, organizationId))
+        collaborationService.handleOrganizationDeleted(organizationId)
         changeEntitySetsAndCollectionsOrganizationId(organizationId, IdConstants.GLOBAL_ORGANIZATION_ID.id)
     }
 
@@ -352,10 +359,7 @@ class HazelcastOrganizationService(
 
     @Timed
     fun getMembers(organizationId: UUID): Set<Principal> {
-        return securePrincipalsManager.getOrganizationMembers(setOf(organizationId))
-                .getValue(organizationId)
-                .map { it.principal }
-                .toSet()
+        return securePrincipalsManager.getOrganizationMemberPrincipals(organizationId)
     }
 
     @Timed
@@ -388,6 +392,7 @@ class HazelcastOrganizationService(
 
         if (newMembers.isNotEmpty()) {
             val newMemberSecurablePrincipals = securePrincipalsManager.getSecurablePrincipals(newMembers)
+            collaborationService.handleMembersAdddedToOrg(organizationId, newMemberSecurablePrincipals.map { it.aclKey }.toSet())
             eventBus.post(
                     MembersAddedToOrganizationEvent(
                             organizationId, SecurablePrincipalList(newMemberSecurablePrincipals.toMutableList())
@@ -470,15 +475,13 @@ class HazelcastOrganizationService(
     fun removeMembers(organizationId: UUID, members: Set<Principal>) {
         val users = members.filter { it.type == PrincipalType.USER }
         val securablePrincipals = securePrincipalsManager.getSecurablePrincipals(users)
-        val userAclKeys = securePrincipalsManager
-                .getSecurablePrincipals(users)
-                .map { it.aclKey }
-                .toSet()
+        val userAclKeys = securablePrincipals.map { it.aclKey }.toSet()
 
         removeRolesFromMembers(getRoles(organizationId).map { it.aclKey }, userAclKeys)
 
         val orgAclKey = AclKey(organizationId)
         removeOrganizationFromMembers(orgAclKey, userAclKeys)
+        collaborationService.handleMembersRemovedFromOrg(organizationId, userAclKeys)
         eventBus.post(
                 MembersRemovedFromOrganizationEvent(
                         organizationId,
@@ -640,8 +643,9 @@ class HazelcastOrganizationService(
         val currentDatabaseName = getOrganizationDatabaseName(organizationId)
 
         try {
-            assembler.renameOrganizationDatabase(currentDatabaseName, newDatabaseName)
+            assembler.renameDatabase(currentDatabaseName, newDatabaseName)
             executeDatabaseNameUpdate(organizationId, newDatabaseName)
+            collaborationService.handleOrganizationDatabaseRename(organizationId, currentDatabaseName, newDatabaseName)
         } catch (e: Exception) {
             throw IllegalStateException(
                     "An error occurred while trying to rename org $organizationId database " +

@@ -54,6 +54,9 @@ import com.openlattice.authorization.initializers.AuthorizationInitializationDep
 import com.openlattice.authorization.initializers.AuthorizationInitializationTask;
 import com.openlattice.authorization.mapstores.ResolvedPrincipalTreesMapLoader;
 import com.openlattice.authorization.mapstores.SecurablePrincipalsMapLoader;
+import com.openlattice.collaborations.CollaborationDatabaseManager;
+import com.openlattice.collaborations.CollaborationService;
+import com.openlattice.collaborations.PostgresCollaborationDatabaseService;
 import com.openlattice.collections.CollectionsManager;
 import com.openlattice.conductor.rpc.ConductorConfiguration;
 import com.openlattice.conductor.rpc.MapboxConfiguration;
@@ -61,13 +64,7 @@ import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.DataGraphService;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
-import com.openlattice.data.storage.ByteBlobDataManager;
-import com.openlattice.data.storage.EntityDatastore;
-import com.openlattice.data.storage.IndexingMetadataManager;
-import com.openlattice.data.storage.PostgresEntityDataQueryService;
-import com.openlattice.data.storage.PostgresEntityDatastore;
-import com.openlattice.data.storage.PostgresEntitySetSizesInitializationTask;
-import com.openlattice.data.storage.PostgresEntitySetSizesTaskDependency;
+import com.openlattice.data.storage.*;
 import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
@@ -103,9 +100,11 @@ import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.organizations.tasks.OrganizationsInitializationDependencies;
 import com.openlattice.organizations.tasks.OrganizationsInitializationTask;
+import com.openlattice.postgres.external.DatabaseQueryManager;
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
 import com.openlattice.postgres.external.ExternalDatabasePermissioner;
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService;
+import com.openlattice.postgres.external.PostgresDatabaseQueryService;
 import com.openlattice.postgres.tasks.PostgresMetaDataPropertiesInitializationDependency;
 import com.openlattice.postgres.tasks.PostgresMetaDataPropertiesInitializationTask;
 import com.openlattice.scheduling.ScheduledTaskService;
@@ -118,15 +117,7 @@ import com.openlattice.tasks.PostConstructInitializerTaskDependencies;
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask;
 import com.openlattice.transporter.pods.TransporterPod;
 import com.openlattice.transporter.services.TransporterService;
-import com.openlattice.users.Auth0SyncInitializationTask;
-import com.openlattice.users.Auth0SyncService;
-import com.openlattice.users.Auth0SyncTask;
-import com.openlattice.users.Auth0SyncTaskDependencies;
-import com.openlattice.users.Auth0UserListingService;
-import com.openlattice.users.DefaultAuth0SyncTask;
-import com.openlattice.users.LocalAuth0SyncTask;
-import com.openlattice.users.LocalUserListingService;
-import com.openlattice.users.UserListingService;
+import com.openlattice.users.*;
 import com.openlattice.users.export.Auth0ApiExtension;
 import com.zaxxer.hikari.HikariDataSource;
 import org.slf4j.LoggerFactory;
@@ -139,7 +130,8 @@ import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 
 @Configuration
-@Import( { ByteBlobServicePod.class, AuditingConfigurationPod.class, AssemblerConfigurationPod.class, TransporterPod.class  } )
+@Import( { ByteBlobServicePod.class, AuditingConfigurationPod.class, AssemblerConfigurationPod.class,
+        TransporterPod.class } )
 public class ConductorServicesPod {
 
     @Inject
@@ -209,22 +201,22 @@ public class ConductorServicesPod {
 
     @Bean
     public PrincipalsMapManager principalsMapManager() {
-        return new HazelcastPrincipalsMapManager(hazelcastInstance, aclKeyReservationService());
+        return new HazelcastPrincipalsMapManager( hazelcastInstance, aclKeyReservationService() );
     }
 
     @Bean
     public HazelcastAclKeyReservationService aclKeyReservationService() {
-        return new HazelcastAclKeyReservationService(hazelcastInstance);
+        return new HazelcastAclKeyReservationService( hazelcastInstance );
     }
 
     @Bean
     public HazelcastLongIdService longIdService() {
-        return new HazelcastLongIdService(hazelcastClientProvider);
+        return new HazelcastLongIdService( hazelcastClientProvider );
     }
 
     @Bean
     public HazelcastIdGenerationService idGenerationService() {
-        return new HazelcastIdGenerationService(hazelcastClientProvider);
+        return new HazelcastIdGenerationService( hazelcastClientProvider );
     }
 
     @Bean
@@ -294,7 +286,7 @@ public class ConductorServicesPod {
 
     @Bean
     public AuthorizationInitializationDependencies authorizationBootstrapDependencies() {
-        return new AuthorizationInitializationDependencies( securePrincipalsManager());
+        return new AuthorizationInitializationDependencies( securePrincipalsManager() );
     }
 
     @Bean
@@ -349,23 +341,53 @@ public class ConductorServicesPod {
     }
 
     @Bean
-    public AssemblerConnectionManager assemblerConnectionManager() {
-        return new AssemblerConnectionManager(
+    public DatabaseQueryManager dbQueryManager() {
+        return new PostgresDatabaseQueryService(
                 assemblerConfiguration,
                 externalDbConnMan,
-                hikariDataSource,
                 securePrincipalsManager(),
-                organizationsManager(),
-                dbCredService(),
-                externalDatabasePermissionsManager(),
-                eventBus,
-                metricRegistry
+                dbCredService()
+        );
+    }
+
+    @Bean
+    public AssemblerConnectionManager assemblerConnectionManager() {
+        return new AssemblerConnectionManager(
+                externalDbConnMan,
+                securePrincipalsManager(),
+                dbQueryManager(),
+                externalDatabasePermissionsManager()
         );
     }
 
     @Bean
     public PhoneNumberService phoneNumberService() {
         return new PhoneNumberService( hazelcastInstance );
+    }
+
+    @Bean
+    public CollaborationDatabaseManager collaborationDatabaseManager() {
+        return new PostgresCollaborationDatabaseService(
+                hazelcastInstance,
+                dbQueryManager(),
+                externalDbConnMan,
+                authorizationManager(),
+                externalDatabasePermissionsManager(),
+                securePrincipalsManager(),
+                dbCredService(),
+                assemblerConfiguration
+        );
+    }
+
+    @Bean
+    public CollaborationService collaborationService() {
+        return new CollaborationService(
+                hazelcastInstance,
+                aclKeyReservationService(),
+                authorizationManager(),
+                securePrincipalsManager(),
+                collaborationDatabaseManager()
+        );
     }
 
     @Bean
@@ -378,7 +400,8 @@ public class ConductorServicesPod {
                 phoneNumberService(),
                 partitionManager(),
                 assembler(),
-                organizationMetadataEntitySetsService() );
+                organizationMetadataEntitySetsService(),
+                collaborationService() );
     }
 
     @Bean
@@ -417,7 +440,7 @@ public class ConductorServicesPod {
     @Bean( name = "auth0SyncTask" )
     @Profile( { ConfigurationConstants.Profiles.LOCAL_CONFIGURATION_PROFILE } )
     public Auth0SyncTask localAuth0SyncTask() {
-        LoggerFactory.getLogger( ConductorServicesPod.class ).info("Constructing local auth0sync task");
+        LoggerFactory.getLogger( ConductorServicesPod.class ).info( "Constructing local auth0sync task" );
         return new LocalAuth0SyncTask();
     }
 
@@ -428,14 +451,14 @@ public class ConductorServicesPod {
             ConfigurationConstants.Profiles.KUBERNETES_CONFIGURATION_PROFILE
     } )
     public Auth0SyncTask defaultAuth0SyncTask() {
-        LoggerFactory.getLogger( ConductorServicesPod.class ).info("Constructing DEFAULT auth0sync task");
+        LoggerFactory.getLogger( ConductorServicesPod.class ).info( "Constructing DEFAULT auth0sync task" );
         return new DefaultAuth0SyncTask();
     }
 
     @Bean( name = "auth0SyncInitializationTask" )
-    @Profile( { ConfigurationConstants.Profiles.LOCAL_CONFIGURATION_PROFILE })
+    @Profile( { ConfigurationConstants.Profiles.LOCAL_CONFIGURATION_PROFILE } )
     public Auth0SyncInitializationTask localAuth0SyncInitializationTask() {
-        return new Auth0SyncInitializationTask<LocalAuth0SyncTask>(LocalAuth0SyncTask.class);
+        return new Auth0SyncInitializationTask<LocalAuth0SyncTask>( LocalAuth0SyncTask.class );
     }
 
     @Bean( name = "auth0SyncInitializationTask" )
@@ -445,7 +468,7 @@ public class ConductorServicesPod {
             ConfigurationConstants.Profiles.KUBERNETES_CONFIGURATION_PROFILE
     } )
     public Auth0SyncInitializationTask defaultAuth0SyncInitializationTask() {
-        return new Auth0SyncInitializationTask<DefaultAuth0SyncTask>(DefaultAuth0SyncTask.class);
+        return new Auth0SyncInitializationTask<DefaultAuth0SyncTask>( DefaultAuth0SyncTask.class );
     }
 
     @Bean
