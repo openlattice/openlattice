@@ -30,6 +30,7 @@ import com.openlattice.postgres.mapstores.EntityTypePropertyMetadataMapstore
 import org.apache.commons.lang3.tuple.Pair
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Service
 import java.util.*
 import java.util.concurrent.ConcurrentSkipListSet
 import java.util.function.Consumer
@@ -37,6 +38,7 @@ import javax.inject.Inject
 import kotlin.collections.LinkedHashSet
 
 @Suppress("UnstableApiUsage")
+@Service
 class EdmService(
         hazelcastInstance: HazelcastInstance,
         private val aclKeyReservations: HazelcastAclKeyReservationService,
