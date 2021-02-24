@@ -54,7 +54,7 @@ import java.util.concurrent.TimeUnit
 internal const val REFRESH_PROPERTY_TYPES_INTERVAL_MILLIS = 30000L
 internal const val LINKING_BATCH_TIMEOUT_MILLIS = 120000L
 internal const val MINIMUM_SCORE = 0.75
-internal const val LINKING_RATE = 300_000L
+internal const val LINKING_RATE = 30_000L
 
 /**
  * Performs realtime linking of individuals as they are integrated ino the system.
@@ -142,7 +142,7 @@ class BackgroundLinkingService(
         }
     }
 
-    private val limiter = Semaphore(configuration.parallelism * 2)
+    private val limiter = Semaphore(configuration.parallelism * 4)
 
     @Suppress("UNUSED")
     private val linkingWorker = if (isLinkingEnabled()) executor.submit {
