@@ -110,6 +110,7 @@ class HazelcastMap<K, V> internal constructor(val name: String) : TypedMapIdenti
         @JvmField val CODEX_MEDIA = HazelcastMap<UUID, Base64Media>("CODEX_MEDIA")
         @JvmField val COLLABORATIONS = HazelcastMap<UUID, Collaboration>("COLLABORATIONS")
         @JvmField val DB_CREDS = HazelcastMap<AclKey, MaterializedViewAccount>("DB_CREDS")
+        @JvmField val DELETED_ENTITY_SETS = HazelcastMap<UUID, DelegatedIntList>("DELETED_ENTITY_SETS")
         @JvmField val DELETION_LOCKS = HazelcastMap<UUID, Long>("DELETION_LOCKS")
         @JvmField val ENTITY_SET_COLLECTION_CONFIG = HazelcastMap<CollectionTemplateKey, UUID>("ENTITY_SET_COLLECTION_CONFIG")
         @JvmField val ENTITY_SET_COLLECTIONS = HazelcastMap<UUID, EntitySetCollection>("ENTITY_SET_COLLECTIONS")

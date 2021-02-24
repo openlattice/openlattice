@@ -25,13 +25,17 @@ import com.hazelcast.config.IndexType
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.QueryConstants
 import com.openlattice.data.storage.PostgresEntityDataQueryService
-import com.openlattice.edm.EntitySet
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.indexing.configuration.IndexerConfiguration
 import com.openlattice.postgres.DataTables.LAST_INDEX
 import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresArrays
-import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.ID
+import com.openlattice.postgres.PostgresColumn.LAST_LINK_INDEX
+import com.openlattice.postgres.PostgresColumn.LINKING_ID
+import com.openlattice.postgres.PostgresColumn.PARTITION
+import com.openlattice.postgres.PostgresColumn.VERSION
 import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.BasePostgresIterable
@@ -63,6 +67,7 @@ class BackgroundIndexedEntitiesDeletionService(
     }
 
     private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
+    private val deletedEntitySets = HazelcastMap.DELETED_ENTITY_SETS.getMap(hazelcastInstance)
 
     private val deletionLocks = HazelcastMap.DELETION_LOCKS.getMap(hazelcastInstance)
 
@@ -91,10 +96,16 @@ class BackgroundIndexedEntitiesDeletionService(
 
             val w = Stopwatch.createStarted()
             //We shuffle entity sets to make sure we have a chance to work share and index everything
-            val lockedEntitySets = entitySets.values
+
+            val entitySetsToAttempt = entitySets.values.map {
+                EntitySetForDeletion(it.id, it.name, it.partitions, false)
+            } + deletedEntitySets.entries.map {
+                EntitySetForDeletion(it.key, it.key.toString(), it.value, true)
+            }
+
+            val lockedEntitySets = entitySetsToAttempt
                     .shuffled()
                     .filter { tryLockEntitySet(it.id) }
-                    .filter { it.name != "OpenLattice Audit Entity Set" } //TODO: Clean out audit entity set from prod
 
             val totalDeleted = lockedEntitySets
                     .parallelStream()
@@ -120,7 +131,7 @@ class BackgroundIndexedEntitiesDeletionService(
         }
     }
 
-    private fun deleteIndexedEntities(entitySet: EntitySet): Int {
+    private fun deleteIndexedEntities(entitySet: EntitySetForDeletion): Int {
         logger.info("Starting entity deletion for entity set ${entitySet.name} with id ${entitySet.id}")
 
         val esw = Stopwatch.createStarted()
@@ -139,13 +150,17 @@ class BackgroundIndexedEntitiesDeletionService(
                         "${esw.elapsed(TimeUnit.MILLISECONDS)} ms."
         )
 
+        if (entitySet.isDeleted) {
+            deletedEntitySets.delete(entitySet.id)
+        }
+
         return deleteCount
     }
 
     /**
      * Select all ids, which have been hard deleted and already un-indexed.
      */
-    private fun getDeletedIdsBatch(entitySet: EntitySet): BasePostgresIterable<UUID> {
+    private fun getDeletedIdsBatch(entitySet: EntitySetForDeletion): BasePostgresIterable<UUID> {
         return BasePostgresIterable(
                 PreparedStatementHolderSupplier(hds, selectDeletedIdsBatch) {
                     val partitionsArray = PostgresArrays.createIntArray(it.connection, entitySet.partitions)
@@ -186,4 +201,11 @@ class BackgroundIndexedEntitiesDeletionService(
     private fun updateExpiration(entitySetId: UUID) {
         deletionLocks.set(entitySetId, System.currentTimeMillis() + DELETE_EXPIRATION_MILLIS)
     }
+
+    data class EntitySetForDeletion(
+            val id: UUID,
+            val name: String,
+            val partitions: Collection<Int>,
+            val isDeleted: Boolean
+    )
 }

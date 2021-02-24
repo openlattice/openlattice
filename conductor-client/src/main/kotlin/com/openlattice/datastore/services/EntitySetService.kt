@@ -21,6 +21,7 @@
 package com.openlattice.datastore.services
 
 import com.codahale.metrics.annotation.Timed
+import com.geekbeast.rhizome.hazelcast.DelegatedIntList
 import com.google.common.base.Preconditions.checkArgument
 import com.google.common.base.Preconditions.checkState
 import com.google.common.collect.Lists
@@ -35,7 +36,12 @@ import com.openlattice.assembler.processors.EntitySetContainsFlagEntryProcessor
 import com.openlattice.auditing.AuditRecordEntitySetsManager
 import com.openlattice.auditing.AuditingConfiguration
 import com.openlattice.auditing.AuditingTypes
-import com.openlattice.authorization.*
+import com.openlattice.authorization.AclKey
+import com.openlattice.authorization.AuthorizationManager
+import com.openlattice.authorization.HazelcastAclKeyReservationService
+import com.openlattice.authorization.Permission
+import com.openlattice.authorization.Principal
+import com.openlattice.authorization.Principals
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.authorization.securable.SecurableObjectType.PropertyTypeInEntitySet
 import com.openlattice.controllers.exceptions.ResourceNotFoundException
@@ -63,7 +69,10 @@ import com.openlattice.hazelcast.processors.RemoveDataExpirationPolicyProcessor
 import com.openlattice.hazelcast.processors.RemoveEntitySetsFromLinkingEntitySetProcessor
 import com.openlattice.organizations.OrganizationMetadataEntitySetsService
 import com.openlattice.postgres.PostgresColumn
-import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresColumn.ACL_KEY
+import com.openlattice.postgres.PostgresColumn.ENTITY_TYPE_ID
+import com.openlattice.postgres.PostgresColumn.ID
+import com.openlattice.postgres.PostgresColumn.PRINCIPAL_ID
 import com.openlattice.postgres.PostgresTable.ENTITY_SETS
 import com.openlattice.postgres.PostgresTable.PERMISSIONS
 import com.openlattice.postgres.ResultSetAdapters
@@ -113,6 +122,7 @@ class EntitySetService(
     private val propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap(hazelcastInstance)
     private val entitySetPropertyMetadata: IMap<EntitySetPropertyKey, EntitySetPropertyMetadata> =
             HazelcastMap.ENTITY_SET_PROPERTY_METADATA.getMap(hazelcastInstance)
+    private val deletedEntitySets = HazelcastMap.DELETED_ENTITY_SETS.getMap(hazelcastInstance)
 
     private val aclKeys = HazelcastMap.ACL_KEYS.getMap(hazelcastInstance)
 
@@ -350,6 +360,7 @@ class EntitySetService(
 
         val entityType = edm.getEntityType(entitySet.entityTypeId)
         deleteEntitySet(entitySet, entityType)
+        deletedEntitySets[entitySet.id] = DelegatedIntList(entitySet.partitions.toList())
 
         eventBus.post(EntitySetDeletedEvent(entitySet.id, entityType.id))
         logger.info("Entity set ${entitySet.name} (${entitySet.id}) deleted successfully.")

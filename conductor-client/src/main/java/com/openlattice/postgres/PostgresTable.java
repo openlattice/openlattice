@@ -190,7 +190,7 @@ public final class PostgresTable {
             new PostgresTableDefinition( "base_long_ids" )
                     .addColumns( SCOPE, BASE )
                     .primaryKey( SCOPE );
-    public static final PostgresTableDefinition COLLABORATIONS                = new PostgresTableDefinition(
+    public static final PostgresTableDefinition COLLABORATIONS      = new PostgresTableDefinition(
             "collaborations" )
             .addColumns(
                     ID,
@@ -199,18 +199,21 @@ public final class PostgresTable {
                     DESCRIPTION,
                     ORGANIZATION_IDS
             ).setUnique( NAME );
-    public static final PostgresTableDefinition COLLISIONS                    = new CitusDistributedTableDefinition(
+    public static final PostgresTableDefinition COLLISIONS          = new CitusDistributedTableDefinition(
             "collisions" )
             .addColumns( ID_VALUE, ENTITY_SET_ID, ENTITY_ID )
             .primaryKey( ID_VALUE, ENTITY_SET_ID, ENTITY_ID )
             .distributionColumn( ID_VALUE );
-    public static final PostgresTableDefinition DATA                          = PostgresDataTables
+    public static final PostgresTableDefinition DATA                = PostgresDataTables
             .buildDataTableDefinition();
-    public static final PostgresTableDefinition DB_CREDS                      =
+    public static final PostgresTableDefinition DB_CREDS            =
             new PostgresTableDefinition( "db_creds" )
                     .addColumns( ACL_KEY, USERNAME, CREDENTIAL )
                     .primaryKey( ACL_KEY );
-    public static final PostgresTableDefinition E                             =
+    public static final PostgresTableDefinition DELETED_ENTITY_SETS =
+            new PostgresTableDefinition( "deleted_entity_sets" )
+                    .addColumns( ID, PARTITIONS );
+    public static final PostgresTableDefinition E                   =
             new CitusDistributedTableDefinition( "e" )
                     .addColumns(
                             PARTITION,
@@ -228,7 +231,7 @@ public final class PostgresTable {
                             DST_ENTITY_KEY_ID,
                             EDGE_ENTITY_KEY_ID )
                     .distributionColumn( PARTITION );
-    public static final PostgresTableDefinition ENTITY_SETS                   =
+    public static final PostgresTableDefinition ENTITY_SETS         =
             new PostgresTableDefinition( "entity_sets" )
                     .addColumns(
                             ID,
