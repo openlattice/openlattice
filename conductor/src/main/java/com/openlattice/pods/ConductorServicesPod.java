@@ -354,7 +354,7 @@ public class ConductorServicesPod {
     public AssemblerConnectionManager assemblerConnectionManager() {
         return new AssemblerConnectionManager(
                 externalDbConnMan,
-                assemblerConfiguration,
+                securePrincipalsManager(),
                 dbQueryManager(),
                 externalDatabasePermissionsManager()
         );
