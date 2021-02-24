@@ -247,7 +247,7 @@ class ExternalDatabasePermissioner(
                         grantPermissionsOnColumnsOnTableToRoleSql(
                                 permissions,
                                 quotedColumns,
-                                Schemas.ASSEMBLED_ENTITY_SETS,
+                                Schemas.ASSEMBLED_ENTITY_SETS.label,
                                 entitySetName,
                                 roleName)
             }
@@ -282,21 +282,56 @@ class ExternalDatabasePermissioner(
             table: OrganizationExternalDatabaseTable,
             columns: Set<OrganizationExternalDatabaseColumn>
     ) {
+        initializePermissionSetForExternalTable(
+                hikariDataSource = extDbManager.connectToOrg(organizationId),
+                tableSchema = table.schema,
+                tableName = table.name,
+                columns = columns,
+                permissions = allTablePermissions
+
+        )
+    }
+
+    /**
+     * Create all postgres roles to apply to [table] and [columns] in [organizationId] database
+     */
+    override fun initializeProjectedTableViewPermissions(
+            collaborationId: UUID,
+            schema: String,
+            table: OrganizationExternalDatabaseTable,
+            columns: Set<OrganizationExternalDatabaseColumn>
+    ) {
+        initializePermissionSetForExternalTable(
+                hikariDataSource = extDbManager.connectToOrg(collaborationId),
+                tableSchema = schema,
+                tableName = table.name,
+                columns = columns,
+                permissions = allViewPermissions
+
+        )
+    }
+
+    private fun initializePermissionSetForExternalTable(
+            hikariDataSource: HikariDataSource,
+            tableSchema: String,
+            tableName: String,
+            columns: Set<OrganizationExternalDatabaseColumn>,
+            permissions: Set<Permission>
+    ) {
         val targetsToColumns = mutableMapOf<AccessTarget, OrganizationExternalDatabaseColumn>()
 
         val targets = columns.flatMapTo(mutableSetOf()) { column ->
-            allTablePermissions.map { permission ->
+            permissions.map { permission ->
                 val at = AccessTarget.forPermissionOnTarget(permission, column.tableId, column.id)
                 targetsToColumns[at] = column
                 at
             }
         }
 
-        val orgHds = extDbManager.connectToOrg(organizationId)
         PostgresRoles.getOrCreatePermissionRolesAsync(
                 externalRoleNames,
                 targets,
-                orgHds
+                hikariDataSource
         ).thenApplyAsync { targetToRoleNames ->
             targetToRoleNames.map { (target, roleName) ->
                 val column = targetsToColumns.getValue(target)
@@ -304,13 +339,13 @@ class ExternalDatabasePermissioner(
                 grantPermissionsOnColumnsOnTableToRoleSql(
                         pgPermissions,
                         ApiHelpers.dbQuote(column.name),
-                        Schemas.fromName(table.schema),
-                        table.name,
+                        tableSchema,
+                        tableName,
                         roleName.toString()
                 )
             }
         }.thenAccept { sqls ->
-            orgHds.connection.use { conn ->
+            hikariDataSource.connection.use { conn ->
                 conn.createStatement().use { stmt ->
                     sqls.forEach { sql ->
                         stmt.addBatch(sql)
@@ -423,7 +458,11 @@ class ExternalDatabasePermissioner(
         }
     }
 
-    private fun lookUpPermissionRoles(permissions: Set<Permission>, columnAcl: Acl, permissionRoles: Map<AccessTarget, UUID>): List<UUID> {
+    private fun lookUpPermissionRoles(
+            permissions: Set<Permission>,
+            columnAcl: Acl,
+            permissionRoles: Map<AccessTarget, UUID>
+    ): List<UUID> {
         return permissions.mapNotNull { permissionRoles[AccessTarget(columnAcl.aclKey, it)] }
     }
 
@@ -441,11 +480,7 @@ class ExternalDatabasePermissioner(
         ).toCompletableFuture().get()
     }
 
-    private fun removePermissionsOnColumn(
-            userRole: String,
-            permissionRoles: List<UUID>
-    ): List<String> {
-
+    private fun removePermissionsOnColumn(userRole: String, permissionRoles: List<UUID>): List<String> {
         return permissionRoles.map {
             revokeRoleSql(it.toString(), setOf(userRole))
         }
@@ -454,9 +489,10 @@ class ExternalDatabasePermissioner(
     private fun grantPermissionsOnColumnsOnTableToRoleSql(
             privileges: Set<PostgresPrivileges>,
             columns: String,
-            schemaName: Schemas,
+            schemaName: String,
             tableName: String,
-            roleName: String): String {
+            roleName: String
+    ): String {
         val privilegeString = privileges.joinToString { privilege ->
             "$privilege ( $columns )"
         }

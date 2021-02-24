@@ -22,7 +22,11 @@ class ExternalDatabaseConnectionManager(
 
     companion object {
         fun buildDefaultOrganizationDatabaseName(organizationId: UUID): String {
-            return "org_${organizationId.toString().replace("-","").toLowerCase()}"
+            return "org_${organizationId.toString().replace("-", "").toLowerCase()}"
+        }
+
+        fun buildDefaultCollaborationDatabaseName(collaborationId: UUID): String {
+            return "collab_${collaborationId.toString().replace("-", "").toLowerCase()}"
         }
     }
 
@@ -74,7 +78,7 @@ class ExternalDatabaseConnectionManager(
         return perDbCache.get(getOrganizationDatabaseName(organizationId))
     }
 
-    fun appendDatabaseToJdbcPartial( jdbcStringNoDatabase: String, dbName: String ): String {
+    fun appendDatabaseToJdbcPartial(jdbcStringNoDatabase: String, dbName: String): String {
         return "${jdbcStringNoDatabase.removeSuffix("/")}/$dbName"
     }
 }

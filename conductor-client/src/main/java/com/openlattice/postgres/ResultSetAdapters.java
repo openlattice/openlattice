@@ -35,14 +35,11 @@ import com.openlattice.apps.AppTypeSetting;
 import com.openlattice.assembler.EntitySetAssemblyKey;
 import com.openlattice.assembler.MaterializedEntitySet;
 import com.openlattice.auditing.AuditRecordEntitySetConfiguration;
-import com.openlattice.authorization.AccessTarget;
-import com.openlattice.authorization.AceKey;
-import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.Permission;
-import com.openlattice.authorization.Principal;
-import com.openlattice.authorization.PrincipalType;
-import com.openlattice.authorization.SecurablePrincipal;
+import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.collaborations.Collaboration;
+import com.openlattice.collaborations.ProjectedTableKey;
+import com.openlattice.collaborations.ProjectedTableMetadata;
 import com.openlattice.collections.CollectionTemplateKey;
 import com.openlattice.collections.CollectionTemplateType;
 import com.openlattice.collections.EntitySetCollection;
@@ -125,6 +122,7 @@ import static com.openlattice.postgres.PostgresColumn.BIDIRECTIONAL;
 import static com.openlattice.postgres.PostgresColumn.CATEGORY;
 import static com.openlattice.postgres.PostgresColumn.CLASS_NAME;
 import static com.openlattice.postgres.PostgresColumn.CLASS_PROPERTIES;
+import static com.openlattice.postgres.PostgresColumn.COLLABORATION_ID;
 import static com.openlattice.postgres.PostgresColumn.COLUMN_NAME;
 import static com.openlattice.postgres.PostgresColumn.COLUMN_NAMES_FIELD;
 import static com.openlattice.postgres.PostgresColumn.CONFIG_ID;
@@ -186,6 +184,7 @@ import static com.openlattice.postgres.PostgresColumn.NULLABLE_TITLE;
 import static com.openlattice.postgres.PostgresColumn.OID;
 import static com.openlattice.postgres.PostgresColumn.ORDINAL_POSITION;
 import static com.openlattice.postgres.PostgresColumn.ORGANIZATION_ID;
+import static com.openlattice.postgres.PostgresColumn.ORGANIZATION_IDS;
 import static com.openlattice.postgres.PostgresColumn.ORGANIZATION_ID_FIELD;
 import static com.openlattice.postgres.PostgresColumn.ORIGIN_ID;
 import static com.openlattice.postgres.PostgresColumn.PARTITION;
@@ -1212,15 +1211,48 @@ public final class ResultSetAdapters {
         return new OrganizationDatabase( oid, name );
     }
 
+    public static Set<UUID> organizationIds( ResultSet rs ) throws SQLException {
+        final UUID[] organizationIds = PostgresArrays.getUuidArray( rs, ORGANIZATION_IDS.getName() );
+
+        if ( organizationIds == null ) {
+            return new LinkedHashSet<>();
+        }
+
+        return new LinkedHashSet<>( Arrays.asList( organizationIds ) );
+    }
+
+    public static Collaboration collaboration( ResultSet rs ) throws SQLException {
+        UUID id = id( rs );
+        String name = name( rs );
+        String title = title( rs );
+        String description = description( rs );
+        Set<UUID> organizationIds = organizationIds( rs );
+
+        return new Collaboration( id, name, title, description, organizationIds );
+    }
+
+    @NotNull public static UUID collaborationId( @NotNull ResultSet rs ) throws SQLException {
+        return rs.getObject( COLLABORATION_ID.getName(), UUID.class );
+    }
+
     @NotNull public static UUID roleId( @NotNull ResultSet rs ) throws SQLException {
-        return rs.getObject( ROLE_ID.getName(), UUID.class);
+        return rs.getObject( ROLE_ID.getName(), UUID.class );
     }
 
     @NotNull public static Permission permission( @NotNull ResultSet rs ) throws SQLException {
-        return Permission.valueOf(rs.getString( PERMISSION.getName()));
+        return Permission.valueOf( rs.getString( PERMISSION.getName() ) );
     }
 
     @NotNull public static AccessTarget accessTarget( @NotNull ResultSet rs ) throws SQLException {
-        return new AccessTarget(aclKey( rs ), permission(rs) );
+        return new AccessTarget( aclKey( rs ), permission( rs ) );
     }
+
+    @NotNull public static ProjectedTableKey projectedTableKey( @NotNull ResultSet rs ) throws SQLException {
+        return new ProjectedTableKey( tableId( rs ), collaborationId( rs ) );
+    }
+
+    @NotNull public static ProjectedTableMetadata projectedTableMetadata( @NotNull ResultSet rs ) throws SQLException {
+        return new ProjectedTableMetadata( organizationId( rs ), name( rs ) );
+    }
+
 }

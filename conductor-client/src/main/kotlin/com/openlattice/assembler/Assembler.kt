@@ -271,7 +271,7 @@ class Assembler(
         }
     }
 
-    fun renameOrganizationDatabase(currentDatabaseName: String, newDatabaseName: String) {
+    fun renameDatabase(currentDatabaseName: String, newDatabaseName: String) {
         acm.renameOrganizationDatabase(currentDatabaseName, newDatabaseName)
     }
 

@@ -149,6 +149,10 @@ class HazelcastPrincipalService(
         return principalsMapManager.getSecurablePrincipal(principalId)
     }
 
+    override fun getSecurablePrincipals(aclKeys: Set<AclKey>): Map<AclKey, SecurablePrincipal> {
+        return principalsMapManager.getSecurablePrincipals(aclKeys)
+    }
+
     override fun getAllRolesInOrganization(organizationId: UUID): Collection<SecurablePrincipal> {
         return getAllRolesInOrganizations(listOf(organizationId)).getValue(organizationId)
     }
@@ -251,6 +255,14 @@ class HazelcastPrincipalService(
                 .associate {
                     it.first() to orgMembers.getOrDefault(it, setOf()).filter { p -> p.principalType == PrincipalType.USER }.toMutableSet()
                 }
+    }
+
+
+    override fun getOrganizationMemberPrincipals(organizationId: UUID): Set<Principal> {
+        return getOrganizationMembers(mutableSetOf(organizationId))
+                .getValue(organizationId)
+                .map { it.principal }
+                .toSet()
     }
 
     override fun principalHasChildPrincipal(parent: AclKey, child: AclKey): Boolean {

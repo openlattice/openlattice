@@ -33,6 +33,9 @@ import com.openlattice.auditing.AuditRecordEntitySetConfiguration
 import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.codex.Base64Media
+import com.openlattice.collaborations.Collaboration
+import com.openlattice.collaborations.ProjectedTableKey
+import com.openlattice.collaborations.ProjectedTableMetadata
 import com.openlattice.collections.CollectionTemplateKey
 import com.openlattice.collections.EntitySetCollection
 import com.openlattice.collections.EntityTypeCollection
@@ -88,6 +91,8 @@ class HazelcastMap<K, V> internal constructor(val name: String) : TypedMapIdenti
         private val valuesCache: MutableList<HazelcastMap<*, *>> = ArrayList()
         private val instanceChecker = UniqueInstanceManager(HazelcastMap::class.java)
 
+        // @formatter:off
+
         // When adding new entries to this list, please make sure to keep it sorted and keep the name in sync
 
         // @formatter:off
@@ -103,6 +108,7 @@ class HazelcastMap<K, V> internal constructor(val name: String) : TypedMapIdenti
         @JvmField val BACKGROUND_ORGANIZATION_DATABASE_SYNCING_LOCKS = HazelcastMap<UUID, Long>("BACKGROUND_ORGANIZATION_DATABASE_SYNCING_LOCKS")
         @JvmField val CODEX_LOCKS = HazelcastMap<SmsInformationKey, Long>("CODEX_LOCKS")
         @JvmField val CODEX_MEDIA = HazelcastMap<UUID, Base64Media>("CODEX_MEDIA")
+        @JvmField val COLLABORATIONS = HazelcastMap<UUID, Collaboration>("COLLABORATIONS")
         @JvmField val DB_CREDS = HazelcastMap<AclKey, MaterializedViewAccount>("DB_CREDS")
         @JvmField val DELETION_LOCKS = HazelcastMap<UUID, Long>("DELETION_LOCKS")
         @JvmField val ENTITY_SET_COLLECTION_CONFIG = HazelcastMap<CollectionTemplateKey, UUID>("ENTITY_SET_COLLECTION_CONFIG")
@@ -135,6 +141,7 @@ class HazelcastMap<K, V> internal constructor(val name: String) : TypedMapIdenti
         @JvmField val PERMISSIONS = HazelcastMap<AceKey, AceValue>("PERMISSIONS")
         @JvmField val PRINCIPAL_TREES = HazelcastMap<AclKey, AclKeySet>("PRINCIPAL_TREES")
         @JvmField val PRINCIPALS = HazelcastMap<AclKey, SecurablePrincipal>("PRINCIPALS")
+        @JvmField val PROJECTED_TABLES = HazelcastMap<ProjectedTableKey, ProjectedTableMetadata>("PROJECTED_TABLES")
         @JvmField val PROPERTY_TYPES = HazelcastMap<UUID, PropertyType>("PROPERTY_TYPES")
         @JvmField val REQUESTS = HazelcastMap<AceKey, Status>("REQUESTS")
         @JvmField val RESOLVED_PRINCIPAL_TREES = HazelcastMap<String, SortedPrincipalSet>("RESOLVED_PRINCIPAL_TREES")
