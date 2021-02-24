@@ -58,7 +58,8 @@ import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import java.sql.Array
 import java.sql.Connection
-import java.util.*
+import java.util.LinkedHashSet
+import java.util.UUID
 
 
 /**
@@ -488,7 +489,7 @@ private val ENTITY_KEY_IDS_NEEDING_LINKING = """
             AND ( ${LAST_INDEX.name} >= ${LAST_WRITE.name} )
             AND ( ${LAST_INDEX.name} > '-infinity'::timestamptz )
             AND ${VERSION.name} > 0
-        ORDER BY ${VERSION.name} DESC
+        ORDER BY ${VERSION.name} ASC
         LIMIT ?
         """.trimIndent()
 
