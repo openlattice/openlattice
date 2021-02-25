@@ -2,10 +2,8 @@ package com.openlattice
 
 import com.google.common.base.Stopwatch
 import com.google.common.collect.ImmutableMap
-import com.hazelcast.config.IndexType
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicates
-import com.hazelcast.query.QueryConstants
 import com.openlattice.auditing.AuditEventType
 import com.openlattice.auditing.AuditRecordEntitySetsManager
 import com.openlattice.auditing.AuditableEvent
@@ -48,21 +46,13 @@ class BackgroundExternalDatabaseSyncingService(
     companion object {
         private val logger = LoggerFactory.getLogger(BackgroundExternalDatabaseSyncingService::class.java)
 
-        const val MAX_DURATION_MILLIS = 1_000L * 60 * 30 // 30 minutes
-        const val SCAN_RATE = 1_000L * 30                // 30 seconds
+        const val SCAN_RATE = 1_000L * 30 // 30 seconds
     }
 
     private val organizationExternalDatabaseColumns = ORGANIZATION_EXTERNAL_DATABASE_COLUMN.getMap(hazelcastInstance)
     private val organizationExternalDatabaseTables = ORGANIZATION_EXTERNAL_DATABASE_TABLE.getMap(hazelcastInstance)
     private val organizationDatabases = ORGANIZATION_DATABASES.getMap(hazelcastInstance)
-
     private val organizations = HazelcastMap.ORGANIZATIONS.getMap(hazelcastInstance)
-    private val expirationLocks = HazelcastMap.BACKGROUND_ORGANIZATION_DATABASE_SYNCING_LOCKS.getMap(hazelcastInstance)
-
-
-    init {
-        expirationLocks.addIndex(IndexType.SORTED, QueryConstants.THIS_ATTRIBUTE_NAME.value())
-    }
 
     private val taskLock = ReentrantLock()
 
@@ -83,12 +73,10 @@ class BackgroundExternalDatabaseSyncingService(
 
         try {
             val timer = Stopwatch.createStarted()
-            val lockedOrganizationIds = organizations.keys
-                    .filter { it != IdConstants.GLOBAL_ORGANIZATION_ID.id }
-                    .filter { tryLockOrganization(it) }
-                    .shuffled()
 
-            lockedOrganizationIds
+            organizations.keys
+                    .filter { it != IdConstants.GLOBAL_ORGANIZATION_ID.id }
+                    .shuffled()
                     .forEach {
                         try {
                             syncOrganizationDatabases(it)
@@ -96,8 +84,6 @@ class BackgroundExternalDatabaseSyncingService(
                             logger.error("An error occurred when trying to sync database for org {}", it, e)
                         }
                     }
-
-            lockedOrganizationIds.forEach(this::deleteLock)
 
             logger.info("Completed syncing database objects in {}", timer)
         } catch (ex: Exception) {
@@ -327,13 +313,4 @@ class BackgroundExternalDatabaseSyncingService(
         }.toList()
         auditingManager.recordEvents(events)
     }
-
-    private fun tryLockOrganization(orgId: UUID): Boolean {
-        return expirationLocks.putIfAbsent(orgId, System.currentTimeMillis() + MAX_DURATION_MILLIS) == null
-    }
-
-    private fun deleteLock(orgId: UUID) {
-        expirationLocks.delete(orgId)
-    }
-
 }
