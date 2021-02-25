@@ -113,7 +113,7 @@ class BackgroundExternalDatabaseSyncingService(
             val table = getOrCreateTable(orgId, oid, tableName, schemaName)
             val columns = syncTableColumns(table)
 
-//            initializeTablePermissions(orgId, table, columns, adminRolePrincipal)
+            initializeTablePermissions(orgId, table, columns, adminRolePrincipal)
 
             tableIds.add(table.id)
             columnIds.addAll(columns.map { it.id })

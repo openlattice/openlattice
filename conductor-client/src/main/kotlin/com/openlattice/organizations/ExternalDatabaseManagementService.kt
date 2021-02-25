@@ -261,8 +261,7 @@ class ExternalDatabaseManagementService(
     fun getColumnNamesByTableName(dbName: String): List<TableInfo> {
         return BasePostgresIterable(StatementHolderSupplier(
                 externalDbManager.connect(dbName),
-                getCurrentTableAndColumnNamesSql(),
-                FETCH_SIZE
+                getCurrentTableAndColumnNamesSql()
         )) { rs ->
             TableInfo(oid(rs), name(rs), schemaName(rs), columnNames(rs))
         }.toList()
@@ -464,7 +463,6 @@ class ExternalDatabaseManagementService(
         val columnToUserToPrivileges = BasePostgresIterable(StatementHolderSupplier(orgHDS, columnPrivilegesSql)) { rs ->
             columnName(rs) to (user(rs) to PostgresPrivileges.valueOf(privilegeType(rs).toUpperCase()))
         }
-                .toList()
                 .groupBy { columnNameToAclKey.getValue(it.first) }
                 .mapValues {
                     it.value.map { pair -> pair.second }
