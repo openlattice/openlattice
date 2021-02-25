@@ -131,17 +131,21 @@ class BackgroundExternalDatabaseSyncingService(
             adminRolePrincipal: Principal
     ) {
         // initialize database permissions
+        logger.info("About to execute extDbPermsService.initializeExternalTablePermissions")
         extDbPermsService.initializeExternalTablePermissions(
                 organizationId,
                 table,
                 columns
         )
+        logger.info("About to execute edms.executePrivilegesUpdate")
         edms.executePrivilegesUpdate(Action.ADD, columns.map { Acl(it.getAclKey(), listOf(Ace(adminRolePrincipal, EnumSet.allOf(Permission::class.java)))) })
 
         // initialize OL permissions
+        logger.info("About to execute edms.syncPermissions")
         val acls = edms.syncPermissions(adminRolePrincipal, table, columns)
 
         // audit
+        logger.info("woot")
         recordAuditableEvents(acls, AuditEventType.ADD_PERMISSION)
     }
 
