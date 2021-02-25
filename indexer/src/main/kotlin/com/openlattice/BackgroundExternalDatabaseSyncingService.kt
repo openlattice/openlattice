@@ -110,16 +110,16 @@ class BackgroundExternalDatabaseSyncingService(
         val columnIds = mutableSetOf<UUID>()
 
         edms.getColumnNamesByTableName(dbName).forEach { (oid, tableName, schemaName, _) ->
-            val table = getOrCreateTable(orgId, oid, tableName, schemaName)
-            val columns = syncTableColumns(table)
-
-            initializeTablePermissions(orgId, table, columns, adminRolePrincipal)
-
-            tableIds.add(table.id)
-            columnIds.addAll(columns.map { it.id })
+//            val table = getOrCreateTable(orgId, oid, tableName, schemaName)
+//            val columns = syncTableColumns(table)
+//
+//            initializeTablePermissions(orgId, table, columns, adminRolePrincipal)
+//
+//            tableIds.add(table.id)
+//            columnIds.addAll(columns.map { it.id })
         }
 
-        removeNonexistentTablesAndColumnsForOrg(orgId, tableIds, columnIds)
+//        removeNonexistentTablesAndColumnsForOrg(orgId, tableIds, columnIds)
 
         logger.info("Finished syncing database for organization {} in {} seconds", orgId, sw.elapsed(TimeUnit.SECONDS))
     }
@@ -139,10 +139,10 @@ class BackgroundExternalDatabaseSyncingService(
         edms.executePrivilegesUpdate(Action.ADD, columns.map { Acl(it.getAclKey(), listOf(Ace(adminRolePrincipal, EnumSet.allOf(Permission::class.java)))) })
 
         // initialize OL permissions
-//        val acls = edms.syncPermissions(adminRolePrincipal, table, columns)
-//
-//        // audit
-//        recordAuditableEvents(acls, AuditEventType.ADD_PERMISSION)
+        val acls = edms.syncPermissions(adminRolePrincipal, table, columns)
+
+        // audit
+        recordAuditableEvents(acls, AuditEventType.ADD_PERMISSION)
     }
 
     private fun getOrCreateTable(orgId: UUID, oid: Int, tableName: String, schemaName: String): OrganizationExternalDatabaseTable {
