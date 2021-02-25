@@ -22,8 +22,6 @@
 package com.openlattice.linking.blocking
 
 import com.openlattice.data.EntityDataKey
-import java.util.Optional
-import java.util.UUID
 
 /**
  *
@@ -40,7 +38,6 @@ interface Blocker {
      */
     fun block(
             entityDataKey: EntityDataKey,
-            entity: Optional<Map<UUID, Set<Any>>> = Optional.empty(),
             top: Int = 50
     ): Block
 

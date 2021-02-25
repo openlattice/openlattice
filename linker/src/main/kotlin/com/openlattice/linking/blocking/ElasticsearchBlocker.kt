@@ -38,10 +38,8 @@ import com.openlattice.postgres.mapstores.EntityTypeMapstore
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
-import java.util.Optional
-import java.util.UUID
+import java.util.*
 import java.util.concurrent.TimeUnit
-import kotlin.streams.asSequence
 
 
 private val logger = LoggerFactory.getLogger(ElasticsearchBlocker::class.java)
@@ -57,12 +55,15 @@ class ElasticsearchBlocker(
         hazelcast: HazelcastInstance
 ) : Blocker {
 
-    private val entitySets = HazelcastMap.ENTITY_SETS.getMap( hazelcast )
-    private val entityTypes = HazelcastMap.ENTITY_TYPES.getMap( hazelcast )
+    private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcast)
+    private val entityTypes = HazelcastMap.ENTITY_TYPES.getMap(hazelcast)
+    private val propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap(hazelcast)
 
     private val personEntityType = entityTypes.values(
             Predicates.equal(EntityTypeMapstore.FULLQUALIFIED_NAME_PREDICATE, PersonProperties.PERSON_TYPE_FQN.fullQualifiedNameAsString)
     ).first()
+    private val personLinkingPropertyTypeIds = propertyTypes.getAll(personEntityType.properties).values
+            .filter { PersonProperties.FQNS.contains(it.type) }.map { it.id }.toSet()
 
     private val entitySetKeysCache = Suppliers.memoizeWithExpiration({
         entitySets.keys.toSet()
@@ -71,16 +72,21 @@ class ElasticsearchBlocker(
     @Timed
     override fun block(
             entityDataKey: EntityDataKey,
-            entity: Optional<Map<UUID, Set<Any>>>,
             top: Int
     ): Block {
         logger.info("Blocking for entity data key {}", entityDataKey)
 
         val sw = Stopwatch.createStarted()
 
+        val loadedCandidateData = dataLoader.getLinkingEntity(entityDataKey)
+
+        if (isEntityEmpty(loadedCandidateData)) { // has no relevant data
+            return Block.emptyBlock(entityDataKey)
+        }
+
         var blockedEntitySetSearchResults = elasticsearch.executeBlockingSearch(
-                personEntityType.id ,
-                getFieldSearches(entity.orElseGet { dataLoader.getEntity(entityDataKey) }),
+                personEntityType.id,
+                getFieldSearches(loadedCandidateData),
                 top,
                 false
         ).filter {
@@ -112,27 +118,31 @@ class ElasticsearchBlocker(
         sw.reset()
         sw.start()
 
+        val filteredSearchResults = removeNegativeFeedbackFromSearchResult(entityDataKey, blockedEntitySetSearchResults)
+
         val block = Block(
                 entityDataKey,
-                removeNegativeFeedbackFromSearchResult(entityDataKey, blockedEntitySetSearchResults)
+                filteredSearchResults.entries
                         .filter { it.value.isNotEmpty() }
-                        .entries
-                        .parallelStream()
                         .flatMap { entry ->
-                            dataLoader
-                                    .getEntityStream(entry.key, entry.value)
-                                    .stream()
+                            dataLoader.getLinkingEntityStream(entry.key, entry.value)
+                                    .filter { !isEntityEmpty(it.second) }
                                     .map { EntityDataKey(entry.key, it.first) to it.second }
-                        }
-                        .asSequence()
-                        .toMap()
+                                    .filter { it.second.isNotEmpty() }
+                        }.toMap()
         )
-
         logger.info(
                 "Loading {} entities took {} ms.", block.size,
                 sw.elapsed(TimeUnit.MILLISECONDS)
         )
         return block
+    }
+
+    private fun isEntityEmpty(candidateData: Map<UUID, Set<Any>>): Boolean {
+        return personLinkingPropertyTypeIds.any {
+            val data = candidateData[it]
+            data != null && data.isNotEmpty()
+        }
     }
 
     /**
