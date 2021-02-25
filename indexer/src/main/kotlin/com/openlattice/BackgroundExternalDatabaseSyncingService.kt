@@ -109,7 +109,7 @@ class BackgroundExternalDatabaseSyncingService(
         val tableIds = mutableSetOf<UUID>()
         val columnIds = mutableSetOf<UUID>()
 
-        val tableToCols = edms.getColumnNamesByTableName(dbName).associate { (oid, tableName, schemaName, _) ->
+        edms.getColumnNamesByTableName(dbName).forEach { (oid, tableName, schemaName, _) ->
             val table = getOrCreateTable(orgId, oid, tableName, schemaName)
             val columns = syncTableColumns(table)
 
@@ -117,54 +117,11 @@ class BackgroundExternalDatabaseSyncingService(
 
             tableIds.add(table.id)
             columnIds.addAll(columns.map { it.id })
-            table to columns
         }
-
-        initializeTablePermissionsBatched(orgId, tableToCols, adminRolePrincipal)
-
-//        edms.getColumnNamesByTableName(dbName).forEach { (oid, tableName, schemaName, _) ->
-//            val table = getOrCreateTable(orgId, oid, tableName, schemaName)
-//            val columns = syncTableColumns(table)
-//
-//            initializeTablePermissions(orgId, table, columns, adminRolePrincipal)
-//
-//            tableIds.add(table.id)
-//            columnIds.addAll(columns.map { it.id })
-//        }
 
         removeNonexistentTablesAndColumnsForOrg(orgId, tableIds, columnIds)
 
         logger.info("Finished syncing database for organization {} in {} seconds", orgId, sw.elapsed(TimeUnit.SECONDS))
-    }
-
-    private fun initializeTablePermissionsBatched(
-            organizationId: UUID,
-            tableToCols: Map<OrganizationExternalDatabaseTable, Set<OrganizationExternalDatabaseColumn>>,
-            adminRolePrincipal: Principal
-    ) {
-        // initialize database permissions
-        logger.info("About to execute extDbPermsService.initializeExternalTablePermissions")
-        tableToCols.forEach { (table, columns) ->
-            extDbPermsService.initializeExternalTablePermissions(
-                    organizationId,
-                    table,
-                    columns
-            )
-        }
-        logger.info("About to execute edms.executePrivilegesUpdate")
-        tableToCols.forEach { (table, columns) ->
-            edms.executePrivilegesUpdate(Action.ADD, columns.map { Acl(it.getAclKey(), listOf(Ace(adminRolePrincipal, EnumSet.allOf(Permission::class.java)))) })
-        }
-
-        // initialize OL permissions
-        logger.info("About to execute edms.syncPermissions")
-        tableToCols.forEach { (table, columns) ->
-            val acls = edms.syncPermissions(adminRolePrincipal, table, columns)
-            recordAuditableEvents(acls, AuditEventType.ADD_PERMISSION)
-        }
-
-        // audit
-        logger.info("woot")
     }
 
     private fun initializeTablePermissions(
