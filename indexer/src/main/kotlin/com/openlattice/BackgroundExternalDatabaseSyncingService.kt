@@ -59,6 +59,7 @@ class BackgroundExternalDatabaseSyncingService(
     @Suppress("UNUSED")
     @Scheduled(fixedDelay = SCAN_RATE)
     fun scanOrganizationDatabases() {
+        return
         logger.info("Starting background external database sync task.")
 
         if (!indexerConfiguration.backgroundExternalDatabaseSyncingEnabled) {
