@@ -19,7 +19,9 @@ import com.openlattice.organization.OrganizationExternalDatabaseTable
 import com.openlattice.organizations.ExternalDatabaseManagementService
 import com.openlattice.organizations.OrganizationMetadataEntitySetsService
 import com.openlattice.organizations.mapstores.ORGANIZATION_ID_INDEX
+import com.openlattice.postgres.TableColumn
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService
+import com.openlattice.postgres.external.Schemas
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import java.time.OffsetDateTime
@@ -136,13 +138,19 @@ class BackgroundExternalDatabaseSyncingService(
                 table,
                 columns
         )
-        edms.executePrivilegesUpdate(Action.ADD, columns.map { Acl(it.getAclKey(), listOf(Ace(adminRolePrincipal, EnumSet.allOf(Permission::class.java)))) })
-//
-//        // initialize OL permissions
-//        val acls = edms.syncPermissions(adminRolePrincipal, table, columns)
-//
-//        // audit
-//        recordAuditableEvents(acls, AuditEventType.ADD_PERMISSION)
+        val columnAcls = columns.map {
+            Acl(it.getAclKey(), listOf(Ace(adminRolePrincipal, EnumSet.allOf(Permission::class.java))))
+        }
+        val tableColsByAclKey = columns.associate {
+            it.getAclKey() to TableColumn(it.organizationId, it.tableId, it.id, Schemas.fromName(table.schema))
+        }
+        extDbPermsService.updateExternalTablePermissions(Action.ADD, columnAcls, tableColsByAclKey)
+
+        // initialize OL permissions
+        val acls = edms.syncPermissions(adminRolePrincipal, table, columns)
+
+        // audit
+        recordAuditableEvents(acls, AuditEventType.ADD_PERMISSION)
     }
 
     private fun getOrCreateTable(orgId: UUID, oid: Int, tableName: String, schemaName: String): OrganizationExternalDatabaseTable {

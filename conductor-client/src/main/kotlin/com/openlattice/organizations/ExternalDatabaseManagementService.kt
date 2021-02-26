@@ -463,6 +463,7 @@ class ExternalDatabaseManagementService(
         val columnToUserToPrivileges = BasePostgresIterable(StatementHolderSupplier(orgHDS, columnPrivilegesSql)) { rs ->
             columnName(rs) to (user(rs) to PostgresPrivileges.valueOf(privilegeType(rs).toUpperCase()))
         }
+                .toList()
                 .groupBy { columnNameToAclKey.getValue(it.first) }
                 .mapValues {
                     it.value.map { pair -> pair.second }
