@@ -110,16 +110,16 @@ class BackgroundExternalDatabaseSyncingService(
         val columnIds = mutableSetOf<UUID>()
 
         edms.getColumnNamesByTableName(dbName).forEach { (oid, tableName, schemaName, _) ->
-//            val table = getOrCreateTable(orgId, oid, tableName, schemaName)
-//            val columns = syncTableColumns(table)
-//
+            val table = getOrCreateTable(orgId, oid, tableName, schemaName)
+            val columns = syncTableColumns(table)
+
 //            initializeTablePermissions(orgId, table, columns, adminRolePrincipal)
-//
-//            tableIds.add(table.id)
-//            columnIds.addAll(columns.map { it.id })
+
+            tableIds.add(table.id)
+            columnIds.addAll(columns.map { it.id })
         }
 
-//        removeNonexistentTablesAndColumnsForOrg(orgId, tableIds, columnIds)
+        removeNonexistentTablesAndColumnsForOrg(orgId, tableIds, columnIds)
 
         logger.info("Finished syncing database for organization {} in {} seconds", orgId, sw.elapsed(TimeUnit.SECONDS))
     }
