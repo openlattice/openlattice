@@ -121,7 +121,7 @@ class BackgroundExternalDatabaseSyncingService(
 
         removeNonexistentTablesAndColumnsForOrg(orgId, tableIds, columnIds)
 
-        logger.info("Finished syncing database for organization {} in {} seconds", orgId, sw.elapsed(TimeUnit.SECONDS))
+        logger.info("Finished syncing database for organization {} in {} ms", orgId, sw.elapsed(TimeUnit.MILLISECONDS))
     }
 
     private fun initializeTablePermissions(
@@ -136,7 +136,7 @@ class BackgroundExternalDatabaseSyncingService(
                 table,
                 columns
         )
-//        edms.executePrivilegesUpdate(Action.ADD, columns.map { Acl(it.getAclKey(), listOf(Ace(adminRolePrincipal, EnumSet.allOf(Permission::class.java)))) })
+        edms.executePrivilegesUpdate(Action.ADD, columns.map { Acl(it.getAclKey(), listOf(Ace(adminRolePrincipal, EnumSet.allOf(Permission::class.java)))) })
 //
 //        // initialize OL permissions
 //        val acls = edms.syncPermissions(adminRolePrincipal, table, columns)
