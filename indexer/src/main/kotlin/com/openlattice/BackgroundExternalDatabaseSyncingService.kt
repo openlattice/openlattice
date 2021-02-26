@@ -113,7 +113,7 @@ class BackgroundExternalDatabaseSyncingService(
             val table = getOrCreateTable(orgId, oid, tableName, schemaName)
             val columns = syncTableColumns(table)
 
-//            initializeTablePermissions(orgId, table, columns, adminRolePrincipal)
+            initializeTablePermissions(orgId, table, columns, adminRolePrincipal)
 
             tableIds.add(table.id)
             columnIds.addAll(columns.map { it.id })
@@ -136,13 +136,13 @@ class BackgroundExternalDatabaseSyncingService(
                 table,
                 columns
         )
-        edms.executePrivilegesUpdate(Action.ADD, columns.map { Acl(it.getAclKey(), listOf(Ace(adminRolePrincipal, EnumSet.allOf(Permission::class.java)))) })
-
-        // initialize OL permissions
-        val acls = edms.syncPermissions(adminRolePrincipal, table, columns)
-
-        // audit
-        recordAuditableEvents(acls, AuditEventType.ADD_PERMISSION)
+//        edms.executePrivilegesUpdate(Action.ADD, columns.map { Acl(it.getAclKey(), listOf(Ace(adminRolePrincipal, EnumSet.allOf(Permission::class.java)))) })
+//
+//        // initialize OL permissions
+//        val acls = edms.syncPermissions(adminRolePrincipal, table, columns)
+//
+//        // audit
+//        recordAuditableEvents(acls, AuditEventType.ADD_PERMISSION)
     }
 
     private fun getOrCreateTable(orgId: UUID, oid: Int, tableName: String, schemaName: String): OrganizationExternalDatabaseTable {
