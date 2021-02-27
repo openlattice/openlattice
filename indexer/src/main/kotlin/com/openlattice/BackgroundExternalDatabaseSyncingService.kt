@@ -150,7 +150,7 @@ class BackgroundExternalDatabaseSyncingService(
 //        val acls = edms.syncPermissions(adminRolePrincipal, table, columns)
 
         // audit
-        recordAuditableEvents(acls, AuditEventType.ADD_PERMISSION)
+//        recordAuditableEvents(acls, AuditEventType.ADD_PERMISSION)
     }
 
     private fun getOrCreateTable(orgId: UUID, oid: Int, tableName: String, schemaName: String): OrganizationExternalDatabaseTable {
