@@ -147,7 +147,7 @@ class BackgroundExternalDatabaseSyncingService(
         extDbPermsService.updateExternalTablePermissions(Action.ADD, columnAcls, tableColsByAclKey)
 
         // initialize OL permissions
-        val acls = edms.syncPermissions(adminRolePrincipal, table, columns)
+//        val acls = edms.syncPermissions(adminRolePrincipal, table, columns)
 
         // audit
         recordAuditableEvents(acls, AuditEventType.ADD_PERMISSION)

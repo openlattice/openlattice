@@ -453,6 +453,10 @@ class ExternalDatabaseManagementService(
             maybeColumnId: UUID? = null,
             maybeColumnName: String? = null
     ): List<Acl> {
+        if (columns.isEmpty()) {
+            return listOf()
+        }
+
         val columnNameToAclKey = columns.associate { it.name to it.getAclKey() }
         val aclKeysToGrant = mutableSetOf(AclKey(table.id)) + columnNameToAclKey.values
 
