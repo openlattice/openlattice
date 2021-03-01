@@ -77,10 +77,10 @@ class SocratesMatcher(
         }
 
         // transform features to matrix and compute scores
-        val featureKeys = extractedFeatures.map { it.key }.toTypedArray()
-        val featureMatrix = extractedFeatures.map { it.value }.toTypedArray()
-        val scores = computeScore(model, featureMatrix).toTypedArray()
-        val matchedEntities = featureKeys.zip(scores).toMap().toMutableMap()
+        val featureMatrix = extractedFeatures.values.toTypedArray()
+        val scores = computeScore(model, featureMatrix).asIterable()
+
+        val matchedEntities = extractedFeatures.keys.zip(scores).toMap(mutableMapOf())
         val initializedBlock = PairwiseMatch(entityDataKey, mutableMapOf(entityDataKey to matchedEntities))
 
         // trim low scores
@@ -112,7 +112,7 @@ class SocratesMatcher(
 //        val feedbacks = linkingFeedbackService.getLinkingFeedbacks(entityPairs)
 
         // filter out feedbacks
-        val filteredEntities = entities.mapValues { entity ->
+        val filteredEntities = entities.mapValues { _ ->
 //            entities.keys.filter {
 //                val entityPair = EntityKeyPair(entity.key, it)
 //                val linked = feedbacks[entityPair]
@@ -144,7 +144,6 @@ class SocratesMatcher(
         )
 
         return PairwiseMatch(block.entityDataKey, matchedEntities)
-
     }
 
     /**
@@ -210,20 +209,21 @@ class SocratesMatcher(
         val bfTime = blockFeatureExtraction - propsExtractionSw
         val fblTime = featureExtractionSW - blockFeatureExtraction
 
-        if (propsExtractionSw > 500){
+        if (propsExtractionSw > 300){
             logger.error("Property extraction: $propsExtractionSw ms")
         }
-        if (bfTime > 500){
+        if (bfTime > 300){
             logger.error("Block feature extraction: $bfTime ms")
         }
-        if (fblTime > 500){
+        if (fblTime > 300){
             logger.error("final transforms: $fblTime ms")
         }
         return results
     }
 
     private fun computeScore(
-            model: MultiLayerNetwork, features: Array<DoubleArray>
+            model: MultiLayerNetwork,
+            features: Array<DoubleArray>
     ): DoubleArray {
         val sw = Stopwatch.createStarted()
         val scores = model.getModelScore(features)
@@ -256,9 +256,12 @@ class SocratesMatcher(
             matchedBlock: PairwiseMatch
     ) {
         //Trim non-center matching thigns.
-        matchedBlock.matches[matchedBlock.candidate] = matchedBlock.matches[matchedBlock.candidate]?.filter {
+        val filtered = matchedBlock.matches.getOrDefault(
+                matchedBlock.candidate, mutableMapOf()
+        ).filterTo(mutableMapOf()) {
             it.value > THRESHOLD
-        }?.toMutableMap() ?: mutableMapOf()
+        }
+        matchedBlock.matches[matchedBlock.candidate] = filtered
     }
 }
 

@@ -59,7 +59,8 @@ public class PersonProperties {
     public static final FullQualifiedName IDENTIFICATION_FQN = new FullQualifiedName( "nc.SubjectIdentification" );
     public static final FullQualifiedName SSN_FQN            = new FullQualifiedName( "nc.SSN" );
 
-    public static final Set<FullQualifiedName> FQNS = ImmutableSet.of( FIRST_NAME_FQN,
+    public static final Set<FullQualifiedName> FQNS = ImmutableSet.of(
+            FIRST_NAME_FQN,
             MIDDLE_NAME_FQN,
             LAST_NAME_FQN,
             SEX_FQN,

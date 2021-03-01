@@ -21,9 +21,9 @@
 
 package com.openlattice.linking
 
-import com.codahale.metrics.Histogram
 import com.codahale.metrics.MetricRegistry
-import com.codahale.metrics.Snapshot
+import com.codahale.metrics.Slf4jReporter
+import com.geekbeast.metrics.time
 import com.google.common.base.Stopwatch
 import com.google.common.collect.Sets
 import com.google.common.util.concurrent.ListeningExecutorService
@@ -42,6 +42,7 @@ import com.openlattice.linking.clustering.Clusterer
 import com.openlattice.linking.clustering.KeyedCluster
 import com.openlattice.linking.matching.Matcher
 import com.openlattice.postgres.mapstores.EntitySetMapstore
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
@@ -53,7 +54,7 @@ import java.util.concurrent.TimeUnit
 internal const val REFRESH_PROPERTY_TYPES_INTERVAL_MILLIS = 30000L
 internal const val LINKING_BATCH_TIMEOUT_MILLIS = 120000L
 internal const val MINIMUM_SCORE = 0.75
-internal const val LINKING_RATE = 300_000L
+internal const val LINKING_RATE = 30_000L
 
 /**
  * Performs realtime linking of individuals as they are integrated ino the system.
@@ -72,39 +73,22 @@ class BackgroundLinkingService(
         private val configuration: LinkingConfiguration
 ) {
     companion object {
-        private val logger = LoggerFactory.getLogger(BackgroundLinkingService::class.java)
+        val logger: Logger = LoggerFactory.getLogger(BackgroundLinkingService::class.java)
 
         fun <T> collectKeys(m: Map<EntityDataKey, Map<EntityDataKey, T>>): Set<EntityDataKey> {
             return m.keys + m.values.flatMap { it.keys }
         }
 
-        private val metrics: MetricRegistry = MetricRegistry()
-        val fullLink: Histogram = metrics.histogram("linking")
+        val metrics: MetricRegistry = MetricRegistry()
 
-        fun <R> histogramify( histogramName: String, block: () -> R ): R {
-            val hist = metrics.histogram(histogramName)
-            val sw = Stopwatch.createStarted()
-            val ret = block()
-            hist.update(sw.stop().elapsed(TimeUnit.MILLISECONDS))
-            return ret
-        }
-
-        fun printHistogram(name: String, histogram: Histogram) {
-            val snapshot: Snapshot = histogram.snapshot
-            logger.error("""
-                         [$name] stats
-                         count = ${histogram.count}
-                           min = ${snapshot.min}
-                           max = ${snapshot.max}
-                          mean = ${snapshot.mean}
-                        stddev = ${snapshot.stdDev}
-                        median = ${snapshot.median}
-                          75%% <= ${snapshot.get75thPercentile()}
-                          95%% <= ${snapshot.get95thPercentile()}
-                          98%% <= ${snapshot.get98thPercentile()}
-                          99%% <= ${snapshot.get99thPercentile()}
-                        99.9%% <= ${snapshot.get999thPercentile()}
-            """.trimIndent())
+        init {
+            val metReporter = Slf4jReporter.forRegistry(metrics)
+                    .outputTo(logger)
+                    .withLoggingLevel(Slf4jReporter.LoggingLevel.INFO)
+                    .convertRatesTo(TimeUnit.HOURS)
+                    .convertDurationsTo(TimeUnit.MILLISECONDS)
+                    .build()
+            metReporter.start(5, TimeUnit.MINUTES)
         }
     }
 
@@ -116,12 +100,6 @@ class BackgroundLinkingService(
     @Suppress("UNUSED")
     @Scheduled(fixedRate = LINKING_RATE)
     fun enqueue() {
-        val linkedInSession = fullLink.snapshot.size()
-        logger.info("$linkedInSession entities linked since last startup.")
-
-        metrics.histograms.forEach { (name, histogram) ->
-            printHistogram(name, histogram)
-        }
         if ( candidates.isNotEmpty() ){
             logger.info("Linking queue still has candidates on it, not adding more at the moment")
             return
@@ -164,7 +142,7 @@ class BackgroundLinkingService(
         }
     }
 
-    private val limiter = Semaphore(configuration.parallelism * 2)
+    private val limiter = Semaphore(configuration.parallelism * 4)
 
     @Suppress("UNUSED")
     private val linkingWorker = if (isLinkingEnabled()) executor.submit {
@@ -180,7 +158,12 @@ class BackgroundLinkingService(
                     logger.info("candidate freshly locked for linking: {}", candidate)
                     try {
                         logger.info("Linking {}", candidate)
-                        link(candidate)
+                        metrics.time(
+                                BackgroundLinkingService::class.java,
+                                "linking"
+                        ) { _, _->
+                            link(candidate)
+                        }
                         logger.info("Finished linking {}", candidate)
                     } catch (ex: Exception) {
                         logger.error("Unable to link {}.", candidate, ex)
@@ -211,7 +194,6 @@ class BackgroundLinkingService(
         // Run standard blocking + clustering
         val sw = Stopwatch.createStarted()
         val initialBlock = blocker.block(candidate)
-
         logger.info(
                 "Blocking ({}, {}) took {} ms.",
                 candidate.entitySetId,
@@ -219,40 +201,36 @@ class BackgroundLinkingService(
                 sw.elapsed(TimeUnit.MILLISECONDS)
         )
 
-        //block contains element being blocked
-        val elem = initialBlock.entities.getValue(candidate)
-
-        // initialize
         logger.info("Initializing matching for block {}", candidate)
-        val sw2 = Stopwatch.createStarted()
+        // initialize
         val initializedBlock = matcher.initialize(initialBlock)
-        sw2.stop()
-        logger.info("Initialization took {} ms", sw2.elapsed(TimeUnit.MILLISECONDS))
+        logger.info("Initialization took {} ms", sw.elapsed(TimeUnit.MILLISECONDS))
+
         val dataKeys = collectKeys(initializedBlock.matches)
 
         //Decision that needs to be made is whether to start new cluster or merge into existing cluster.
+        // v TODO v Getting Arithmetic exceptions in here
         try {
-            val (linkingId, scores) = lqs.lockClustersDoWorkAndCommit( candidate, dataKeys) { clusters ->
+            val (linkingId, scores) = lqs.lockClustersDoWorkAndCommit(candidate, dataKeys) { clusters ->
                 val maybeBestCluster = clusters.asSequence()
-                            .map { cluster -> clusterer.cluster(candidate, KeyedCluster.fromEntry(cluster)) }
-                            .filter { it.score > MINIMUM_SCORE }
-                            .maxBy { it.score }
-
-                if ( maybeBestCluster != null ) {
-                    return@lockClustersDoWorkAndCommit Triple(maybeBestCluster.clusterId, maybeBestCluster.cluster, false)
+                        .map { clusterer.cluster(candidate, KeyedCluster.fromEntry(it)) }
+                        .filter { it.score > MINIMUM_SCORE }
+                        .maxBy { it.score }
+                return@lockClustersDoWorkAndCommit if (maybeBestCluster != null) {
+                    Triple(maybeBestCluster.clusterId, maybeBestCluster.cluster, false)
+                } else {
+                    val linkingId = ids.reserveLinkingIds(1).first()
+                    val block = Block(candidate, mapOf(candidate to initialBlock.entities.getValue(candidate)))
+                    val cluster = matcher.match(block).matches
+                    //TODO: When creating new cluster do we really need to re-match or can we assume score of 1.0?
+                    Triple(linkingId, cluster, true)
                 }
-                val linkingId = ids.reserveLinkingIds(1).first()
-                val block = Block(candidate, mapOf(candidate to elem))
-                val cluster = matcher.match(block).matches
-                //TODO: When creating new cluster do we really need to re-match or can we assume score of 1.0?
-                return@lockClustersDoWorkAndCommit Triple(linkingId, cluster, true)
             }
             insertMatches(linkingId, candidate, Cluster(scores))
         } catch (ex: Exception) {
             logger.error("An error occurred while performing linking.", ex)
             throw IllegalStateException("Error occured while performing linking.", ex)
         }
-        fullLink.update(sw.elapsed(TimeUnit.MILLISECONDS))
     }
 
     private fun clearNeighborhoods(candidate: EntityDataKey) {
@@ -272,7 +250,6 @@ class BackgroundLinkingService(
         val scoresAsEsidToEkids = (collectKeys(scores) + newMember)
                 .groupBy { edk -> edk.entitySetId }
                 .mapValues { (_, edks) ->
-
                     Sets.newLinkedHashSet(edks.map { it.entityKeyId })
                 }
         lqs.updateLinkingInformation( linkingId, newMember, scoresAsEsidToEkids )
