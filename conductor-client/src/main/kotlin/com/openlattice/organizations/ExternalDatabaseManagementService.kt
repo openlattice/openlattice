@@ -465,8 +465,14 @@ class ExternalDatabaseManagementService(
         val orgHDS = externalDbManager.connectToOrg(table.organizationId)
 
         val columnToUserToPrivileges = BasePostgresIterable(StatementHolderSupplier(orgHDS, columnPrivilegesSql)) { rs ->
-            columnName(rs) to (user(rs) to PostgresPrivileges.valueOf(privilegeType(rs).toUpperCase()))
+            try {
+                columnName(rs) to (user(rs) to PostgresPrivileges.valueOf(privilegeType(rs).toUpperCase()))
+            } catch (e: Exception) {
+                logger.error("Unable to sync privilege row for table {}", table.id, e)
+                null
+            }
         }
+                .filterNotNull()
                 .groupBy { columnNameToAclKey.getValue(it.first) }
                 .mapValues {
                     it.value.map { pair -> pair.second }
