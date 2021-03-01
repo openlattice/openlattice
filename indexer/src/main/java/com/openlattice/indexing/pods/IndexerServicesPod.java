@@ -194,6 +194,7 @@ public class IndexerServicesPod {
                 hikariDataSource,
                 authorizationManager(),
                 securePrincipalsManager(),
+                dbQueryManager(),
                 metricRegistry,
                 hazelcastInstance,
                 eventBus

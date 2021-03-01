@@ -32,7 +32,15 @@ import com.openlattice.assembler.AssemblerConnectionManager;
 import com.openlattice.assembler.pods.AssemblerConfigurationPod;
 import com.openlattice.auditing.AuditingConfiguration;
 import com.openlattice.auditing.pods.AuditingConfigurationPod;
-import com.openlattice.authorization.*;
+import com.openlattice.authorization.AuthorizationManager;
+import com.openlattice.authorization.DbCredentialService;
+import com.openlattice.authorization.HazelcastAclKeyReservationService;
+import com.openlattice.authorization.HazelcastAuthorizationService;
+import com.openlattice.authorization.HazelcastPrincipalsMapManager;
+import com.openlattice.authorization.HazelcastSecurableObjectResolveTypeService;
+import com.openlattice.authorization.Principals;
+import com.openlattice.authorization.PrincipalsMapManager;
+import com.openlattice.authorization.SecurableObjectResolveTypeService;
 import com.openlattice.collaborations.CollaborationDatabaseManager;
 import com.openlattice.collaborations.CollaborationService;
 import com.openlattice.collaborations.PostgresCollaborationDatabaseService;
@@ -177,6 +185,7 @@ public class LinkerServicesPod {
                 hikariDataSource,
                 authorizationManager(),
                 principalService(),
+                dbQueryManager(),
                 metricRegistry,
                 hazelcastInstance,
                 eventBus

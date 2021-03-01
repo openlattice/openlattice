@@ -182,7 +182,7 @@ class TransporterDatastore(
         }
 
         transporterHds.close()
-        transporterHds = exConnMan.connect(TRANSPORTER_DB_NAME)
+        transporterHds = exConnMan.connectToTransporter()
     }
 
     fun datastore(): HikariDataSource {

@@ -135,16 +135,6 @@ class AssemblerConnectionManager(
 
     /** DEPRECATED METHODS: MOVED TO [DatabaseQueryManager] **/
 
-    /**
-     * Creates a private organization database that can be used for uploading data using launchpad.
-     * Also sets up foreign data wrapper using assembler in assembler so that materialized views of data can be
-     * provided.
-     */
-    @Deprecated(message = "Use identical function in DatabaseQueryManager")
-    fun createAndInitializeOrganizationDatabase(organizationId: UUID, dbName: String) {
-        dbQueryManager.createAndInitializeOrganizationDatabase(organizationId, dbName)
-    }
-
     @Deprecated(message = "Use identical function in DatabaseQueryManager")
     fun addMembersToOrganization(
             organizationId: UUID,

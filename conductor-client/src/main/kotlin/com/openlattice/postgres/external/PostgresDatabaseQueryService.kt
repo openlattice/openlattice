@@ -28,6 +28,7 @@ import com.openlattice.authorization.*
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.organization.roles.Role
+import com.openlattice.organizations.OrganizationDatabase
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresColumn.*
@@ -65,11 +66,13 @@ class PostgresDatabaseQueryService(
      * Also sets up foreign data wrapper using assembler in assembler so that materialized views of data can be
      * provided.
      */
-    override fun createAndInitializeOrganizationDatabase(organizationId: UUID, dbName: String) {
+    override fun createAndInitializeOrganizationDatabase(organizationId: UUID): OrganizationDatabase {
         logger.info("Creating organization database for organization with id $organizationId")
+        val (hds, dbName) = extDbManager.connectToDatabaseOrDefault(organizationId, ExternalDatabaseType.ORGANIZATION)
+
         createOrganizationDatabase(organizationId, dbName)
 
-        extDbManager.connect(dbName).let { dataSource ->
+        hds.let { dataSource ->
             configureRolesInDatabase(dataSource)
             createSchema(dataSource, OPENLATTICE_SCHEMA)
             createSchema(dataSource, INTEGRATIONS_SCHEMA)
@@ -80,18 +83,21 @@ class PostgresDatabaseQueryService(
             addMembersToOrganization(organizationId, dataSource, securePrincipalsManager.getOrganizationMemberPrincipals(organizationId))
             configureServerUser(dataSource)
         }
+
+        return OrganizationDatabase(getDatabaseOid(dbName), dbName)
     }
 
-    override fun createAndInitializeCollaborationDatabase(collaborationId: UUID, dbName: String): Int {
+    override fun createAndInitializeCollaborationDatabase(collaborationId: UUID): OrganizationDatabase {
         logger.info("Creating collaboration database for collaboration with id $collaborationId")
+        val (hds, dbName) = extDbManager.connectToDatabaseOrDefault(collaborationId, ExternalDatabaseType.COLLABORATION)
         createDatabase(dbName)
 
-        extDbManager.connect(dbName).let { hds ->
-            createRenameServerFunctionIfNotExists(hds)
-            configureRolesInDatabase(hds)
+        hds.let { dbHds ->
+            createRenameServerFunctionIfNotExists(dbHds)
+            configureRolesInDatabase(dbHds)
         }
 
-        return getDatabaseOid(dbName)
+        return OrganizationDatabase(getDatabaseOid(dbName), dbName)
     }
 
     override fun addMembersToCollaboration(collaborationId: UUID, memberRoles: Iterable<String>) {
@@ -320,7 +326,7 @@ class PostgresDatabaseQueryService(
     }
 
     override fun dropOrganizationDatabase(organizationId: UUID) {
-        val dbName = extDbManager.getOrganizationDatabaseName(organizationId)
+        val dbName = extDbManager.getDatabaseName(organizationId)
         dropDatabase(dbName)
 
         val dbAdminUser = quote(dbCredentialService.getDbUsername(AclKey(organizationId)))
@@ -357,10 +363,9 @@ class PostgresDatabaseQueryService(
     }
 
     internal fun executeStatementsInDatabase(organizationId: UUID, sqlFromDbName: (String) -> Iterable<String>) {
-        val dbName = extDbManager.getOrganizationDatabaseName(organizationId)
+        val (hds, dbName) = extDbManager.connectToOrgGettingName(organizationId)
         val sqlStatements = sqlFromDbName(dbName)
-
-        extDbManager.connect(dbName).connection.use { conn ->
+        hds.connection.use { conn ->
             conn.createStatement().use { stmt ->
                 sqlStatements.forEach { stmt.execute(it) }
             }
@@ -458,7 +463,7 @@ class PostgresDatabaseQueryService(
     private fun configureUsersInDatabase(dataSource: HikariDataSource, organizationId: UUID, userIds: Collection<String>) {
         val userIdsSql = userIds.joinToString()
 
-        val dbName = extDbManager.getOrganizationDatabaseName(organizationId)
+        val dbName = extDbManager.getDatabaseName(organizationId)
         logger.info("Configuring users $userIds in database $dbName")
         //First we will grant all privilege which for database is connect, temporary, and create schema
         atlas.connection.use { connection ->
@@ -493,7 +498,7 @@ class PostgresDatabaseQueryService(
     private fun revokeConnectAndSchemaUsage(dataSource: HikariDataSource, organizationId: UUID, userIds: List<String>) {
         val userIdsSql = userIds.joinToString(", ")
 
-        val dbName = extDbManager.getOrganizationDatabaseName(organizationId)
+        val dbName = extDbManager.getDatabaseName(organizationId)
         logger.info(
                 "Removing users $userIds from database $dbName, schema usage and all privileges on all tables in schemas {} and {}",
                 OPENLATTICE_SCHEMA,

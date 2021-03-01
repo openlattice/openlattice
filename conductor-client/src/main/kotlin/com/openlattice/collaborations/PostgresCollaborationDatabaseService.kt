@@ -47,10 +47,7 @@ class PostgresCollaborationDatabaseService(
     }
 
     override fun createCollaborationDatabase(collaborationId: UUID) {
-        val dbName = ExternalDatabaseConnectionManager.buildDefaultCollaborationDatabaseName(collaborationId)
-        val oid = dbQueryManager.createAndInitializeCollaborationDatabase(collaborationId, dbName)
-
-        organizationDatabases[collaborationId] = OrganizationDatabase(oid, dbName)
+        organizationDatabases[collaborationId] = dbQueryManager.createAndInitializeCollaborationDatabase(collaborationId)
     }
 
     override fun deleteCollaborationDatabase(collaborationId: UUID) {
@@ -59,7 +56,7 @@ class PostgresCollaborationDatabaseService(
     }
 
     override fun renameCollaborationDatabase(collaborationId: UUID, newName: String) {
-        val currentName = organizationDatabases.getValue(collaborationId).name
+        val currentName = externalDbConnMan.getDatabaseName(collaborationId)
         dbQueryManager.renameDatabase(currentName, newName)
     }
 
@@ -170,7 +167,7 @@ class PostgresCollaborationDatabaseService(
         val intermediateSchema = Schemas.PROJECTIONS_SCHEMA.label
         val intermediateName = tableId.toString()
 
-        val viewSchema = externalDbConnMan.getOrganizationDatabaseName(organizationId)
+        val viewSchema = externalDbConnMan.getDatabaseName(organizationId)
         val viewName = table.name
 
         PostgresProjectionService.importTableFromFdw(
@@ -200,7 +197,7 @@ class PostgresCollaborationDatabaseService(
 
     override fun removeTableProjection(collaborationId: UUID, organizationId: UUID, tableId: UUID) {
         val table = externalTables.getValue(tableId)
-        val orgSchema = externalDbConnMan.getOrganizationDatabaseName(organizationId)
+        val orgSchema = externalDbConnMan.getDatabaseName(organizationId)
         val collaborationHds = externalDbConnMan.connectToOrg(collaborationId)
 
         PostgresProjectionService.destroyViewOverTable(collaborationHds, orgSchema, table.name)
@@ -213,7 +210,7 @@ class PostgresCollaborationDatabaseService(
     }
 
     private fun createOrganizationFdw(collaborationId: UUID, organizationId: UUID) {
-        val organizationDbName = externalDbConnMan.getOrganizationDatabaseName(organizationId)
+        val organizationDbName = externalDbConnMan.getDatabaseName(organizationId)
         val fdwName = getFdwName(organizationId)
 
         val atlasUsername = assemblerConfiguration.server.getProperty("username")

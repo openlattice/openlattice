@@ -64,7 +64,13 @@ import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.DataGraphService;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
-import com.openlattice.data.storage.*;
+import com.openlattice.data.storage.ByteBlobDataManager;
+import com.openlattice.data.storage.EntityDatastore;
+import com.openlattice.data.storage.IndexingMetadataManager;
+import com.openlattice.data.storage.PostgresEntityDataQueryService;
+import com.openlattice.data.storage.PostgresEntityDatastore;
+import com.openlattice.data.storage.PostgresEntitySetSizesInitializationTask;
+import com.openlattice.data.storage.PostgresEntitySetSizesTaskDependency;
 import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
@@ -117,7 +123,15 @@ import com.openlattice.tasks.PostConstructInitializerTaskDependencies;
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask;
 import com.openlattice.transporter.pods.TransporterPod;
 import com.openlattice.transporter.services.TransporterService;
-import com.openlattice.users.*;
+import com.openlattice.users.Auth0SyncInitializationTask;
+import com.openlattice.users.Auth0SyncService;
+import com.openlattice.users.Auth0SyncTask;
+import com.openlattice.users.Auth0SyncTaskDependencies;
+import com.openlattice.users.Auth0UserListingService;
+import com.openlattice.users.DefaultAuth0SyncTask;
+import com.openlattice.users.LocalAuth0SyncTask;
+import com.openlattice.users.LocalUserListingService;
+import com.openlattice.users.UserListingService;
 import com.openlattice.users.export.Auth0ApiExtension;
 import com.zaxxer.hikari.HikariDataSource;
 import org.slf4j.LoggerFactory;
@@ -270,6 +284,7 @@ public class ConductorServicesPod {
                 hikariDataSource,
                 authorizationManager(),
                 securePrincipalsManager(),
+                dbQueryManager(),
                 metricRegistry,
                 hazelcastInstance,
                 eventBus
