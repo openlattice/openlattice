@@ -25,8 +25,8 @@ import com.hazelcast.config.IndexType
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.QueryConstants
 import com.openlattice.data.storage.PostgresEntityDataQueryService
-import com.openlattice.edm.EntitySet
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.indexer.IndexerEntitySetMetadata
 import com.openlattice.indexing.configuration.IndexerConfiguration
 import com.openlattice.postgres.DataTables.LAST_INDEX
 import com.openlattice.postgres.DataTables.LAST_WRITE
@@ -93,8 +93,9 @@ class BackgroundIndexedEntitiesDeletionService(
             //We shuffle entity sets to make sure we have a chance to work share and index everything
             val lockedEntitySets = entitySets.values
                     .shuffled()
-                    .filter { tryLockEntitySet(it.id) }
                     .filter { it.name != "OpenLattice Audit Entity Set" } //TODO: Clean out audit entity set from prod
+                    .filter { tryLockEntitySet(it.id) }
+                    .map { IndexerEntitySetMetadata.fromEntitySet(it) }
 
             val totalDeleted = lockedEntitySets
                     .parallelStream()
@@ -120,7 +121,7 @@ class BackgroundIndexedEntitiesDeletionService(
         }
     }
 
-    private fun deleteIndexedEntities(entitySet: EntitySet): Int {
+    private fun deleteIndexedEntities(entitySet: IndexerEntitySetMetadata): Int {
         logger.info("Starting entity deletion for entity set ${entitySet.name} with id ${entitySet.id}")
 
         val esw = Stopwatch.createStarted()
@@ -145,10 +146,10 @@ class BackgroundIndexedEntitiesDeletionService(
     /**
      * Select all ids, which have been hard deleted and already un-indexed.
      */
-    private fun getDeletedIdsBatch(entitySet: EntitySet): BasePostgresIterable<UUID> {
+    private fun getDeletedIdsBatch(entitySet: IndexerEntitySetMetadata): BasePostgresIterable<UUID> {
         return BasePostgresIterable(
                 PreparedStatementHolderSupplier(hds, selectDeletedIdsBatch) {
-                    val partitionsArray = PostgresArrays.createIntArray(it.connection, entitySet.partitions)
+                    val partitionsArray = PostgresArrays.createIntArray(it.connection, *entitySet.partitions)
                     it.setObject(1, entitySet.id)
                     it.setArray(2, partitionsArray)
                 }

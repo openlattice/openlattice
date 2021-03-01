@@ -123,7 +123,7 @@ class BackgroundExternalDatabaseSyncingService(
         val tableIds = mutableSetOf<UUID>()
         val columnIds = mutableSetOf<UUID>()
 
-        edms.getColumnNamesByTableName(dbName).forEach { (oid, tableName, schemaName, _) ->
+        edms.getTableInfoForOrganization(orgId).forEach { (oid, tableName, schemaName, _) ->
             val table = getOrCreateTable(orgId, oid, tableName, schemaName)
             val columns = syncTableColumns(table)
 

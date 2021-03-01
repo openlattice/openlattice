@@ -54,7 +54,7 @@ class PostgresDatabaseQueryService(
         private val dbCredentialService: DbCredentialService
 ) : DatabaseQueryManager {
 
-    private val atlas: HikariDataSource = extDbManager.connect("postgres")
+    private val atlas: HikariDataSource = extDbManager.connectAsSuperuser()
 
     companion object {
         const val PUBLIC_ROLE = "public"

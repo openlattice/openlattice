@@ -36,5 +36,5 @@ data class AssemblerDependencies(
         val externalDatabaseConnectionManager: ExternalDatabaseConnectionManager,
         val assemblerConnectionManager: AssemblerConnectionManager
 ) : HazelcastTaskDependencies {
-    val target: HikariDataSource = externalDatabaseConnectionManager.connect("postgres")
+    val target: HikariDataSource = externalDatabaseConnectionManager.connectAsSuperuser()
 }

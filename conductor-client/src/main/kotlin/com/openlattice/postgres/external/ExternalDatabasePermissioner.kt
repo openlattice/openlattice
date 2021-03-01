@@ -36,7 +36,7 @@ class ExternalDatabasePermissioner(
         private val dbCredentialService: DbCredentialService,
         private val principalsMapManager: PrincipalsMapManager
 ) : ExternalDatabasePermissioningService {
-    private val atlas: HikariDataSource = extDbManager.connect("postgres")
+    private val atlas: HikariDataSource = extDbManager.connectAsSuperuser()
 
     private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
     private val securableObjectTypes = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap(hazelcastInstance)

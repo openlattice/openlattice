@@ -8,8 +8,9 @@ import com.openlattice.assembler.AssemblerConfiguration
 import com.openlattice.hazelcast.HazelcastMap
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
+import org.slf4j.LoggerFactory
+import java.time.Duration
 import java.util.*
-import java.util.concurrent.TimeUnit
 
 /**
  * @author Drew Bailey &lt;drew@openlattice.com&gt;
@@ -21,6 +22,8 @@ class ExternalDatabaseConnectionManager(
     private val organizationDatabases = HazelcastMap.ORGANIZATION_DATABASES.getMap(hazelcastInstance)
 
     companion object {
+        private val logger = LoggerFactory.getLogger(ExternalDatabaseConnectionManager::class.java)
+
         fun buildDefaultOrganizationDatabaseName(organizationId: UUID): String {
             return "org_${organizationId.toString().replace("-", "").toLowerCase()}"
         }
@@ -32,7 +35,7 @@ class ExternalDatabaseConnectionManager(
 
     private val perDbCache: LoadingCache<String, HikariDataSource> = CacheBuilder
             .newBuilder()
-            .expireAfterAccess(1, TimeUnit.HOURS)
+            .expireAfterAccess(Duration.ofHours(1))
             .build(cacheLoader())
 
     fun createDataSource(dbName: String, config: Properties, useSsl: Boolean): HikariDataSource {
@@ -52,21 +55,27 @@ class ExternalDatabaseConnectionManager(
         return CacheLoader.from { dbName ->
             createDataSource(
                     dbName!!,
-                    assemblerConfiguration.server.clone() as Properties,
+                    assemblerConfiguration.server,
                     assemblerConfiguration.ssl
             )
         }
     }
 
     fun getOrganizationDatabaseName(organizationId: UUID): String {
-        return organizationDatabases.getValue(organizationId).name
+        val maybeOrg = organizationDatabases[organizationId]
+
+        requireNotNull(maybeOrg ) {
+            logger.error("Organization {} does not exist in the organizationDatabases mapstore", organizationId)
+            "Organization {} does not exist in the organizationDatabases mapstore"
+        }
+        return maybeOrg.name
     }
 
     fun deleteOrganizationDatabase(organizationId: UUID) {
         organizationDatabases.delete(organizationId)
     }
 
-    fun connect(dbName: String): HikariDataSource {
+    private fun connect(dbName: String): HikariDataSource {
         return perDbCache.get(dbName)
     }
 
@@ -76,6 +85,11 @@ class ExternalDatabaseConnectionManager(
 
     fun connectToOrg(organizationId: UUID): HikariDataSource {
         return perDbCache.get(getOrganizationDatabaseName(organizationId))
+    }
+
+    fun connectToOrgGettingName(organizationId: UUID): Pair<HikariDataSource, String> {
+        val orgName = getOrganizationDatabaseName(organizationId)
+        return perDbCache.get(orgName) to orgName
     }
 
     fun appendDatabaseToJdbcPartial(jdbcStringNoDatabase: String, dbName: String): String {
