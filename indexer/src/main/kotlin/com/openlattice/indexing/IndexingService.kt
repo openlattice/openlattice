@@ -26,14 +26,18 @@ import com.geekbeast.util.StopWatch
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
 import com.openlattice.admin.indexing.IndexingState
-import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.data.storage.partitions.PartitionManager
+import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastQueue
 import com.openlattice.hazelcast.processors.UUIDKeyToUUIDSetMerger
+import com.openlattice.indexer.IndexerEntitySetMetadata
 import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresArrays
-import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.ID
+import com.openlattice.postgres.PostgresColumn.PARTITION
+import com.openlattice.postgres.PostgresColumn.VERSION
 import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.BasePostgresIterable
@@ -92,7 +96,7 @@ class IndexingService(
             try {
                 val entitySetId = indexingQueue.take()
                 executor.submit {
-                    val entitySet = entitySets.getValue(entitySetId)
+                    val entitySet = IndexerEntitySetMetadata.fromEntitySet(entitySets.getValue(entitySetId))
                     var cursor = indexingProgress.getOrPut(entitySetId) { LB_UUID }
                     val currentPartitions = partitionManager.getEntitySetPartitions(entitySetId)
 

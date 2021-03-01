@@ -278,8 +278,9 @@ class ExternalDatabaseManagementService(
             val newTableFqn = FullQualifiedName(orgId.toString(), it)
             val oldTableName = getNameFromFqnString(tableFqnToId.first)
             externalDbManager.connectToOrg(orgId).connection.use { conn ->
-                val stmt = conn.createStatement()
-                stmt.execute("ALTER TABLE $oldTableName RENAME TO $it")
+                conn.createStatement().use { stmt ->
+                    stmt.execute("ALTER TABLE $oldTableName RENAME TO $it")
+                }
             }
             aclKeyReservations.renameReservation(tableFqnToId.second, newTableFqn.fullQualifiedNameAsString)
         }
@@ -293,8 +294,9 @@ class ExternalDatabaseManagementService(
             val newColumnFqn = FullQualifiedName(tableFqnToId.second.toString(), it)
             val oldColumnName = getNameFromFqnString(columnFqnToId.first)
             externalDbManager.connectToOrg(orgId).connection.use { conn ->
-                val stmt = conn.createStatement()
-                stmt.execute("ALTER TABLE $tableName RENAME COLUMN $oldColumnName to $it")
+                conn.createStatement().use { stmt ->
+                    stmt.execute("ALTER TABLE $tableName RENAME COLUMN $oldColumnName to $it")
+                }
             }
             aclKeyReservations.renameReservation(columnFqnToId.second, newColumnFqn.fullQualifiedNameAsString)
         }
@@ -317,8 +319,9 @@ class ExternalDatabaseManagementService(
 
             //delete tables from postgres
             externalDbManager.connectToOrg(orgId).connection.use { conn ->
-                val stmt = conn.createStatement()
-                stmt.execute("DROP TABLE $tableName")
+                conn.createStatement().use { stmt ->
+                    stmt.execute("DROP TABLE $tableName")
+                }
             }
         }
 
@@ -349,8 +352,9 @@ class ExternalDatabaseManagementService(
             //delete columns from postgres
             val dropColumnsSql = createDropColumnSql(columnNames)
             externalDbManager.connectToOrg(orgId).connection.use { conn ->
-                val stmt = conn.createStatement()
-                stmt.execute("ALTER TABLE $tableName $dropColumnsSql")
+                conn.createStatement().use { stmt ->
+                    stmt.execute("ALTER TABLE $tableName $dropColumnsSql")
+                }
             }
 
             deleteOrganizationExternalDatabaseColumnObjects(mapOf(tableId to columnIds))
@@ -385,9 +389,10 @@ class ExternalDatabaseManagementService(
         //drop db from schema
         val dbName = externalDbManager.getDatabaseName(orgId)
         externalDbManager.connectAsSuperuser().connection.use { conn ->
-            val stmt = conn.createStatement()
-            stmt.execute(dropAllConnectionsToDatabaseSql(dbName))
-            stmt.execute("DROP DATABASE $dbName")
+            conn.createStatement().use { stmt ->
+                stmt.execute(dropAllConnectionsToDatabaseSql(dbName))
+                stmt.execute("DROP DATABASE $dbName")
+            }
         }
 
 
@@ -448,8 +453,9 @@ class ExternalDatabaseManagementService(
         val userName = getDBUser(userId)
         val (hds, dbName) = externalDbManager.connectToOrgGettingName(orgId)
         hds.connection.use { conn ->
-            val stmt = conn.createStatement()
-            stmt.execute("REVOKE ALL ON DATABASE $dbName FROM $userName")
+            conn.createStatement().use { stmt ->
+                stmt.execute("REVOKE ALL ON DATABASE $dbName FROM $userName")
+            }
         }
     }
 
@@ -633,8 +639,9 @@ class ExternalDatabaseManagementService(
 
         //reload config
         externalDbManager.connectToOrg(organizationId).connection.use { conn ->
-            val stmt = conn.createStatement()
-            stmt.executeQuery(getReloadConfigSql())
+            conn.createStatement().use { stmt ->
+                stmt.executeQuery(getReloadConfigSql())
+            }
         }
 
         //replace old hba with new hba
