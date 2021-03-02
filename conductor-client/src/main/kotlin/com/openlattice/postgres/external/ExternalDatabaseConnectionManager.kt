@@ -100,7 +100,7 @@ class ExternalDatabaseConnectionManager(
     }
 }
 
-enum class ExternalDatabaseType(val generateName: (UUID) -> String): DBNameGenerator<UUID> {
+enum class ExternalDatabaseType(val nameFunction: (UUID) -> String): DBNameGenerator<UUID> {
     ORGANIZATION({ organizationId ->
         "org_${organizationId.toString().replace("-", "").toLowerCase()}"
     }),
@@ -109,7 +109,7 @@ enum class ExternalDatabaseType(val generateName: (UUID) -> String): DBNameGener
     });
 
     override fun generateName(dbId: UUID): String {
-        return generateName(dbId)
+        return nameFunction(dbId)
     }
 }
 
