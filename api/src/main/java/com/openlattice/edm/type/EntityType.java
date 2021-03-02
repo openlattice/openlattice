@@ -81,6 +81,9 @@ public class EntityType extends AbstractSchemaAssociatedSecurableType {
                         "Properties must include all the key property types" );
         Preconditions.checkArgument( this.shards > 0 && this.shards < MAX_SHARDS,
                 "The number of shards must be between 0 and " + MAX_SHARDS );
+
+        Preconditions
+                .checkArgument( this.getBaseType().isEmpty(), "Base types are no longer supported on entity types." );
     }
 
     public EntityType(
