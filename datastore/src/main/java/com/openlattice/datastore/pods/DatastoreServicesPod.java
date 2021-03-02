@@ -35,8 +35,7 @@ import com.kryptnostic.rhizome.configuration.ConfigurationConstants;
 import com.openlattice.apps.services.AppService;
 import com.openlattice.assembler.Assembler;
 import com.openlattice.assembler.AssemblerConfiguration;
-import com.openlattice.assembler.AssemblerConnectionManager;
-import com.openlattice.assembler.AssemblerDependencies;
+import com.openlattice.assembler.UserRoleSyncTaskDependencies;
 import com.openlattice.assembler.pods.AssemblerConfigurationPod;
 import com.openlattice.assembler.tasks.UserCredentialSyncTask;
 import com.openlattice.auditing.AuditRecordEntitySetsManager;
@@ -356,7 +355,6 @@ public class DatastoreServicesPod {
     public Assembler assembler() {
         return new Assembler(
                 dcs(),
-                hikariDataSource,
                 authorizationManager(),
                 securePrincipalsManager(),
                 dbQueryManager(),
@@ -431,8 +429,13 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    public AssemblerDependencies assemblerDependencies() {
-        return new AssemblerDependencies( hikariDataSource, dcs(), externalDbConnMan, assemblerConnectionManager() );
+    public UserRoleSyncTaskDependencies assemblerDependencies() {
+        return new UserRoleSyncTaskDependencies(
+                dcs(),
+                externalDbConnMan,
+                externalDatabasePermissionsManager(),
+                securePrincipalsManager()
+        );
     }
 
     @Bean
@@ -579,15 +582,6 @@ public class DatastoreServicesPod {
                 byteBlobDataManager,
                 partitionManager()
         );
-    }
-
-    @Bean
-    public AssemblerConnectionManager assemblerConnectionManager() {
-        return new AssemblerConnectionManager(
-                externalDbConnMan,
-                securePrincipalsManager(),
-                dbQueryManager(),
-                externalDatabasePermissionsManager() );
     }
 
     @Bean

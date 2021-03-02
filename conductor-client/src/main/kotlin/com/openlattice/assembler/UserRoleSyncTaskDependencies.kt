@@ -21,13 +21,19 @@
 
 package com.openlattice.assembler
 
+import com.openlattice.authorization.DbCredentialService
+import com.openlattice.organizations.roles.SecurePrincipalsManager
+import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
+import com.openlattice.postgres.external.ExternalDatabasePermissioningService
+import com.openlattice.tasks.HazelcastTaskDependencies
+
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-interface AssemblerConnectionManagerDependent<T> {
-    companion object {
-        const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
-    }
-    fun init(acm: AssemblerConnectionManager): T
-}
+data class UserRoleSyncTaskDependencies(
+        val dbCredentialService: DbCredentialService,
+        val externalDatabaseConnectionManager: ExternalDatabaseConnectionManager,
+        val extDbPermissioner: ExternalDatabasePermissioningService,
+        val securePrincipalsManager: SecurePrincipalsManager
+) : HazelcastTaskDependencies

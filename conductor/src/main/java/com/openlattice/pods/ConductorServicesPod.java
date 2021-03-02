@@ -37,9 +37,8 @@ import com.openlattice.assembler.Assembler;
 import com.openlattice.assembler.Assembler.EntitySetViewsInitializerTask;
 import com.openlattice.assembler.Assembler.OrganizationAssembliesInitializerTask;
 import com.openlattice.assembler.AssemblerConfiguration;
-import com.openlattice.assembler.AssemblerConnectionManager;
-import com.openlattice.assembler.AssemblerDependencies;
 import com.openlattice.assembler.MaterializedEntitySetsDependencies;
+import com.openlattice.assembler.UserRoleSyncTaskDependencies;
 import com.openlattice.assembler.pods.AssemblerConfigurationPod;
 import com.openlattice.assembler.tasks.UsersAndRolesInitializationTask;
 import com.openlattice.auditing.AuditInitializationTask;
@@ -281,7 +280,6 @@ public class ConductorServicesPod {
     public Assembler assembler() {
         return new Assembler(
                 dbCredService(),
-                hikariDataSource,
                 authorizationManager(),
                 securePrincipalsManager(),
                 dbQueryManager(),
@@ -305,11 +303,13 @@ public class ConductorServicesPod {
     }
 
     @Bean
-    public AssemblerDependencies assemblerDependencies() {
-        return new AssemblerDependencies( hikariDataSource,
+    public UserRoleSyncTaskDependencies assemblerDependencies() {
+        return new UserRoleSyncTaskDependencies(
                 dbCredService(),
                 externalDbConnMan,
-                assemblerConnectionManager() );
+                externalDatabasePermissionsManager(),
+                securePrincipalsManager()
+        );
     }
 
     @Bean
@@ -362,16 +362,6 @@ public class ConductorServicesPod {
                 externalDbConnMan,
                 securePrincipalsManager(),
                 dbCredService()
-        );
-    }
-
-    @Bean
-    public AssemblerConnectionManager assemblerConnectionManager() {
-        return new AssemblerConnectionManager(
-                externalDbConnMan,
-                securePrincipalsManager(),
-                dbQueryManager(),
-                externalDatabasePermissionsManager()
         );
     }
 

@@ -3,7 +3,6 @@ package com.openlattice.rehearsal.organization
 import com.google.common.collect.ArrayListMultimap
 import com.google.common.collect.ImmutableList
 import com.google.common.collect.ListMultimap
-import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.authorization.Ace
 import com.openlattice.authorization.Acl
 import com.openlattice.authorization.AclData
@@ -949,7 +948,7 @@ class AssemblerTest : AssemblerTestBase() {
 
         user1OrganizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                stmt.executeQuery("SELECT * FROM ${AssemblerConnectionManager.entitySetNameTableName(es.name)}")
+                stmt.executeQuery("SELECT * FROM ${entitySetNameTableName(es.name)}")
 
                 val exceptionMsg = "permission denied for schema prod"
                 assertException(

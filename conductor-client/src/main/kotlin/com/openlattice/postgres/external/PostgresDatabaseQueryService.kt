@@ -23,7 +23,6 @@ package com.openlattice.postgres.external
 
 import com.openlattice.ApiHelpers
 import com.openlattice.assembler.AssemblerConfiguration
-import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.authorization.*
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
@@ -59,6 +58,32 @@ class PostgresDatabaseQueryService(
 
     companion object {
         const val PUBLIC_ROLE = "public"
+
+        /**
+         * Build grant select sql statement for a given table and user with column level security.
+         * If properties (columns) are left empty, it will grant select on whole table.
+         */
+        @JvmStatic
+        private fun grantSelectSql(
+                tableName: String,
+                postgresUserName: String,
+                columns: List<String>
+        ): String {
+            val onProperties = if (columns.isEmpty()) {
+                ""
+            } else {
+                "( ${columns.joinToString(",")} )"
+            }
+
+            return "GRANT SELECT $onProperties " +
+                    "ON $tableName " +
+                    "TO $postgresUserName"
+        }
+
+        @JvmStatic
+        fun entitySetNameTableName(entitySetName: String): String {
+            return "$OPENLATTICE_SCHEMA.${quote(entitySetName)}"
+        }
     }
 
     /**
@@ -389,9 +414,9 @@ class PostgresDatabaseQueryService(
 
                         // grant select on authorized tables and their properties
                         authorizedPropertyTypesOfEntitySets.forEach { (entitySet, propertyTypes) ->
-                            val tableName = AssemblerConnectionManager.entitySetNameTableName(entitySet.name)
+                            val tableName = entitySetNameTableName(entitySet.name)
                             val columns = getSelectColumnsForMaterializedView(propertyTypes)
-                            val grantSelectSql = AssemblerConnectionManager.grantSelectSql(tableName, postgresUserName, columns)
+                            val grantSelectSql = grantSelectSql(tableName, postgresUserName, columns)
                             stmt.addBatch(grantSelectSql)
                         }
 
@@ -399,7 +424,7 @@ class PostgresDatabaseQueryService(
                         // materialized view exist)
                         if (authorizedPropertyTypesOfEntitySets.isNotEmpty()) {
                             val edgesTableName = "$OPENLATTICE_SCHEMA.${E.name}"
-                            val grantSelectSql = AssemblerConnectionManager.grantSelectSql(edgesTableName, postgresUserName, listOf())
+                            val grantSelectSql = grantSelectSql(edgesTableName, postgresUserName, listOf())
                             stmt.addBatch(grantSelectSql)
                         }
                     }
