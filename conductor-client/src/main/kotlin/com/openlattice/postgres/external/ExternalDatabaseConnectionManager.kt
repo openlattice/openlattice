@@ -24,14 +24,6 @@ class ExternalDatabaseConnectionManager(
 
     companion object {
         private val logger = LoggerFactory.getLogger(ExternalDatabaseConnectionManager::class.java)
-
-        fun buildDefaultOrganizationDatabaseName(organizationId: UUID): String {
-            return "org_${organizationId.toString().replace("-", "").toLowerCase()}"
-        }
-
-        fun buildDefaultCollaborationDatabaseName(collaborationId: UUID): String {
-            return "collab_${collaborationId.toString().replace("-", "").toLowerCase()}"
-        }
     }
 
     private val perDbCache: LoadingCache<String, HikariDataSource> = CacheBuilder
@@ -60,14 +52,6 @@ class ExternalDatabaseConnectionManager(
                     assemblerConfiguration.ssl
             )
         }
-    }
-
-    fun getDatabaseNameOrDefault(databaseId: UUID, extDbType: ExternalDatabaseType): String {
-        val maybeOrg = organizationDatabases[databaseId]?: return when(extDbType) {
-            ExternalDatabaseType.COLLABORATION -> buildDefaultCollaborationDatabaseName(databaseId)
-            ExternalDatabaseType.ORGANIZATION -> buildDefaultOrganizationDatabaseName(databaseId)
-        }
-        return maybeOrg.name
     }
 
     fun getDatabaseName(databaseId: UUID): String {
@@ -101,8 +85,13 @@ class ExternalDatabaseConnectionManager(
         return perDbCache.get(orgName) to orgName
     }
 
-    fun connectToDatabaseOrDefault(databaseId: UUID, extDbType: ExternalDatabaseType): Pair<HikariDataSource, String> {
-        val dbName = getDatabaseNameOrDefault(databaseId, extDbType)
+    fun createDbAndConnect(
+            databaseId: UUID,
+            extDbType: ExternalDatabaseType,
+            createDatabase: (dbName: String) -> Unit
+    ): Pair<HikariDataSource, String> {
+        val dbName = extDbType.generateName(databaseId)
+        createDatabase(dbName)
         return perDbCache.get(dbName) to dbName
     }
 
@@ -111,6 +100,19 @@ class ExternalDatabaseConnectionManager(
     }
 }
 
-enum class ExternalDatabaseType {
-    COLLABORATION, ORGANIZATION
+enum class ExternalDatabaseType(val generateName: (UUID) -> String): DBNameGenerator<UUID> {
+    ORGANIZATION({ organizationId ->
+        "org_${organizationId.toString().replace("-", "").toLowerCase()}"
+    }),
+    COLLABORATION({ collaborationId ->
+        "collab_${collaborationId.toString().replace("-", "").toLowerCase()}"
+    });
+
+    override fun generateName(dbId: UUID): String {
+        return generateName(dbId)
+    }
+}
+
+interface DBNameGenerator<T> {
+    fun generateName(dbId: T): String
 }

@@ -24,10 +24,12 @@ import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.organization.OrganizationEntitySetFlag
 import com.openlattice.organizations.Organization
 import com.openlattice.postgres.DataTables.quote
-import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresColumn.ENTITY_KEY_IDS_COL
+import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.ID
 import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.ResultSetAdapters
-import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
+import com.openlattice.postgres.external.ExternalDatabaseType
 import com.openlattice.postgres.external.Schemas
 import com.openlattice.rehearsal.assertException
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
@@ -1176,7 +1178,7 @@ class AssemblerTest : AssemblerTestBase() {
 
         // integrate data from local db to org openlattice schema
         val organizationUserCredentials = organizationsApi.getOrganizationIntegrationAccount(organization2.id)
-        val organizationDataBaseName = ExternalDatabaseConnectionManager.buildDefaultOrganizationDatabaseName(organization2.id)
+        val organizationDataBaseName = ExternalDatabaseType.ORGANIZATION.generateName(organization2.id)
 
         val sourceDb = "local_db"
         val destinationDb = "${organization2.id}_db"

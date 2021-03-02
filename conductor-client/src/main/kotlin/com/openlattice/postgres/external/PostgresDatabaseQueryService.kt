@@ -68,9 +68,9 @@ class PostgresDatabaseQueryService(
      */
     override fun createAndInitializeOrganizationDatabase(organizationId: UUID): OrganizationDatabase {
         logger.info("Creating organization database for organization with id $organizationId")
-        val (hds, dbName) = extDbManager.connectToDatabaseOrDefault(organizationId, ExternalDatabaseType.ORGANIZATION)
-
-        createOrganizationDatabase(organizationId, dbName)
+        val (hds, dbName) = extDbManager.createDbAndConnect(organizationId, ExternalDatabaseType.ORGANIZATION) { dbName ->
+            createOrganizationDatabase(organizationId, dbName)
+        }
 
         hds.let { dataSource ->
             configureRolesInDatabase(dataSource)
@@ -89,8 +89,9 @@ class PostgresDatabaseQueryService(
 
     override fun createAndInitializeCollaborationDatabase(collaborationId: UUID): OrganizationDatabase {
         logger.info("Creating collaboration database for collaboration with id $collaborationId")
-        val (hds, dbName) = extDbManager.connectToDatabaseOrDefault(collaborationId, ExternalDatabaseType.COLLABORATION)
-        createDatabase(dbName)
+        val (hds, dbName) = extDbManager.createDbAndConnect(collaborationId, ExternalDatabaseType.COLLABORATION) { dbName ->
+            createDatabase(dbName)
+        }
 
         hds.let { dbHds ->
             createRenameServerFunctionIfNotExists(dbHds)
