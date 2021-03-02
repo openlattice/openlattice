@@ -56,26 +56,6 @@ class PostgresTypeManager(
         return propertyTypes.values
     }
 
-    fun getIdsForQuery(query: String): Iterable<UUID> {
-        try {
-            hds.connection.use { connection ->
-                connection.prepareStatement(query).use { ps ->
-                    val result: MutableList<UUID> = Lists.newArrayList()
-                    ps.executeQuery().use { rs ->
-                        while (rs.next()) {
-                            result.add(ResultSetAdapters.id(rs))
-                        }
-                        connection.close()
-                        return result
-                    }
-                }
-            }
-        } catch (e: SQLException) {
-            logger.error("Unable to load ids for query: {}", query, e)
-            return ImmutableList.of()
-        }
-    }
-
     fun getEntityTypes(): Iterable<EntityType> {
         return entityTypes.values
     }
@@ -88,35 +68,11 @@ class PostgresTypeManager(
         return entityTypes.values(Predicates.equal<UUID, EntityType>(EntityTypeMapstore.CATEGORY_INDEX, SecurableObjectType.AssociationType))
     }
 
-    fun getAssociationIdsForEntityType(entityTypeId: UUID): Stream<UUID> {
+    fun getAssociationIdsForEntityType(entityTypeId: UUID): Set<UUID> {
         return associationTypes.keySet(Predicates.or(
                 Predicates.equal<UUID, AssociationType>(AssociationTypeMapstore.SRC_INDEX, entityTypeId),
                 Predicates.equal<UUID, AssociationType>(AssociationTypeMapstore.DST_INDEX, entityTypeId)
-        )).stream()
-    }
-
-    fun getAssociationTypeIds(): Iterable<UUID> {
-        return associationTypes.keys
-    }
-
-    fun getEnumTypeIds(): Stream<UUID> {
-        return StreamUtil.stream(getIdsForQuery(getEnumTypeIds))
-    }
-
-    private fun getEntityTypeChildrenIds(entityTypeId: UUID): Iterable<UUID> {
-        return entityTypes.keySet(Predicates.equal(EntityTypeMapstore.BASE_TYPE_INDEX, entityTypeId))
-    }
-
-    fun getEntityTypeChildrenIdsDeep(entityTypeId: UUID): Stream<UUID> {
-        val children: MutableSet<UUID> = Sets.newHashSet()
-        val idsToLoad: Queue<UUID> = Queues.newArrayDeque()
-        idsToLoad.add(entityTypeId)
-        while (!idsToLoad.isEmpty()) {
-            val id = idsToLoad.poll()
-            getEntityTypeChildrenIds(id).forEach(Consumer { e: UUID -> idsToLoad.add(e) })
-            children.add(id)
-        }
-        return StreamUtil.stream(children)
+        ))
     }
 
     override fun getAllPropertyTypesInSchema(schemaName: FullQualifiedName): Set<UUID> {

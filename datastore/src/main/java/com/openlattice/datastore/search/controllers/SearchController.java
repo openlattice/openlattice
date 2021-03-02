@@ -660,7 +660,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
         searchService.triggerEntitySetIndex();
         searchService.triggerPropertyTypeIndex( Lists.newArrayList( edm.getPropertyTypes() ) );
         searchService.triggerEntityTypeIndex( Lists.newArrayList( edm.getEntityTypes() ) );
-        searchService.triggerAssociationTypeIndex( Lists.newArrayList( edm.getAssociationTypes() ) );
+        searchService.triggerAssociationTypeIndex( Lists.newArrayList( edm.getAllAssociationTypes() ) );
         searchService.triggerAppIndex( Lists.newArrayList( appService.getApps() ) );
         return null;
     }
