@@ -368,7 +368,7 @@ class EntitySetService(
                 }
 
         aclKeyReservations.release(entitySet.id)
-        Util.deleteSafely(entitySets, entitySet.id)
+        entitySets.delete(entitySet.id)
     }
 
     /**

@@ -202,7 +202,7 @@ class Assembler(
 
     fun destroyOrganization(organizationId: UUID) {
         deleteOrganizationTimer.time().use {
-            Util.deleteSafely(assemblies, organizationId)
+            assemblies.delete(organizationId)
             materializedEntitySets.removeAll(organizationIdPredicate(organizationId))
         }
     }

@@ -238,6 +238,7 @@ public interface EdmApi {
      * @param entityTypeId ID for a given entity type.
      * @return A set of entity types and their corresponding base types.
      */
+    @Deprecated
     @GET( ENTITY_TYPE_BASE_PATH + ID_PATH + HIERARCHY_PATH )
     Set<EntityType> getEntityTypeHierarchy( @Path( ID ) UUID entityTypeId );
 
