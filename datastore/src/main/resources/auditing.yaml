@@ -1,0 +1,13 @@
+entity-type: "ol.audit"
+edge-entity-type: "ol.audited"
+fqns:
+  ACL_KEY: "ol.key"
+  DATA: "ol.details"
+  DESCRIPTION: "ol.description"
+  ENTITY_SETS: "ol.target"
+  ENTITIES: "ol.objectid"
+  EVENT_TYPE: "ol.type"
+  ID: "ol.id"
+  PRINCIPAL: "ol.userid"
+  TIMESTAMP: "general.datetime"
+  OPERATION_ID: "ol.auditeventid"

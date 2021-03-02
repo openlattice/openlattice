@@ -1,0 +1,225 @@
+/*
+ * Copyright (C) 2018. OpenLattice, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * You can contact the owner of the copyright at support@openlattice.com
+ *
+ */
+
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        // Replace $version with the current version
+        classpath "com.smokejumperit.gradle.license:Gradle-License-Report:0.0.2"
+    }
+}
+
+plugins {
+    id 'application'
+    id 'checkstyle'
+    id 'eclipse'
+    id 'idea'
+    id 'jacoco'
+    id 'java'
+    id 'maven-publish'
+    id 'signing'
+    id 'com.github.spotbugs'
+    id 'org.jetbrains.kotlin.jvm'
+    id 'org.jetbrains.kotlin.plugin.spring'
+}
+
+description = "Indexing Server"
+group = "com.openlattice"
+
+distTar {
+    archiveName "indexer.tgz"
+}
+
+ext.projectName = "indexer"
+ext.scmUrl = 'scm:git:https://github.com/openlattice/indexer.git'
+ext.connectionUrl = 'scm:git:https://github.com/openlattice/indexer.git'
+ext.developerConnectionUrl = 'scm:git:https://github.com/openlattice/indexer.git'
+
+apply from: "../gradles/openlattice.gradle"
+apply plugin: 'kotlin'
+apply plugin: 'license-report'
+
+def INDEXER_XMS = "$System.env.INDEXER_XMS"
+def INDEXER_XMX = "$System.env.INDEXER_XMX"
+def INDEXER_ARGS = "$System.env.INDEXER_ARGS"
+def PARALLEL = "$System.env.PARALLELISM"
+def GC = "$System.env.GC"
+
+if (INDEXER_XMS == 'null' || INDEXER_XMS == null || INDEXER_XMS == "") {
+    INDEXER_XMS = '-Xms1g'
+}
+
+if (INDEXER_XMX == 'null' || INDEXER_XMX == null || INDEXER_XMX == "") {
+    INDEXER_XMX = '-Xmx4g'
+}
+
+if (INDEXER_ARGS == 'null' || INDEXER_ARGS == null || INDEXER_ARGS == "") {
+    INDEXER_ARGS = 'local postgres medialocal auditlocal'
+}
+
+if (PARALLEL == 'null' || PARALLEL == null || PARALLEL == "") {
+    PARALLEL = "-Djava.util.concurrent.ForkJoinPool.common.parallelism=" + Runtime.runtime.availableProcessors()
+}
+
+if (GC == 'null' || GC == null || GC == "") {
+    GC = "-XX:+UseG1GC"
+}
+
+mainClassName = "com.openlattice.indexing.Indexer"
+applicationDefaultJvmArgs = [INDEXER_XMS, INDEXER_XMX, "-server", GC, PARALLEL]
+
+sourceCompatibility = JavaVersion.VERSION_11
+targetCompatibility = JavaVersion.VERSION_11
+
+println "Using java args for running ${projectName}: " + Arrays.toString(applicationDefaultJvmArgs)
+
+run {
+    if (INDEXER_ARGS != null) {
+        args INDEXER_ARGS.split()
+    } else if (System.getProperty("exec.args") != null) {
+        args System.getProperty("exec.args").split()
+    }
+}
+
+println "Enabled profiles: " + Arrays.toString(run.args)
+
+checkstyle {
+  toolVersion = "${checkstyle_version}"
+  showViolations = false
+    config project.resources.text.fromUri('https://raw.githubusercontent.com/openlattice/openlattice/develop/gradles/checkstyle.xml')
+}
+tasks.withType(Checkstyle) {
+    reports {
+        xml.enabled = false
+        html.enabled = true
+    }
+}
+
+spotbugs {
+    reportLevel = 'high'
+    toolVersion = "${spotbugs_annotations_version}"
+}
+
+spotbugsMain {
+    reports {
+        xml.enabled = false
+        html.enabled = true
+    }
+}
+
+jacoco {
+    toolVersion = "0.8.2"
+}
+
+configurations {
+    provided
+}
+
+configurations.all {
+    exclude module: 'slf4j-log4j12'
+    exclude group: 'asm', module: 'asm'
+}
+
+sourceSets {
+    main.compileClasspath += configurations.provided
+    test.compileClasspath += configurations.provided
+    test.runtimeClasspath += configurations.provided
+}
+
+test {
+  ignoreFailures = true
+}
+
+dependencies {
+    spotbugsPlugins "com.h3xstream.findsecbugs:findsecbugs-plugin:${findsecbugs_version}"
+    compileOnly "net.jcip:jcip-annotations:${jcip_version}"
+    compileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugs_annotations_version}"
+    testCompileOnly "net.jcip:jcip-annotations:${jcip_version}"
+    testCompileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugs_annotations_version}"
+
+    compile "org.ow2.asm:asm:${asm_version}"
+
+    compile "com.openlattice:conductor-client:${conductor_client_version}"
+    compile "com.openlattice:scrunchie:${scrunchie_version}"
+    compile "com.openlattice:courier:${courier_version}"
+    compile "com.openlattice:rhizome:${rhizome_version}"
+
+    if( project.hasProperty('developmentMode') && project.developmentMode ) {
+        testImplementation(project(path: ":rhizome-client", configuration: "tests"))
+    } else {
+        testImplementation "com.openlattice:rhizome-client:${rhizome_client_version}:tests"
+    }
+
+    /*
+     * TESTING
+     */
+    testImplementation "junit:junit:${junit_version}"
+    testImplementation "org.mockito:mockito-all:${mockito_version}"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+}
+
+eclipse {
+    ext.downloadSources = true
+    ext.downloadJavadoc = true
+
+    ext.sourceCompatibility = JavaVersion.VERSION_11
+    ext.targetCompatibility = JavaVersion.VERSION_11
+}
+
+eclipse.classpath.plusConfigurations += [configurations.provided]
+
+tasks.withType(JavaCompile) {
+    options.compilerArgs+= [ "--add-modules", "java.se",
+                             "--add-exports","java.base/jdk.internal.ref=ALL-UNNAMED"]
+}
+
+tasks.withType(Test) {
+    jvmArgs += [ "--add-modules", "java.se",
+                 "--add-exports","java.base/jdk.internal.ref=ALL-UNNAMED",
+                 "--add-opens","java.base/java.lang=ALL-UNNAMED",
+                 "--add-opens","java.base/java.nio=ALL-UNNAMED",
+                 "--add-opens","java.base/sun.nio.ch=ALL-UNNAMED",
+                 "--add-opens","java.management/sun.management=ALL-UNNAMED",
+                 "--add-opens","jdk.management/com.sun.management.internal=ALL-UNNAMED"]
+}
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
+    kotlinOptions {
+        jvmTarget = "1.8"
+        freeCompilerArgs += '-Xjvm-default=compatibility'
+    }
+}
+
+jar {
+    doFirst {
+        manifest {
+            attributes (
+                    "Class-Path": configurations.runtime.files.collect { it.getName() }.join(" "),
+                    "Main-Class": mainClassName
+            )
+        }
+    }
+}
+
+startScripts {
+    classpath = files(jar.archivePath)
+}

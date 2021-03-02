@@ -1,0 +1,3 @@
+ext.projectName = 'sharedGradle'
+
+apply from: "./openlattice.gradle"

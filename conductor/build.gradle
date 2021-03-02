@@ -1,0 +1,222 @@
+/*
+ * Copyright (C) 2018. OpenLattice, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * You can contact the owner of the copyright at support@openlattice.com
+ *
+ */
+
+
+plugins {
+    id "application"
+    id "java"
+    id "eclipse"
+    id "idea"
+    id "jacoco"
+    id 'checkstyle'
+    id "maven-publish"
+    id "signing"
+    id 'com.github.spotbugs'
+    id 'org.jetbrains.kotlin.jvm'
+    id 'org.jetbrains.kotlin.plugin.spring'
+    id 'com.github.jk1.dependency-license-report'
+}
+
+description = "Conductor Server"
+group = "com.openlattice"
+
+distTar {
+    archiveName "conductor.tgz"
+}
+
+ext.projectName = "conductor"
+ext.scmUrl = 'scm:git:https://github.com/openlattice/conductor.git'
+ext.connectionUrl = 'scm:git:https://github.com/openlattice/conductor.git'
+ext.developerConnectionUrl = 'scm:git:https://github.com/openlattice/conductor.git'
+
+apply from: "../gradles/openlattice.gradle"
+apply plugin: 'kotlin'
+
+def CONDUCTOR_XMS = "$System.env.CONDUCTOR_XMS"
+def CONDUCTOR_XMX = "$System.env.CONDUCTOR_XMX"
+def C_ARGS = "$System.env.CONDUCTOR_ARGS"
+def PARALLEL = "$System.env.PARALLELISM"
+def GC = "$System.env.GC"
+
+if (CONDUCTOR_XMS == 'null' || CONDUCTOR_XMS == null || CONDUCTOR_XMS == "") {
+    CONDUCTOR_XMS = '-Xms1g'
+}
+
+if (CONDUCTOR_XMX == 'null' || CONDUCTOR_XMX == null || CONDUCTOR_XMX == "") {
+    CONDUCTOR_XMX = '-Xmx4g'
+}
+
+if (C_ARGS == 'null' || C_ARGS == null || C_ARGS == "") {
+    C_ARGS = 'local postgres medialocal auditlocal edmsync'
+}
+
+if (PARALLEL == 'null' || PARALLEL == null || PARALLEL == "") {
+    PARALLEL = "-Djava.util.concurrent.ForkJoinPool.common.parallelism=" + Runtime.runtime.availableProcessors()
+}
+
+if (GC == 'null' || GC == null || GC == "") {
+    GC = "-XX:+UseG1GC"
+}
+
+
+mainClassName = "com.openlattice.Conductor"
+applicationDefaultJvmArgs = [CONDUCTOR_XMS, CONDUCTOR_XMX, "-server", GC, PARALLEL]
+applicationDefaultJvmArgs += [ "--add-modules", "java.se",
+                               "--add-exports","java.base/jdk.internal.ref=ALL-UNNAMED",
+                               "--add-opens","java.base/java.lang=ALL-UNNAMED",
+                               "--add-opens","java.base/java.nio=ALL-UNNAMED",
+                               "--add-opens","java.base/sun.nio.ch=ALL-UNNAMED",
+                               "--add-opens","java.management/sun.management=ALL-UNNAMED",
+                               "--add-opens","jdk.management/com.sun.management.internal=ALL-UNNAMED"]
+sourceCompatibility = JavaVersion.VERSION_11
+targetCompatibility = JavaVersion.VERSION_11
+
+println "Using java args for running ${projectName}: " + Arrays.toString(applicationDefaultJvmArgs)
+
+run {
+    if (C_ARGS != null) {
+        args C_ARGS.split()
+    } else if (System.getProperty("exec.args") != null) {
+        args System.getProperty("exec.args").split()
+    }
+}
+
+println "Enabled profiles: " + Arrays.toString(run.args)
+
+jacoco {
+    toolVersion = "0.8.2"
+}
+
+checkstyle {
+    toolVersion = '7.4'
+    showViolations = false
+    config project.resources.text.fromUri('https://raw.githubusercontent.com/openlattice/openlattice/develop/gradles/checkstyle.xml')
+}
+
+tasks.withType(Checkstyle) {
+    reports {
+        xml.enabled = false
+        html.enabled = true
+    }
+}
+
+spotbugs {
+    reportLevel = 'high'
+    toolVersion = "${spotbugs_annotations_version}"
+}
+
+spotbugsMain {
+    reports {
+        xml.enabled = false
+        html.enabled = true
+    }
+}
+
+import com.github.jk1.license.render.*
+licenseReport {
+    renderers = [new InventoryHtmlReportRenderer()]
+}
+
+configurations {
+    provided
+}
+
+configurations.all {
+    exclude module: 'slf4j-log4j12'
+    exclude group: 'asm', module: 'asm'
+}
+
+sourceSets {
+    main.compileClasspath += configurations.provided
+    test.compileClasspath += configurations.provided
+    test.runtimeClasspath += configurations.provided
+}
+
+test {
+    ignoreFailures = true
+}
+
+dependencies {
+    spotbugsPlugins "com.h3xstream.findsecbugs:findsecbugs-plugin:${findsecbugs_version}"
+    compileOnly "net.jcip:jcip-annotations:${jcip_version}"
+    compileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugs_annotations_version}"
+    testCompileOnly "net.jcip:jcip-annotations:${jcip_version}"
+    testCompileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugs_annotations_version}"
+
+    compile "org.ow2.asm:asm:${asm_version}"
+    compile "com.openlattice:conductor-client:${conductor_client_version}"
+    compile "com.openlattice:scrunchie:${scrunchie_version}"
+    compile "com.openlattice:courier:${courier_version}"
+    compile "com.openlattice:rhizome:${rhizome_version}"
+    /*
+     * TESTING
+     */
+    testImplementation "junit:junit:${junit_version}"
+    testImplementation "org.mockito:mockito-all:${mockito_version}"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+}
+
+eclipse {
+    ext.downloadSources = true
+    ext.downloadJavadoc = true
+
+    ext.sourceCompatibility = JavaVersion.VERSION_11
+    ext.targetCompatibility = JavaVersion.VERSION_11
+}
+
+eclipse.classpath.plusConfigurations += [configurations.provided]
+
+
+tasks.withType(JavaCompile) {
+    options.compilerArgs+= [ "--add-modules", "java.se",
+                             "--add-exports","java.base/jdk.internal.ref=ALL-UNNAMED"]
+}
+
+tasks.withType(Test) {
+    jvmArgs += [ "--add-modules", "java.se",
+                 "--add-exports","java.base/jdk.internal.ref=ALL-UNNAMED",
+                 "--add-opens","java.base/java.lang=ALL-UNNAMED",
+                 "--add-opens","java.base/java.nio=ALL-UNNAMED",
+                 "--add-opens","java.base/sun.nio.ch=ALL-UNNAMED",
+                 "--add-opens","java.management/sun.management=ALL-UNNAMED",
+                 "--add-opens","jdk.management/com.sun.management.internal=ALL-UNNAMED"]
+}
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
+    kotlinOptions {
+        jvmTarget = "1.8"
+        freeCompilerArgs += '-Xjvm-default=compatibility'
+    }
+}
+
+jar {
+    doFirst {
+        manifest {
+            attributes (
+                    "Class-Path": configurations.runtime.files.collect { it.getName() }.join(" "),
+                    "Main-Class": mainClassName
+            )
+        }
+    }
+}
+
+startScripts {
+    classpath = files(jar.archivePath)
+}

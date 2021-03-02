@@ -1,0 +1,144 @@
+plugins {
+    id 'java'
+    id "eclipse"
+    id "idea"
+    id "jacoco"
+    id "maven-publish"
+    id "signing"
+    id 'checkstyle'
+    id 'com.github.spotbugs'
+    id 'org.jetbrains.kotlin.jvm'
+    id 'org.jetbrains.kotlin.plugin.spring'
+    id 'com.github.johnrengelman.shadow'
+
+}
+
+description = "RPC Library"
+group = "com.openlattice"
+ext.projectName = "scrunchie"
+ext.scmUrl = 'scm:git:https://github.com/openlattice/scrunchie.git'
+ext.connectionUrl = 'scm:git:https://github.com/openlattice/scrunchie.git'
+ext.developerConnectionUrl = 'scm:git:https://github.com/openlattice/scrunchie.git'
+
+apply plugin: 'kotlin'
+apply from: "../gradles/openlattice.gradle"
+
+ext.sourceCompatibility = JavaVersion.VERSION_11
+ext.targetCompatibility = JavaVersion.VERSION_11
+
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(11))
+    }
+}
+
+checkstyle {
+    toolVersion = '7.4'
+    showViolations = false
+    config project.resources.text.fromUri('https://raw.githubusercontent.com/openlattice/openlattice/develop/gradles/checkstyle.xml')
+}
+
+tasks.withType(Checkstyle) {
+    reports {
+        xml.enabled = false
+        html.enabled = true
+    }
+}
+
+spotbugs {
+    reportLevel = 'high'
+    toolVersion = "${spotbugs_annotations_version}"
+}
+
+spotbugsMain {
+    reports {
+        xml.enabled = false
+        html.enabled = true
+    }
+}
+
+jacoco {
+    toolVersion = "0.8.2"
+}
+
+configurations {
+    provided
+}
+
+sourceSets {
+    main.compileClasspath += configurations.provided
+    test.compileClasspath += configurations.provided
+    test.runtimeClasspath += configurations.provided
+}
+
+test {
+    ignoreFailures = true
+}
+
+dependencies {
+    spotbugsPlugins "com.h3xstream.findsecbugs:findsecbugs-plugin:${findsecbugs_version}"
+    compileOnly "net.jcip:jcip-annotations:${jcip_version}"
+    compileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugs_annotations_version}"
+    testCompileOnly "net.jcip:jcip-annotations:${jcip_version}"
+    testCompileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugs_annotations_version}"
+
+    implementation "com.openlattice:api:${api_version}"
+    implementation "com.openlattice:conductor-client:${conductor_client_version}"
+
+    testImplementation "com.openlattice:datastore:${datastore_version}"
+
+    if( project.hasProperty('developmentMode') && project.developmentMode ) {
+        testImplementation(project(path: ":rhizome", configuration: "tests"))
+        testImplementation(project(path: ":rhizome-client", configuration: "tests"))
+    } else {
+        testImplementation "com.openlattice:rhizome:${rhizome_version}:tests"
+        testImplementation "com.openlattice:rhizome-client:${rhizome_client_version}:tests"
+    }
+    /*
+     * ELASTICSEARCH
+     */
+    compile("org.elasticsearch:elasticsearch:${elastic_version}") {
+        exclude module: 'slf4j-log4j12'
+    }
+
+    compile("org.elasticsearch.client:transport:${elastic_version}") {
+        exclude module: 'slf4j-log4j12'
+    }
+
+    /*
+     * TESTING
+     */
+    testImplementation "junit:junit:${junit_version}"
+    testImplementation "org.mockito:mockito-core:$mockito_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version";
+}
+
+eclipse {
+    ext.downloadSources = true
+    ext.downloadJavadoc = true
+    ext.sourceCompatibility = JavaVersion.VERSION_11
+    ext.targetCompatibility = JavaVersion.VERSION_11
+}
+
+idea {
+    ext.downloadSources = true
+    ext.downloadJavadoc = true
+    ext.sourceCompatibility = JavaVersion.VERSION_11
+    ext.targetCompatibility = JavaVersion.VERSION_11
+}
+
+shadowJar {
+    zip64 true
+}
+eclipse.classpath.plusConfigurations += [configurations.provided]
+
+compileKotlin {
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+}
+compileTestKotlin {
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+}
