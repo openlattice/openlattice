@@ -43,6 +43,7 @@ class DataDeletionJob(
 
     companion object {
         private const val BATCH_SIZE = 10_000
+        private val ALL_PARTITIONS = (0..257)
     }
 
     @Transient
@@ -52,7 +53,6 @@ class DataDeletionJob(
     private lateinit var entitySets: IMap<UUID, EntitySet>
 
     override fun initialize() {
-        state.partitions = entitySets.executeOnKey(state.entitySetId, GetPartitionsFromEntitySetEntryProcessor())
         state.totalToDelete = getTotalToDelete()
     }
 
@@ -123,10 +123,7 @@ class DataDeletionJob(
     }
 
     private fun deleteEntities(entityDataKeys: Set<EntityDataKey>): Int {
-        val entitySetIdToPartitions = entitySets.executeOnKeys(
-                entityDataKeys.mapTo(mutableSetOf()) { it.entitySetId },
-                GetPartitionsFromEntitySetEntryProcessor()
-        )
+        val entitySetIdToPartitions = getEntitySetPartitions(entityDataKeys)
 
         val (deleteFromDataSql, deleteFromIdsSql) = if (state.deleteType == DeleteType.Hard) {
             HARD_DELETE_FROM_DATA_SQL to HARD_DELETE_FROM_IDS_SQL
@@ -158,6 +155,19 @@ class DataDeletionJob(
                 }
                 ps.executeBatch()
             }.sum()
+        }
+    }
+
+    private fun getEntitySetPartitions(entityDataKeys: Set<EntityDataKey>): Map<UUID, Iterable<Int>> {
+        val entitySetIds = entityDataKeys.mapTo(mutableSetOf()) { it.entitySetId }
+        val esToPartitions = entitySets.executeOnKeys(entitySetIds, GetPartitionsFromEntitySetEntryProcessor())
+
+        return entitySetIds.associateWith {
+            esToPartitions[it] ?: if (it == state.entitySetId) {
+                state.partitions
+            } else {
+                ALL_PARTITIONS
+            }
         }
     }
 
