@@ -261,8 +261,7 @@ class ExternalDatabaseManagementService(
     fun getColumnNamesByTableName(dbName: String): List<TableInfo> {
         return BasePostgresIterable(StatementHolderSupplier(
                 externalDbManager.connect(dbName),
-                getCurrentTableAndColumnNamesSql(),
-                FETCH_SIZE
+                getCurrentTableAndColumnNamesSql()
         )) { rs ->
             TableInfo(oid(rs), name(rs), schemaName(rs), columnNames(rs))
         }.toList()
@@ -454,15 +453,26 @@ class ExternalDatabaseManagementService(
             maybeColumnId: UUID? = null,
             maybeColumnName: String? = null
     ): List<Acl> {
+        if (columns.isEmpty()) {
+            return listOf()
+        }
+
         val columnNameToAclKey = columns.associate { it.name to it.getAclKey() }
         val aclKeysToGrant = mutableSetOf(AclKey(table.id)) + columnNameToAclKey.values
 
         // Load any existing privileges on columns
         val columnPrivilegesSql = getPrivilegesOnColumnsSql(table.schema, table.name, columns.map { it.name })
         val orgHDS = externalDbManager.connectToOrg(table.organizationId)
+
         val columnToUserToPrivileges = BasePostgresIterable(StatementHolderSupplier(orgHDS, columnPrivilegesSql)) { rs ->
-            columnName(rs) to (user(rs) to PostgresPrivileges.valueOf(privilegeType(rs).toUpperCase()))
+            try {
+                columnName(rs) to (user(rs) to PostgresPrivileges.valueOf(privilegeType(rs).toUpperCase()))
+            } catch (e: Exception) {
+                logger.error("Unable to sync privilege row for table {}", table.id, e)
+                null
+            }
         }
+                .filterNotNull()
                 .groupBy { columnNameToAclKey.getValue(it.first) }
                 .mapValues {
                     it.value.map { pair -> pair.second }
