@@ -176,4 +176,36 @@ class OrganizationsControllerTest : MultipleAuthenticatedUsersBase() {
         Assert.assertNotEquals(rolesWithoutSuperAdmin, rolesWithSuperAdminAgain)
         Assert.assertTrue(rolesWithSuperAdminAgain.contains(sameRole))
     }
+
+    @Test
+    fun testRemoveSelfFromOrg() {
+
+        loginAs("admin")
+        val orgId = createOrganization().id
+        OrganizationControllerCallHelper.addMemberToOrganization(orgId, user1.id)
+        OrganizationControllerCallHelper.addMemberToOrganization(orgId, user2.id)
+        Assert.assertEquals(2, organizationsApi.getMembers(orgId).count())
+        Assert.assertEquals(2, organizationsApi.getMemberCountForOrganizations(setOf(orgId))[orgId])
+
+        loginAs("user1")
+
+        // user 1 should not be able to remove user 2
+        assertException(
+                { OrganizationControllerCallHelper.removeMemberFromOrganization(orgId, user2.id) },
+                "Object [$orgId] is not accessible"
+        )
+
+        // user 1 should be able to remove themselves
+        OrganizationControllerCallHelper.removeMemberFromOrganization(orgId, user1.id)
+        Assert.assertEquals(1, organizationsApi.getMembers(orgId).count())
+        Assert.assertEquals(1, organizationsApi.getMemberCountForOrganizations(setOf(orgId))[orgId])
+
+
+        loginAs("user2")
+
+        // user 2 should be able to remove themselves
+        OrganizationControllerCallHelper.removeMemberFromOrganization(orgId, user2.id)
+        Assert.assertEquals(0, organizationsApi.getMembers(orgId).count())
+        Assert.assertEquals(0, organizationsApi.getMemberCountForOrganizations(setOf(orgId))[orgId])
+    }
 }

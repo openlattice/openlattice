@@ -281,22 +281,16 @@ interface OrganizationsApi {
     @GET(BASE + PRINCIPALS + ROLES + COUNT)
     fun getRoleCountForOrganizations(@Body organizationIds: Set<UUID>): Map<UUID, Int>
 
-    @PUT(
-            BASE + ID_PATH + PRINCIPALS + MEMBERS + USER_ID_PATH
-    )
+    @PUT(BASE + ID_PATH + PRINCIPALS + MEMBERS + USER_ID_PATH)
     fun addMember(
-            @Path(ID) organizationId: UUID, @Path(
-                    USER_ID
-            ) userId: String
+            @Path(ID) organizationId: UUID,
+            @Path(USER_ID) userId: String
     ): Void?
 
-    @DELETE(
-            BASE + ID_PATH + PRINCIPALS + MEMBERS + USER_ID_PATH
-    )
+    @DELETE(BASE + ID_PATH + PRINCIPALS + MEMBERS + USER_ID_PATH)
     fun removeMember(
-            @Path(ID) organizationId: UUID, @Path(
-                    USER_ID
-            ) userId: String
+            @Path(ID) organizationId: UUID,
+            @Path(USER_ID) userId: String
     ): Void?
 
     // Endpoints about roles
