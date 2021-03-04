@@ -463,7 +463,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
             method = RequestMethod.GET,
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Iterable<AssociationType> getAssociationTypes() {
-        return modelService.getAssociationTypes();
+        return modelService.getAllAssociationTypes();
     }
 
     @Override

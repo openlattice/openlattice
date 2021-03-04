@@ -131,8 +131,6 @@ import org.springframework.context.annotation.Profile;
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 
-import static com.openlattice.datastore.util.Util.returnAndLog;
-
 @Configuration
 @Import( {
         Auth0Pod.class,
@@ -502,17 +500,16 @@ public class DatastoreServicesPod {
 
     @Bean
     public AppService appService() {
-        return returnAndLog(
-                new AppService(
-                        hazelcastInstance,
-                        dataModelService(),
-                        organizationsManager(),
-                        authorizationManager(),
-                        securePrincipalsManager(),
-                        aclKeyReservationService(),
-                        collectionsManager(),
-                        entitySetManager()
-                ), "Checkpoint app service"
+        logger.info( "Checkpoint app service" );
+        return new AppService(
+                hazelcastInstance,
+                dataModelService(),
+                organizationsManager(),
+                authorizationManager(),
+                securePrincipalsManager(),
+                aclKeyReservationService(),
+                collectionsManager(),
+                entitySetManager()
         );
     }
 
