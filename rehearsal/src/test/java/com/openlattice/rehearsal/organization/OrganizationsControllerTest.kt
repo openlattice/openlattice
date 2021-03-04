@@ -184,8 +184,8 @@ class OrganizationsControllerTest : MultipleAuthenticatedUsersBase() {
         val orgId = createOrganization().id
         OrganizationControllerCallHelper.addMemberToOrganization(orgId, user1.id)
         OrganizationControllerCallHelper.addMemberToOrganization(orgId, user2.id)
-        Assert.assertEquals(2, organizationsApi.getMembers(orgId).count())
-        Assert.assertEquals(2, organizationsApi.getMemberCountForOrganizations(setOf(orgId))[orgId])
+        Assert.assertEquals(3, organizationsApi.getMembers(orgId).count())
+        Assert.assertEquals(3, organizationsApi.getMemberCountForOrganizations(setOf(orgId))[orgId])
 
         loginAs("user1")
 
@@ -197,14 +197,14 @@ class OrganizationsControllerTest : MultipleAuthenticatedUsersBase() {
 
         // user 1 should be able to remove themselves
         OrganizationControllerCallHelper.removeMemberFromOrganization(orgId, user1.id)
-        Assert.assertEquals(1, organizationsApi.getMembers(orgId).count())
-        Assert.assertEquals(1, organizationsApi.getMemberCountForOrganizations(setOf(orgId))[orgId])
+        Assert.assertEquals(2, organizationsApi.getMembers(orgId).count())
+        Assert.assertEquals(2, organizationsApi.getMemberCountForOrganizations(setOf(orgId))[orgId])
 
         loginAs("user2")
 
         // user 2 should be able to remove themselves
         OrganizationControllerCallHelper.removeMemberFromOrganization(orgId, user2.id)
-        Assert.assertEquals(0, organizationsApi.getMembers(orgId).count())
-        Assert.assertEquals(0, organizationsApi.getMemberCountForOrganizations(setOf(orgId))[orgId])
+        Assert.assertEquals(1, organizationsApi.getMembers(orgId).count())
+        Assert.assertEquals(1, organizationsApi.getMemberCountForOrganizations(setOf(orgId))[orgId])
     }
 }
