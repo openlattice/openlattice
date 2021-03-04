@@ -537,12 +537,11 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
             @PathVariable(OrganizationsApi.ID) organizationId: UUID,
             @PathVariable(OrganizationsApi.USER_ID) userId: String
     ): Void? {
-        val principal = Principal(PrincipalType.USER, userId)
         // allow caller to remove themselves from the org
-        if (Principals.getCurrentPrincipals().contains(principal).not()) {
+        if (Principals.getCurrentUser().id != userId) {
             ensureOwnerAccess(AclKey(organizationId))
         }
-        organizations.removeMembers(organizationId, ImmutableSet.of(principal))
+        organizations.removeMembers(organizationId, ImmutableSet.of(Principal(PrincipalType.USER, userId)))
         edms.revokeAllPrivilegesFromMember(organizationId, userId)
         return null
     }
