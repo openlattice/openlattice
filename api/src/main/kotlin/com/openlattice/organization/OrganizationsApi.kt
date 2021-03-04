@@ -273,9 +273,7 @@ interface OrganizationsApi {
     @GET(BASE + ID_PATH + PRINCIPALS + MEMBERS)
     fun getMembers(@Path(ID) organizationId: UUID): Iterable<OrganizationMember>
 
-    @GET(
-            BASE + PRINCIPALS + MEMBERS + COUNT
-    )
+    @GET(BASE + PRINCIPALS + MEMBERS + COUNT)
     fun getMemberCountForOrganizations(@Body organizationIds: Set<UUID>): Map<UUID, Int>
 
     @GET(BASE + PRINCIPALS + ROLES + COUNT)
