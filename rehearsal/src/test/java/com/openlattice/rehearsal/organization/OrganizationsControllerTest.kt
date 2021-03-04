@@ -200,7 +200,6 @@ class OrganizationsControllerTest : MultipleAuthenticatedUsersBase() {
         Assert.assertEquals(1, organizationsApi.getMembers(orgId).count())
         Assert.assertEquals(1, organizationsApi.getMemberCountForOrganizations(setOf(orgId))[orgId])
 
-
         loginAs("user2")
 
         // user 2 should be able to remove themselves
