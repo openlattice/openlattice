@@ -619,10 +619,11 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             BulkResponse resp = requestBuilder.execute().actionGet();
 
             if ( resp.hasFailures() ) {
-                logger.info( "At least one failure observed when attempting to index {} entities for entity set {}: {}",
+                logger.info( "At least one failure observed when attempting to index {} entities for entity set {}",
                         entitiesById.size(),
-                        entitySetId,
-                        resp.buildFailureMessage() );
+                        entitySetId
+                );
+                logger.debug( "Entity index failure details: {}", resp.buildFailureMessage() );
                 return false;
             }
 
@@ -656,10 +657,11 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             final var resp = requestBuilder.execute().actionGet();
 
             if ( resp.hasFailures() ) {
-                logger.info( "At least one failure observed when attempting to index linking entities with linking " +
-                                "ids {}: {}",
-                        entitiesByLinkingId.keySet(),
-                        resp.buildFailureMessage() );
+                logger.info(
+                        "At least one failure observed when attempting to index linking entities with linking ids {}",
+                        entitiesByLinkingId.keySet()
+                );
+                logger.debug( "Linking entity failure details: {}", resp.buildFailureMessage() );
                 return false;
             }
 
