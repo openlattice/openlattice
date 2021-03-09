@@ -352,11 +352,11 @@ class ExternalDatabaseManagementService(
                 stmt.execute("ALTER TABLE $tableName $dropColumnsSql")
             }
 
-            deleteOrganizationExternalDatabaseColumnObjects(mapOf(tableId to columnIds))
+            deleteOrganizationExternalDatabaseColumnObjects(orgId, mapOf(tableId to columnIds))
         }
     }
 
-    fun deleteOrganizationExternalDatabaseColumnObjects(columnIdsByTableId: Map<UUID, Set<UUID>>) {
+    fun deleteOrganizationExternalDatabaseColumnObjects(organizationId: UUID, columnIdsByTableId: Map<UUID, Set<UUID>>) {
         columnIdsByTableId.forEach { (tableId, columnIds) ->
             columnIds.forEach { columnId ->
                 val aclKey = AclKey(tableId, columnId)
@@ -366,6 +366,8 @@ class ExternalDatabaseManagementService(
             }
             organizationExternalDatabaseColumns.removeAll(idsPredicate(columnIds))
         }
+
+        extDbPermsManager.destroyExternalTablePermissions(organizationId, columnIdsByTableId)
     }
 
     /**
