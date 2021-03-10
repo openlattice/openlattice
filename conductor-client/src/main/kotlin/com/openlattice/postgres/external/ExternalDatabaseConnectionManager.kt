@@ -10,7 +10,6 @@ import com.openlattice.transporter.types.TransporterDatastore
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
-import java.time.Duration
 import java.util.*
 
 /**
@@ -37,6 +36,7 @@ class ExternalDatabaseConnectionManager(
     private val perDbCache: LoadingCache<String, HikariDataSource> = CacheBuilder
             .newBuilder()
             .expireAfterAccess(Duration.ofHours(1))
+            .removalListener<String, HikariDataSource> { it.value.close() }
             .build(cacheLoader())
 
     fun createDataSource(dbName: String, config: Properties, useSsl: Boolean): HikariDataSource {

@@ -477,7 +477,7 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
             value = [OrganizationsApi.PRINCIPALS + OrganizationsApi.MEMBERS + OrganizationsApi.COUNT],
             consumes = [MediaType.APPLICATION_JSON_VALUE], produces = [MediaType.APPLICATION_JSON_VALUE]
     )
-    override fun getMemberCountForOrganizations(organizationIds: Set<UUID>): Map<UUID, Int> {
+    override fun getMemberCountForOrganizations(@RequestBody organizationIds: Set<UUID>): Map<UUID, Int> {
         val readPermissions = EnumSet.of(Permission.READ)
         accessCheck( organizationIds.associate { AclKey(it) to readPermissions } )
         return organizations.getMemberCountsForOrganizations(organizationIds)
@@ -488,7 +488,7 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
             value = [OrganizationsApi.PRINCIPALS + OrganizationsApi.ROLES + OrganizationsApi.COUNT],
             consumes = [MediaType.APPLICATION_JSON_VALUE], produces = [MediaType.APPLICATION_JSON_VALUE]
     )
-    override fun getRoleCountForOrganizations(organizationIds: Set<UUID>): Map<UUID, Int> {
+    override fun getRoleCountForOrganizations(@RequestBody organizationIds: Set<UUID>): Map<UUID, Int> {
         val readPermissions = EnumSet.of(Permission.READ)
         accessCheck( organizationIds.associate { AclKey(it) to readPermissions } )
         return organizations.getRoleCountsForOrganizations(organizationIds)
@@ -537,12 +537,11 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
             @PathVariable(OrganizationsApi.ID) organizationId: UUID,
             @PathVariable(OrganizationsApi.USER_ID) userId: String
     ): Void? {
-        ensureOwnerAccess(AclKey(organizationId))
-        organizations.removeMembers(
-                organizationId, ImmutableSet.of(
-                Principal(PrincipalType.USER, userId)
-        )
-        )
+        // allow caller to remove themselves from the org
+        if (Principals.getCurrentUser().id != userId) {
+            ensureOwnerAccess(AclKey(organizationId))
+        }
+        organizations.removeMembers(organizationId, ImmutableSet.of(Principal(PrincipalType.USER, userId)))
         edms.revokeAllPrivilegesFromMember(organizationId, userId)
         return null
     }

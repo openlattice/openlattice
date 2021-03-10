@@ -30,7 +30,12 @@ import com.openlattice.assembler.EntitySetAssemblyKey
 import com.openlattice.assembler.MaterializedEntitySet
 import com.openlattice.assembler.OrganizationAssembly
 import com.openlattice.auditing.AuditRecordEntitySetConfiguration
-import com.openlattice.authorization.*
+import com.openlattice.authorization.AccessTarget
+import com.openlattice.authorization.AceKey
+import com.openlattice.authorization.AceValue
+import com.openlattice.authorization.AclKey
+import com.openlattice.authorization.AclKeySet
+import com.openlattice.authorization.SecurablePrincipal
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.codex.Base64Media
 import com.openlattice.collaborations.Collaboration
@@ -44,7 +49,11 @@ import com.openlattice.directory.MaterializedViewAccount
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetPropertyKey
 import com.openlattice.edm.set.EntitySetPropertyMetadata
-import com.openlattice.edm.type.*
+import com.openlattice.edm.type.AssociationType
+import com.openlattice.edm.type.EntityType
+import com.openlattice.edm.type.EntityTypePropertyKey
+import com.openlattice.edm.type.EntityTypePropertyMetadata
+import com.openlattice.edm.type.PropertyType
 import com.openlattice.ids.Range
 import com.openlattice.linking.EntityKeyPair
 import com.openlattice.notifications.sms.SmsEntitySetInformation
@@ -105,7 +114,6 @@ class HazelcastMap<K, V> internal constructor(val name: String) : TypedMapIdenti
         @JvmField val ASSOCIATION_TYPES = HazelcastMap<UUID, AssociationType>("ASSOCIATION_TYPES")
         @JvmField val AUDIT_RECORD_ENTITY_SETS = HazelcastMap<AclKey, AuditRecordEntitySetConfiguration>("AUDIT_RECORD_ENTITY_SETS")
         @JvmField val BACKGROUND_EXPIRED_DATA_DELETION_LOCKS = HazelcastMap<UUID, Long>("BACKGROUND_EXPIRED_DATA_DELETION_LOCKS")
-        @JvmField val BACKGROUND_ORGANIZATION_DATABASE_SYNCING_LOCKS = HazelcastMap<UUID, Long>("BACKGROUND_ORGANIZATION_DATABASE_SYNCING_LOCKS")
         @JvmField val CODEX_LOCKS = HazelcastMap<SmsInformationKey, Long>("CODEX_LOCKS")
         @JvmField val CODEX_MEDIA = HazelcastMap<UUID, Base64Media>("CODEX_MEDIA")
         @JvmField val COLLABORATIONS = HazelcastMap<UUID, Collaboration>("COLLABORATIONS")

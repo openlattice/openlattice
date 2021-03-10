@@ -16,6 +16,7 @@ import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.organization.OrganizationExternalDatabaseTable
 import com.openlattice.organization.roles.Role
 import com.openlattice.postgres.DataTables
+import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresPrivileges
 import com.openlattice.postgres.TableColumn
 import com.openlattice.postgres.mapstores.SecurableObjectTypeMapstore
@@ -23,7 +24,6 @@ import com.openlattice.transporter.grantUsageOnSchemaSql
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
-import java.sql.Statement
 import java.util.*
 
 /**
@@ -367,6 +367,33 @@ class ExternalDatabasePermissioner(
         updateTablePermissions(action, columnAcls, columnsById, TableType.TABLE)
     }
 
+    override fun destroyExternalTablePermissions(organizationId: UUID, tablesToColumnIds: Map<UUID, Set<UUID>>) {
+        val accessTargetsToDestroy = tablesToColumnIds.flatMap { (tableId, columnIds) ->
+            columnIds.flatMap { columnId ->
+                val aclKey = AclKey(tableId, columnId)
+                allTablePermissions.map { permission -> AccessTarget(aclKey, permission) }
+            }
+        }.toSet()
+
+        val permissionRoles = externalRoleNames.getAll(accessTargetsToDestroy)
+        extDbManager.connectToOrg(organizationId).connection.use { conn ->
+            conn.createStatement().use { stmt ->
+                permissionRoles.forEach { (accessTarget, permissionRoleName) ->
+                    try {
+                        stmt.execute("DROP ROLE ${quote(permissionRoleName.toString())}")
+                    } catch (e: Exception) {
+                        logger.error("Unable to drop permission role {} for AccessTarget {}", permissionRoleName, accessTarget, e)
+                    }
+                }
+            }
+        }
+
+
+        accessTargetsToDestroy.forEach {
+            externalRoleNames.delete(it)
+        }
+    }
+
     private fun updateTablePermissions(
             action: Action,
             columnAcls: List<Acl>,
@@ -435,24 +462,23 @@ class ExternalDatabasePermissioner(
             val addz = adds.getOrDefault(organizationId, listOf<String>())
             extDbManager.connectToOrg(organizationId).connection.use { conn ->
                 conn.autoCommit = false
-                val stmt: Statement = conn.createStatement()
-                try {
-                    rems.forEach { sql ->
-                        stmt.addBatch(sql)
-                    }
-                    stmt.executeBatch()
-                    stmt.clearBatch()
+                conn.createStatement().use { stmt ->
+                    try {
+                        rems.forEach { sql ->
+                            stmt.addBatch(sql)
+                        }
+                        stmt.executeBatch()
+                        stmt.clearBatch()
 
-                    addz.forEach { sql ->
-                        stmt.addBatch(sql)
+                        addz.forEach { sql ->
+                            stmt.addBatch(sql)
+                        }
+                        stmt.executeBatch()
+                        conn.commit()
+                    } catch (ex: Exception) {
+                        logger.error("Exception occurred during external permissions update, rolling back", ex)
+                        conn.rollback()
                     }
-                    stmt.executeBatch()
-                    conn.commit()
-                } catch (ex: Exception) {
-                    logger.error("Exception occurred during external permissions update, rolling back", ex)
-                    conn.rollback()
-                } finally {
-                    stmt.close()
                 }
             }
         }
