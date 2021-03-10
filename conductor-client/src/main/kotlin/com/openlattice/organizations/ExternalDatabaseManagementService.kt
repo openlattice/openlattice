@@ -357,11 +357,11 @@ class ExternalDatabaseManagementService(
                 }
             }
 
-            deleteOrganizationExternalDatabaseColumnObjects(mapOf(tableId to columnIds))
+            deleteOrganizationExternalDatabaseColumnObjects(orgId, mapOf(tableId to columnIds))
         }
     }
 
-    fun deleteOrganizationExternalDatabaseColumnObjects(columnIdsByTableId: Map<UUID, Set<UUID>>) {
+    fun deleteOrganizationExternalDatabaseColumnObjects(organizationId: UUID, columnIdsByTableId: Map<UUID, Set<UUID>>) {
         columnIdsByTableId.forEach { (tableId, columnIds) ->
             columnIds.forEach { columnId ->
                 val aclKey = AclKey(tableId, columnId)
@@ -371,6 +371,8 @@ class ExternalDatabaseManagementService(
             }
             organizationExternalDatabaseColumns.removeAll(idsPredicate(columnIds))
         }
+
+        extDbPermsManager.destroyExternalTablePermissions(organizationId, columnIdsByTableId)
     }
 
     /**
@@ -466,15 +468,26 @@ class ExternalDatabaseManagementService(
             maybeColumnId: UUID? = null,
             maybeColumnName: String? = null
     ): List<Acl> {
+        if (columns.isEmpty()) {
+            return listOf()
+        }
+
         val columnNameToAclKey = columns.associate { it.name to it.getAclKey() }
         val aclKeysToGrant = mutableSetOf(AclKey(table.id)) + columnNameToAclKey.values
 
         // Load any existing privileges on columns
         val columnPrivilegesSql = getPrivilegesOnColumnsSql(table.schema, table.name, columns.map { it.name })
         val orgHDS = externalDbManager.connectToOrg(table.organizationId)
+
         val columnToUserToPrivileges = BasePostgresIterable(StatementHolderSupplier(orgHDS, columnPrivilegesSql)) { rs ->
-            columnName(rs) to (user(rs) to PostgresPrivileges.valueOf(privilegeType(rs).toUpperCase()))
+            try {
+                columnName(rs) to (user(rs) to PostgresPrivileges.valueOf(privilegeType(rs).toUpperCase()))
+            } catch (e: Exception) {
+                logger.error("Unable to sync privilege row for table {}", table.id, e)
+                null
+            }
         }
+                .filterNotNull()
                 .groupBy { columnNameToAclKey.getValue(it.first) }
                 .mapValues {
                     it.value.map { pair -> pair.second }

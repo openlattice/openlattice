@@ -88,4 +88,12 @@ interface ExternalDatabasePermissioningService {
             columnAcls: List<Acl>,
             columnsById: Map<AclKey, TableColumn>
     )
+
+    /**
+     * Drops permission roles on tables and columns [tablesToColumnIds] in org database for [organizationId]
+     */
+    fun destroyExternalTablePermissions(
+            organizationId: UUID,
+            tablesToColumnIds: Map<UUID, Set<UUID>>
+    )
 }
