@@ -3,7 +3,6 @@ package com.openlattice.rehearsal.organization
 import com.google.common.collect.ArrayListMultimap
 import com.google.common.collect.ImmutableList
 import com.google.common.collect.ListMultimap
-import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.authorization.Ace
 import com.openlattice.authorization.Acl
 import com.openlattice.authorization.AclData
@@ -30,6 +29,7 @@ import com.openlattice.postgres.PostgresColumn.ID
 import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.external.ExternalDatabaseType
+import com.openlattice.postgres.external.PostgresDatabaseQueryService.Companion.entitySetNameTableName
 import com.openlattice.postgres.external.Schemas
 import com.openlattice.rehearsal.assertException
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
@@ -951,7 +951,7 @@ class AssemblerTest : AssemblerTestBase() {
 
         user1OrganizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                stmt.executeQuery("SELECT * FROM ${AssemblerConnectionManager.entitySetNameTableName(es.name)}")
+                stmt.executeQuery("SELECT * FROM ${entitySetNameTableName(es.name)}")
 
                 val exceptionMsg = "permission denied for schema prod"
                 assertException(

@@ -21,7 +21,6 @@
 
 package com.openlattice.hazelcast.pods
 
-import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.datastore.services.EdmService
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService
 import org.mockito.Mockito
@@ -34,12 +33,6 @@ import org.springframework.context.annotation.Configuration
  */
 @Configuration
 class TestPod {
-
-    @Bean
-    fun assemblerConnectionManager() : AssemblerConnectionManager {
-        return Mockito.mock(AssemblerConnectionManager::class.java)
-    }
-
     @Bean
     fun edmService() : EdmService {
         return Mockito.mock(EdmService::class.java)

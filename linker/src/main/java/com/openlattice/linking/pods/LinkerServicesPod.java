@@ -28,7 +28,6 @@ import com.google.common.eventbus.EventBus;
 import com.hazelcast.core.HazelcastInstance;
 import com.openlattice.assembler.Assembler;
 import com.openlattice.assembler.AssemblerConfiguration;
-import com.openlattice.assembler.AssemblerConnectionManager;
 import com.openlattice.assembler.pods.AssemblerConfigurationPod;
 import com.openlattice.auditing.AuditingConfiguration;
 import com.openlattice.auditing.pods.AuditingConfigurationPod;
@@ -182,7 +181,6 @@ public class LinkerServicesPod {
     public Assembler assembler() {
         return new Assembler(
                 dbcs(),
-                hikariDataSource,
                 authorizationManager(),
                 principalService(),
                 dbQueryManager(),
@@ -199,16 +197,6 @@ public class LinkerServicesPod {
                 externalDbConnMan,
                 principalService(),
                 dbcs()
-        );
-    }
-
-    @Bean
-    public AssemblerConnectionManager assemblerConnectionManager() {
-        return new AssemblerConnectionManager(
-                externalDbConnMan,
-                principalService(),
-                dbQueryManager(),
-                externalDatabasePermissionsManager()
         );
     }
 

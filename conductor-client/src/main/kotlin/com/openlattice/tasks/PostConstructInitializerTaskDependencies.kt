@@ -21,8 +21,6 @@
 
 package com.openlattice.tasks
 
-import com.openlattice.assembler.AssemblerConnectionManager
-import com.openlattice.assembler.AssemblerConnectionManagerDependent
 import com.openlattice.transporter.types.TransporterDatastore
 import com.openlattice.transporter.types.TransporterDependent
 import org.slf4j.LoggerFactory
@@ -38,12 +36,6 @@ private val logger = LoggerFactory.getLogger(PostConstructInitializerTaskDepende
 @Component
 class PostConstructInitializerTaskDependencies : HazelcastTaskDependencies {
     @Inject
-    private lateinit var accessConnectionManager: AssemblerConnectionManager
-
-    @Inject
-    private lateinit var acmDependentStreamSerializers: Set<AssemblerConnectionManagerDependent<out Any>>
-
-    @Inject
     private lateinit var transporterDatastore: TransporterDatastore
 
     @Inject
@@ -56,10 +48,6 @@ class PostConstructInitializerTaskDependencies : HazelcastTaskDependencies {
         }
 
         override fun initialize(dependencies: PostConstructInitializerTaskDependencies) {
-            dependencies.acmDependentStreamSerializers.forEach {
-                it.init(dependencies.accessConnectionManager)
-                logger.info("Initialized ${it.javaClass} with ACM")
-            }
             dependencies.transporterDependent.forEach {
                 it.init(dependencies.transporterDatastore)
                 logger.info("Initialized ${it.javaClass} with TransporterDatastore")
