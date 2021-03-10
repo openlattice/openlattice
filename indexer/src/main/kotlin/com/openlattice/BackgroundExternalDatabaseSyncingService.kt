@@ -235,7 +235,7 @@ class BackgroundExternalDatabaseSyncingService(
         }.groupBy { it.tableId }.mapValues { it.value.map { c -> c.id }.toSet() }
 
         if (columnIdsToDelete.isNotEmpty()) {
-            edms.deleteOrganizationExternalDatabaseColumnObjects(columnIdsToDelete)
+            edms.deleteOrganizationExternalDatabaseColumnObjects(orgId, columnIdsToDelete)
         }
     }
 
@@ -282,15 +282,6 @@ class BackgroundExternalDatabaseSyncingService(
         }
 
         return fullExistingColumns
-    }
-
-    private fun deleteColumns(columns: List<OrganizationExternalDatabaseColumn>): Int {
-        edms.deleteOrganizationExternalDatabaseColumnObjects(columns
-                .groupBy { it.tableId }
-                .mapValues { it.value.map { c -> c.id }.toSet() }
-        )
-
-        return columns.size
     }
 
     private fun createSecurableColumnObjects(
