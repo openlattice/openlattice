@@ -22,12 +22,12 @@ package com.openlattice.rehearsal.organization
 
 import com.kryptnostic.rhizome.pods.ConfigurationLoaderPod
 import com.openlattice.assembler.AssemblerConfiguration
-import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.pods.AssemblerConfigurationPod
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.PostgresTable
-import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
+import com.openlattice.postgres.external.ExternalDatabaseType
+import com.openlattice.postgres.external.PostgresDatabaseQueryService.Companion.entitySetNameTableName
 import com.openlattice.postgres.external.Schemas
 import com.openlattice.rehearsal.application.TestServer
 import com.zaxxer.hikari.HikariConfig
@@ -51,7 +51,7 @@ class TestAssemblerConnectionManager {
 
         @JvmStatic
         fun connect(organizationId: UUID, config: Optional<Properties> = Optional.empty()): HikariDataSource {
-            val dbName = ExternalDatabaseConnectionManager.buildDefaultOrganizationDatabaseName(organizationId)
+            val dbName = ExternalDatabaseType.ORGANIZATION.generateName(organizationId)
             val connectionConfig = config.orElse(assemblerConfiguration.server.clone() as Properties)
 
             return createDataSource(dbName, connectionConfig, assemblerConfiguration.ssl)
@@ -81,7 +81,7 @@ class TestAssemblerConnectionManager {
             } else {
                 properties.joinToString(",") { DataTables.quote(it) }
             }
-            return "SELECT $columnsToSelect FROM ${AssemblerConnectionManager.entitySetNameTableName(entitySetName)}"
+            return "SELECT $columnsToSelect FROM ${entitySetNameTableName(entitySetName)}"
         }
 
         /**

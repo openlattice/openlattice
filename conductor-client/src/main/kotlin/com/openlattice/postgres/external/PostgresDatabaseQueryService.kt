@@ -23,11 +23,11 @@ package com.openlattice.postgres.external
 
 import com.openlattice.ApiHelpers
 import com.openlattice.assembler.AssemblerConfiguration
-import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.authorization.*
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.organization.roles.Role
+import com.openlattice.organizations.OrganizationDatabase
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresColumn.*
@@ -54,10 +54,36 @@ class PostgresDatabaseQueryService(
         private val dbCredentialService: DbCredentialService
 ) : DatabaseQueryManager {
 
-    private val atlas: HikariDataSource = extDbManager.connect("postgres")
+    private val atlas: HikariDataSource = extDbManager.connectAsSuperuser()
 
     companion object {
         const val PUBLIC_ROLE = "public"
+
+        /**
+         * Build grant select sql statement for a given table and user with column level security.
+         * If properties (columns) are left empty, it will grant select on whole table.
+         */
+        @JvmStatic
+        private fun grantSelectSql(
+                tableName: String,
+                postgresUserName: String,
+                columns: List<String>
+        ): String {
+            val onProperties = if (columns.isEmpty()) {
+                ""
+            } else {
+                "( ${columns.joinToString(",")} )"
+            }
+
+            return "GRANT SELECT $onProperties " +
+                    "ON $tableName " +
+                    "TO $postgresUserName"
+        }
+
+        @JvmStatic
+        fun entitySetNameTableName(entitySetName: String): String {
+            return "$OPENLATTICE_SCHEMA.${quote(entitySetName)}"
+        }
     }
 
     /**
@@ -65,11 +91,13 @@ class PostgresDatabaseQueryService(
      * Also sets up foreign data wrapper using assembler in assembler so that materialized views of data can be
      * provided.
      */
-    override fun createAndInitializeOrganizationDatabase(organizationId: UUID, dbName: String) {
+    override fun createAndInitializeOrganizationDatabase(organizationId: UUID): OrganizationDatabase {
         logger.info("Creating organization database for organization with id $organizationId")
-        createOrganizationDatabase(organizationId, dbName)
+        val (hds, dbName) = extDbManager.createDbAndConnect(organizationId, ExternalDatabaseType.ORGANIZATION) { dbName ->
+            createOrganizationDatabase(organizationId, dbName)
+        }
 
-        extDbManager.connect(dbName).let { dataSource ->
+        hds.let { dataSource ->
             configureRolesInDatabase(dataSource)
             createSchema(dataSource, OPENLATTICE_SCHEMA)
             createSchema(dataSource, INTEGRATIONS_SCHEMA)
@@ -80,18 +108,22 @@ class PostgresDatabaseQueryService(
             addMembersToOrganization(organizationId, dataSource, securePrincipalsManager.getOrganizationMemberPrincipals(organizationId))
             configureServerUser(dataSource)
         }
+
+        return OrganizationDatabase(getDatabaseOid(dbName), dbName)
     }
 
-    override fun createAndInitializeCollaborationDatabase(collaborationId: UUID, dbName: String): Int {
+    override fun createAndInitializeCollaborationDatabase(collaborationId: UUID): OrganizationDatabase {
         logger.info("Creating collaboration database for collaboration with id $collaborationId")
-        createDatabase(dbName)
-
-        extDbManager.connect(dbName).let { hds ->
-            createRenameServerFunctionIfNotExists(hds)
-            configureRolesInDatabase(hds)
+        val (hds, dbName) = extDbManager.createDbAndConnect(collaborationId, ExternalDatabaseType.COLLABORATION) { dbName ->
+            createDatabase(dbName)
         }
 
-        return getDatabaseOid(dbName)
+        hds.let { dbHds ->
+            createRenameServerFunctionIfNotExists(dbHds)
+            configureRolesInDatabase(dbHds)
+        }
+
+        return OrganizationDatabase(getDatabaseOid(dbName), dbName)
     }
 
     override fun addMembersToCollaboration(collaborationId: UUID, memberRoles: Iterable<String>) {
@@ -320,7 +352,7 @@ class PostgresDatabaseQueryService(
     }
 
     override fun dropOrganizationDatabase(organizationId: UUID) {
-        val dbName = extDbManager.getOrganizationDatabaseName(organizationId)
+        val dbName = extDbManager.getDatabaseName(organizationId)
         dropDatabase(dbName)
 
         val dbAdminUser = quote(dbCredentialService.getDbUsername(AclKey(organizationId)))
@@ -357,10 +389,9 @@ class PostgresDatabaseQueryService(
     }
 
     internal fun executeStatementsInDatabase(organizationId: UUID, sqlFromDbName: (String) -> Iterable<String>) {
-        val dbName = extDbManager.getOrganizationDatabaseName(organizationId)
+        val (hds, dbName) = extDbManager.connectToOrgGettingName(organizationId)
         val sqlStatements = sqlFromDbName(dbName)
-
-        extDbManager.connect(dbName).connection.use { conn ->
+        hds.connection.use { conn ->
             conn.createStatement().use { stmt ->
                 sqlStatements.forEach { stmt.execute(it) }
             }
@@ -384,9 +415,9 @@ class PostgresDatabaseQueryService(
 
                         // grant select on authorized tables and their properties
                         authorizedPropertyTypesOfEntitySets.forEach { (entitySet, propertyTypes) ->
-                            val tableName = AssemblerConnectionManager.entitySetNameTableName(entitySet.name)
+                            val tableName = entitySetNameTableName(entitySet.name)
                             val columns = getSelectColumnsForMaterializedView(propertyTypes)
-                            val grantSelectSql = AssemblerConnectionManager.grantSelectSql(tableName, postgresUserName, columns)
+                            val grantSelectSql = grantSelectSql(tableName, postgresUserName, columns)
                             stmt.addBatch(grantSelectSql)
                         }
 
@@ -394,7 +425,7 @@ class PostgresDatabaseQueryService(
                         // materialized view exist)
                         if (authorizedPropertyTypesOfEntitySets.isNotEmpty()) {
                             val edgesTableName = "$OPENLATTICE_SCHEMA.${E.name}"
-                            val grantSelectSql = AssemblerConnectionManager.grantSelectSql(edgesTableName, postgresUserName, listOf())
+                            val grantSelectSql = grantSelectSql(edgesTableName, postgresUserName, listOf())
                             stmt.addBatch(grantSelectSql)
                         }
                     }
@@ -458,7 +489,7 @@ class PostgresDatabaseQueryService(
     private fun configureUsersInDatabase(dataSource: HikariDataSource, organizationId: UUID, userIds: Collection<String>) {
         val userIdsSql = userIds.joinToString()
 
-        val dbName = extDbManager.getOrganizationDatabaseName(organizationId)
+        val dbName = extDbManager.getDatabaseName(organizationId)
         logger.info("Configuring users $userIds in database $dbName")
         //First we will grant all privilege which for database is connect, temporary, and create schema
         atlas.connection.use { connection ->
@@ -493,7 +524,7 @@ class PostgresDatabaseQueryService(
     private fun revokeConnectAndSchemaUsage(dataSource: HikariDataSource, organizationId: UUID, userIds: List<String>) {
         val userIdsSql = userIds.joinToString(", ")
 
-        val dbName = extDbManager.getOrganizationDatabaseName(organizationId)
+        val dbName = extDbManager.getDatabaseName(organizationId)
         logger.info(
                 "Removing users $userIds from database $dbName, schema usage and all privileges on all tables in schemas {} and {}",
                 OPENLATTICE_SCHEMA,

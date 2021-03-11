@@ -21,7 +21,7 @@
 
 package com.openlattice.assembler.tasks
 
-import com.openlattice.assembler.AssemblerDependencies
+import com.openlattice.assembler.UserRoleSyncTaskDependencies
 import com.openlattice.postgres.DataTables
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask
@@ -36,26 +36,20 @@ private val logger = LoggerFactory.getLogger(UserCredentialSyncTask::class.java)
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class UserCredentialSyncTask : HazelcastInitializationTask<AssemblerDependencies> {
-    override fun initialize(dependencies: AssemblerDependencies) {
-        dependencies
-                .assemblerConnectionManager
-                .getAllUsers()
-                .forEach { user ->
-                    dependencies.target.connection.use { conn ->
-                        conn.createStatement().use { stmt ->
-                            val (username, credential) = dependencies.dbCredentialService.getOrCreateDbAccount( user )
-
-                            try {
-                                stmt.execute(
-                                        "ALTER USER ${DataTables.quote(username)} WITH ENCRYPTED PASSWORD '$credential'"
-                                )
-                            } catch (ex: Exception) {
-                                logger.error("Unable to set credential for user {}", username, ex)
-                            }
-                        }
+class UserCredentialSyncTask : HazelcastInitializationTask<UserRoleSyncTaskDependencies> {
+    override fun initialize(dependencies: UserRoleSyncTaskDependencies) {
+        dependencies.externalDatabaseConnectionManager.connectAsSuperuser().connection.use { conn ->
+            conn.createStatement().use { stmt ->
+                dependencies.securePrincipalsManager.allUsers.forEach { user ->
+                    val (username, credential) = dependencies.dbCredentialService.getOrCreateDbAccount( user )
+                    try {
+                        stmt.execute( "ALTER USER ${DataTables.quote(username)} WITH ENCRYPTED PASSWORD '$credential'" )
+                    } catch (ex: Exception) {
+                        logger.error("Unable to set credential for user {}", username, ex)
                     }
                 }
+            }
+        }
     }
 
     override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
@@ -74,7 +68,7 @@ class UserCredentialSyncTask : HazelcastInitializationTask<AssemblerDependencies
         return Task.USER_CREDENTIAL_SYNC_TASK.name
     }
 
-    override fun getDependenciesClass(): Class<out AssemblerDependencies> {
-        return AssemblerDependencies::class.java
+    override fun getDependenciesClass(): Class<out UserRoleSyncTaskDependencies> {
+        return UserRoleSyncTaskDependencies::class.java
     }
 }
