@@ -22,9 +22,10 @@ package com.openlattice.datastore.data.controllers;
 
 import com.auth0.spring.security.api.authentication.PreAuthenticatedAuthenticationJsonWebToken;
 import com.codahale.metrics.annotation.Timed;
+import com.geekbeast.rhizome.jobs.HazelcastJobService;
+import com.geekbeast.rhizome.jobs.JobStatus;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.*;
-import com.openlattice.analysis.requests.Filter;
 import com.openlattice.auditing.AuditEventType;
 import com.openlattice.auditing.AuditableEvent;
 import com.openlattice.auditing.AuditingComponent;
@@ -39,6 +40,7 @@ import com.openlattice.controllers.exceptions.BadRequestException;
 import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.data.*;
 import com.openlattice.data.graph.DataGraphServiceHelper;
+import com.openlattice.data.jobs.DataDeletionJobState;
 import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
 import com.openlattice.datastore.services.EdmService;
@@ -115,6 +117,12 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
 
     @Inject
     private DataDeletionManager deletionManager;
+
+    @Inject
+    private HazelcastJobService jobService;
+
+    private static int DELETION_BLOCKING_INTERVAL   = 1000 * 5; // 5 seconds
+    private static int MAX_DELETION_BLOCKING_CHECKS = DELETION_BLOCKING_INTERVAL * 12 * 5; // 5 minutes
 
     @RequestMapping(
             path = { "/" + ENTITY_SET + "/" + SET_ID_PATH },
@@ -646,12 +654,12 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     @RequestMapping(
             path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ALL },
             method = RequestMethod.DELETE )
-    public Integer deleteAllEntitiesFromEntitySet(
+    public UUID deleteAllEntitiesFromEntitySet(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @RequestParam( value = TYPE ) DeleteType deleteType ) {
         ensureEntitySetCanBeWritten( entitySetId );
 
-        WriteEvent writeEvent = deletionManager
+        UUID deletionJobId = deletionManager
                 .clearOrDeleteEntitySetIfAuthorized( entitySetId, deleteType, Principals.getCurrentPrincipals() );
 
         recordEvent( new AuditableEvent(
@@ -662,11 +670,11 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                         + " through DataApi.deleteAllEntitiesFromEntitySet",
                 Optional.empty(),
                 ImmutableMap.of(),
-                getDateTimeFromLong( writeEvent.getVersion() ),
+                OffsetDateTime.now(),
                 Optional.empty()
         ) );
 
-        return writeEvent.getNumUpdates();
+        return deletionJobId;
     }
 
     @Timed
@@ -675,8 +683,9 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     public Integer deleteEntity(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId,
-            @RequestParam( value = TYPE ) DeleteType deleteType ) {
-        return deleteEntities( entitySetId, ImmutableSet.of( entityKeyId ), deleteType );
+            @RequestParam( value = TYPE ) DeleteType deleteType,
+            @RequestParam( value = BLOCK, defaultValue = "false" ) boolean blockUntilCompletion ) {
+        return deleteEntities( entitySetId, ImmutableSet.of( entityKeyId ), deleteType, blockUntilCompletion );
     }
 
     @Timed
@@ -685,11 +694,12 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     public Integer deleteEntities(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @RequestBody Set<UUID> entityKeyIds,
-            @RequestParam( value = TYPE ) DeleteType deleteType ) {
+            @RequestParam( value = TYPE ) DeleteType deleteType,
+            @RequestParam( value = BLOCK, defaultValue = "false" ) boolean blockUntilCompletion ) {
 
         ensureEntitySetCanBeWritten( entitySetId );
 
-        WriteEvent writeEvent = deletionManager
+        UUID deletionJobId = deletionManager
                 .clearOrDeleteEntitiesIfAuthorized( entitySetId,
                         entityKeyIds,
                         deleteType,
@@ -702,11 +712,11 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                 "Entities deleted using delete type " + deleteType.toString() + " through DataApi.deleteEntities",
                 Optional.of( entityKeyIds ),
                 ImmutableMap.of(),
-                getDateTimeFromLong( writeEvent.getVersion() ),
+                OffsetDateTime.now(),
                 Optional.empty()
         ) );
 
-        return writeEvent.getNumUpdates();
+        return blockOnDeletionJobGettingNumUpdates( deletionJobId, blockUntilCompletion );
     }
 
     @Timed
@@ -1057,6 +1067,34 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             throw new ForbiddenException( "You cannot modify data of entity sets " + auditEntitySetIds.toString()
                     + " because they are audit entity sets." );
         }
+    }
+
+    private int blockOnDeletionJobGettingNumUpdates( UUID deletionJobId, boolean blockUntilCompletion ) {
+        if ( !blockUntilCompletion ) {
+            return 0;
+        }
+
+        for ( int i = 0; i < MAX_DELETION_BLOCKING_CHECKS; i++ ) {
+            try {
+                Thread.sleep( DELETION_BLOCKING_INTERVAL );
+                JobStatus status = jobService.getStatus( deletionJobId );
+
+                if ( status.equals( JobStatus.FINISHED ) ) {
+                    return Long.valueOf(
+                            ( (DataDeletionJobState) jobService.getJob( deletionJobId ).getState() ).getNumDeletes()
+                    ).intValue();
+                }
+
+                if ( status.equals( JobStatus.CANCELED ) ) {
+                    throw new IllegalStateException(
+                            "Deletion failed -- job " + deletionJobId.toString() + " was canceled." );
+                }
+            } catch ( InterruptedException e ) {
+                logger.error( "Unable to block until deletion finished." );
+            }
+        }
+
+        return 0;
     }
 
 }

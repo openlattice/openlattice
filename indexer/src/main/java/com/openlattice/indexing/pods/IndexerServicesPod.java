@@ -409,7 +409,9 @@ public class IndexerServicesPod {
                 authorizationManager(),
                 auditRecordEntitySetsManager(),
                 entityDatastore(),
-                graphApi()
+                graphApi(),
+                jobService(),
+                partitionManager()
         );
     }
 

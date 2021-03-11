@@ -100,10 +100,10 @@ interface EntitySetsApi {
      * Hard deletes the entity set
      *
      * @param entitySetId the ID for the entity set
-     * @return The number of entities deleted.
+     * @return The id of the deletion job
      */
     @DELETE(BASE + ALL + ID_PATH)
-    fun deleteEntitySet(@Path(ID) entitySetId: UUID): Int
+    fun deleteEntitySet(@Path(ID) entitySetId: UUID): UUID
 
     /**
      * Get entity set id, entity type id, name, title, description, and contacts list for a given entity set.

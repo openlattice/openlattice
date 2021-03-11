@@ -40,7 +40,6 @@ import com.openlattice.controllers.util.ApiExceptions
 import com.openlattice.data.DataDeletionManager
 import com.openlattice.data.DataGraphManager
 import com.openlattice.data.DeleteType
-import com.openlattice.data.WriteEvent
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
@@ -287,20 +286,16 @@ constructor(
 
     @Timed
     @RequestMapping(path = [ALL + ID_PATH], method = [RequestMethod.DELETE])
-    override fun deleteEntitySet(@PathVariable(ID) entitySetId: UUID): Int {
+    override fun deleteEntitySet(@PathVariable(ID) entitySetId: UUID): UUID {
         val entitySet = checkPermissionsForDelete(entitySetId)
         ensureEntitySetCanBeDeleted(entitySet)
 
         /* Delete first entity set data */
-        val deleted = if (!entitySet.isLinking) {
-            // associations need to be deleted first, because edges are deleted in DataGraphManager.deleteEntitySet call
-            deletionManager.clearOrDeleteEntitySetIfAuthorized(
-                    entitySet.id, DeleteType.Hard, Principals.getCurrentPrincipals()
-            )
-        } else {
-            // linking entitysets have no entities or associations
-            WriteEvent(System.currentTimeMillis(), 1)
-        }
+        val deletionJobId = deletionManager.clearOrDeleteEntitySetIfAuthorized(
+                entitySet.id,
+                DeleteType.Hard,
+                Principals.getCurrentPrincipals()
+        )
 
         deleteAuditEntitySetsForId(entitySetId)
         entitySetManager.deleteEntitySet(entitySet)
@@ -318,7 +313,7 @@ constructor(
                 )
         )
 
-        return deleted.numUpdates
+        return deletionJobId
     }
 
     private fun deleteAuditEntitySetsForId(entitySetId: UUID) {

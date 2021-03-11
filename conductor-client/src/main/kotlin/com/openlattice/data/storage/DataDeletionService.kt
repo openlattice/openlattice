@@ -1,5 +1,6 @@
 package com.openlattice.data.storage
 
+import com.geekbeast.rhizome.jobs.HazelcastJobService
 import com.google.common.collect.Iterables
 import com.google.common.collect.Sets
 import com.openlattice.IdConstants
@@ -7,6 +8,9 @@ import com.openlattice.auditing.AuditRecordEntitySetsManager
 import com.openlattice.authorization.*
 import com.openlattice.controllers.exceptions.ForbiddenException
 import com.openlattice.data.*
+import com.openlattice.data.jobs.DataDeletionJob
+import com.openlattice.data.jobs.DataDeletionJobState
+import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EntitySet
@@ -45,7 +49,9 @@ class DataDeletionService(
         private val authorizationManager: AuthorizationManager,
         private val aresManager: AuditRecordEntitySetsManager,
         private val eds: EntityDatastore,
-        private val graphService: GraphService
+        private val graphService: GraphService,
+        private val jobService: HazelcastJobService,
+        private val partitionManager: PartitionManager
 ) : DataDeletionManager {
 
     companion object {
@@ -56,51 +62,42 @@ class DataDeletionService(
 
     /** Delete all entities from an entity set **/
 
-    override fun clearOrDeleteEntitySet(entitySetId: UUID, deleteType: DeleteType): WriteEvent {
-        return clearOrDeleteEntitySet(entitySetId, deleteType, setOf(), skipAuthChecks = true)
+    override fun clearOrDeleteEntitySet(entitySetId: UUID, deleteType: DeleteType): UUID {
+        val partitions = partitionManager.getEntitySetPartitions(entitySetId)
+
+        return jobService.submitJob(DataDeletionJob(DataDeletionJobState(
+                entitySetId,
+                deleteType,
+                partitions
+        )))
+
     }
 
     override fun clearOrDeleteEntitySetIfAuthorized(
             entitySetId: UUID,
             deleteType: DeleteType,
             principals: Set<Principal>
-    ): WriteEvent {
-        return clearOrDeleteEntitySet(entitySetId, deleteType, principals, skipAuthChecks = false)
-    }
-
-    private fun clearOrDeleteEntitySet(
-            entitySetId: UUID,
-            deleteType: DeleteType,
-            principals: Set<Principal>,
-            skipAuthChecks: Boolean = false
-    ): WriteEvent {
-
-        val authorizedPropertyTypes = getAuthorizedPropertyTypesForDelete(
-                entitySetId,
-                Optional.empty(),
+    ): UUID {
+        val authorizedPropertyTypes = getAuthorizedPropertyTypesForDeleteByEntitySet(
+                setOf(entitySetId),
                 deleteType,
-                principals,
-                skipAuthChecks
-        )
+                Optional.empty(),
+                principals
+        ).getValue(entitySetId)
 
-        // associations need to be deleted first, because edges are deleted when deleting entities in entity set
-        clearOrDeleteAssociations(entitySetId, Optional.empty(), deleteType, principals, skipAuthChecks)
+        // TODO: fix auth checks
 
-        val writeEvent = if (deleteType == DeleteType.Hard) {
-            eds.deleteEntitySetData(entitySetId, authorizedPropertyTypes)
-        } else {
-            eds.clearEntitySet(entitySetId, authorizedPropertyTypes)
-        }
-
-        logger.info("Deleted {} entities from entity set {}.", writeEvent.numUpdates, entitySetId)
-
-        return writeEvent
-
+        return clearOrDeleteEntitySet(entitySetId, deleteType)
     }
 
+    override fun clearOrDeleteEntities(entitySetId: UUID, entityKeyIds: Set<UUID>, deleteType: DeleteType): UUID {
+        val partitions = partitionManager.getEntitySetPartitions(entitySetId)
 
-    override fun clearOrDeleteEntities(entitySetId: UUID, entityKeyIds: Set<UUID>, deleteType: DeleteType): WriteEvent {
-        return clearOrDeleteEntities(entitySetId, entityKeyIds, deleteType, setOf(), skipAuthChecks = true)
+        return jobService.submitJob(DataDeletionJob(DataDeletionJobState(
+                entitySetId,
+                deleteType,
+                partitions
+        )))
     }
 
 
@@ -109,126 +106,10 @@ class DataDeletionService(
             entityKeyIds: Set<UUID>,
             deleteType: DeleteType,
             principals: Set<Principal>
-    ): WriteEvent {
-        return clearOrDeleteEntities(entitySetId, entityKeyIds, deleteType, principals, skipAuthChecks = false)
-    }
+    ): UUID {
+        // TODO auth checks
 
-    override fun clearOrDeleteEntitiesAndNeighborsIfAuthorized(
-            entitySetId: UUID,
-            entityKeyIds: Set<UUID>,
-            srcEntitySetIds: Set<UUID>,
-            dstEntitySetIds: Set<UUID>,
-            deleteType: DeleteType,
-            principals: Set<Principal>
-    ): WriteEvent {
-
-        // we don't include associations in filtering, since they will be deleted anyways with deleting the entities
-        val filteringNeighborEntitySetIds = srcEntitySetIds + dstEntitySetIds
-
-        // if no neighbor entity set ids are defined to delete from, it reduces down to a simple deleteEntities call
-        if (filteringNeighborEntitySetIds.isEmpty()) {
-            return clearOrDeleteEntities(entitySetId, entityKeyIds, deleteType, principals)
-        }
-
-        /*
-         * 1 - Collect all neighbor entities, organized by EntitySet
-         */
-
-        val includeClearedEdges = deleteType == DeleteType.Hard
-
-        val entitySetIdToEntityDataKeys: Map<UUID, Set<UUID>> = dgm
-                .getEdgesConnectedToEntities(entitySetId, entityKeyIds, includeClearedEdges)
-                .filter { edge ->
-                    (edge.dst.entitySetId == entitySetId && filteringNeighborEntitySetIds.contains(edge.src.entitySetId))
-                            || (edge.src.entitySetId == entitySetId && filteringNeighborEntitySetIds.contains(edge.dst.entitySetId))
-                }
-                .flatMap { edge -> setOf(edge.src, edge.dst) }
-                .groupBy { it.entitySetId }
-                .mapValues { it.value.map { it.entityKeyId }.toSet() }
-
-        /*
-        * 2 - Check authorization on all entities
-        */
-
-        /* Check entity set permissions */
-
-        val authorizedPropertiesByEntitySets = getAuthorizedPropertyTypesForDeleteByEntitySet(
-                setOf(entitySetId) + entitySetIdToEntityDataKeys.keys, // include original entity set too
-                deleteType,
-                Optional.empty(),
-                principals
-        )
-
-        /* Check association permissions */
-
-        // only original entity set can be association entity set
-        val isAssociation = entitySetManager.isAssociationEntitySet(entitySetId)
-        val authorizedAssociationPropertiesByEntitySets = if (isAssociation) {
-            // no need to check associations on original entity set
-            getAuthorizedPropertyTypesOfAssociations(entitySetIdToEntityDataKeys, deleteType, principals)
-        } else {
-            getAuthorizedPropertyTypesOfAssociations(
-                    mapOf(entitySetId to entityKeyIds) + entitySetIdToEntityDataKeys,
-                    deleteType,
-                    principals
-            )
-        }
-
-
-        /*
-         * 3 - Delete all entities
-         */
-
-        /* Delete entity */
-
-        var numUpdates = 0
-
-        // associations need to be deleted first, because edges are deleted when deleting requested entities
-        if (isAssociation) {
-            // if entity set is association, we only delete its edges
-            deleteEdgesForAssociationEntitySet(entitySetId, Optional.of(entityKeyIds), deleteType)
-        } else {
-            val associationNumUpdates = clearOrDeleteAuthorizedAssociations(
-                    entitySetId,
-                    Optional.of(entityKeyIds),
-                    deleteType,
-                    authorizedAssociationPropertiesByEntitySets.getValue(entitySetId)
-            )
-            numUpdates += associationNumUpdates
-        }
-
-        val entityWriteEvent = clearOrDeleteAuthorizedEntities(
-                entitySetId,
-                entityKeyIds,
-                deleteType,
-                authorizedPropertiesByEntitySets.getValue(entitySetId)
-        )
-        numUpdates += entityWriteEvent.numUpdates
-
-
-        /* Delete neighbors */
-
-        numUpdates += entitySetIdToEntityDataKeys.entries.stream().parallel().mapToInt { entry ->
-            val neighborEntitySetId = entry.key
-            val neighborEntityKeyIds = entry.value
-
-            // associations need to be deleted first, because edges are deleted when deleting requested entities
-            val associationNumUpdates = clearOrDeleteAuthorizedAssociations(
-                    neighborEntitySetId,
-                    Optional.of(neighborEntityKeyIds),
-                    deleteType,
-                    authorizedAssociationPropertiesByEntitySets.getValue(neighborEntitySetId))
-
-            val neighborWriteEvent = clearOrDeleteAuthorizedEntities(
-                    neighborEntitySetId,
-                    neighborEntityKeyIds,
-                    deleteType,
-                    authorizedPropertiesByEntitySets.getValue(neighborEntitySetId))
-
-            neighborWriteEvent.numUpdates + associationNumUpdates
-        }.sum()
-
-        return WriteEvent(entityWriteEvent.version, numUpdates)
+        return clearOrDeleteEntities(entitySetId, entityKeyIds, deleteType)
     }
 
     /**
@@ -241,7 +122,17 @@ class DataDeletionService(
             deleteType: DeleteType,
             principals: Set<Principal>,
             skipAuthChecks: Boolean = false
-    ): WriteEvent {
+    ): UUID {
+
+        val partitions = partitionManager.getEntitySetPartitions(entitySetId)
+
+        return jobService.submitJob(DataDeletionJob(DataDeletionJobState(
+                entitySetId,
+                deleteType,
+                partitions,
+                entityKeyIds
+        )))
+
 
         // access checks for entity set and properties
         val authorizedPropertyTypes = getAuthorizedPropertyTypesForDelete(
@@ -546,25 +437,6 @@ class DataDeletionService(
 
     }
 
-    private fun getAuthorizedPropertyTypesForDelete(
-            entitySetId: UUID,
-            properties: Optional<Set<UUID>>,
-            deleteType: DeleteType,
-            principals: Set<Principal>,
-            skipAuthChecks: Boolean = false
-    ): Map<UUID, PropertyType> {
-
-        if (skipAuthChecks) {
-            return entitySetManager.getPropertyTypesForEntitySet(entitySetId)
-        }
-
-        return getAuthorizedPropertyTypesForDeleteByEntitySet(
-                setOf(entitySetId),
-                deleteType,
-                properties,
-                principals
-        ).getValue(entitySetId)
-    }
 
     private fun getRequiredPermissions(deleteType: DeleteType): EnumSet<Permission> {
         return if (deleteType === DeleteType.Hard) {
@@ -572,6 +444,126 @@ class DataDeletionService(
         } else {
             EnumSet.of(Permission.WRITE)
         }
+    }
+
+
+    @Deprecated("This is very broken.")
+    override fun clearOrDeleteEntitiesAndNeighborsIfAuthorized(
+            entitySetId: UUID,
+            entityKeyIds: Set<UUID>,
+            srcEntitySetIds: Set<UUID>,
+            dstEntitySetIds: Set<UUID>,
+            deleteType: DeleteType,
+            principals: Set<Principal>
+    ): WriteEvent {
+
+        // we don't include associations in filtering, since they will be deleted anyways with deleting the entities
+        val filteringNeighborEntitySetIds = srcEntitySetIds + dstEntitySetIds
+
+        // if no neighbor entity set ids are defined to delete from, it reduces down to a simple deleteEntities call
+        if (filteringNeighborEntitySetIds.isEmpty()) {
+            return clearOrDeleteEntities(entitySetId, entityKeyIds, deleteType, principals)
+        }
+
+        /*
+         * 1 - Collect all neighbor entities, organized by EntitySet
+         */
+
+        val includeClearedEdges = deleteType == DeleteType.Hard
+
+        val entitySetIdToEntityDataKeys: Map<UUID, Set<UUID>> = dgm
+                .getEdgesConnectedToEntities(entitySetId, entityKeyIds, includeClearedEdges)
+                .filter { edge ->
+                    (edge.dst.entitySetId == entitySetId && filteringNeighborEntitySetIds.contains(edge.src.entitySetId))
+                            || (edge.src.entitySetId == entitySetId && filteringNeighborEntitySetIds.contains(edge.dst.entitySetId))
+                }
+                .flatMap { edge -> setOf(edge.src, edge.dst) }
+                .groupBy { it.entitySetId }
+                .mapValues { it.value.map { it.entityKeyId }.toSet() }
+
+        /*
+        * 2 - Check authorization on all entities
+        */
+
+        /* Check entity set permissions */
+
+        val authorizedPropertiesByEntitySets = getAuthorizedPropertyTypesForDeleteByEntitySet(
+                setOf(entitySetId) + entitySetIdToEntityDataKeys.keys, // include original entity set too
+                deleteType,
+                Optional.empty(),
+                principals
+        )
+
+        /* Check association permissions */
+
+        // only original entity set can be association entity set
+        val isAssociation = entitySetManager.isAssociationEntitySet(entitySetId)
+        val authorizedAssociationPropertiesByEntitySets = if (isAssociation) {
+            // no need to check associations on original entity set
+            getAuthorizedPropertyTypesOfAssociations(entitySetIdToEntityDataKeys, deleteType, principals)
+        } else {
+            getAuthorizedPropertyTypesOfAssociations(
+                    mapOf(entitySetId to entityKeyIds) + entitySetIdToEntityDataKeys,
+                    deleteType,
+                    principals
+            )
+        }
+
+
+        /*
+         * 3 - Delete all entities
+         */
+
+        /* Delete entity */
+
+        var numUpdates = 0
+
+        // associations need to be deleted first, because edges are deleted when deleting requested entities
+        if (isAssociation) {
+            // if entity set is association, we only delete its edges
+            deleteEdgesForAssociationEntitySet(entitySetId, Optional.of(entityKeyIds), deleteType)
+        } else {
+            val associationNumUpdates = clearOrDeleteAuthorizedAssociations(
+                    entitySetId,
+                    Optional.of(entityKeyIds),
+                    deleteType,
+                    authorizedAssociationPropertiesByEntitySets.getValue(entitySetId)
+            )
+            numUpdates += associationNumUpdates
+        }
+
+        val entityWriteEvent = clearOrDeleteAuthorizedEntities(
+                entitySetId,
+                entityKeyIds,
+                deleteType,
+                authorizedPropertiesByEntitySets.getValue(entitySetId)
+        )
+        numUpdates += entityWriteEvent.numUpdates
+
+
+        /* Delete neighbors */
+
+        numUpdates += entitySetIdToEntityDataKeys.entries.stream().parallel().mapToInt { entry ->
+            val neighborEntitySetId = entry.key
+            val neighborEntityKeyIds = entry.value
+
+            // associations need to be deleted first, because edges are deleted when deleting requested entities
+            val associationNumUpdates = clearOrDeleteAuthorizedAssociations(
+                    neighborEntitySetId,
+                    Optional.of(neighborEntityKeyIds),
+                    deleteType,
+                    authorizedAssociationPropertiesByEntitySets.getValue(neighborEntitySetId))
+
+            val neighborWriteEvent = clearOrDeleteAuthorizedEntities(
+                    neighborEntitySetId,
+                    neighborEntityKeyIds,
+                    deleteType,
+                    authorizedPropertiesByEntitySets.getValue(neighborEntitySetId))
+
+            neighborWriteEvent.numUpdates + associationNumUpdates
+        }.sum()
+
+        return WriteEvent(entityWriteEvent.version, numUpdates)
     }
 
 }

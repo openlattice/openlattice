@@ -12,7 +12,7 @@ interface DataDeletionManager {
             entitySetId: UUID,
             deleteType: DeleteType,
             principals: Set<Principal>
-    ): WriteEvent
+    ): UUID
 
     /**
      * Clears or deletes the specified entity key ids from an entity set, as well as any edges and association entities, if authorized
@@ -22,12 +22,13 @@ interface DataDeletionManager {
             entityKeyIds: Set<UUID>,
             deleteType: DeleteType,
             principals: Set<Principal>
-    ): WriteEvent
+    ): UUID
 
 
     /**
      * Clears or deletes the specified entity key ids from an entity set, as well as any edges and association entities, if authorized
      */
+    @Deprecated("This is very broken.")
     fun clearOrDeleteEntitiesAndNeighborsIfAuthorized(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
@@ -62,7 +63,7 @@ interface DataDeletionManager {
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
             deleteType: DeleteType
-    ): WriteEvent
+    ): UUID
 
     /**
      * Clears or deletes all entities from an entity set, as well as any edges and association entities.
@@ -72,6 +73,6 @@ interface DataDeletionManager {
     fun clearOrDeleteEntitySet(
             entitySetId: UUID,
             deleteType: DeleteType
-    ): WriteEvent
+    ): UUID
 
 }

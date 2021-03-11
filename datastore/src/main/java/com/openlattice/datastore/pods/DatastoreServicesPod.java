@@ -659,7 +659,9 @@ public class DatastoreServicesPod {
                 authorizationManager(),
                 auditRecordEntitySetsManager(),
                 entityDatastore(),
-                graphApi()
+                graphApi(),
+                jobService(),
+                partitionManager()
         );
     }
 
