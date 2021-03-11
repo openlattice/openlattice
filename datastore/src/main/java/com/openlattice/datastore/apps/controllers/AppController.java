@@ -201,7 +201,7 @@ public class AppController implements AppApi, AuthorizingComponent {
         Map<UUID, AppType> result = Maps.newHashMapWithExpectedSize(collectionTemplateTypeIds.size());
         collectionsManager.getAllEntityTypeCollections().forEach( collection -> {
             collection.getTemplate().forEach( templateType -> {
-                
+
                 if (collectionTemplateTypeIds.contains( templateType.getId() )) {
                     result.put( templateType.getId(), new AppType(
                             templateType.getId(),
@@ -234,7 +234,7 @@ public class AppController implements AppApi, AuthorizingComponent {
             method = RequestMethod.GET,
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Map<UUID, AppTypeSetting> getOrganizationAppsByAppId(
-            @RequestParam( ORGANIZATION_ID ) UUID organizationId ) {
+            @PathVariable( ORGANIZATION_ID ) UUID organizationId ) {
         ensureOwnerAccess( new AclKey( organizationId ) );
         return appService.getOrganizationAppsByAppId( organizationId );
     }
