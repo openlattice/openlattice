@@ -265,7 +265,8 @@ class BackgroundIndexingService(
 
         if (entitiesById.isEmpty()
                 || !elasticsearchApi.createBulkEntityData(entitySet.entityTypeId, entitySet.id, entitiesById)) {
-            logger.error("Failed to index elements with entitiesById: {}", entitiesById)
+            logger.error("Failed to index {} elements.", entitiesById.size)
+            logger.debug("Failed to index elements with entitiesById: {}", entitiesById)
             return 0
         }
 
@@ -313,7 +314,8 @@ class BackgroundIndexingService(
             )
         } else {
             indexCount = 0
-            logger.error(
+            logger.error("Failed to un-index {} elements of entity set {}", batchToIndex.size, entitySet.id)
+            logger.debug(
                     "Failed to un-index elements of entity set {} with entity key ids: {}",
                     entitySet.id,
                     batchToIndex.keys

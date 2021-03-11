@@ -2,10 +2,8 @@ package com.openlattice
 
 import com.google.common.base.Stopwatch
 import com.google.common.collect.ImmutableMap
-import com.hazelcast.config.IndexType
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicates
-import com.hazelcast.query.QueryConstants
 import com.openlattice.auditing.AuditEventType
 import com.openlattice.auditing.AuditRecordEntitySetsManager
 import com.openlattice.auditing.AuditableEvent
@@ -21,7 +19,9 @@ import com.openlattice.organization.OrganizationExternalDatabaseTable
 import com.openlattice.organizations.ExternalDatabaseManagementService
 import com.openlattice.organizations.OrganizationMetadataEntitySetsService
 import com.openlattice.organizations.mapstores.ORGANIZATION_ID_INDEX
+import com.openlattice.postgres.TableColumn
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService
+import com.openlattice.postgres.external.Schemas
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import java.time.OffsetDateTime
@@ -48,21 +48,13 @@ class BackgroundExternalDatabaseSyncingService(
     companion object {
         private val logger = LoggerFactory.getLogger(BackgroundExternalDatabaseSyncingService::class.java)
 
-        const val MAX_DURATION_MILLIS = 1_000L * 60 * 30 // 30 minutes
-        const val SCAN_RATE = 1_000L * 30                // 30 seconds
+        const val SCAN_RATE = 1_000L * 30 // 30 seconds
     }
 
     private val organizationExternalDatabaseColumns = ORGANIZATION_EXTERNAL_DATABASE_COLUMN.getMap(hazelcastInstance)
     private val organizationExternalDatabaseTables = ORGANIZATION_EXTERNAL_DATABASE_TABLE.getMap(hazelcastInstance)
     private val organizationDatabases = ORGANIZATION_DATABASES.getMap(hazelcastInstance)
-
     private val organizations = HazelcastMap.ORGANIZATIONS.getMap(hazelcastInstance)
-    private val expirationLocks = HazelcastMap.BACKGROUND_ORGANIZATION_DATABASE_SYNCING_LOCKS.getMap(hazelcastInstance)
-
-
-    init {
-        expirationLocks.addIndex(IndexType.SORTED, QueryConstants.THIS_ATTRIBUTE_NAME.value())
-    }
 
     private val taskLock = ReentrantLock()
 
@@ -83,12 +75,10 @@ class BackgroundExternalDatabaseSyncingService(
 
         try {
             val timer = Stopwatch.createStarted()
-            val lockedOrganizationIds = organizations.keys
-                    .filter { it != IdConstants.GLOBAL_ORGANIZATION_ID.id }
-                    .filter { tryLockOrganization(it) }
-                    .shuffled()
 
-            lockedOrganizationIds
+            organizations.keys
+                    .filter { it != IdConstants.GLOBAL_ORGANIZATION_ID.id }
+                    .shuffled()
                     .forEach {
                         try {
                             syncOrganizationDatabases(it)
@@ -96,8 +86,6 @@ class BackgroundExternalDatabaseSyncingService(
                             logger.error("An error occurred when trying to sync database for org {}", it, e)
                         }
                     }
-
-            lockedOrganizationIds.forEach(this::deleteLock)
 
             logger.info("Completed syncing database objects in {}", timer)
         } catch (ex: Exception) {
@@ -135,7 +123,7 @@ class BackgroundExternalDatabaseSyncingService(
 
         removeNonexistentTablesAndColumnsForOrg(orgId, tableIds, columnIds)
 
-        logger.info("Finished syncing database for organization {} in {} seconds", orgId, sw.elapsed(TimeUnit.SECONDS))
+        logger.info("Finished syncing database for organization {} in {} ms", orgId, sw.elapsed(TimeUnit.MILLISECONDS))
     }
 
     private fun initializeTablePermissions(
@@ -150,7 +138,13 @@ class BackgroundExternalDatabaseSyncingService(
                 table,
                 columns
         )
-        edms.executePrivilegesUpdate(Action.ADD, columns.map { Acl(it.getAclKey(), listOf(Ace(adminRolePrincipal, EnumSet.allOf(Permission::class.java)))) })
+        val columnAcls = columns.map {
+            Acl(it.getAclKey(), listOf(Ace(adminRolePrincipal, EnumSet.allOf(Permission::class.java))))
+        }
+        val tableColsByAclKey = columns.associate {
+            it.getAclKey() to TableColumn(it.organizationId, it.tableId, it.id, Schemas.fromName(table.schema))
+        }
+        extDbPermsService.updateExternalTablePermissions(Action.ADD, columnAcls, tableColsByAclKey)
 
         // initialize OL permissions
         val acls = edms.syncPermissions(adminRolePrincipal, table, columns)
@@ -318,13 +312,4 @@ class BackgroundExternalDatabaseSyncingService(
         }.toList()
         auditingManager.recordEvents(events)
     }
-
-    private fun tryLockOrganization(orgId: UUID): Boolean {
-        return expirationLocks.putIfAbsent(orgId, System.currentTimeMillis() + MAX_DURATION_MILLIS) == null
-    }
-
-    private fun deleteLock(orgId: UUID) {
-        expirationLocks.delete(orgId)
-    }
-
 }

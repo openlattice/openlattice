@@ -91,13 +91,13 @@ class GraphProcessingService(
                             it.executeUpdate(propQuery)
                         }
                     } catch(e:SQLException) {
-                        logger.error("Unable to mark root property as propagated with sql query: {} ${System.lineSeparator()}$e", propQuery)
+                        logger.error("Unable to mark root property as propagated with sql query: {} ${System.lineSeparator()}", propQuery, e)
                         0
                     }
                 }
             }
         } catch(e: IllegalStateException) {
-            logger.error("Couldn't mark root entities as propagated ${edm.getEntityTypeFqn(rootProp.entityTypeId)}: $e")
+            logger.error("Couldn't mark root entities as propagated ${rootProp.entityTypeId}: ", e)
             return 0
         }
     }
@@ -145,14 +145,14 @@ class GraphProcessingService(
                         return queries.map(stmt::executeUpdate).sum()
                     }
                 } catch (e: SQLException) {
-                    logger.error("Unable to propagate information with sql queries: {} ${System.lineSeparator()}$e", queries)
+                    logger.error("Unable to propagate information with sql queries: {} ${System.lineSeparator()}", queries, e)
                     return 0
                 } finally {
                     conn.autoCommit = true
                 }
             }
         } catch(e:IllegalStateException) {
-            logger.error("Couldn't propagate input entity type ${edm.getEntityTypeFqn(input.entityTypeId)}: $e")
+            logger.error("Couldn't propagate input entity type ${input.entityTypeId}", e)
             return 0
         }
     }
@@ -225,13 +225,13 @@ class GraphProcessingService(
                                 insertCount
                             }
                         } catch (e: SQLException) {
-                            logger.error("Unable to compute aggregated values with queries: {} ${System.lineSeparator()}$e", computeQuery)
+                            logger.error("Unable to compute aggregated values with queries: {} ${System.lineSeparator()}", computeQuery, e)
                              0
                         }
                     }
                 }
             } catch(e:IllegalStateException) {
-                logger.error("Couldn't compute property type ${processor.getOutput().second} of entity type ${processor.getOutput().first}: $e")
+                logger.error("Couldn't compute property type ${processor.getOutput().second} of entity type ${processor.getOutput().first}", e)
                  0
             }
         }.sum()

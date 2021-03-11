@@ -113,8 +113,8 @@ class HazelcastPrincipalService(
             }
         } catch (e: Exception) {
             logger.error("Unable to create principal {}", principal, e)
-            Util.deleteSafely(principals, aclKey)
-            Util.deleteSafely(principalTrees, aclKey)
+            principals.delete(aclKey)
+            principalTrees.delete(aclKey)
             authorizations.deletePermissions(aclKey)
             reservations.release(principal.id)
             throw IllegalStateException("Unable to create principal: $principal")
@@ -171,8 +171,8 @@ class HazelcastPrincipalService(
         authorizations.deletePermissions(aclKey)
         principalTrees.executeOnEntries(NestedPrincipalRemover(setOf(aclKey)), hasSecurablePrincipal(aclKey))
         reservations.release(aclKey[aclKey.getSize() - 1])
-        Util.deleteSafely(principalTrees, aclKey)
-        Util.deleteSafely(principals, aclKey)
+        principalTrees.delete(aclKey)
+        principals.delete(aclKey)
     }
 
     override fun deleteAllRolesInOrganization(organizationId: UUID) {

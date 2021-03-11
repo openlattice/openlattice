@@ -33,6 +33,7 @@ class ExternalDatabaseConnectionManager(
     private val perDbCache: LoadingCache<String, HikariDataSource> = CacheBuilder
             .newBuilder()
             .expireAfterAccess(1, TimeUnit.HOURS)
+            .removalListener<String, HikariDataSource> { it.value.close() }
             .build(cacheLoader())
 
     fun createDataSource(dbName: String, config: Properties, useSsl: Boolean): HikariDataSource {
