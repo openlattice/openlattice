@@ -93,7 +93,9 @@ class DataDeletionJob(
     }
 
     override fun updateProgress() {
-        progress = ((100 * state.numDeletes) / state.totalToDelete).toByte()
+        if (state.totalToDelete > 0) {
+            progress = ((100 * state.numDeletes) / state.totalToDelete).toByte()
+        }
     }
 
     private fun getTotalToDelete(): Long {
