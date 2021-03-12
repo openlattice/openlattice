@@ -79,4 +79,6 @@ interface GraphService {
     ): AggregationResult
 
     fun getNeighborEntitySets(entitySetIds: Set<UUID>): List<NeighborSets>
+
+    fun checkForUnauthorizedEdges(entitySetId: UUID, authorizedEdgeEntitySets: Set<UUID>, entityKeyIds: Set<UUID>?): Boolean
 }

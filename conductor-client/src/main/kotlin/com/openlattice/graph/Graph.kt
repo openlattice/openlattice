@@ -909,6 +909,42 @@ class Graph(
         }.toSet()
     }
 
+    override fun checkForUnauthorizedEdges(
+            entitySetId: UUID,
+            authorizedEdgeEntitySets: Set<UUID>,
+            entityKeyIds: Set<UUID>?
+    ): Boolean {
+        val notAssocClause = if (authorizedEdgeEntitySets.isEmpty()) "" else {
+            "AND NOT( ${EDGE_ENTITY_SET_ID.name} = ANY('{${authorizedEdgeEntitySets.joinToString()}}') )"
+        }
+
+        val srcEntitySetFilter = entitySetClause(entitySetId, entityKeyIds, SRC_ENTITY_SET_ID, SRC_ENTITY_KEY_ID)
+        val dstEntitySetFilter = entitySetClause(entitySetId, entityKeyIds, DST_ENTITY_SET_ID, DST_ENTITY_KEY_ID)
+
+        val query = """
+            SELECT 1 FROM ${E.name}
+            WHERE
+              ( ($srcEntitySetFilter) OR ($dstEntitySetFilter) )
+              $notAssocClause
+        """.trimIndent()
+
+        hds.connection.use { conn ->
+            conn.createStatement().use { stmt ->
+                stmt.executeQuery(query).use { rs ->
+                    return rs.next()
+                }
+            }
+        }
+    }
+
+    private fun entitySetClause(entitySetId: UUID, entityKeyIds: Set<UUID>?, entitySetColumn: PostgresColumnDefinition, entityKeyIdColumn: PostgresColumnDefinition): String {
+        val entityKeyIdClause = if (entityKeyIds.isNullOrEmpty()) "" else {
+            " AND ${entityKeyIdColumn.name} = ANY('{${entityKeyIds.joinToString()}}')"
+        }
+
+        return "${entitySetColumn.name} = '$entitySetId' $entityKeyIdClause"
+    }
+
     private fun buildAssociationTable(
             index: Int,
             selfEntitySetIds: Set<UUID>,

@@ -1,6 +1,9 @@
 package com.openlattice.data.jobs
 
+import com.fasterxml.jackson.annotation.JsonCreator
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.geekbeast.rhizome.jobs.AbstractDistributedJob
+import com.geekbeast.rhizome.jobs.JobStatus
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.map.IMap
 import com.openlattice.data.DeleteType
@@ -40,6 +43,19 @@ import java.util.*
 class DataDeletionJob(
         state: DataDeletionJobState
 ) : AbstractDistributedJob<Long, DataDeletionJobState>(state), MetastoreAware {
+
+    @JsonCreator
+    constructor(
+            id: UUID?,
+            taskId: Long?,
+            status: JobStatus,
+            progress: Byte,
+            hasWorkRemaining: Boolean,
+            result: Long?,
+            state: DataDeletionJobState
+    ) : this(state) {
+        initialize(id, taskId, status, progress, hasWorkRemaining, result)
+    }
 
     companion object {
         private const val BATCH_SIZE = 10_000
@@ -205,10 +221,12 @@ class DataDeletionJob(
         ps.setObject(index, edk.entityKeyId)
     }
 
+    @JsonIgnore
     override fun setHikariDataSource(hds: HikariDataSource) {
         this.hds = hds
     }
 
+    @JsonIgnore
     override fun setHazelcastInstance(hazelcastInstance: HazelcastInstance) {
         super.setHazelcastInstance(hazelcastInstance)
         this.entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
@@ -375,4 +393,32 @@ class DataDeletionJob(
               AND ${EDGE_ENTITY_KEY_ID.name} = ANY(?) 
         """.trimIndent()
     }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+        if (!super.equals(other)) return false
+
+        other as DataDeletionJob
+
+        if (GET_ENTITY_SET_COUNT_SQL != other.GET_ENTITY_SET_COUNT_SQL) return false
+        if (SOFT_DELETE_FROM_DATA_SQL != other.SOFT_DELETE_FROM_DATA_SQL) return false
+        if (HARD_DELETE_FROM_DATA_SQL != other.HARD_DELETE_FROM_DATA_SQL) return false
+        if (HARD_DELETE_FROM_IDS_SQL != other.HARD_DELETE_FROM_IDS_SQL) return false
+        if (SOFT_DELETE_FROM_IDS_SQL != other.SOFT_DELETE_FROM_IDS_SQL) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = super.hashCode()
+        result = 31 * result + GET_ENTITY_SET_COUNT_SQL.hashCode()
+        result = 31 * result + SOFT_DELETE_FROM_DATA_SQL.hashCode()
+        result = 31 * result + HARD_DELETE_FROM_DATA_SQL.hashCode()
+        result = 31 * result + HARD_DELETE_FROM_IDS_SQL.hashCode()
+        result = 31 * result + SOFT_DELETE_FROM_IDS_SQL.hashCode()
+        return result
+    }
+
+
 }

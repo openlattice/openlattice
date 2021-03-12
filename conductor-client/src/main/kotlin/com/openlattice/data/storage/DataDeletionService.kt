@@ -5,9 +5,17 @@ import com.google.common.collect.Iterables
 import com.google.common.collect.Sets
 import com.openlattice.IdConstants
 import com.openlattice.auditing.AuditRecordEntitySetsManager
-import com.openlattice.authorization.*
+import com.openlattice.authorization.AccessCheck
+import com.openlattice.authorization.AclKey
+import com.openlattice.authorization.AuthorizationManager
+import com.openlattice.authorization.Permission
+import com.openlattice.authorization.Principal
 import com.openlattice.controllers.exceptions.ForbiddenException
-import com.openlattice.data.*
+import com.openlattice.data.DataDeletionManager
+import com.openlattice.data.DataEdgeKey
+import com.openlattice.data.DataGraphManager
+import com.openlattice.data.DeleteType
+import com.openlattice.data.WriteEvent
 import com.openlattice.data.jobs.DataDeletionJob
 import com.openlattice.data.jobs.DataDeletionJobState
 import com.openlattice.data.storage.partitions.PartitionManager
@@ -20,6 +28,7 @@ import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.core.GraphService
 import com.openlattice.postgres.PostgresMetaDataProperties
 import com.openlattice.postgres.streams.BasePostgresIterable
+import com.openlattice.search.requests.EntityNeighborsFilter
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.stream.Collectors
@@ -56,6 +65,11 @@ class DataDeletionService(
 
     companion object {
         const val MAX_BATCH_SIZE = 10_000
+
+        val PERMISSIONS_FOR_DELETE_TYPE = mapOf(
+                DeleteType.Soft to EnumSet.of(Permission.WRITE),
+                DeleteType.Hard to EnumSet.of(Permission.OWNER)
+        )
     }
 
     private val logger = LoggerFactory.getLogger(DataDeletionService::class.java)
@@ -132,20 +146,6 @@ class DataDeletionService(
                 partitions,
                 entityKeyIds
         )))
-
-
-        // access checks for entity set and properties
-        val authorizedPropertyTypes = getAuthorizedPropertyTypesForDelete(
-                entitySetId,
-                Optional.empty(),
-                deleteType,
-                principals,
-                skipAuthChecks)
-
-        // associations need to be deleted first, because edges are deleted when deleting requested entities in entity set
-        clearOrDeleteAssociations(entitySetId, Optional.of(entityKeyIds), deleteType, principals, skipAuthChecks)
-
-        return clearOrDeleteAuthorizedEntities(entitySetId, entityKeyIds, deleteType, authorizedPropertyTypes)
     }
 
     private fun clearOrDeleteAuthorizedEntities(
@@ -188,11 +188,12 @@ class DataDeletionService(
             principals: Set<Principal>
     ): WriteEvent {
 
-        val authorizedPropertyTypes = getAuthorizedPropertyTypesForDelete(
-                entitySetId,
-                Optional.of(propertyTypeIds),
+        val authorizedPropertyTypes = getAuthorizedPropertyTypesForDeleteByEntitySet(
+                setOf(entitySetId),
                 deleteType,
-                principals)
+                Optional.of(propertyTypeIds),
+                principals
+        ).getValue(entitySetId)
 
         val writeEvent = if (deleteType === DeleteType.Hard) {
             eds.deleteEntityProperties(entitySetId, entityKeyIds, authorizedPropertyTypes)
@@ -462,7 +463,8 @@ class DataDeletionService(
 
         // if no neighbor entity set ids are defined to delete from, it reduces down to a simple deleteEntities call
         if (filteringNeighborEntitySetIds.isEmpty()) {
-            return clearOrDeleteEntities(entitySetId, entityKeyIds, deleteType, principals)
+            clearOrDeleteEntities(entitySetId, entityKeyIds, deleteType, principals)
+            return WriteEvent(0, 0) // TODO
         }
 
         /*
@@ -564,6 +566,42 @@ class DataDeletionService(
         }.sum()
 
         return WriteEvent(entityWriteEvent.version, numUpdates)
+    }
+
+    private fun authCheckForEntitySetAndItsNeighbors(entitySetId: UUID, principals: Set<Principal>, deleteType: DeleteType, entityKeyIds: Set<UUID>? = null) {
+        val isAssociationEntitySet = entitySetManager.getEntitySet(entitySetId)!!.flags.contains(EntitySetFlag.ASSOCIATION)
+
+        val authorizedEdgeEntitySets = if (isAssociationEntitySet) setOf() else entitySetManager.getAuthorizedNeighborEntitySets(
+                principals,
+                setOf(entitySetId),
+                EntityNeighborsFilter(setOf())
+        ).associationEntitySetIds.get()
+
+
+        val entitySetPropertyTypes = entitySetManager.getPropertyTypesOfEntitySets(authorizedEdgeEntitySets + entitySetId)
+
+        val requiredPermissions = PERMISSIONS_FOR_DELETE_TYPE.getValue(deleteType)
+        authorizationManager.accessChecksForPrincipals(entitySetPropertyTypes.flatMap { (entitySetId, propertyTypes) ->
+            propertyTypes.keys.map { ptId ->
+                AccessCheck(AclKey(entitySetId, ptId), requiredPermissions)
+            }
+        }.toSet(), principals).forEach { authorization ->
+            requiredPermissions.forEach { permission ->
+                if (!authorization.permissions.getValue(permission)) {
+                    val unauthorizedEntitySetId = authorization.aclKey.first()
+                    if (unauthorizedEntitySetId == entitySetId) {
+                        throw ForbiddenException("Unable to perform delete on entity set $entitySetId because " +
+                                "$requiredPermissions permissions are required on all its property types.")
+                    }
+                    authorizedEdgeEntitySets.remove(authorization.aclKey.first())
+                }
+            }
+        }
+
+        if (graphService.checkForUnauthorizedEdges(entitySetId, authorizedEdgeEntitySets, entityKeyIds)) {
+            throw ForbiddenException("Unable to perform delete on entity set $entitySetId -- delete would have required permissions on unauthorized edge entity sets.")
+        }
+
     }
 
 }
