@@ -926,6 +926,7 @@ class Graph(
             WHERE
               ( ($srcEntitySetFilter) OR ($dstEntitySetFilter) )
               $notAssocClause
+            LIMIT 1
         """.trimIndent()
 
         hds.connection.use { conn ->

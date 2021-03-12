@@ -283,7 +283,7 @@ class DataDeletionService(
         val authorizedEdgeEntitySets = if (isAssociationEntitySet) setOf() else entitySetManager.getAuthorizedNeighborEntitySets(
                 principals,
                 setOf(entitySetId),
-                EntityNeighborsFilter(setOf())
+                EntityNeighborsFilter(setOf(entitySetId))
         ).associationEntitySetIds.get()
 
 
