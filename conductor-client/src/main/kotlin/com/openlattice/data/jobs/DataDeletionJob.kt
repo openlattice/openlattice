@@ -200,7 +200,7 @@ class DataDeletionJob(
     }
 
     private fun deleteEdges(edgeBatch: Set<EntityDataKey>) {
-        val sql = if (state.deleteType == DeleteType.Hard) hardDeleteEdgesSql() else softDeleteEdgesSql()
+        val sql = if (state.deleteType == DeleteType.Hard) HARD_DELETE_EDGES_SQL else SOFT_DELETE_EDGES_SQL
         val version = -System.currentTimeMillis()
 
         hds.connection.use { conn ->
@@ -245,6 +245,7 @@ class DataDeletionJob(
      *
      * 1) entitySetId
      */
+    @JsonIgnore
     private val GET_ENTITY_SET_COUNT_SQL = """
         SELECT $COUNT 
             FROM ${PostgresEntitySetSizesInitializationTask.ENTITY_SET_SIZES_VIEW} 
@@ -259,7 +260,7 @@ class DataDeletionJob(
      */
     private fun getIdsBatchSql(): String {
         return """
-            SELECT ${ID.name}
+            SELECT ${ENTITY_SET_ID.name}, ${ID.name}
             FROM ${IDS.name}
             WHERE ${ENTITY_SET_ID.name} = ?
             AND ${PARTITION.name} = ANY(?)
@@ -306,6 +307,7 @@ class DataDeletionJob(
      * 5. partition
      * 6. entityKeyIds
      */
+    @JsonIgnore
     private val SOFT_DELETE_FROM_DATA_SQL = """
         UPDATE ${DATA.name} 
         SET
@@ -331,6 +333,7 @@ class DataDeletionJob(
      * 2. partition
      * 3. entityKeyIds
      */
+    @JsonIgnore
     private val HARD_DELETE_FROM_DATA_SQL = """
         DELETE FROM ${DATA.name}
         WHERE
@@ -346,6 +349,7 @@ class DataDeletionJob(
      * 2. partition
      * 3. entityKeyIds
      */
+    @JsonIgnore
     private val HARD_DELETE_FROM_IDS_SQL = zeroVersionsForEntitiesInEntitySet
 
     /**
@@ -356,7 +360,9 @@ class DataDeletionJob(
      * 5. partition
      * 6. entityKeyIds
      */
+    @JsonIgnore
     private val SOFT_DELETE_FROM_IDS_SQL = updateVersionsForEntitiesInEntitySet
+
     /**
      * PreparedStatement bind order:
      *
@@ -365,8 +371,8 @@ class DataDeletionJob(
      * 1) entitySetIds
      * 2) entityKeyIds
      */
-    private fun softDeleteEdgesSql(): String {
-        return """
+    @JsonIgnore
+    private val SOFT_DELETE_EDGES_SQL = """
             UPDATE ${E.name}
             SET
               ${VERSION.name} = ?,
@@ -377,7 +383,6 @@ class DataDeletionJob(
               AND ${EDGE_ENTITY_KEY_ID.name} = ANY(?) 
             
         """.trimIndent()
-    }
 
     /**
      * PreparedStatement bind order:
@@ -385,14 +390,14 @@ class DataDeletionJob(
      * 1) entitySetIds
      * 2) entityKeyIds
      */
-    private fun hardDeleteEdgesSql(): String {
-        return """
+    @JsonIgnore
+    private val HARD_DELETE_EDGES_SQL = """
             DELETE FROM ${E.name}
             WHERE
               ${EDGE_ENTITY_SET_ID.name} = ANY(?)
               AND ${EDGE_ENTITY_KEY_ID.name} = ANY(?) 
         """.trimIndent()
-    }
+
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -401,23 +406,11 @@ class DataDeletionJob(
 
         other as DataDeletionJob
 
-        if (GET_ENTITY_SET_COUNT_SQL != other.GET_ENTITY_SET_COUNT_SQL) return false
-        if (SOFT_DELETE_FROM_DATA_SQL != other.SOFT_DELETE_FROM_DATA_SQL) return false
-        if (HARD_DELETE_FROM_DATA_SQL != other.HARD_DELETE_FROM_DATA_SQL) return false
-        if (HARD_DELETE_FROM_IDS_SQL != other.HARD_DELETE_FROM_IDS_SQL) return false
-        if (SOFT_DELETE_FROM_IDS_SQL != other.SOFT_DELETE_FROM_IDS_SQL) return false
-
         return true
     }
 
     override fun hashCode(): Int {
-        var result = super.hashCode()
-        result = 31 * result + GET_ENTITY_SET_COUNT_SQL.hashCode()
-        result = 31 * result + SOFT_DELETE_FROM_DATA_SQL.hashCode()
-        result = 31 * result + HARD_DELETE_FROM_DATA_SQL.hashCode()
-        result = 31 * result + HARD_DELETE_FROM_IDS_SQL.hashCode()
-        result = 31 * result + SOFT_DELETE_FROM_IDS_SQL.hashCode()
-        return result
+        return super.hashCode()
     }
 
 
