@@ -375,34 +375,33 @@ class DataDeletionJob(
      *
      * 1) version
      * 2) version
-     * 1) entitySetIds
-     * 2) entityKeyIds
+     * 1) entitySetId
+     * 2) entityKeyId
      */
     @JsonIgnore
     private val SOFT_DELETE_EDGES_SQL = """
             UPDATE ${E.name}
             SET
               ${VERSION.name} = ?,
-              ${VERSIONS.name} = ${VERSIONS.name} || ?,
-              ${LAST_WRITE.name} = now()
+              ${VERSIONS.name} = ${VERSIONS.name} || ?
             WHERE
-              ${EDGE_ENTITY_SET_ID.name} = ANY(?)
-              AND ${EDGE_ENTITY_KEY_ID.name} = ANY(?) 
+              ${EDGE_ENTITY_SET_ID.name} = ?
+              AND ${EDGE_ENTITY_KEY_ID.name} = ? 
             
         """.trimIndent()
 
     /**
      * PreparedStatement bind order:
      *
-     * 1) entitySetIds
-     * 2) entityKeyIds
+     * 1) entitySetId
+     * 2) entityKeyId
      */
     @JsonIgnore
     private val HARD_DELETE_EDGES_SQL = """
             DELETE FROM ${E.name}
             WHERE
-              ${EDGE_ENTITY_SET_ID.name} = ANY(?)
-              AND ${EDGE_ENTITY_KEY_ID.name} = ANY(?) 
+              ${EDGE_ENTITY_SET_ID.name} = ?
+              AND ${EDGE_ENTITY_KEY_ID.name} = ? 
         """.trimIndent()
 
 
