@@ -181,11 +181,13 @@ class DataDeletionJob(
         val esToPartitions = entitySets.executeOnKeys(entitySetIds, GetPartitionsFromEntitySetEntryProcessor())
 
         return entitySetIds.associateWith {
-            esToPartitions[it] ?: if (it == state.entitySetId) {
-                state.partitions
-            } else {
-                ALL_PARTITIONS
+            esToPartitions[it]?.let { partitions ->
+                if (partitions.isNotEmpty()) {
+                    return@associateWith partitions
+                }
             }
+
+            ALL_PARTITIONS
         }
     }
 
@@ -234,9 +236,9 @@ class DataDeletionJob(
         this.entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
     }
 
-    private fun excludeClearedIfSoftDeleteSql(): String {
+    private fun excludeClearedIfSoftDeleteSql(isEdges: Boolean = false): String {
         return if (state.deleteType == DeleteType.Hard) {
-            ""
+            if (isEdges) "" else "AND ${VERSION.name} <> 0"
         } else {
             "AND ${VERSION.name} > 0"
         }
@@ -294,7 +296,7 @@ class DataDeletionJob(
             SELECT ${EDGE_ENTITY_SET_ID.name}, ${EDGE_ENTITY_KEY_ID.name}
             FROM ${E.name}
             WHERE ( $entityMatches )
-            ${excludeClearedIfSoftDeleteSql()}
+            ${excludeClearedIfSoftDeleteSql(true)}
             LIMIT $BATCH_SIZE
         """.trimIndent()
     }
