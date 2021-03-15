@@ -57,6 +57,8 @@ class DataDeletionJob(
         initialize(id, taskId, status, progress, hasWorkRemaining, result)
     }
 
+    override val resumable = true
+
     companion object {
         private const val BATCH_SIZE = 10_000
         private val ALL_PARTITIONS = (0..257)
@@ -143,7 +145,7 @@ class DataDeletionJob(
     private fun deleteEntities(entityDataKeys: Set<EntityDataKey>): Int {
         val entitySetIdToPartitions = getEntitySetPartitions(entityDataKeys)
 
-        val (deleteFromDataSql, deleteFromIdsSql) = if (state.deleteType == DeleteType.Hard) {
+        val (deleteFromDataSql, deleteFromIdsSql) = if (isHardDelete()) {
             HARD_DELETE_FROM_DATA_SQL to HARD_DELETE_FROM_IDS_SQL
         } else {
             SOFT_DELETE_FROM_DATA_SQL to SOFT_DELETE_FROM_IDS_SQL
@@ -193,7 +195,7 @@ class DataDeletionJob(
 
     private fun bindEntityDelete(ps: PreparedStatement, entitySetId: UUID, partition: Int, ids: Collection<UUID>, version: Long) {
         var index = 1
-        if (state.deleteType == DeleteType.Soft) {
+        if (!isHardDelete()) {
             ps.setLong(index++, version)
             ps.setLong(index++, version)
             ps.setLong(index++, version)
@@ -206,7 +208,7 @@ class DataDeletionJob(
     }
 
     private fun deleteEdges(edgeBatch: Set<EntityDataKey>) {
-        val sql = if (state.deleteType == DeleteType.Hard) HARD_DELETE_EDGES_SQL else SOFT_DELETE_EDGES_SQL
+        val sql = if (isHardDelete()) HARD_DELETE_EDGES_SQL else SOFT_DELETE_EDGES_SQL
         val version = -System.currentTimeMillis()
 
         hds.connection.use { conn ->
@@ -219,7 +221,7 @@ class DataDeletionJob(
 
     private fun bindEdgeDelete(ps: PreparedStatement, edk: EntityDataKey, version: Long) {
         var index = 1
-        if (state.deleteType == DeleteType.Soft) {
+        if (!isHardDelete()) {
             ps.setLong(index++, version)
             ps.setLong(index++, version)
         }
@@ -239,12 +241,18 @@ class DataDeletionJob(
         this.entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
     }
 
+    @JsonIgnore
+    private fun isHardDelete(): Boolean {
+        return state.deleteType == DeleteType.Hard
+    }
+
     private fun excludeClearedIfSoftDeleteSql(isEdges: Boolean = false): String {
-        return if (state.deleteType == DeleteType.Hard) {
-            if (isEdges) "" else "AND ${VERSION.name} <> 0"
-        } else {
-            "AND ${VERSION.name} > 0"
+        if (isHardDelete() && isEdges) {
+            return ""
         }
+
+        val operator = if (isHardDelete()) "<>" else ">"
+        return "AND ${VERSION.name} $operator 0"
     }
 
     /**
