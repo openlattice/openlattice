@@ -289,13 +289,10 @@ constructor(
     override fun deleteEntitySet(@PathVariable(ID) entitySetId: UUID): UUID {
         val entitySet = checkPermissionsForDelete(entitySetId)
         ensureEntitySetCanBeDeleted(entitySet)
+        deletionManager.authCheckForEntitySetAndItsNeighbors(entitySetId, DeleteType.Hard, Principals.getCurrentPrincipals())
 
         /* Delete first entity set data */
-        val deletionJobId = deletionManager.clearOrDeleteEntitySetIfAuthorized(
-                entitySet.id,
-                DeleteType.Hard,
-                Principals.getCurrentPrincipals()
-        )
+        val deletionJobId = deletionManager.clearOrDeleteEntitySet(entitySet.id, DeleteType.Hard)
 
         deleteAuditEntitySetsForId(entitySetId)
         entitySetManager.deleteEntitySet(entitySet)

@@ -659,8 +659,12 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             @RequestParam( value = TYPE ) DeleteType deleteType ) {
         ensureEntitySetCanBeWritten( entitySetId );
 
-        UUID deletionJobId = deletionManager
-                .clearOrDeleteEntitySetIfAuthorized( entitySetId, deleteType, Principals.getCurrentPrincipals() );
+        deletionManager.authCheckForEntitySetAndItsNeighbors( entitySetId,
+                deleteType,
+                Principals.getCurrentPrincipals(),
+                null );
+
+        UUID deletionJobId = deletionManager.clearOrDeleteEntitySet( entitySetId, deleteType );
 
         recordEvent( new AuditableEvent(
                 spm.getCurrentUserId(),
@@ -698,12 +702,12 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             @RequestParam( value = BLOCK, defaultValue = "false" ) boolean blockUntilCompletion ) {
 
         ensureEntitySetCanBeWritten( entitySetId );
+        deletionManager.authCheckForEntitySetAndItsNeighbors( entitySetId,
+                deleteType,
+                Principals.getCurrentPrincipals(),
+                entityKeyIds );
 
-        UUID deletionJobId = deletionManager
-                .clearOrDeleteEntitiesIfAuthorized( entitySetId,
-                        entityKeyIds,
-                        deleteType,
-                        Principals.getCurrentPrincipals() );
+        UUID deletionJobId = deletionManager.clearOrDeleteEntities( entitySetId, entityKeyIds, deleteType );
 
         recordEvent( new AuditableEvent(
                 spm.getCurrentUserId(),

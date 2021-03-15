@@ -25,7 +25,9 @@ import com.geekbeast.rhizome.jobs.AbstractDistributableJobStreamSerializer
 import com.geekbeast.rhizome.jobs.DistributableJob
 import com.google.common.annotations.VisibleForTesting
 import com.hazelcast.nio.ObjectDataInput
+import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.hazelcast.StreamSerializerTypeIds
+import com.openlattice.hazelcast.serializers.decorators.ByteBlobDataManagerAware
 import com.openlattice.hazelcast.serializers.decorators.IdGenerationAware
 import com.openlattice.hazelcast.serializers.decorators.MetastoreAware
 import com.openlattice.ids.HazelcastIdGenerationService
@@ -39,11 +41,14 @@ import javax.inject.Inject
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 @Component
-class DistributableJobStreamSerializer : IdGenerationServiceDependent<DistributableJobStreamSerializer>, AbstractDistributableJobStreamSerializer(){
+class DistributableJobStreamSerializer : IdGenerationServiceDependent<DistributableJobStreamSerializer>, AbstractDistributableJobStreamSerializer() {
     @Inject
     private lateinit var hds: HikariDataSource
 
     private lateinit var idService: HazelcastIdGenerationService
+
+    @Inject
+    private lateinit var byteBlobDataManager: ByteBlobDataManager
 
     override fun getTypeId(): Int = StreamSerializerTypeIds.DISTRIBUTABLE_JOB.ordinal
     override fun read(`in`: ObjectDataInput): DistributableJob<*> {
@@ -53,6 +58,9 @@ class DistributableJobStreamSerializer : IdGenerationServiceDependent<Distributa
         }
         if (job is IdGenerationAware) {
             job.setIdGenerationService(idService)
+        }
+        if (job is ByteBlobDataManagerAware) {
+            job.setByteBlobDataManager(byteBlobDataManager)
         }
         return job
     }

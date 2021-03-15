@@ -200,19 +200,6 @@ class Graph(
         }
     }
 
-    override fun getEdgeKeysOfEntitySet(
-            entitySetId: UUID, includeClearedEdges: Boolean
-    ): BasePostgresIterable<DataEdgeKey> {
-        val sql = if (includeClearedEdges) NEIGHBORHOOD_OF_ENTITY_SET_SQL else NON_TOMBSTONED_NEIGHBORHOOD_OF_ENTITY_SET_SQL
-        return BasePostgresIterable(PreparedStatementHolderSupplier(hds, sql, BATCH_SIZE, false) { ps ->
-            ps.setObject(1, entitySetId)
-            ps.setObject(2, entitySetId)
-            ps.setObject(3, entitySetId)
-        }) {
-            ResultSetAdapters.edgeKey(it)
-        }
-    }
-
     override fun getEdgesAndNeighborsForVertices(
             entitySetIds: Set<UUID>,
             pagedNeighborRequest: PagedNeighborRequest
@@ -888,22 +875,6 @@ class Graph(
             ps.setObject(2, entitySetId)
             ps.setArray(3, entityKeyIdArr)
             ps.setObject(4, entitySetId)
-        }) {
-            ResultSetAdapters.edgeEntitySetId(it)
-        }.toSet()
-    }
-
-
-    override fun getEdgeEntitySetsConnectedToEntitySet(
-            entitySetId: UUID
-    ): Set<UUID> {
-        val query = "SELECT DISTINCT ${EDGE_ENTITY_SET_ID.name} " +
-                "FROM ${E.name} " +
-                "WHERE ${SRC_ENTITY_SET_ID.name} = ? OR ${DST_ENTITY_SET_ID.name} = ?"
-
-        return BasePostgresIterable(PreparedStatementHolderSupplier(reader, query) { ps ->
-            ps.setObject(1, entitySetId)
-            ps.setObject(2, entitySetId)
         }) {
             ResultSetAdapters.edgeEntitySetId(it)
         }.toSet()

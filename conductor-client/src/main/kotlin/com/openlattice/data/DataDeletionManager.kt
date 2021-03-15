@@ -1,27 +1,30 @@
 package com.openlattice.data
 
 import com.openlattice.authorization.Principal
+import com.openlattice.controllers.exceptions.ForbiddenException
 import java.util.*
 
 interface DataDeletionManager {
 
     /**
-     * Clears or deletes all entities from an entity set, as well as any edges and association entities, if authorized
+     * Clears or deletes the specified entity key ids from an entity set, as well as any edges and association entities.
+     *
+     * This function does not perform authorization checks.
      */
-    fun clearOrDeleteEntitySetIfAuthorized(
+    fun clearOrDeleteEntities(
             entitySetId: UUID,
-            deleteType: DeleteType,
-            principals: Set<Principal>
+            entityKeyIds: MutableSet<UUID>,
+            deleteType: DeleteType
     ): UUID
 
     /**
-     * Clears or deletes the specified entity key ids from an entity set, as well as any edges and association entities, if authorized
+     * Clears or deletes all entities from an entity set, as well as any edges and association entities.
+     *
+     * This function does not perform authorization checks.
      */
-    fun clearOrDeleteEntitiesIfAuthorized(
+    fun clearOrDeleteEntitySet(
             entitySetId: UUID,
-            entityKeyIds: MutableSet<UUID>,
-            deleteType: DeleteType,
-            principals: Set<Principal>
+            deleteType: DeleteType
     ): UUID
 
 
@@ -50,29 +53,15 @@ interface DataDeletionManager {
     ): WriteEvent
 
 
-
-    /* The functions below do not perform auth checks and should only be used internally. */
-
-
     /**
-     * Clears or deletes the specified entity key ids from an entity set, as well as any edges and association entities.
-     *
-     * This function does not perform authorization checks.
+     * Performs auth checks for [principals] in order to delete entities from entity set [entitySetId], throwing
+     * a [ForbiddenException] if the user does not have required permissions for a delete of type [deleteType].
      */
-    fun clearOrDeleteEntities(
+    fun authCheckForEntitySetAndItsNeighbors(
             entitySetId: UUID,
-            entityKeyIds: MutableSet<UUID>,
-            deleteType: DeleteType
-    ): UUID
-
-    /**
-     * Clears or deletes all entities from an entity set, as well as any edges and association entities.
-     *
-     * This function does not perform authorization checks.
-     */
-    fun clearOrDeleteEntitySet(
-            entitySetId: UUID,
-            deleteType: DeleteType
-    ): UUID
+            deleteType: DeleteType,
+            principals: Set<Principal>,
+            entityKeyIds: Set<UUID>? = null
+    )
 
 }

@@ -8,14 +8,18 @@ import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.map.IMap
 import com.openlattice.data.DeleteType
 import com.openlattice.data.EntityDataKey
-import com.openlattice.data.storage.PostgresEntitySetSizesInitializationTask
+import com.openlattice.data.storage.*
 import com.openlattice.data.storage.partitions.getPartition
-import com.openlattice.data.storage.updateVersionsForEntitiesInEntitySet
-import com.openlattice.data.storage.zeroVersionsForEntitiesInEntitySet
 import com.openlattice.edm.EntitySet
+import com.openlattice.edm.processors.GetEntityTypeFromEntitySetEntryProcessor
 import com.openlattice.edm.processors.GetPartitionsFromEntitySetEntryProcessor
+import com.openlattice.edm.processors.GetPropertiesFromEntityTypeEntryProcessor
+import com.openlattice.edm.type.EntityType
+import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.hazelcast.serializers.decorators.ByteBlobDataManagerAware
 import com.openlattice.hazelcast.serializers.decorators.MetastoreAware
+import com.openlattice.linking.graph.PostgresLinkingQueryService
 import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.COUNT
@@ -30,6 +34,7 @@ import com.openlattice.postgres.PostgresColumn.SRC_ENTITY_KEY_ID
 import com.openlattice.postgres.PostgresColumn.SRC_ENTITY_SET_ID
 import com.openlattice.postgres.PostgresColumn.VERSION
 import com.openlattice.postgres.PostgresColumn.VERSIONS
+import com.openlattice.postgres.PostgresDatatype
 import com.openlattice.postgres.PostgresTable.DATA
 import com.openlattice.postgres.PostgresTable.E
 import com.openlattice.postgres.PostgresTable.IDS
@@ -37,12 +42,14 @@ import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import java.sql.PreparedStatement
 import java.util.*
+import java.util.concurrent.atomic.AtomicLong
 
 class DataDeletionJob(
         state: DataDeletionJobState
-) : AbstractDistributedJob<Long, DataDeletionJobState>(state), MetastoreAware {
+) : AbstractDistributedJob<Long, DataDeletionJobState>(state), MetastoreAware, ByteBlobDataManagerAware {
 
     @JsonCreator
     constructor(
@@ -68,7 +75,16 @@ class DataDeletionJob(
     private lateinit var hds: HikariDataSource
 
     @Transient
+    private lateinit var byteBlobDataManager: ByteBlobDataManager
+
+    @Transient
     private lateinit var entitySets: IMap<UUID, EntitySet>
+
+    @Transient
+    private lateinit var entityTypes: IMap<UUID, EntityType>
+
+    @Transient
+    private lateinit var propertyTypes: IMap<UUID, PropertyType>
 
     override fun initialize() {
         state.totalToDelete = getTotalToDelete()
@@ -133,11 +149,14 @@ class DataDeletionJob(
     }
 
     private fun cleanUpBatch(entityDataKeys: Set<EntityDataKey>) {
+        val entityKeyIds = entityDataKeys.mapTo(mutableSetOf()) { it.entityKeyId }
+        PostgresLinkingQueryService.deleteNeighborhoods(hds, state.entitySetId, entityKeyIds)
+
         if (state.entityKeyIds == null) {
             return
         }
 
-        state.entityKeyIds!!.removeAll(entityDataKeys.map { it.entityKeyId })
+        state.entityKeyIds!!.removeAll(entityKeyIds)
     }
 
     private fun getBatchOfEdgesForIds(edks: Set<EntityDataKey>): Set<EntityDataKey> {
@@ -169,6 +188,18 @@ class DataDeletionJob(
         }
         val version = -System.currentTimeMillis()
 
+
+        if (isHardDelete()) {
+            val esIdToBinaryPts = getBinaryPropertiesOfEntitySets(entitySetIdToPartitions.keys)
+            if (esIdToBinaryPts.isNotEmpty()) {
+                deletePropertyOfEntityFromS3(
+                        esIdToBinaryPts.keys,
+                        esIdToBinaryPts.keys.flatMap { entitySetIdToPartitionToIds.getValue(it).flatMap { (_, ids) -> ids } },
+                        esIdToBinaryPts.flatMap { it.value }
+                )
+            }
+        }
+
         return hds.connection.use { conn ->
             conn.prepareStatement(deleteFromDataSql).use { ps ->
                 entitySetIdToPartitionToIds.forEach { (entitySetId, partitionToIds) ->
@@ -188,6 +219,18 @@ class DataDeletionJob(
                 ps.executeBatch()
             }.sum()
         }
+    }
+
+    private fun getBinaryPropertiesOfEntitySets(entitySetIds: Set<UUID>): Map<UUID, List<UUID>> {
+        val entitySetToEntityType = entitySets.executeOnKeys(entitySetIds, GetEntityTypeFromEntitySetEntryProcessor())
+        val entityTypeToProperties = entityTypes.executeOnKeys(entitySetToEntityType.values.toSet(), GetPropertiesFromEntityTypeEntryProcessor())
+        val binaryPropertyTypeIds = propertyTypes.getAll(entityTypeToProperties.flatMap { it.value }.toSet()).values
+                .filter { it.datatype == EdmPrimitiveTypeKind.Binary }.mapTo(mutableSetOf()) { it.id }
+
+        return entitySetToEntityType.mapNotNull { (entitySetId, entityTypeId) ->
+            val binaryPts = entityTypeToProperties[entityTypeId]?.filter { binaryPropertyTypeIds.contains(it) }
+            if (binaryPts == null) null else entitySetId to binaryPts
+        }.toMap()
     }
 
     private fun getEntitySetPartitions(entityDataKeys: Set<EntityDataKey>): Map<UUID, Iterable<Int>> {
@@ -242,6 +285,28 @@ class DataDeletionJob(
         ps.addBatch()
     }
 
+    private fun deletePropertyOfEntityFromS3(
+            entitySetIds: Collection<UUID>,
+            entityKeyIds: Collection<UUID>,
+            propertyTypeIds: Collection<UUID>
+    ) {
+        val count = AtomicLong()
+        val s3Keys = BasePostgresIterable<String>(
+                PreparedStatementHolderSupplier(hds, selectEntitiesTextProperties, FETCH_SIZE) { ps ->
+                    val connection = ps.connection
+                    val entitySetIdsArr = PostgresArrays.createUuidArray(connection, entitySetIds)
+                    val propertyTypeIdsArr = PostgresArrays.createUuidArray(connection, propertyTypeIds)
+                    val entityKeyIdsArr = PostgresArrays.createUuidArray(connection, entityKeyIds)
+                    ps.setArray(1, entitySetIdsArr)
+                    ps.setArray(2, propertyTypeIdsArr)
+                    ps.setArray(3, entityKeyIdsArr)
+                }
+        ) { it.getString(getMergedDataColumnName(PostgresDatatype.TEXT)) }.toList()
+
+        byteBlobDataManager.deleteObjects(s3Keys)
+        count.addAndGet(s3Keys.size.toLong())
+    }
+
     @JsonIgnore
     override fun setHikariDataSource(hds: HikariDataSource) {
         this.hds = hds
@@ -251,6 +316,13 @@ class DataDeletionJob(
     override fun setHazelcastInstance(hazelcastInstance: HazelcastInstance) {
         super.setHazelcastInstance(hazelcastInstance)
         this.entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
+        this.entityTypes = HazelcastMap.ENTITY_TYPES.getMap(hazelcastInstance)
+        this.propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap(hazelcastInstance)
+    }
+
+    @JsonIgnore
+    override fun setByteBlobDataManager(byteBlobDataManager: ByteBlobDataManager) {
+        this.byteBlobDataManager = byteBlobDataManager
     }
 
     @JsonIgnore
