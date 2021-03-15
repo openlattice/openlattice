@@ -2,6 +2,7 @@ package com.openlattice.data
 
 import com.openlattice.authorization.Principal
 import com.openlattice.controllers.exceptions.ForbiddenException
+import com.openlattice.edm.type.PropertyType
 import java.util.*
 
 interface DataDeletionManager {
@@ -27,29 +28,15 @@ interface DataDeletionManager {
             deleteType: DeleteType
     ): UUID
 
-
     /**
-     * Clears or deletes the specified entity key ids from an entity set, as well as any edges and association entities, if authorized
-     */
-    @Deprecated("This is very broken.")
-    fun clearOrDeleteEntitiesAndNeighborsIfAuthorized(
-            entitySetId: UUID,
-            entityKeyIds: MutableSet<UUID>,
-            srcEntitySetIds: Set<UUID>,
-            dstEntitySetIds: Set<UUID>,
-            deleteType: DeleteType,
-            principals: Set<Principal>
-    ): WriteEvent
-
-    /**
-     * Clears or deletes certain property values from the specified entity key ids from an entity set, if authorized
+     * Clears or deletes certain property values from the specified entity key ids from an entity set
      */
     fun clearOrDeleteEntityProperties(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
             deleteType: DeleteType,
             propertyTypeIds: Set<UUID>,
-            principals: Set<Principal>
+            authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent
 
 

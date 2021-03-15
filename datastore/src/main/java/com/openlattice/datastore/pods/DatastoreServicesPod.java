@@ -653,11 +653,8 @@ public class DatastoreServicesPod {
     @Bean
     public DataDeletionManager dataDeletionManager() {
         return new DataDeletionService(
-                dataModelService(),
                 entitySetManager(),
-                dataGraphService(),
                 authorizationManager(),
-                auditRecordEntitySetsManager(),
                 entityDatastore(),
                 graphApi(),
                 jobService(),

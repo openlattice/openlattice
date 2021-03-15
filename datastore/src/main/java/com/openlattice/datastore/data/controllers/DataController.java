@@ -43,6 +43,7 @@ import com.openlattice.data.graph.DataGraphServiceHelper;
 import com.openlattice.data.jobs.DataDeletionJobState;
 import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
+import com.openlattice.data.storage.DataDeletionService;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.EntitySetManager;
 import com.openlattice.edm.EntitySet;
@@ -732,14 +733,30 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId,
             @RequestBody Set<UUID> propertyTypeIds,
             @RequestParam( value = TYPE ) DeleteType deleteType ) {
-
+        if ( deleteType.equals( DeleteType.Soft ) ) {
+            ensureWriteAccess( new AclKey( entitySetId ) );
+        } else {
+            ensureOwnerAccess( new AclKey( entitySetId ) );
+        }
         ensureEntitySetCanBeWritten( entitySetId );
 
-        WriteEvent writeEvent = deletionManager.clearOrDeleteEntityProperties( entitySetId,
+        Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper.getAuthorizedPropertiesOnEntitySets(
+                ImmutableSet.of( entitySetId ),
+                DataDeletionService.getPERMISSIONS_FOR_DELETE_TYPE().get( deleteType )
+        ).get( entitySetId );
+        Set<UUID> unauthorizedPropertyTypeIds = Sets.difference( propertyTypeIds, authorizedPropertyTypes.keySet() );
+        if ( !unauthorizedPropertyTypeIds.isEmpty() ) {
+            throw new ForbiddenException( "Cannot delete properties of entity set " + entitySetId.toString() +
+                    " because properties " + unauthorizedPropertyTypeIds.toString() + " are not authorized." );
+        }
+
+        WriteEvent writeEvent = deletionManager.clearOrDeleteEntityProperties(
+                entitySetId,
                 ImmutableSet.of( entityKeyId ),
                 deleteType,
                 propertyTypeIds,
-                Principals.getCurrentPrincipals() );
+                authorizedPropertyTypes
+        );
 
         recordEvent( new AuditableEvent(
                 spm.getCurrentUserId(),
@@ -770,14 +787,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
 
         ensureEntitySetCanBeWritten( entitySetId );
 
-        WriteEvent writeEvent = deletionManager.clearOrDeleteEntitiesAndNeighborsIfAuthorized(
-                entitySetId,
-                filter.getEntityKeyIds(),
-                filter.getSrcEntitySetIds().orElse( ImmutableSet.of() ),
-                filter.getDstEntitySetIds().orElse( ImmutableSet.of() ),
-                deleteType,
-                Principals.getCurrentPrincipals()
-        );
+        WriteEvent writeEvent = new WriteEvent( 0, 0 );
 
         recordEvent( new AuditableEvent(
                 spm.getCurrentUserId(),
