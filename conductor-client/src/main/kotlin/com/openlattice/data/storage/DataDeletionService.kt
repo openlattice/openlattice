@@ -97,7 +97,7 @@ class DataDeletionService(
         return clearOrDeleteEntitySet(entitySetId, deleteType)
     }
 
-    override fun clearOrDeleteEntities(entitySetId: UUID, entityKeyIds: Set<UUID>, deleteType: DeleteType): UUID {
+    override fun clearOrDeleteEntities(entitySetId: UUID, entityKeyIds: MutableSet<UUID>, deleteType: DeleteType): UUID {
         val partitions = partitionManager.getEntitySetPartitions(entitySetId)
 
         return jobService.submitJob(DataDeletionJob(DataDeletionJobState(
@@ -111,7 +111,7 @@ class DataDeletionService(
 
     override fun clearOrDeleteEntitiesIfAuthorized(
             entitySetId: UUID,
-            entityKeyIds: Set<UUID>,
+            entityKeyIds: MutableSet<UUID>,
             deleteType: DeleteType,
             principals: Set<Principal>
     ): UUID {
@@ -459,7 +459,7 @@ class DataDeletionService(
     @Deprecated("This is very broken.")
     override fun clearOrDeleteEntitiesAndNeighborsIfAuthorized(
             entitySetId: UUID,
-            entityKeyIds: Set<UUID>,
+            entityKeyIds: MutableSet<UUID>,
             srcEntitySetIds: Set<UUID>,
             dstEntitySetIds: Set<UUID>,
             deleteType: DeleteType,

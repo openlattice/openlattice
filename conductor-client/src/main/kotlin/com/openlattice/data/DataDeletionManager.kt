@@ -19,7 +19,7 @@ interface DataDeletionManager {
      */
     fun clearOrDeleteEntitiesIfAuthorized(
             entitySetId: UUID,
-            entityKeyIds: Set<UUID>,
+            entityKeyIds: MutableSet<UUID>,
             deleteType: DeleteType,
             principals: Set<Principal>
     ): UUID
@@ -31,7 +31,7 @@ interface DataDeletionManager {
     @Deprecated("This is very broken.")
     fun clearOrDeleteEntitiesAndNeighborsIfAuthorized(
             entitySetId: UUID,
-            entityKeyIds: Set<UUID>,
+            entityKeyIds: MutableSet<UUID>,
             srcEntitySetIds: Set<UUID>,
             dstEntitySetIds: Set<UUID>,
             deleteType: DeleteType,
@@ -61,7 +61,7 @@ interface DataDeletionManager {
      */
     fun clearOrDeleteEntities(
             entitySetId: UUID,
-            entityKeyIds: Set<UUID>,
+            entityKeyIds: MutableSet<UUID>,
             deleteType: DeleteType
     ): UUID
 
