@@ -91,6 +91,7 @@ class DataDeletionJob(
         }
 
         state.numDeletes += deleteEntities(entityDataKeys)
+        cleanUpBatch(entityDataKeys)
         publishJobState()
     }
 
@@ -120,12 +121,23 @@ class DataDeletionJob(
     }
 
     private fun getBatchOfEntityDataKeys(): Set<EntityDataKey> {
+        if (state.entityKeyIds != null) {
+            return state.entityKeyIds!!.take(BATCH_SIZE).mapTo(mutableSetOf()) { EntityDataKey(state.entitySetId, it) }
+        }
         return BasePostgresIterable(PreparedStatementHolderSupplier(hds, getIdsBatchSql()) {
             it.setObject(1, state.entitySetId)
             it.setArray(2, PostgresArrays.createIntArray(it.connection, state.partitions))
         }) {
             ResultSetAdapters.entityDataKey(it)
         }.toSet()
+    }
+
+    private fun cleanUpBatch(entityDataKeys: Set<EntityDataKey>) {
+        if (state.entityKeyIds == null) {
+            return
+        }
+
+        state.entityKeyIds!!.removeAll(entityDataKeys.map { it.entityKeyId })
     }
 
     private fun getBatchOfEdgesForIds(edks: Set<EntityDataKey>): Set<EntityDataKey> {

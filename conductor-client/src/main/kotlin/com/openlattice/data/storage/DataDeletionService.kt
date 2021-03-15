@@ -103,7 +103,8 @@ class DataDeletionService(
         return jobService.submitJob(DataDeletionJob(DataDeletionJobState(
                 entitySetId,
                 deleteType,
-                partitions
+                partitions,
+                entityKeyIds
         )))
     }
 
