@@ -201,6 +201,8 @@ class DataDeletionJob(
         ps.setObject(index++, entitySetId)
         ps.setInt(index++, partition)
         ps.setArray(index, PostgresArrays.createUuidArray(ps.connection, ids))
+
+        ps.addBatch()
     }
 
     private fun deleteEdges(edgeBatch: Set<EntityDataKey>) {
@@ -223,6 +225,7 @@ class DataDeletionJob(
         }
         ps.setObject(index++, edk.entitySetId)
         ps.setObject(index, edk.entityKeyId)
+        ps.addBatch()
     }
 
     @JsonIgnore
