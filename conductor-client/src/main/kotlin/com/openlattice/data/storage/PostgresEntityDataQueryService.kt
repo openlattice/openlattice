@@ -528,7 +528,7 @@ class PostgresEntityDataQueryService(
         val tombstoneFn: (Long, Map<UUID, Map<UUID, Set<Any>>>) -> Unit =
                 { version: Long, entityBatch: Map<UUID, Map<UUID, Set<Any>>> ->
                     val ids = entityBatch.keys
-                    tombstone(
+                    tombstoneEntityPropertyHashes(
                             entitySetId,
                             replacementProperties.filter { ids.contains(it.key) },
                             version,
@@ -790,7 +790,7 @@ class PostgresEntityDataQueryService(
      * @return A write event object containing a summary of the operation useful for auditing purposes.
      *
      */
-    private fun tombstone(
+    private fun tombstoneEntityPropertyHashes(
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Map<ByteBuffer, Any>>>>,
             version: Long,
