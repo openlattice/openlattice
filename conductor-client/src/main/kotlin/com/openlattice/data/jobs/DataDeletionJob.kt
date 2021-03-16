@@ -117,6 +117,7 @@ class DataDeletionJob(
         }
     }
 
+    @JsonIgnore
     private fun getTotalToDelete(): Long {
         state.entityKeyIds?.let {
             return it.size.toLong()
@@ -136,6 +137,7 @@ class DataDeletionJob(
         }
     }
 
+    @JsonIgnore
     private fun getBatchOfEntityDataKeys(): Set<EntityDataKey> {
         if (state.entityKeyIds != null) {
             return state.entityKeyIds!!.take(BATCH_SIZE).mapTo(mutableSetOf()) { EntityDataKey(state.entitySetId, it) }
@@ -159,6 +161,7 @@ class DataDeletionJob(
         state.entityKeyIds!!.removeAll(entityKeyIds)
     }
 
+    @JsonIgnore
     private fun getBatchOfEdgesForIds(edks: Set<EntityDataKey>): Set<EntityDataKey> {
         return BasePostgresIterable(PreparedStatementHolderSupplier(hds, getEdgesBatchSql()) {
             val entityKeyIdsArr = PostgresArrays.createUuidArray(it.connection, edks.map { edk -> edk.entityKeyId })
@@ -221,6 +224,7 @@ class DataDeletionJob(
         }
     }
 
+    @JsonIgnore
     private fun getBinaryPropertiesOfEntitySets(entitySetIds: Set<UUID>): Map<UUID, List<UUID>> {
         val entitySetToEntityType = entitySets.executeOnKeys(entitySetIds, GetEntityTypeFromEntitySetEntryProcessor())
         val entityTypeToProperties = entityTypes.executeOnKeys(entitySetToEntityType.values.toSet(), GetPropertiesFromEntityTypeEntryProcessor())
@@ -233,6 +237,7 @@ class DataDeletionJob(
         }.toMap()
     }
 
+    @JsonIgnore
     private fun getEntitySetPartitions(entityDataKeys: Set<EntityDataKey>): Map<UUID, Iterable<Int>> {
         val entitySetIds = entityDataKeys.mapTo(mutableSetOf()) { it.entitySetId }
         val esToPartitions = entitySets.executeOnKeys(entitySetIds, GetPartitionsFromEntitySetEntryProcessor())
@@ -285,6 +290,7 @@ class DataDeletionJob(
         ps.addBatch()
     }
 
+    @JsonIgnore
     private fun deletePropertyOfEntityFromS3(
             entitySetIds: Collection<UUID>,
             entityKeyIds: Collection<UUID>,
@@ -330,6 +336,7 @@ class DataDeletionJob(
         return state.deleteType == DeleteType.Hard
     }
 
+    @JsonIgnore
     private fun excludeClearedIfSoftDeleteSql(isEdges: Boolean = false): String {
         if (isHardDelete() && isEdges) {
             return ""
@@ -357,6 +364,7 @@ class DataDeletionJob(
      * 1) entitySetId
      * 2) partitions
      */
+    @JsonIgnore
     private fun getIdsBatchSql(): String {
         return """
             SELECT ${ENTITY_SET_ID.name}, ${ID.name}
@@ -378,6 +386,7 @@ class DataDeletionJob(
      * 5) entitySetId
      * 6) entityKeyIds
      */
+    @JsonIgnore
     private fun getEdgesBatchSql(): String {
         val entityMatches = listOf(
                 SRC_ENTITY_SET_ID to SRC_ENTITY_KEY_ID,
