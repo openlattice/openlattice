@@ -12,7 +12,11 @@ import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.data.util.PostgresDataHasher
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.*
-import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.ID
+import com.openlattice.postgres.PostgresColumn.PARTITION
+import com.openlattice.postgres.PostgresColumn.PROPERTY_TYPE_ID
+import com.openlattice.postgres.PostgresColumn.VERSION
 import com.openlattice.postgres.PostgresTable.DATA
 import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.streams.BasePostgresIterable
@@ -571,16 +575,13 @@ class PostgresEntityDataQueryService(
     ): WriteEvent {
         val version = System.currentTimeMillis()
 
-        return hds.connection.use { conn ->
-            val writeEvent = tombstone(
-                    entitySetId,
-                    entityKeyIds,
-                    authorizedPropertyTypes.values,
-                    version,
-                    partitions.toList()
-            )
-            return@use writeEvent
-        }
+        return tombstone(
+                entitySetId,
+                entityKeyIds,
+                authorizedPropertyTypes.values,
+                version,
+                partitions.toList()
+        )
     }
 
     /**
