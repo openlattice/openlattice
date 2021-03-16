@@ -37,6 +37,7 @@ import com.openlattice.postgres.PostgresColumn.LINKING_ID
 import com.openlattice.postgres.PostgresColumn.PARTITION
 import com.openlattice.postgres.PostgresColumn.VERSION
 import com.openlattice.postgres.PostgresTable.IDS
+import com.openlattice.postgres.PostgresTable.SYNC_IDS
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
@@ -154,6 +155,7 @@ class BackgroundIndexedEntitiesDeletionService(
         while (deletableIds.isNotEmpty()) {
             updateExpiration(entitySet.id)
             deleteCount += dataQueryService.deleteEntities(entitySet.id, deletableIds, entitySet.partitions).numUpdates
+            deleteFromSyncIds(entitySet.id, deletableIds)
             deletableIds = getDeletedIdsBatch(entitySet, indexedOnly).toSet()
         }
 
@@ -208,6 +210,29 @@ class BackgroundIndexedEntitiesDeletionService(
                   )
                   LIMIT $DELETE_SIZE
             """.trimIndent()
+
+    private fun deleteFromSyncIds(entitySetId: UUID, entityKeyIds: Set<UUID>) {
+        hds.connection.use { conn ->
+            conn.prepareStatement(deleteFromSyncIdsSql).use { ps ->
+                ps.setObject(1, entitySetId)
+                ps.setArray(2, PostgresArrays.createUuidArray(conn, entityKeyIds))
+                ps.executeUpdate()
+            }
+        }
+    }
+
+    /**
+     * PreparedStatement bind order:
+     *
+     * 1) entitySetId
+     * 2) entityKeyIds
+     */
+    private val deleteFromSyncIdsSql = """
+        DELETE FROM ${SYNC_IDS.name}
+        WHERE
+          ${ENTITY_SET_ID.name} = ?
+          AND ${ID.name} = ANY(?)
+    """.trimIndent()
 
     private fun tryLockEntitySet(entitySetId: UUID): Boolean {
         return deletionLocks.putIfAbsent(entitySetId, System.currentTimeMillis() + DELETE_EXPIRATION_MILLIS) == null
