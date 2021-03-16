@@ -60,6 +60,7 @@ import com.openlattice.edm.set.EntitySetPropertyMetadata;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
+import com.openlattice.entitysets.DeletedEntitySetMapstore;
 import com.openlattice.hazelcast.mapstores.shuttle.IntegrationJobsMapstore;
 import com.openlattice.hazelcast.mapstores.shuttle.IntegrationsMapstore;
 import com.openlattice.ids.IdGenerationMapstore;
@@ -314,7 +315,12 @@ public class MapstoresPod {
     }
 
     @Bean
-    public ProjectedTablesMapstore ProjectedTablesMapstore() {
+    public ProjectedTablesMapstore projectedTablesMapstore() {
         return new ProjectedTablesMapstore( hikariDataSource );
+    }
+
+    @Bean
+    public DeletedEntitySetMapstore deletedEntitySetMapstore() {
+        return new DeletedEntitySetMapstore( hikariDataSource );
     }
 }

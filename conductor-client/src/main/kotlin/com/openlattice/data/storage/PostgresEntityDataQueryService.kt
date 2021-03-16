@@ -687,9 +687,8 @@ class PostgresEntityDataQueryService(
     /**
      * Deletes entities from [IDS] table.
      */
-    fun deleteEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): WriteEvent {
-        val partitions = partitionManager.getEntitySetPartitions(entitySetId).toList()
-        val entitiesByPartition = getIdsByPartition(entityKeyIds, partitions)
+    fun deleteEntities(entitySetId: UUID, entityKeyIds: Set<UUID>, partitions: Set<Int>): WriteEvent {
+        val entitiesByPartition = getIdsByPartition(entityKeyIds, partitions.toList())
 
         val numUpdates = hds.connection.use { connection ->
             try {
