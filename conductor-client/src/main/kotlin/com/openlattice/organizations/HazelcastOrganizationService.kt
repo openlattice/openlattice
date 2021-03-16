@@ -10,7 +10,15 @@ import com.hazelcast.query.Predicates
 import com.openlattice.IdConstants
 import com.openlattice.assembler.Assembler
 import com.openlattice.assembler.PostgresDatabases
-import com.openlattice.authorization.*
+import com.openlattice.authorization.Ace
+import com.openlattice.authorization.Acl
+import com.openlattice.authorization.AclKey
+import com.openlattice.authorization.AuthorizationManager
+import com.openlattice.authorization.HazelcastAclKeyReservationService
+import com.openlattice.authorization.Permission
+import com.openlattice.authorization.Principal
+import com.openlattice.authorization.PrincipalType
+import com.openlattice.authorization.SecurablePrincipal
 import com.openlattice.authorization.mapstores.PrincipalMapstore
 import com.openlattice.collaborations.CollaborationService
 import com.openlattice.collections.mapstores.EntitySetCollectionMapstore
@@ -159,8 +167,8 @@ class HazelcastOrganizationService(
         initializeOrganization(organization)
 
         // set up organization database
-        val orgDatabase = assembler.createOrganizationAndReturnOid(organization.id)
-        organizationDatabases.set(organization.id, orgDatabase)
+        val orgDb = assembler.createOrganizationAndReturnOid(organization.id)
+        organizationDatabases[organization.id] = orgDb
 
         val adminRole = initializeOrganizationAdminRole(creatorPrincipal, organization.adminRoleAclKey, organization)
 

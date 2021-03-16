@@ -21,8 +21,6 @@
 
 package com.openlattice.ids
 
-import com.openlattice.assembler.AssemblerConnectionManager
-
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;

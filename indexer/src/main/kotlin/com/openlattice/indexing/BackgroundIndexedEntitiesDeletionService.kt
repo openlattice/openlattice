@@ -97,8 +97,8 @@ class BackgroundIndexedEntitiesDeletionService(
             val w = Stopwatch.createStarted()
             //We shuffle entity sets to make sure we have a chance to work share and index everything
             val lockedEntitySets = entitySets.values
-                    .shuffled()
                     .map { EntitySetForDeletion(it.id, it.name, it.partitions) }
+                    .shuffled()
                     .filter { tryLockEntitySet(it.id) }
 
             val lockedDeletedEntitySets = deletedEntitySets
