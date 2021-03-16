@@ -122,8 +122,8 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     @Inject
     private HazelcastJobService jobService;
 
-    private static int DELETION_BLOCKING_INTERVAL   = 1000 * 5; // 5 seconds
-    private static int MAX_DELETION_BLOCKING_CHECKS = DELETION_BLOCKING_INTERVAL * 12 * 5; // 5 minutes
+    private static final int DELETION_BLOCKING_INTERVAL   = 1000; // 1 second
+    private static final int MAX_DELETION_BLOCKING_CHECKS = DELETION_BLOCKING_INTERVAL * 60 * 5; // 5 minutes
 
     @RequestMapping(
             path = { "/" + ENTITY_SET + "/" + SET_ID_PATH },
@@ -689,7 +689,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId,
             @RequestParam( value = TYPE ) DeleteType deleteType,
-            @RequestParam( value = BLOCK, defaultValue = "false" ) boolean blockUntilCompletion ) {
+            @RequestParam( value = BLOCK, defaultValue = "true" ) boolean blockUntilCompletion ) {
         return deleteEntities( entitySetId, ImmutableSet.of( entityKeyId ), deleteType, blockUntilCompletion );
     }
 
@@ -700,7 +700,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @RequestBody Set<UUID> entityKeyIds,
             @RequestParam( value = TYPE ) DeleteType deleteType,
-            @RequestParam( value = BLOCK, defaultValue = "false" ) boolean blockUntilCompletion ) {
+            @RequestParam( value = BLOCK, defaultValue = "true" ) boolean blockUntilCompletion ) {
 
         ensureEntitySetCanBeWritten( entitySetId );
         deletionManager.authCheckForEntitySetAndItsNeighbors( entitySetId,
