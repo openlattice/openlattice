@@ -417,7 +417,7 @@ class PostgresEntityDataQueryService(
 
             val updatedEntities = ps.executeBatch().sum()
             logger.debug("Updated $updatedEntities entities as part of insert.")
-            return updatedPropertyCounts
+            return@use updatedPropertyCounts
         }
     }
 
@@ -663,25 +663,6 @@ class PostgresEntityDataQueryService(
             byteBlobDataManager.deleteObjects(s3Keys)
             count.addAndGet(s3Keys.size.toLong())
         }
-    }
-
-
-    private fun deletePropertiesInEntitySetFromS3(entitySetId: UUID, propertyTypeId: UUID): Long {
-        val count = AtomicLong()
-        BasePostgresIterable<String>(
-                PreparedStatementHolderSupplier(hds, selectEntitySetTextProperties, FETCH_SIZE) { ps ->
-                    val entitySetIdsArr = PostgresArrays.createUuidArray(ps.connection, setOf(entitySetId))
-                    val propertyTypeIdsArr = PostgresArrays.createUuidArray(ps.connection, setOf(propertyTypeId))
-                    ps.setArray(1, entitySetIdsArr)
-                    ps.setArray(2, propertyTypeIdsArr)
-                }
-        ) { rs ->
-            rs.getString(getMergedDataColumnName(PostgresDatatype.TEXT))
-        }.asSequence().chunked(S3_DELETE_BATCH_SIZE).asStream().parallel().forEach { s3Keys ->
-            byteBlobDataManager.deleteObjects(s3Keys)
-            count.addAndGet(s3Keys.size.toLong())
-        }
-        return count.get()
     }
 
     /**
