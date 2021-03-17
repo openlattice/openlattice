@@ -139,8 +139,8 @@ class DataDeletionJob(
 
     @JsonIgnore
     private fun getBatchOfEntityDataKeys(): Set<EntityDataKey> {
-        state.entityKeyIds?.let {
-            return it.take(BATCH_SIZE).mapTo(mutableSetOf()) { EntityDataKey(state.entitySetId, it) }
+        state.entityKeyIds?.let { entityKeyIds ->
+            return entityKeyIds.take(BATCH_SIZE).mapTo(mutableSetOf()) { EntityDataKey(state.entitySetId, it) }
         }
 
         return BasePostgresIterable(PreparedStatementHolderSupplier(hds, getIdsBatchSql()) {
