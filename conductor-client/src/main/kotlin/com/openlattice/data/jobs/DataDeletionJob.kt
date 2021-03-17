@@ -139,9 +139,10 @@ class DataDeletionJob(
 
     @JsonIgnore
     private fun getBatchOfEntityDataKeys(): Set<EntityDataKey> {
-        if (state.entityKeyIds != null) {
-            return state.entityKeyIds!!.take(BATCH_SIZE).mapTo(mutableSetOf()) { EntityDataKey(state.entitySetId, it) }
+        state.entityKeyIds?.let {
+            return it.take(BATCH_SIZE).mapTo(mutableSetOf()) { EntityDataKey(state.entitySetId, it) }
         }
+
         return BasePostgresIterable(PreparedStatementHolderSupplier(hds, getIdsBatchSql()) {
             it.setObject(1, state.entitySetId)
             it.setArray(2, PostgresArrays.createIntArray(it.connection, state.partitions))
@@ -154,11 +155,7 @@ class DataDeletionJob(
         val entityKeyIds = entityDataKeys.mapTo(mutableSetOf()) { it.entityKeyId }
         PostgresLinkingQueryService.deleteNeighborhoods(hds, state.entitySetId, entityKeyIds)
 
-        if (state.entityKeyIds == null) {
-            return
-        }
-
-        state.entityKeyIds!!.removeAll(entityKeyIds)
+        state.entityKeyIds?.removeAll(entityKeyIds)
     }
 
     @JsonIgnore
