@@ -134,7 +134,7 @@ class DataDeletionService(
                         throw ForbiddenException("Unable to perform delete on entity set $entitySetId because " +
                                 "$requiredPermissions permissions are required on all its property types.")
                     }
-                    authorizedEdgeEntitySets.remove(authorization.aclKey.first())
+                    authorizedEdgeEntitySets.remove(unauthorizedEntitySetId)
                 }
             }
         }

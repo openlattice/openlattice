@@ -123,7 +123,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     private HazelcastJobService jobService;
 
     private static final int DELETION_BLOCKING_INTERVAL   = 1000; // 1 second
-    private static final int MAX_DELETION_BLOCKING_CHECKS = DELETION_BLOCKING_INTERVAL * 60 * 5; // 5 minutes
+    private static final int MAX_DELETION_BLOCKING_CHECKS = 60 * 5; // 5 minutes
 
     @RequestMapping(
             path = { "/" + ENTITY_SET + "/" + SET_ID_PATH },
@@ -733,10 +733,11 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId,
             @RequestBody Set<UUID> propertyTypeIds,
             @RequestParam( value = TYPE ) DeleteType deleteType ) {
+        AclKey entitySetAclKey = new AclKey( entitySetId );
         if ( deleteType.equals( DeleteType.Soft ) ) {
-            ensureWriteAccess( new AclKey( entitySetId ) );
+            ensureWriteAccess( entitySetAclKey );
         } else {
-            ensureOwnerAccess( new AclKey( entitySetId ) );
+            ensureOwnerAccess( entitySetAclKey );
         }
         ensureEntitySetCanBeWritten( entitySetId );
 
