@@ -200,19 +200,6 @@ class Graph(
         }
     }
 
-    override fun getEdgeKeysOfEntitySet(
-            entitySetId: UUID, includeClearedEdges: Boolean
-    ): BasePostgresIterable<DataEdgeKey> {
-        val sql = if (includeClearedEdges) NEIGHBORHOOD_OF_ENTITY_SET_SQL else NON_TOMBSTONED_NEIGHBORHOOD_OF_ENTITY_SET_SQL
-        return BasePostgresIterable(PreparedStatementHolderSupplier(hds, sql, BATCH_SIZE, false) { ps ->
-            ps.setObject(1, entitySetId)
-            ps.setObject(2, entitySetId)
-            ps.setObject(3, entitySetId)
-        }) {
-            ResultSetAdapters.edgeKey(it)
-        }
-    }
-
     override fun getEdgesAndNeighborsForVertices(
             entitySetIds: Set<UUID>,
             pagedNeighborRequest: PagedNeighborRequest
@@ -893,20 +880,41 @@ class Graph(
         }.toSet()
     }
 
+    override fun checkForUnauthorizedEdges(
+            entitySetId: UUID,
+            authorizedEdgeEntitySets: Set<UUID>,
+            entityKeyIds: Set<UUID>?
+    ): Boolean {
+        val notAssocClause = if (authorizedEdgeEntitySets.isEmpty()) "" else {
+            "AND NOT( ${EDGE_ENTITY_SET_ID.name} = ANY('{${authorizedEdgeEntitySets.joinToString()}}') )"
+        }
 
-    override fun getEdgeEntitySetsConnectedToEntitySet(
-            entitySetId: UUID
-    ): Set<UUID> {
-        val query = "SELECT DISTINCT ${EDGE_ENTITY_SET_ID.name} " +
-                "FROM ${E.name} " +
-                "WHERE ${SRC_ENTITY_SET_ID.name} = ? OR ${DST_ENTITY_SET_ID.name} = ?"
+        val srcEntitySetFilter = entitySetClause(entitySetId, entityKeyIds, SRC_ENTITY_SET_ID, SRC_ENTITY_KEY_ID)
+        val dstEntitySetFilter = entitySetClause(entitySetId, entityKeyIds, DST_ENTITY_SET_ID, DST_ENTITY_KEY_ID)
 
-        return BasePostgresIterable(PreparedStatementHolderSupplier(reader, query) { ps ->
-            ps.setObject(1, entitySetId)
-            ps.setObject(2, entitySetId)
-        }) {
-            ResultSetAdapters.edgeEntitySetId(it)
-        }.toSet()
+        val query = """
+            SELECT 1 FROM ${E.name}
+            WHERE
+              ( ($srcEntitySetFilter) OR ($dstEntitySetFilter) )
+              $notAssocClause
+            LIMIT 1
+        """.trimIndent()
+
+        hds.connection.use { conn ->
+            conn.createStatement().use { stmt ->
+                stmt.executeQuery(query).use { rs ->
+                    return rs.next()
+                }
+            }
+        }
+    }
+
+    private fun entitySetClause(entitySetId: UUID, entityKeyIds: Set<UUID>?, entitySetColumn: PostgresColumnDefinition, entityKeyIdColumn: PostgresColumnDefinition): String {
+        val entityKeyIdClause = if (entityKeyIds.isNullOrEmpty()) "" else {
+            " AND ${entityKeyIdColumn.name} = ANY('{${entityKeyIds.joinToString()}}')"
+        }
+
+        return "${entitySetColumn.name} = '$entitySetId' $entityKeyIdClause"
     }
 
     private fun buildAssociationTable(

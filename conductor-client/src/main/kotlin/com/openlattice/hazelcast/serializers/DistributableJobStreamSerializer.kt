@@ -39,12 +39,14 @@ import javax.inject.Inject
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 @Component
-class DistributableJobStreamSerializer : IdGenerationServiceDependent<DistributableJobStreamSerializer>, AbstractDistributableJobStreamSerializer(){
+class DistributableJobStreamSerializer :
+        IdGenerationServiceDependent<DistributableJobStreamSerializer>,
+        AbstractDistributableJobStreamSerializer() {
     @Inject
     private lateinit var hds: HikariDataSource
 
     private lateinit var idService: HazelcastIdGenerationService
-
+    
     override fun getTypeId(): Int = StreamSerializerTypeIds.DISTRIBUTABLE_JOB.ordinal
     override fun read(`in`: ObjectDataInput): DistributableJob<*> {
         val job = super.read(`in`)

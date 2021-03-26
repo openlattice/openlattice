@@ -25,10 +25,19 @@ import com.google.common.cache.CacheBuilder
 import com.google.common.cache.CacheLoader
 import com.google.common.cache.LoadingCache
 import com.google.common.collect.*
-import com.openlattice.authorization.*
+import com.openlattice.authorization.Ace
+import com.openlattice.authorization.Acl
+import com.openlattice.authorization.AclData
+import com.openlattice.authorization.AclKey
+import com.openlattice.authorization.Action
 import com.openlattice.authorization.EdmAuthorizationHelper.OWNER_PERMISSION
 import com.openlattice.authorization.EdmAuthorizationHelper.WRITE_PERMISSION
-import com.openlattice.data.*
+import com.openlattice.authorization.Permission
+import com.openlattice.data.DataEdge
+import com.openlattice.data.DataEdgeKey
+import com.openlattice.data.DeleteType
+import com.openlattice.data.EntityDataKey
+import com.openlattice.data.UpdateType
 import com.openlattice.data.requests.EntitySetSelection
 import com.openlattice.data.requests.FileType
 import com.openlattice.edm.EdmConstants
@@ -45,7 +54,11 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
-import java.time.*
+import java.time.Instant
+import java.time.LocalDate
+import java.time.OffsetDateTime
+import java.time.ZoneId
+import java.time.ZoneOffset
 import java.util.*
 import kotlin.math.abs
 
@@ -811,7 +824,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         /*   HARD DELETE   */
         loginAs("user1")
         assertException(
-                { dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Hard) },
+                { dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Hard, true) },
                 "Object [${es.id}] is not accessible."
         )
         loginAs("admin")
@@ -823,7 +836,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         loginAs("user1")
         assertException(
-                { dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Hard) },
+                { dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Hard, true) },
                 "You must have OWNER permission of all required entity set ${es.id} properties to delete entities from it."
         )
         loginAs("admin")
@@ -836,7 +849,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         loginAs("user1")
         assertException(
-                { dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Hard) },
+                { dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Hard, true) },
                 "Object [${esEdge.id}] is not accessible."
         )
         loginAs("admin")
@@ -883,7 +896,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         loginAs("user1")
         assertException(
-                { dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Soft) },
+                { dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Soft, true) },
                 "Object [${es.id}] is not accessible."
         )
         loginAs("admin")
@@ -895,7 +908,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         loginAs("user1")
         assertException(
-                { dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Soft) },
+                { dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Soft, true) },
                 "You must have WRITE permission of all required entity set ${es.id} properties to delete entities from it."
         )
         loginAs("admin")
@@ -910,7 +923,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         loginAs("user1")
         assertException(
-                { dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Soft) },
+                { dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Soft, true) },
                 "Object [${esEdge.id}] is not accessible."
         )
         loginAs("admin")
@@ -994,7 +1007,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val ess = EntitySetSelection(Optional.of(personEt.properties))
         Assert.assertEquals(numberOfEntries, dataApi.loadSelectedEntitySetData(es.id, ess, FileType.json).toList().size)
 
-        dataApi.deleteEntities(es.id, setOf(newEntityIds[0]), DeleteType.Hard)
+        dataApi.deleteEntities(es.id, setOf(newEntityIds[0]), DeleteType.Hard, true)
 
         val loadedEntries = dataApi.loadSelectedEntitySetData(es.id, ess, FileType.json).toList()
 
@@ -1003,7 +1016,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
             it[EdmTestConstants.personGivenNameFqn] == entries.first().values
         })
 
-        dataApi.deleteEntities(es.id, newEntityIds.drop(1).toSet(), DeleteType.Hard)
+        dataApi.deleteEntities(es.id, newEntityIds.drop(1).toSet(), DeleteType.Hard, true)
         Assert.assertEquals(0, dataApi.loadSelectedEntitySetData(es.id, ess, FileType.json).toList().size)
 
         /* Association entity set */
@@ -1033,11 +1046,11 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val aess = EntitySetSelection(Optional.of(et.properties))
         Assert.assertEquals(numberOfEntries, dataApi.loadSelectedEntitySetData(aes.id, aess, FileType.json).toList().size)
 
-        dataApi.deleteEntities(aes.id, setOf(createdEdges[0]), DeleteType.Soft)
+        dataApi.deleteEntities(aes.id, setOf(createdEdges[0]), DeleteType.Soft, true)
         val loadedAssociations = dataApi.loadSelectedEntitySetData(aes.id, aess, FileType.json).toList()
         Assert.assertEquals(numberOfEntries - 1, loadedAssociations.size)
 
-        dataApi.deleteEntities(aes.id, createdEdges.drop(1).toSet(), DeleteType.Soft)
+        dataApi.deleteEntities(aes.id, createdEdges.drop(1).toSet(), DeleteType.Soft, true)
         Assert.assertEquals(0, dataApi.loadSelectedEntitySetData(aes.id, aess, FileType.json).toList().size)
     }
 
@@ -1079,7 +1092,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
 
         // hard delete 1st entity
-        dataApi.deleteEntities(es.id, setOf(newEntityIds[0]), DeleteType.Hard)
+        dataApi.deleteEntities(es.id, setOf(newEntityIds[0]), DeleteType.Hard, true)
 
         val ess1 = EntitySetSelection(Optional.of(personEt.properties))
         val loadedEntries1 = dataApi.loadSelectedEntitySetData(es.id, ess1, FileType.json).toList()
@@ -1104,7 +1117,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         })
 
         // soft delete last entity
-        dataApi.deleteEntities(es.id, setOf(newEntityIds[numberOfEntries - 1]), DeleteType.Soft)
+        dataApi.deleteEntities(es.id, setOf(newEntityIds[numberOfEntries - 1]), DeleteType.Soft, true)
 
         val ess2 = EntitySetSelection(Optional.of(personEt.properties))
         val loadedEntries2 = dataApi.loadSelectedEntitySetData(es.id, ess2, FileType.json).toList()

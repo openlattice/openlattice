@@ -2,14 +2,23 @@ package com.openlattice.rehearsal.search
 
 import com.google.common.base.Strings
 import com.google.common.collect.ImmutableList
-import com.openlattice.authorization.*
+import com.openlattice.authorization.Ace
+import com.openlattice.authorization.Acl
+import com.openlattice.authorization.AclData
+import com.openlattice.authorization.AclKey
+import com.openlattice.authorization.Action
+import com.openlattice.authorization.Permission
 import com.openlattice.data.DataEdgeKey
 import com.openlattice.data.DeleteType
 import com.openlattice.data.EntityDataKey
 import com.openlattice.edm.EdmConstants
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
-import com.openlattice.search.requests.*
+import com.openlattice.search.requests.AdvancedSearch
+import com.openlattice.search.requests.EntityNeighborsFilter
+import com.openlattice.search.requests.SearchConstraints
+import com.openlattice.search.requests.SearchDetails
+import com.openlattice.search.requests.SearchTerm
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
@@ -321,7 +330,7 @@ class SearchControllerTest : MultipleAuthenticatedUsersBase() {
 
         /* Hard delete */
         // 1 entity
-        dataApi.deleteEntity(es.id, idsList[0], DeleteType.Hard)
+        dataApi.deleteEntity(es.id, idsList[0], DeleteType.Hard, true)
 
         // should be deleted automatically
         searchedEntities = searchApi.executeEntitySetDataQuery(es.id, searchAll)
@@ -333,7 +342,7 @@ class SearchControllerTest : MultipleAuthenticatedUsersBase() {
         }
 
         // multiple entities
-        dataApi.deleteEntities(es.id, setOf(idsList[1], idsList[2]), DeleteType.Hard)
+        dataApi.deleteEntities(es.id, setOf(idsList[1], idsList[2]), DeleteType.Hard, true)
 
         // should be deleted automatically
         searchedEntities = searchApi.executeEntitySetDataQuery(es.id, searchAll)
@@ -348,7 +357,7 @@ class SearchControllerTest : MultipleAuthenticatedUsersBase() {
 
         /* Soft delete */
         // 1 entity
-        dataApi.deleteEntity(es.id, idsList[3], DeleteType.Soft)
+        dataApi.deleteEntity(es.id, idsList[3], DeleteType.Soft, true)
 
         // should be deleted automatically
         searchedEntities = searchApi.executeEntitySetDataQuery(es.id, searchAll)
@@ -359,7 +368,7 @@ class SearchControllerTest : MultipleAuthenticatedUsersBase() {
         }
 
         // multiple entities
-        dataApi.deleteEntities(es.id, setOf(idsList[4], idsList[5]), DeleteType.Soft)
+        dataApi.deleteEntities(es.id, setOf(idsList[4], idsList[5]), DeleteType.Soft, true)
 
         // should be deleted automatically
         searchedEntities = searchApi.executeEntitySetDataQuery(es.id, searchAll)
@@ -495,8 +504,8 @@ class SearchControllerTest : MultipleAuthenticatedUsersBase() {
         // make both soft and hard deletes
         val (softDeleteIds, hardDeleteIds) = deletedIds.chunked(25).map { it.toSet() }
         val numberOfDeletes = softDeleteIds.size + hardDeleteIds.size
-        dataApi.deleteEntities(es.id, softDeleteIds, DeleteType.Soft)
-        dataApi.deleteEntities(es.id, hardDeleteIds, DeleteType.Hard)
+        dataApi.deleteEntities(es.id, softDeleteIds, DeleteType.Soft, true)
+        dataApi.deleteEntities(es.id, hardDeleteIds, DeleteType.Hard, true)
         Thread.sleep(1000)
 
         // should be deleted automatically
