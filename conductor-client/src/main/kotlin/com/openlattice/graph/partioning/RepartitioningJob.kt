@@ -11,11 +11,27 @@ import com.openlattice.data.storage.getPartitioningSelector
 import com.openlattice.edm.EntitySet
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.serializers.decorators.MetastoreAware
-import com.openlattice.postgres.DataTables.*
+import com.openlattice.postgres.DataTables.LAST_INDEX
+import com.openlattice.postgres.DataTables.LAST_LINK
+import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresArrays
-import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.ID
+import com.openlattice.postgres.PostgresColumn.LAST_LINK_INDEX
+import com.openlattice.postgres.PostgresColumn.LAST_MIGRATE
+import com.openlattice.postgres.PostgresColumn.LAST_PROPAGATE
+import com.openlattice.postgres.PostgresColumn.LINKING_ID
+import com.openlattice.postgres.PostgresColumn.ORIGIN_ID
+import com.openlattice.postgres.PostgresColumn.PARTITION
+import com.openlattice.postgres.PostgresColumn.PARTITIONS
+import com.openlattice.postgres.PostgresColumn.SRC_ENTITY_KEY_ID
+import com.openlattice.postgres.PostgresColumn.SRC_ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.VERSION
+import com.openlattice.postgres.PostgresColumn.VERSIONS
 import com.openlattice.postgres.PostgresColumnDefinition
-import com.openlattice.postgres.PostgresTable.*
+import com.openlattice.postgres.PostgresTable.DATA
+import com.openlattice.postgres.PostgresTable.E
+import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.PostgresTableDefinition
 import com.openlattice.postgres.ResultSetAdapters
 import com.zaxxer.hikari.HikariDataSource
@@ -258,6 +274,10 @@ fun buildRepartitionColumns(ptd: PostgresTableDefinition): String {
     return ptd.columns.joinToString(",") { if (it == PARTITION) selector else it.name }
 }
 
+fun buildNormalColumns(ptd: PostgresTableDefinition): String {
+    return ptd.columns.joinToString { it.name }
+}
+
 /**
  * Counts ids that need migrating on a single partition. We do one partition at a time to be able to re-use same
  * bind order across all queries in this class.
@@ -325,9 +345,10 @@ val REPARTITION_EDGES_COLUMNS = buildRepartitionColumns(E)
  * NOTE: We set origin_id based on version. This should be fine in 99.999% of cases as the latest version should have
  * the most up to date linkined. See note on  for exceptional case [REPARTITION_IDS_SQL]
  */
+
 private val REPARTITION_DATA_SQL = """
-INSERT INTO ${DATA.name} SELECT $REPARTITION_DATA_COLUMNS
-    FROM ${DATA.name} INNER JOIN (select ? as ${ENTITY_SET_ID.name},? as ${PARTITIONS.name} ) as es 
+INSERT INTO ${DATA.name} (${buildNormalColumns(DATA)}) SELECT $REPARTITION_DATA_COLUMNS
+    FROM ${DATA.name} INNER JOIN (select ? as ${ENTITY_SET_ID.name},? as ${PARTITIONS.name} ) as es
     USING ( ${ENTITY_SET_ID.name} )
     WHERE ${PARTITION.name} = ? AND ${PARTITION.name}!=$REPARTITION_SELECTOR
     ON CONFLICT (${DATA.primaryKey.joinToString(",") { it.name }}) DO UPDATE SET
@@ -348,7 +369,7 @@ INSERT INTO ${DATA.name} SELECT $REPARTITION_DATA_COLUMNS
  * NOTE: Using last_link for LINKING_ID in this query because a link can happen without triggering a version update.
  */
 private val REPARTITION_IDS_SQL = """
-INSERT INTO ${IDS.name} SELECT $REPARTITION_IDS_COLUMNS
+INSERT INTO ${IDS.name} (${buildNormalColumns(IDS)}) SELECT $REPARTITION_IDS_COLUMNS
     FROM ${IDS.name} INNER JOIN (select ? as ${ENTITY_SET_ID.name},? as ${PARTITIONS.name} ) as es 
     USING (${ENTITY_SET_ID.name})
     WHERE ${PARTITION.name} = ? AND ${PARTITION.name}!=$REPARTITION_SELECTOR
@@ -373,7 +394,7 @@ INSERT INTO ${IDS.name} SELECT $REPARTITION_IDS_COLUMNS
  * NOTE: Using last_link for LINKING_ID in this query because a link can happen without triggering a version update.
  */
 private val REPARTITION_EDGES_SQL = """
-INSERT INTO ${E.name} SELECT $REPARTITION_EDGES_COLUMNS
+INSERT INTO ${E.name} (${buildNormalColumns(E)}) SELECT $REPARTITION_EDGES_COLUMNS
     FROM ${E.name} INNER JOIN (select ? as ${SRC_ENTITY_SET_ID.name},? as ${PARTITIONS.name} ) as es
     USING (${SRC_ENTITY_SET_ID.name})
     WHERE ${PARTITION.name} = ? AND ${PARTITION.name}!=$REPARTITION_SELECTOR_E
