@@ -349,7 +349,7 @@ class AssemblerTest : AssemblerTestBase() {
         }
 
         // delete data
-        dataApi.deleteEntities(es.id, ids.toSet(), DeleteType.Hard)
+        dataApi.deleteEntities(es.id, ids.toSet(), DeleteType.Hard, true)
         Assert.assertTrue(
                 organizationsApi.getOrganizationEntitySets(organizationID)[es.id]!!
                         .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)

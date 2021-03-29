@@ -178,13 +178,19 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
                     ),
                     allUserPrincipals
             ).neighbors
-            sendAlertsForNewWrites(userSecurablePrincipal, persistentSearch, results, neighborsById)
-            val lastReadDateTime = getLatestRead(results.hits)
-            logger.info(
-                    "Last read date time {} for alert {} with {} hits", lastReadDateTime, persistentSearch.id,
-                    results.numHits
-            )
-            lastReadDateTime?.let { updatedReadDateTimes[persistentSearch.id] = it }
+
+            try {
+                sendAlertsForNewWrites(userSecurablePrincipal, persistentSearch, results, neighborsById)
+                val lastReadDateTime = getLatestRead(results.hits)
+                logger.info(
+                        "Last read date time {} for alert {} with {} hits", lastReadDateTime, persistentSearch.id,
+                        results.numHits
+                )
+                lastReadDateTime?.let { updatedReadDateTimes[persistentSearch.id] = it }
+
+            } catch (e: Exception) {
+                logger.error("An error occurred while trying to send alerts for user {} for search {}", userSecurablePrincipal.aclKey, persistentSearch.id)
+            }
         }
 
         return updatedReadDateTimes

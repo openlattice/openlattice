@@ -2,7 +2,12 @@ package com.openlattice.rehearsal.search
 
 import com.google.common.collect.ImmutableList
 import com.google.common.collect.Lists
-import com.openlattice.authorization.*
+import com.openlattice.authorization.Ace
+import com.openlattice.authorization.Acl
+import com.openlattice.authorization.AclData
+import com.openlattice.authorization.AclKey
+import com.openlattice.authorization.Action
+import com.openlattice.authorization.Permission
 import com.openlattice.data.DataEdgeKey
 import com.openlattice.data.DeleteType
 import com.openlattice.data.EntityDataKey
@@ -349,7 +354,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
             Assert.assertTrue(result4.hits.any { it[EdmTestConstants.personGivenNameFqn] == setOf("newtestt") })
         }
 
-        dataApi.deleteEntity(socratesBId, newBEntityIds.first(), DeleteType.Soft) // delete first entity with value newtestt
+        dataApi.deleteEntity(socratesBId, newBEntityIds.first(), DeleteType.Soft, true) // delete first entity with value newtestt
 
         Thread.sleep(10000L) // wait for linking to finish
         while (!checkLinkingFinished(importedEntitySets.keys)) {
@@ -368,7 +373,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
             Assert.assertTrue(result5.hits.any { it[EdmTestConstants.personGivenNameFqn] == setOf("newtestt") })
         }
 
-        dataApi.deleteEntity(socratesBId, newBEntityIds.last(), DeleteType.Soft) // delete last entity with value newtestt
+        dataApi.deleteEntity(socratesBId, newBEntityIds.last(), DeleteType.Soft, true) // delete last entity with value newtestt
         Thread.sleep(60000L) // wait for indexing to finish, we don't need to wait for linking here
 
         val result6 = searchApi.searchEntitySetData(simpleSearchConstraint)

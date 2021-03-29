@@ -363,6 +363,10 @@ public final class ResultSetAdapters {
         return rs.getObject( EDGE_ENTITY_SET_ID.getName(), UUID.class );
     }
 
+    public static UUID edgeEntityKeyId( ResultSet rs ) throws SQLException {
+        return rs.getObject( EDGE_ENTITY_KEY_ID.getName(), UUID.class );
+    }
+
     public static DataEdgeKey edgeKey( ResultSet rs ) throws SQLException {
         final UUID srcEntityKeyId = rs.getObject( SRC_ENTITY_KEY_ID.getName(), UUID.class );
         final UUID srcEntitySetId = rs.getObject( SRC_ENTITY_SET_ID.getName(), UUID.class );
