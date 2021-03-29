@@ -24,7 +24,6 @@ import com.openlattice.transporter.grantUsageOnSchemaSql
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
-import java.sql.Statement
 import java.util.*
 
 /**
@@ -37,7 +36,7 @@ class ExternalDatabasePermissioner(
         private val dbCredentialService: DbCredentialService,
         private val principalsMapManager: PrincipalsMapManager
 ) : ExternalDatabasePermissioningService {
-    private val atlas: HikariDataSource = extDbManager.connect("postgres")
+    private val atlas: HikariDataSource = extDbManager.connectAsSuperuser()
 
     private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
     private val securableObjectTypes = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap(hazelcastInstance)
@@ -463,24 +462,23 @@ class ExternalDatabasePermissioner(
             val addz = adds.getOrDefault(organizationId, listOf<String>())
             extDbManager.connectToOrg(organizationId).connection.use { conn ->
                 conn.autoCommit = false
-                val stmt: Statement = conn.createStatement()
-                try {
-                    rems.forEach { sql ->
-                        stmt.addBatch(sql)
-                    }
-                    stmt.executeBatch()
-                    stmt.clearBatch()
+                conn.createStatement().use { stmt ->
+                    try {
+                        rems.forEach { sql ->
+                            stmt.addBatch(sql)
+                        }
+                        stmt.executeBatch()
+                        stmt.clearBatch()
 
-                    addz.forEach { sql ->
-                        stmt.addBatch(sql)
+                        addz.forEach { sql ->
+                            stmt.addBatch(sql)
+                        }
+                        stmt.executeBatch()
+                        conn.commit()
+                    } catch (ex: Exception) {
+                        logger.error("Exception occurred during external permissions update, rolling back", ex)
+                        conn.rollback()
                     }
-                    stmt.executeBatch()
-                    conn.commit()
-                } catch (ex: Exception) {
-                    logger.error("Exception occurred during external permissions update, rolling back", ex)
-                    conn.rollback()
-                } finally {
-                    stmt.close()
                 }
             }
         }

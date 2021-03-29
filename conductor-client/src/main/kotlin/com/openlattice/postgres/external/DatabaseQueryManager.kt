@@ -5,14 +5,20 @@ import com.openlattice.authorization.SecurablePrincipal
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.organization.roles.Role
+import com.openlattice.organizations.OrganizationDatabase
 import com.zaxxer.hikari.HikariDataSource
 import java.util.*
 
 interface DatabaseQueryManager {
 
-    fun createAndInitializeOrganizationDatabase(organizationId: UUID, dbName: String)
+    /**
+     * Creates a private organization database that can be used for uploading data using launchpad.
+     * Also sets up foreign data wrapper using assembler in assembler so that materialized views of data can be
+     * provided.
+     */
+    fun createAndInitializeOrganizationDatabase(organizationId: UUID): OrganizationDatabase
 
-    fun createAndInitializeCollaborationDatabase(collaborationId: UUID, dbName: String): Int
+    fun createAndInitializeCollaborationDatabase(collaborationId: UUID): OrganizationDatabase
 
     fun addMembersToCollaboration(collaborationId: UUID, memberRoles: Iterable<String>)
 

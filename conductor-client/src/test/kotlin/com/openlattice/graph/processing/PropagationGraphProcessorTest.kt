@@ -1,19 +1,20 @@
 package com.openlattice.graph.processing
 
-import com.google.common.collect.LinkedHashMultimap
 import com.google.common.collect.Maps
 import com.openlattice.analysis.requests.ValueFilter
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.type.EntityType
-import com.openlattice.graph.processing.processors.*
+import com.openlattice.graph.processing.processors.AssociationProcessor
+import com.openlattice.graph.processing.processors.BaseDurationProcessor
+import com.openlattice.graph.processing.processors.DurationProcessor
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
 import org.mockito.Matchers
 import org.mockito.Mockito
-import org.mockito.Mockito.*
+import org.mockito.Mockito.mock
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
 import java.time.temporal.ChronoUnit
@@ -69,7 +70,7 @@ class PropagationGraphProcessorTest {
                             LinkedHashSet<UUID>(),
                             LinkedHashSet<UUID>(),
                             Maps.newLinkedHashMap<UUID, LinkedHashSet<String>>(),
-                            Optional.of(uuid),
+                            Optional.empty(),
                             Optional.of(SecurableObjectType.EntityType),
                             Optional.empty()
                     )

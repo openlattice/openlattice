@@ -20,6 +20,7 @@
 
 package com.openlattice.indexing.pods;
 
+import com.geekbeast.rhizome.jobs.HazelcastJobService;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
 import com.openlattice.BackgroundExternalDatabaseSyncingService;
@@ -129,6 +130,9 @@ public class IndexerPostConfigurationServicesPod {
     @Inject
     private EntitySetManager entitySetManager;
 
+    @Inject
+    private HazelcastJobService jobService;
+
     @Bean
     public PartitionManager partitionManager() {
         return new PartitionManager( hazelcastInstance, hikariDataSource );
@@ -180,7 +184,8 @@ public class IndexerPostConfigurationServicesPod {
                 auditingManager,
                 dataGraphService,
                 dataDeletionManager,
-                entitySetManager );
+                entitySetManager,
+                jobService );
     }
 
     @Bean

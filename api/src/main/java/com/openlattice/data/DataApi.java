@@ -20,7 +20,6 @@ package com.openlattice.data;
 
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.SetMultimap;
-import com.openlattice.analysis.requests.Filter;
 import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
 import com.openlattice.search.requests.EntityNeighborsFilter;
@@ -40,7 +39,7 @@ public interface DataApi {
     String BASE                  = SERVICE + CONTROLLER;
     // @formatter:on
 
-    String ASSOCIATION           = "association";
+    String ASSOCIATION = "association";
 
     int    MAX_BATCH_SIZE        = 10_000;
     String COUNT                 = "count";
@@ -51,6 +50,7 @@ public interface DataApi {
      */
 
     String ALL                   = "all";
+    String BLOCK                 = "block";
     String PROPERTIES            = "properties";
     String ENTITY_SET            = "set";
     String ENTITY_SET_ID         = "setId";
@@ -95,7 +95,7 @@ public interface DataApi {
             @Query( ENTITY_SET_ID ) UUID entitySetId,
             @Body List<Map<UUID, Set<Object>>> entities );
 
-    @POST( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + FILTERED)
+    @POST( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + FILTERED )
     Iterable<Map<FullQualifiedName, Set<Object>>> loadFilteredEntitySetData(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Body FilteredDataPageDefinition filteredDataPageDefinition
@@ -179,13 +179,12 @@ public interface DataApi {
     @POST( BASE )
     DataGraphIds createEntityAndAssociationData( @Body DataGraph data );
 
-
     /**
      * Deletes the entities matching the given entity ids and all of its neighbor entities provided in the filter.
      *
      * @param entitySetId The id of the EntitySet to delete from.
-     * @param filter EntityNeighboursFilter containing which ids of entities to delete and entity set ids of neighbours
-     *               to delete from.
+     * @param filter      EntityNeighboursFilter containing which ids of entities to delete and entity set ids of neighbours
+     *                    to delete from.
      * @param deleteType  The delete type to perform (soft or hard delete).
      */
     @POST( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + NEIGHBORS )
@@ -201,7 +200,7 @@ public interface DataApi {
      * @param deleteType  The delete type to perform (soft or hard delete).
      */
     @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ALL )
-    Integer deleteAllEntitiesFromEntitySet(
+    UUID deleteAllEntitiesFromEntitySet(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Query( TYPE ) DeleteType deleteType );
 
@@ -216,7 +215,8 @@ public interface DataApi {
     Integer deleteEntity(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Path( ENTITY_KEY_ID ) UUID entityKeyId,
-            @Query( TYPE ) DeleteType deleteType );
+            @Query( TYPE ) DeleteType deleteType,
+            @Query( BLOCK ) boolean blockUntilCompletion );
 
     /**
      * Deletes multiple entities from an entity set.
@@ -229,7 +229,8 @@ public interface DataApi {
     Integer deleteEntities(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Body Set<UUID> entityKeyIds,
-            @Query( TYPE ) DeleteType deleteType );
+            @Query( TYPE ) DeleteType deleteType,
+            @Query( BLOCK ) boolean blockUntilCompletion );
 
     /**
      * Deletes properties from an entity.
@@ -295,11 +296,11 @@ public interface DataApi {
      * Loads a linked entity set breakdown with the selected linked entities and properties.
      *
      * @param linkedEntitySetId The id of the linked entity set to load.
-     * @param selection The selection of properties and linking ids to load.
+     * @param selection         The selection of properties and linking ids to load.
      * @return Returns linked entity set data detailed in a Map mapped by linking id, (normal) entity set id, origin id,
      * property type full qualified name and values respectively.
      */
-    @POST( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + DETAILED  )
+    @POST( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + DETAILED )
     Map<UUID, Map<UUID, Map<UUID, Map<FullQualifiedName, Set<Object>>>>> loadLinkedEntitySetBreakdown(
             @Path( ENTITY_SET_ID ) UUID linkedEntitySetId,
             @Body EntitySetSelection selection

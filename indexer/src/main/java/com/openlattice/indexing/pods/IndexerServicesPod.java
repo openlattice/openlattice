@@ -31,7 +31,6 @@ import com.hazelcast.core.HazelcastInstance;
 import com.kryptnostic.rhizome.configuration.ConfigurationConstants;
 import com.openlattice.assembler.Assembler;
 import com.openlattice.assembler.AssemblerConfiguration;
-import com.openlattice.assembler.AssemblerConnectionManager;
 import com.openlattice.assembler.pods.AssemblerConfigurationPod;
 import com.openlattice.auditing.AuditRecordEntitySetsManager;
 import com.openlattice.auditing.AuditingConfiguration;
@@ -191,9 +190,9 @@ public class IndexerServicesPod {
     public Assembler assembler() {
         return new Assembler(
                 dbcs(),
-                hikariDataSource,
                 authorizationManager(),
                 securePrincipalsManager(),
+                dbQueryManager(),
                 metricRegistry,
                 hazelcastInstance,
                 eventBus
@@ -207,16 +206,6 @@ public class IndexerServicesPod {
                 externalDbConnMan,
                 securePrincipalsManager(),
                 dbcs()
-        );
-    }
-
-    @Bean
-    public AssemblerConnectionManager assemblerConnectionManager() {
-        return new AssemblerConnectionManager(
-                externalDbConnMan,
-                securePrincipalsManager(),
-                dbQueryManager(),
-                externalDatabasePermissionsManager()
         );
     }
 
@@ -403,13 +392,12 @@ public class IndexerServicesPod {
     @Bean
     public DataDeletionManager dataDeletionManager() {
         return new DataDeletionService(
-                dataModelService(),
                 entitySetManager(),
-                dataGraphService(),
                 authorizationManager(),
-                auditRecordEntitySetsManager(),
                 entityDatastore(),
-                graphApi()
+                graphApi(),
+                jobService(),
+                partitionManager()
         );
     }
 

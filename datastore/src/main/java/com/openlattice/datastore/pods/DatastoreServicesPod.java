@@ -35,8 +35,7 @@ import com.kryptnostic.rhizome.configuration.ConfigurationConstants;
 import com.openlattice.apps.services.AppService;
 import com.openlattice.assembler.Assembler;
 import com.openlattice.assembler.AssemblerConfiguration;
-import com.openlattice.assembler.AssemblerConnectionManager;
-import com.openlattice.assembler.AssemblerDependencies;
+import com.openlattice.assembler.UserRoleSyncTaskDependencies;
 import com.openlattice.assembler.pods.AssemblerConfigurationPod;
 import com.openlattice.assembler.tasks.UserCredentialSyncTask;
 import com.openlattice.auditing.AuditRecordEntitySetsManager;
@@ -64,7 +63,13 @@ import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.graph.DataGraphServiceHelper;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
-import com.openlattice.data.storage.*;
+import com.openlattice.data.storage.ByteBlobDataManager;
+import com.openlattice.data.storage.DataDeletionService;
+import com.openlattice.data.storage.EntityDatastore;
+import com.openlattice.data.storage.IndexingMetadataManager;
+import com.openlattice.data.storage.PostgresEntityDataQueryService;
+import com.openlattice.data.storage.PostgresEntityDatastore;
+import com.openlattice.data.storage.PostgresEntitySetSizesTaskDependency;
 import com.openlattice.data.storage.aws.AwsDataSinkService;
 import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datastore.configuration.DatastoreConfiguration;
@@ -130,8 +135,6 @@ import org.springframework.context.annotation.Profile;
 
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
-
-import static com.openlattice.datastore.util.Util.returnAndLog;
 
 @Configuration
 @Import( {
@@ -350,9 +353,9 @@ public class DatastoreServicesPod {
     public Assembler assembler() {
         return new Assembler(
                 dcs(),
-                hikariDataSource,
                 authorizationManager(),
                 securePrincipalsManager(),
+                dbQueryManager(),
                 metricRegistry,
                 hazelcastInstance,
                 eventBus
@@ -424,8 +427,13 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    public AssemblerDependencies assemblerDependencies() {
-        return new AssemblerDependencies( hikariDataSource, dcs(), externalDbConnMan, assemblerConnectionManager() );
+    public UserRoleSyncTaskDependencies assemblerDependencies() {
+        return new UserRoleSyncTaskDependencies(
+                dcs(),
+                externalDbConnMan,
+                externalDatabasePermissionsManager(),
+                securePrincipalsManager()
+        );
     }
 
     @Bean
@@ -502,17 +510,16 @@ public class DatastoreServicesPod {
 
     @Bean
     public AppService appService() {
-        return returnAndLog(
-                new AppService(
-                        hazelcastInstance,
-                        dataModelService(),
-                        organizationsManager(),
-                        authorizationManager(),
-                        securePrincipalsManager(),
-                        aclKeyReservationService(),
-                        collectionsManager(),
-                        entitySetManager()
-                ), "Checkpoint app service"
+        logger.info( "Checkpoint app service" );
+        return new AppService(
+                hazelcastInstance,
+                dataModelService(),
+                organizationsManager(),
+                authorizationManager(),
+                securePrincipalsManager(),
+                aclKeyReservationService(),
+                collectionsManager(),
+                entitySetManager()
         );
     }
 
@@ -572,15 +579,6 @@ public class DatastoreServicesPod {
                 byteBlobDataManager,
                 partitionManager()
         );
-    }
-
-    @Bean
-    public AssemblerConnectionManager assemblerConnectionManager() {
-        return new AssemblerConnectionManager(
-                externalDbConnMan,
-                securePrincipalsManager(),
-                dbQueryManager(),
-                externalDatabasePermissionsManager() );
     }
 
     @Bean
@@ -656,13 +654,12 @@ public class DatastoreServicesPod {
     @Bean
     public DataDeletionManager dataDeletionManager() {
         return new DataDeletionService(
-                dataModelService(),
                 entitySetManager(),
-                dataGraphService(),
                 authorizationManager(),
-                auditRecordEntitySetsManager(),
                 entityDatastore(),
-                graphApi()
+                graphApi(),
+                jobService(),
+                partitionManager()
         );
     }
 

@@ -116,7 +116,7 @@ println "Using dependencies for " + branch
 /**
  * Monorepo Versions
  **/
-ext.monorepo_version='2.1.0-SNAPSHOT'
+ext.monorepo_version='2.6.0-SNAPSHOT'
 ext.api_version="${monorepo_version}"
 ext.conductor_version="${monorepo_version}"
 ext.conductor_client_version="${monorepo_version}"
@@ -244,7 +244,7 @@ if( branch.equals("master") ) { //Master overrides
   /**
    * Monorepo Versions
    **/
-  ext.monorepo_version='2.1.0'
+  ext.monorepo_version='2.5.0'
   ext.api_version="${monorepo_version}"
   ext.conductor_version="${monorepo_version}"
   ext.conductor_client_version="${monorepo_version}"

@@ -258,9 +258,9 @@ class ExternalDatabaseManagementService(
         return organizationExternalDatabaseColumns.getValue(columnId)
     }
 
-    fun getColumnNamesByTableName(dbName: String): List<TableInfo> {
-        return BasePostgresIterable(StatementHolderSupplier(
-                externalDbManager.connect(dbName),
+    fun getTableInfoForOrganization(organizationId: UUID): List<TableInfo> {
+            return BasePostgresIterable(StatementHolderSupplier(
+                externalDbManager.connectToOrg(organizationId),
                 getCurrentTableAndColumnNamesSql(),
                 FETCH_SIZE
         )) { rs ->
@@ -278,8 +278,9 @@ class ExternalDatabaseManagementService(
             val newTableFqn = FullQualifiedName(orgId.toString(), it)
             val oldTableName = getNameFromFqnString(tableFqnToId.first)
             externalDbManager.connectToOrg(orgId).connection.use { conn ->
-                val stmt = conn.createStatement()
-                stmt.execute("ALTER TABLE $oldTableName RENAME TO $it")
+                conn.createStatement().use { stmt ->
+                    stmt.execute("ALTER TABLE $oldTableName RENAME TO $it")
+                }
             }
             aclKeyReservations.renameReservation(tableFqnToId.second, newTableFqn.fullQualifiedNameAsString)
         }
@@ -293,8 +294,9 @@ class ExternalDatabaseManagementService(
             val newColumnFqn = FullQualifiedName(tableFqnToId.second.toString(), it)
             val oldColumnName = getNameFromFqnString(columnFqnToId.first)
             externalDbManager.connectToOrg(orgId).connection.use { conn ->
-                val stmt = conn.createStatement()
-                stmt.execute("ALTER TABLE $tableName RENAME COLUMN $oldColumnName to $it")
+                conn.createStatement().use { stmt ->
+                    stmt.execute("ALTER TABLE $tableName RENAME COLUMN $oldColumnName to $it")
+                }
             }
             aclKeyReservations.renameReservation(columnFqnToId.second, newColumnFqn.fullQualifiedNameAsString)
         }
@@ -317,8 +319,9 @@ class ExternalDatabaseManagementService(
 
             //delete tables from postgres
             externalDbManager.connectToOrg(orgId).connection.use { conn ->
-                val stmt = conn.createStatement()
-                stmt.execute("DROP TABLE $tableName")
+                conn.createStatement().use { stmt ->
+                    stmt.execute("DROP TABLE $tableName")
+                }
             }
         }
 
@@ -349,8 +352,9 @@ class ExternalDatabaseManagementService(
             //delete columns from postgres
             val dropColumnsSql = createDropColumnSql(columnNames)
             externalDbManager.connectToOrg(orgId).connection.use { conn ->
-                val stmt = conn.createStatement()
-                stmt.execute("ALTER TABLE $tableName $dropColumnsSql")
+                conn.createStatement().use { stmt ->
+                    stmt.execute("ALTER TABLE $tableName $dropColumnsSql")
+                }
             }
 
             deleteOrganizationExternalDatabaseColumnObjects(orgId, mapOf(tableId to columnIds))
@@ -385,11 +389,12 @@ class ExternalDatabaseManagementService(
         deleteOrganizationExternalDatabaseTables(orgId, tableIdByFqn)
 
         //drop db from schema
-        val dbName = externalDbManager.getOrganizationDatabaseName(orgId)
+        val dbName = externalDbManager.getDatabaseName(orgId)
         externalDbManager.connectAsSuperuser().connection.use { conn ->
-            val stmt = conn.createStatement()
-            stmt.execute(dropAllConnectionsToDatabaseSql(dbName))
-            stmt.execute("DROP DATABASE $dbName")
+            conn.createStatement().use { stmt ->
+                stmt.execute(dropAllConnectionsToDatabaseSql(dbName))
+                stmt.execute("DROP DATABASE $dbName")
+            }
         }
 
 
@@ -398,28 +403,39 @@ class ExternalDatabaseManagementService(
 
     /*PERMISSIONS*/
     fun addHBARecord(orgId: UUID, userPrincipal: Principal, connectionType: PostgresConnectionType, ipAddress: String) {
-        val dbName = externalDbManager.getOrganizationDatabaseName(orgId)
-        val username = getDBUser(userPrincipal.id)
-        val record = PostgresAuthenticationRecord(
-                connectionType,
-                dbName,
-                username,
-                ipAddress,
-                organizationExternalDatabaseConfiguration.authMethod)
-        hds.connection.use { connection ->
-            connection.createStatement().use { stmt ->
-                val hbaTable = PostgresTable.HBA_AUTHENTICATION_RECORDS
-                val columns = hbaTable.columns.joinToString(", ", "(", ")") { it.name }
-                val pkey = hbaTable.primaryKey.joinToString(", ", "(", ")") { it.name }
-                val insertRecordSql = getInsertRecordSql(hbaTable, columns, pkey, record)
-                stmt.executeUpdate(insertRecordSql)
+        operateOnHBARecord(orgId, userPrincipal, connectionType, ipAddress) { hds, pgAuthRecord ->
+            hds.connection.use { connection ->
+                connection.createStatement().use { stmt ->
+                    val hbaTable = PostgresTable.HBA_AUTHENTICATION_RECORDS
+                    val columns = hbaTable.columns.joinToString(", ", "(", ")") { it.name }
+                    val pkey = hbaTable.primaryKey.joinToString(", ", "(", ")") { it.name }
+                    val insertRecordSql = getInsertRecordSql(hbaTable, columns, pkey, pgAuthRecord)
+                    stmt.executeUpdate(insertRecordSql)
+                }
             }
         }
-        updateHBARecords(dbName)
     }
 
     fun removeHBARecord(orgId: UUID, userPrincipal: Principal, connectionType: PostgresConnectionType, ipAddress: String) {
-        val dbName = externalDbManager.getOrganizationDatabaseName(orgId)
+        operateOnHBARecord(orgId, userPrincipal, connectionType, ipAddress) { hds, pgAuthRecord ->
+            hds.connection.use {
+                it.createStatement().use { stmt ->
+                    val hbaTable = PostgresTable.HBA_AUTHENTICATION_RECORDS
+                    val deleteRecordSql = getDeleteRecordSql(hbaTable, pgAuthRecord)
+                    stmt.executeUpdate(deleteRecordSql)
+                }
+            }
+        }
+    }
+
+    fun operateOnHBARecord(
+            orgId: UUID,
+            userPrincipal: Principal,
+            connectionType: PostgresConnectionType,
+            ipAddress: String,
+            operation: (hds: HikariDataSource, pgAuthRecord: PostgresAuthenticationRecord) -> Unit
+    ) {
+        val dbName = externalDbManager.getDatabaseName(orgId)
         val username = getDBUser(userPrincipal.id)
         val record = PostgresAuthenticationRecord(
                 connectionType,
@@ -427,13 +443,8 @@ class ExternalDatabaseManagementService(
                 username,
                 ipAddress,
                 organizationExternalDatabaseConfiguration.authMethod)
-        hds.connection.use {
-            val stmt = it.createStatement()
-            val hbaTable = PostgresTable.HBA_AUTHENTICATION_RECORDS
-            val deleteRecordSql = getDeleteRecordSql(hbaTable, record)
-            stmt.executeUpdate(deleteRecordSql)
-        }
-        updateHBARecords(dbName)
+        operation(hds, record)
+        updateHBARecords(orgId)
     }
 
     /**
@@ -441,11 +452,12 @@ class ExternalDatabaseManagementService(
      * when that user is removed from an organization.
      */
     fun revokeAllPrivilegesFromMember(orgId: UUID, userId: String) {
-        val dbName = externalDbManager.getOrganizationDatabaseName(orgId)
         val userName = getDBUser(userId)
-        externalDbManager.connect(dbName).connection.use { conn ->
-            val stmt = conn.createStatement()
-            stmt.execute("REVOKE ALL ON DATABASE $dbName FROM $userName")
+        val (hds, dbName) = externalDbManager.connectToOrgGettingName(orgId)
+        hds.connection.use { conn ->
+            conn.createStatement().use { stmt ->
+                stmt.execute("REVOKE ALL ON DATABASE $dbName FROM $userName")
+            }
         }
     }
 
@@ -456,15 +468,26 @@ class ExternalDatabaseManagementService(
             maybeColumnId: UUID? = null,
             maybeColumnName: String? = null
     ): List<Acl> {
+        if (columns.isEmpty()) {
+            return listOf()
+        }
+
         val columnNameToAclKey = columns.associate { it.name to it.getAclKey() }
         val aclKeysToGrant = mutableSetOf(AclKey(table.id)) + columnNameToAclKey.values
 
         // Load any existing privileges on columns
         val columnPrivilegesSql = getPrivilegesOnColumnsSql(table.schema, table.name, columns.map { it.name })
         val orgHDS = externalDbManager.connectToOrg(table.organizationId)
+
         val columnToUserToPrivileges = BasePostgresIterable(StatementHolderSupplier(orgHDS, columnPrivilegesSql)) { rs ->
-            columnName(rs) to (user(rs) to PostgresPrivileges.valueOf(privilegeType(rs).toUpperCase()))
+            try {
+                columnName(rs) to (user(rs) to PostgresPrivileges.valueOf(privilegeType(rs).toUpperCase()))
+            } catch (e: Exception) {
+                logger.error("Unable to sync privilege row for table {}", table.id, e)
+                null
+            }
         }
+                .filterNotNull()
                 .groupBy { columnNameToAclKey.getValue(it.first) }
                 .mapValues {
                     it.value.map { pair -> pair.second }
@@ -600,33 +623,38 @@ class ExternalDatabaseManagementService(
         return permissions
     }
 
-    private fun updateHBARecords(dbName: String) {
+    private fun updateHBARecords(organizationId: UUID) {
         val originalHBAPath = Paths.get(organizationExternalDatabaseConfiguration.path + organizationExternalDatabaseConfiguration.fileName)
         val tempHBAPath = Paths.get(organizationExternalDatabaseConfiguration.path + "/temp_hba.conf")
 
         //create hba file with new records
-        val records = getHBARecords(PostgresTable.HBA_AUTHENTICATION_RECORDS.name)
-                .map {
-                    it.buildHBAConfRecord()
-                }.toSet()
-        try {
-            val out = BufferedOutputStream(
-                    Files.newOutputStream(tempHBAPath, StandardOpenOption.WRITE, StandardOpenOption.CREATE,
-                            StandardOpenOption.TRUNCATE_EXISTING)
-            )
-            records.forEach {
-                val recordAsByteArray = it.toByteArray()
-                out.write(recordAsByteArray)
-            }
-            out.close()
+        val records = getHBARecords(PostgresTable.HBA_AUTHENTICATION_RECORDS.name).map {
+            it.buildHBAConfRecord()
+        }.toSet()
 
-            //reload config
-            externalDbManager.connect(dbName).connection.use { conn ->
-                val stmt = conn.createStatement()
-                stmt.executeQuery(getReloadConfigSql())
+        try {
+            Files.newOutputStream(
+                    tempHBAPath,
+                    StandardOpenOption.WRITE,
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.TRUNCATE_EXISTING
+            ).use { `in` ->
+                BufferedOutputStream(`in`).use { out ->
+                    records.forEach {
+                        val recordAsByteArray = it.toByteArray()
+                        out.write(recordAsByteArray)
+                    }
+                }
             }
         } catch (ex: IOException) {
             logger.info("IO exception while creating new hba config")
+        }
+
+        //reload config
+        externalDbManager.connectToOrg(organizationId).connection.use { conn ->
+            conn.createStatement().use { stmt ->
+                stmt.executeQuery(getReloadConfigSql())
+            }
         }
 
         //replace old hba with new hba
@@ -635,7 +663,6 @@ class ExternalDatabaseManagementService(
         } catch (ex: IOException) {
             logger.info("IO exception while updating hba config")
         }
-
     }
 
     private fun getHBARecords(tableName: String): BasePostgresIterable<PostgresAuthenticationRecord> {

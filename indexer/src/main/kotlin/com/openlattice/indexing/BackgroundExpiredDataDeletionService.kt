@@ -1,5 +1,7 @@
 package com.openlattice.indexing
 
+import com.geekbeast.rhizome.jobs.HazelcastJobService
+import com.geekbeast.rhizome.jobs.JobStatus
 import com.google.common.base.Stopwatch
 import com.google.common.collect.ImmutableMap
 import com.hazelcast.config.IndexType
@@ -40,10 +42,12 @@ class BackgroundExpiredDataDeletionService(
         private val auditingManager: AuditingManager,
         private val dataGraphService: DataGraphManager,
         private val deletionManager: DataDeletionManager,
-        private val entitySetManager: EntitySetManager
+        private val entitySetManager: EntitySetManager,
+        private val jobService: HazelcastJobService
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(BackgroundExpiredDataDeletionService::class.java)!!
+        private val NON_BLOCKING_JOB_STATUSES = EnumSet.of(JobStatus.FINISHED, JobStatus.CANCELED, JobStatus.PAUSED)
     }
 
     private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
@@ -130,19 +134,21 @@ class BackgroundExpiredDataDeletionService(
 
         while (idsBatch.isNotEmpty()) {
 
-            val writeEvent = deletionManager.clearOrDeleteEntities(
+            val deletionJobId = deletionManager.clearOrDeleteEntities(
                     entitySet.id,
                     idsBatch,
                     entitySet.expiration!!.deleteType
             )
 
+            blockUntilJobFinishedOrCanceled(deletionJobId)
+
             logger.info(
                     "Completed deleting {} expired elements from entity set {}.",
-                    writeEvent.numUpdates,
+                    idsBatch.size,
                     entitySet.name
             )
 
-            totalDeletedEntitiesCount += writeEvent.numUpdates
+            totalDeletedEntitiesCount += idsBatch.size
 
             auditingManager.recordEvents(
                     listOf(
@@ -163,6 +169,24 @@ class BackgroundExpiredDataDeletionService(
         }
 
         return totalDeletedEntitiesCount
+    }
+
+    private fun blockUntilJobFinishedOrCanceled(jobId: UUID) {
+        var status = jobService.getStatus(jobId)
+
+        while (!NON_BLOCKING_JOB_STATUSES.contains(status)) {
+            try {
+                Thread.sleep(1000)
+                status = jobService.getStatus(jobId)
+            } catch (e: InterruptedException) {
+                logger.info("Something bad happened while attempting to wait for job {} to complete.", jobId)
+                return
+            }
+        }
+
+        if (status != JobStatus.FINISHED) {
+            logger.info("Terminating blocking for job {} as it is {}", jobId, status)
+        }
     }
 
     private fun tryLockEntitySet(entitySet: EntitySet): Boolean {
