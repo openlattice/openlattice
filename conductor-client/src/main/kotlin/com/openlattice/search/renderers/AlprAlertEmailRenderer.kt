@@ -9,7 +9,6 @@ import jodd.mail.EmailAttachment
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayOutputStream
-import java.io.IOException
 import java.net.URL
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
@@ -92,7 +91,7 @@ class AlprAlertEmailRenderer {
                 ImageIO.write(bufferedImage, fileType, baos)
                 baos.flush()
                 stream = baos
-            } catch (e: IOException) {
+            } catch (e: Exception) {
                 logger.error("Unable to load image for url {}", imageUrlPath, e)
             }
 
