@@ -27,7 +27,6 @@ import com.google.common.collect.Lists
 import com.google.common.collect.Sets
 import com.google.common.eventbus.EventBus
 import com.hazelcast.core.HazelcastInstance
-import com.hazelcast.map.IMap
 import com.hazelcast.query.Predicates
 import com.hazelcast.query.QueryConstants
 import com.openlattice.assembler.events.MaterializedEntitySetEdmChangeEvent
@@ -35,7 +34,12 @@ import com.openlattice.assembler.processors.EntitySetContainsFlagEntryProcessor
 import com.openlattice.auditing.AuditRecordEntitySetsManager
 import com.openlattice.auditing.AuditingConfiguration
 import com.openlattice.auditing.AuditingTypes
-import com.openlattice.authorization.*
+import com.openlattice.authorization.AclKey
+import com.openlattice.authorization.AuthorizationManager
+import com.openlattice.authorization.HazelcastAclKeyReservationService
+import com.openlattice.authorization.Permission
+import com.openlattice.authorization.Principal
+import com.openlattice.authorization.Principals
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.authorization.securable.SecurableObjectType.PropertyTypeInEntitySet
 import com.openlattice.controllers.exceptions.ResourceNotFoundException
@@ -63,13 +67,17 @@ import com.openlattice.hazelcast.processors.RemoveDataExpirationPolicyProcessor
 import com.openlattice.hazelcast.processors.RemoveEntitySetsFromLinkingEntitySetProcessor
 import com.openlattice.organizations.OrganizationMetadataEntitySetsService
 import com.openlattice.postgres.PostgresColumn
-import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresColumn.ACL_KEY
+import com.openlattice.postgres.PostgresColumn.ENTITY_TYPE_ID
+import com.openlattice.postgres.PostgresColumn.ID
+import com.openlattice.postgres.PostgresColumn.PRINCIPAL_ID
 import com.openlattice.postgres.PostgresTable.ENTITY_SETS
 import com.openlattice.postgres.PostgresTable.PERMISSIONS
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.mapstores.EntitySetMapstore
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.StatementHolderSupplier
+import com.openlattice.rhizome.DelegatedIntSet
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
 import com.openlattice.search.requests.EntityNeighborsFilter
 import com.zaxxer.hikari.HikariDataSource
@@ -101,18 +109,17 @@ class EntitySetService(
             authorizations,
             hazelcastInstance
     )
-    
+
     companion object {
         private val logger = LoggerFactory.getLogger(EntitySetManager::class.java)
     }
 
     private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
     private val entityTypes = HazelcastMap.ENTITY_TYPES.getMap(hazelcastInstance)
-    private val associationTypes: IMap<UUID, AssociationType> =
-            HazelcastMap.ASSOCIATION_TYPES.getMap(hazelcastInstance)
+    private val associationTypes = HazelcastMap.ASSOCIATION_TYPES.getMap(hazelcastInstance)
     private val propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap(hazelcastInstance)
-    private val entitySetPropertyMetadata: IMap<EntitySetPropertyKey, EntitySetPropertyMetadata> =
-            HazelcastMap.ENTITY_SET_PROPERTY_METADATA.getMap(hazelcastInstance)
+    private val entitySetPropertyMetadata = HazelcastMap.ENTITY_SET_PROPERTY_METADATA.getMap(hazelcastInstance)
+    private val deletedEntitySets = HazelcastMap.DELETED_ENTITY_SETS.getMap(hazelcastInstance)
 
     private val aclKeys = HazelcastMap.ACL_KEYS.getMap(hazelcastInstance)
 
@@ -369,6 +376,7 @@ class EntitySetService(
 
         aclKeyReservations.release(entitySet.id)
         entitySets.delete(entitySet.id)
+        deletedEntitySets[entitySet.id] = DelegatedIntSet(entitySet.partitions)
     }
 
     /**

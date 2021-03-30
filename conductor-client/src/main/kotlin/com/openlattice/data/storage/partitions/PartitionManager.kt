@@ -20,7 +20,7 @@ import com.openlattice.rhizome.DelegatedIntSet
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import java.util.UUID
+import java.util.*
 
 
 /**
@@ -66,7 +66,7 @@ class PartitionManager @JvmOverloads constructor(
         if (partitions.isEmpty()) {
             logger.error("ERROR: attempting to load partitions for entity set {} but its partition list is empty", entitySetId)
         }
-        return partitions as DelegatedIntSet
+        return partitions
     }
 
     fun getPartitionsByEntitySetId(entitySetIds: Set<UUID>): Map<UUID, Set<Int>> {

@@ -21,17 +21,12 @@ import com.openlattice.edm.type.PropertyType
 import com.openlattice.linking.LinkingQueryService
 import com.openlattice.linking.PostgresLinkingFeedbackService
 import com.openlattice.postgres.streams.BasePostgresIterable
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.nio.ByteBuffer
-import java.util.EnumSet
-import java.util.HashMap
-import java.util.LinkedHashSet
-import java.util.Optional
-import java.util.UUID
+import java.util.*
 import java.util.stream.Stream
 import kotlin.streams.asSequence
 
@@ -170,24 +165,6 @@ class PostgresEntityDatastore(
                 .replacePropertiesInEntities(entitySetId, replacementProperties, authorizedPropertyTypes)
         signalCreatedEntities(entitySetId, replacementProperties.keys)
 
-        return writeEvent
-    }
-
-    @Timed
-    override fun clearEntitySet(
-            entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): WriteEvent {
-        val writeEvent = dataQueryService.clearEntitySet(entitySetId, authorizedPropertyTypes)
-        signalEntitySetDataDeleted(entitySetId, DeleteType.Soft)
-        return writeEvent
-    }
-
-    @Timed
-    override fun clearEntities(
-            entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): WriteEvent {
-        val writeEvent = dataQueryService.clearEntities(entitySetId, entityKeyIds, authorizedPropertyTypes)
-        signalDeletedEntities(entitySetId, entityKeyIds, DeleteType.Soft)
         return writeEvent
     }
 
@@ -414,70 +391,6 @@ class PostgresEntityDatastore(
             normalEntitySetIds: Set<UUID>
     ): BasePostgresIterable<Pair<UUID, Set<UUID>>> {
         return linkingQueryService.getEntityKeyIdsOfLinkingIds(linkingIds, normalEntitySetIds)
-    }
-
-    /**
-     * Delete data of an entity set across ALL sync Ids.
-     */
-    @SuppressFBWarnings(
-            value = ["UC_USELESS_OBJECT"],
-            justification = "results Object is used to execute deletes in batches"
-    )
-    override fun deleteEntitySetData(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent {
-        logger.info("Deleting data of entity set: {}", entitySetId)
-
-        val (_, numUpdates) = dataQueryService.deleteEntitySetData(entitySetId, authorizedPropertyTypes)
-        val writeEvent = dataQueryService.tombstoneDeletedEntitySet(entitySetId)
-
-        signalEntitySetDataDeleted(entitySetId, DeleteType.Hard)
-
-        // delete entities from linking feedbacks
-        val deleteFeedbackCount = feedbackQueryService.deleteLinkingFeedback(entitySetId, Optional.empty())
-
-        // Delete all neighboring entries from matched entities
-        val deleteMatchCount = linkingQueryService.deleteEntitySetNeighborhood(entitySetId)
-
-        logger.info(
-                "Finished deleting data from entity set {}. " + "Deleted {} rows and {} property data, {} linking feedback and {} matched entries.",
-                entitySetId,
-                writeEvent.numUpdates,
-                numUpdates,
-                deleteFeedbackCount,
-                deleteMatchCount
-        )
-
-        return writeEvent
-    }
-
-    override fun deleteEntities(
-            entitySetId: UUID,
-            entityKeyIds: Set<UUID>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): WriteEvent {
-
-        val (_, numUpdates) = dataQueryService
-                .deleteEntityDataAndEntities(entitySetId, entityKeyIds, authorizedPropertyTypes)
-        val writeEvent = dataQueryService.tombstoneDeletedEntities(entitySetId, entityKeyIds)
-        signalDeletedEntities(entitySetId, entityKeyIds, DeleteType.Hard)
-
-        // delete entities from linking feedbacks too
-        val deleteFeedbackCount = feedbackQueryService.deleteLinkingFeedback(entitySetId, Optional.of(entityKeyIds))
-
-        // Delete all neighboring entries from matched entities
-        val deleteMatchCount = linkingQueryService.deleteNeighborhoods(entitySetId, entityKeyIds)
-
-        logger.info(
-                "Finished deletion of entities ( {} ) from entity set {}. Deleted {} rows, {} property data, " + "{} linking feedback and {} matched entries.",
-                entityKeyIds,
-                entitySetId,
-                writeEvent.numUpdates,
-                numUpdates,
-                deleteFeedbackCount,
-                deleteMatchCount
-        )
-
-        return writeEvent
-        TODO("DREW add linking logs")
     }
 
     override fun deleteEntityProperties(

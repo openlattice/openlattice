@@ -21,6 +21,8 @@
 
 package com.openlattice.tasks
 
+import com.openlattice.data.storage.ByteBlobDataManager
+import com.openlattice.hazelcast.serializers.decorators.ByteBlobDataManagerAware
 import com.openlattice.transporter.types.TransporterDatastore
 import com.openlattice.transporter.types.TransporterDependent
 import org.slf4j.LoggerFactory
@@ -41,6 +43,13 @@ class PostConstructInitializerTaskDependencies : HazelcastTaskDependencies {
     @Inject
     private lateinit var transporterDependent: Set<TransporterDependent<out Any>>
 
+    @Inject
+    private lateinit var byteBlobDataManager: ByteBlobDataManager
+
+    @Inject
+    private lateinit var byteBlobDataManagerAware: Set<ByteBlobDataManagerAware>
+
+
     @Component
     class PostConstructInitializerTask : HazelcastInitializationTask<PostConstructInitializerTaskDependencies> {
         override fun getInitialDelay(): Long {
@@ -51,6 +60,11 @@ class PostConstructInitializerTaskDependencies : HazelcastTaskDependencies {
             dependencies.transporterDependent.forEach {
                 it.init(dependencies.transporterDatastore)
                 logger.info("Initialized ${it.javaClass} with TransporterDatastore")
+            }
+
+            dependencies.byteBlobDataManagerAware.forEach {
+                it.setByteBlobDataManager(dependencies.byteBlobDataManager)
+                logger.info("Initialized ${it.javaClass} with ByteBlobDataManager")
             }
         }
 

@@ -58,8 +58,7 @@ import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import java.sql.Array
 import java.sql.Connection
-import java.util.LinkedHashSet
-import java.util.UUID
+import java.util.*
 
 
 /**
@@ -74,6 +73,19 @@ class PostgresLinkingQueryService(
 
     companion object {
         private val logger = LoggerFactory.getLogger(PostgresLinkingQueryService::class.java)
+
+        fun deleteNeighborhoods(hds: HikariDataSource, entitySetId: UUID, entityKeyIds: Set<UUID>): Int {
+            hds.connection.use { connection ->
+                val arr = PostgresArrays.createUuidArray(connection, entityKeyIds)
+                connection.prepareStatement(DELETE_NEIGHBORHOODS_SQL).use { ps ->
+                    ps.setObject(1, entitySetId)
+                    ps.setArray(2, arr)
+                    ps.setObject(3, entitySetId)
+                    ps.setArray(4, arr)
+                    return ps.executeUpdate()
+                }
+            }
+        }
     }
 
     override fun lockClustersForUpdates(clusters: Set<UUID>): Connection {
@@ -330,29 +342,6 @@ class PostgresLinkingQueryService(
                 ps.setObject(2, entity.entityKeyId)
                 ps.setObject(3, entity.entitySetId)
                 ps.setObject(4, entity.entityKeyId)
-                return ps.executeUpdate()
-            }
-        }
-    }
-
-    override fun deleteNeighborhoods(entitySetId: UUID, entityKeyIds: Set<UUID>): Int {
-        hds.connection.use { connection ->
-            val arr = PostgresArrays.createUuidArray(connection, entityKeyIds)
-            connection.prepareStatement(DELETE_NEIGHBORHOODS_SQL).use { ps ->
-                ps.setObject(1, entitySetId)
-                ps.setArray(2, arr)
-                ps.setObject(3, entitySetId)
-                ps.setArray(4, arr)
-                return ps.executeUpdate()
-            }
-        }
-    }
-
-    override fun deleteEntitySetNeighborhood(entitySetId: UUID): Int {
-        hds.connection.use { connection ->
-            connection.prepareStatement(DELETE_ENTITY_SET_NEIGHBORHOOD_SQL).use { ps ->
-                ps.setObject(1, entitySetId)
-                ps.setObject(2, entitySetId)
                 return ps.executeUpdate()
             }
         }

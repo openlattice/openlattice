@@ -41,13 +41,6 @@ interface GraphService {
     fun deleteEdges(keys: Iterable<DataEdgeKey>): WriteEvent
 
     /**
-     * Returns all [DataEdgeKey]s where either src, dst and/or edge entity set id(s) equal the requested
-     * entitySetId.
-     * If includeClearedEdges is set to true, it will also return cleared (version < 0) entities.
-     */
-    fun getEdgeKeysOfEntitySet(entitySetId: UUID, includeClearedEdges: Boolean): BasePostgresIterable<DataEdgeKey>
-
-    /**
      * Returns all [DataEdgeKey]s that include requested entityKeyIds either as src, dst and/or edge.
      * If includeClearedEdges is set to true, it will also return cleared (version < 0) entities.
      */
@@ -67,8 +60,6 @@ interface GraphService {
             entityKeyIds: Set<UUID>
     ): Set<UUID>
 
-    fun getEdgeEntitySetsConnectedToEntitySet(entitySetId: UUID): Set<UUID>
-
     fun computeTopEntities(
             limit: Int,
             entitySetIds: Set<UUID>,
@@ -79,4 +70,6 @@ interface GraphService {
     ): AggregationResult
 
     fun getNeighborEntitySets(entitySetIds: Set<UUID>): List<NeighborSets>
+
+    fun checkForUnauthorizedEdges(entitySetId: UUID, authorizedEdgeEntitySets: Set<UUID>, entityKeyIds: Set<UUID>?): Boolean
 }
