@@ -5,6 +5,7 @@ import com.openlattice.mail.RenderableEmailRequest
 import com.openlattice.search.renderers.AlprAlertEmailRenderer
 import com.openlattice.search.renderers.BHRAlertEmailRenderer
 import com.openlattice.search.renderers.CAREIssueAlertEmailRenderer
+import com.openlattice.search.renderers.ReentryTaskAlertEmailRenderer
 import com.openlattice.search.renderers.CodexAlertEmailRenderer
 import com.openlattice.search.requests.PersistentSearch
 import org.apache.olingo.commons.api.edm.FullQualifiedName
