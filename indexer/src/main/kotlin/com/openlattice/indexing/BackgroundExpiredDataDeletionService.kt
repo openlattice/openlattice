@@ -17,7 +17,6 @@ import com.openlattice.data.DataGraphManager
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EntitySet
-import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.indexing.configuration.IndexerConfiguration
 import org.slf4j.LoggerFactory
@@ -108,13 +107,11 @@ class BackgroundExpiredDataDeletionService(
         }
     }
 
-    private fun getBatchOfExpiringEkids(entitySet: EntitySet, expirationPT: Optional<PropertyType>): MutableSet<UUID> {
+    private fun getBatchOfExpiringEkids(entitySet: EntitySet): MutableSet<UUID> {
         return dataGraphService.getExpiringEntitiesFromEntitySet(
                 entitySet.id,
                 entitySet.expiration!!,
-                OffsetDateTime.now(),
-                entitySet.expiration!!.deleteType,
-                expirationPT
+                OffsetDateTime.now()
         ).toMutableSet()
     }
 
@@ -125,12 +122,8 @@ class BackgroundExpiredDataDeletionService(
                 entitySet.id
         )
 
-        val propertyTypes = entitySetManager.getPropertyTypesForEntitySet(entitySet.id)
-
         var totalDeletedEntitiesCount = 0
-
-        val expirationPT = entitySet.expiration!!.startDateProperty.map { propertyTypes[it]!! }
-        var idsBatch = getBatchOfExpiringEkids(entitySet, expirationPT)
+        var idsBatch = getBatchOfExpiringEkids(entitySet)
 
         while (idsBatch.isNotEmpty()) {
 
@@ -165,7 +158,7 @@ class BackgroundExpiredDataDeletionService(
                     )
             )
 
-            idsBatch = getBatchOfExpiringEkids(entitySet, expirationPT)
+            idsBatch = getBatchOfExpiringEkids(entitySet)
         }
 
         return totalDeletedEntitiesCount

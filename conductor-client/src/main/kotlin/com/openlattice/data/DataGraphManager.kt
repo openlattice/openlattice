@@ -160,9 +160,7 @@ interface DataGraphManager {
     fun getExpiringEntitiesFromEntitySet(
             entitySetId: UUID,
             expirationPolicy: DataExpiration,
-            dateTime: OffsetDateTime,
-            deleteType: DeleteType,
-            expirationPropertyType: Optional<PropertyType>
+            currentDateTime: OffsetDateTime
     ): BasePostgresIterable<UUID>
 
     fun getEdgeEntitySetsConnectedToEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): Set<UUID>

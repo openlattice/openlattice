@@ -7,6 +7,7 @@ import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
 import com.google.common.eventbus.EventBus
 import com.openlattice.assembler.events.MaterializedEntitySetDataChangeEvent
+import com.openlattice.data.DataExpiration
 import com.openlattice.data.DeleteType
 import com.openlattice.data.EntitySetData
 import com.openlattice.data.FilteredDataPageDefinition
@@ -26,6 +27,7 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.nio.ByteBuffer
+import java.time.OffsetDateTime
 import java.util.*
 import java.util.stream.Stream
 import kotlin.streams.asSequence
@@ -47,7 +49,7 @@ class PostgresEntityDatastore(
 
     companion object {
         private val logger = LoggerFactory.getLogger(PostgresEntityDatastore::class.java)
-        const val BATCH_INDEX_THRESHOLD = 256
+        const val BATCH_INDEX_THRESHOLD = 25600000
     }
 
     private val getEntitiesTimer = metricRegistry.timer(
@@ -415,14 +417,19 @@ class PostgresEntityDatastore(
 
     override fun getExpiringEntitiesFromEntitySet(
             entitySetId: UUID,
-            expirationBaseColumn: String,
-            formattedDateMinusTTE: Any,
-            sqlFormat: Int,
-            deleteType: DeleteType
+            expirationPolicy: DataExpiration,
+            currentDateTime: OffsetDateTime
     ): BasePostgresIterable<UUID> {
-        return dataQueryService.getExpiringEntitiesFromEntitySet(
-                entitySetId, expirationBaseColumn, formattedDateMinusTTE, sqlFormat, deleteType
-        )
+        if (expirationPolicy.startDateProperty.isPresent) {
+            return dataQueryService.getExpiringEntitiesFromEntitySetUsingData(
+                    entitySetId,
+                    expirationPolicy,
+                    edmManager.getPropertyType(expirationPolicy.startDateProperty.get()),
+                    currentDateTime
+            )
+        }
+
+        return dataQueryService.getExpiringEntitiesFromEntitySet(entitySetId, expirationPolicy, currentDateTime)
     }
 
 }
