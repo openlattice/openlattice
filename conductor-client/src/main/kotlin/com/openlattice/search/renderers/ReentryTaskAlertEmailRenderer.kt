@@ -78,8 +78,9 @@ class ReentryTaskAlertEmailRenderer {
             val firstName = (combinedEntity[FIRST_NAME_FQN] ?: emptySet()).joinToString("/")
             val lastName = (combinedEntity[LAST_NAME_FQN] ?: emptySet()).joinToString("/")
             val middleName = (combinedEntity[MIDDLE_NAME_FQN] ?: emptySet()).joinToString("/")
+            val formattedName = "$lastName, $firstName $middleName"
 
-            return mapOf("formattedName" to "$lastName, $firstName $middleName")
+            return mapOf("formattedName" to formattedName)
         }
 
         private fun getReporterDetails(
@@ -105,13 +106,18 @@ class ReentryTaskAlertEmailRenderer {
             val dueDateTime = (issue[GENERAL_DATETIME_FQN] ?: emptySet()).map { OffsetDateTime.parse(it.toString()) }
             val dueDate = dueDateTime.joinToString(", ") { MessageFormatters.formatDate(it, timeZone) }
             val dueTime = dueDateTime.joinToString(", ") { MessageFormatters.formatTime(it, timeZone) }
+            val dueDateString = "$dueDate $dueTime"
+            val status = (issue[STATUS_FQN] ?: emptySet()).joinToString(", ")
+            val title = (issue[TITLE_FQN] ?: emptySet()).joinToString(", ")
+            val description = (issue[DESCRIPTION_FQN] ?: emptySet()).joinToString(", ")
+            val category = (issue[CATEGORY_FQN] ?: emptySet()).joinToString(", ")
 
             return mapOf(
-                    "dueDateTime" to "$dueDate $dueTime",
-                    "status" to (issue[STATUS_FQN] ?: emptySet()).joinToString(", "),
-                    "title" to (issue[TITLE_FQN] ?: emptySet()).joinToString(", "),
-                    "description" to (issue[DESCRIPTION_FQN] ?: emptySet()).joinToString(", "),
-                    "category" to (issue[CATEGORY_FQN] ?: emptySet()).joinToString(", ")
+                    "dueDateTime" to dueDateString,
+                    "status" to status,
+                    "title" to title,
+                    "description" to description,
+                    "category" to category
             )
         }
 
