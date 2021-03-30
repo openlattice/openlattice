@@ -104,7 +104,7 @@ class ReentryTaskAlertEmailRenderer {
 
             val dueDateTime = (issue[GENERAL_DATETIME_FQN] ?: emptySet()).map { OffsetDateTime.parse(it.toString()) }
             val dueDate = dueDateTime.joinToString(", ") { MessageFormatters.formatDate(it, timeZone) }
-            val dueTime = completedDateTime.joinToString(", ") { MessageFormatters.formatTime(it, timeZone) }
+            val dueTime = dueDateTime.joinToString(", ") { MessageFormatters.formatTime(it, timeZone) }
 
             return mapOf(
                     "dueDateTime" to "$dueDate $dueTime",
