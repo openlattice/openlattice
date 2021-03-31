@@ -5,4 +5,5 @@ public enum PersistentSearchNotificationType {
     BHR_ALERT,
     CARE_ISSUE_ALERT,
     CODEX_ALERT,
+    REENTRY_TASK_ALERT,
 }
