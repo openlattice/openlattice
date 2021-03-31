@@ -50,11 +50,20 @@ class ReentryTaskAlertEmailRenderer {
     companion object {
 
         private fun isMatchByEntitySetId(neighbor: NeighborEntityDetails, entitySetId: UUID, associationEntitySetId: Optional<UUID>): Boolean {
-            val isMatchingEntitySetId = neighbor.neighborEntitySet.isPresent && neighbor.neighborEntitySet.get().id == entitySetId
-            return if (associationEntitySetId.isPresent) {
-                (neighbor.associationEntitySet.id == associationEntitySetId.get()) && isMatchingEntitySetId
+
+            if (neighbor.neighborEntitySet.isEmpty) {
+              return false
             }
-            else { isMatchingEntitySetId }
+
+            if (neighbor.neighborEntitySet.get().id != entitySetId) {
+              return false
+            }
+
+            if (associationEntitySetId.isPresent && associationEntitySetId.get() != neighbor.associationEntitySet.id) {
+              return false
+            }
+
+            return true
         }
 
         private fun getCombinedNeighbors(
