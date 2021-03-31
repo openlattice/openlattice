@@ -64,46 +64,48 @@ class BackgroundExpiredDataDeletionService(
     @Suppress("UNUSED")
     @Scheduled(fixedRate = DATA_DELETION_RATE)
     fun deleteExpiredDataFromEntitySets() {
-        logger.info("Starting background expired data deletion task.")
+        if (!indexerConfiguration.backgroundExpiredDataDeletionEnabled) {
+            logger.debug("Skipping expired data deletion as it is not enabled.")
+            return
+        }
+
         //Keep number of expired data deletion jobs under control
-        if (taskLock.tryLock()) {
-            try {
-                if (indexerConfiguration.backgroundExpiredDataDeletionEnabled) {
-                    val w = Stopwatch.createStarted()
-                    //We shuffle entity sets to make sure we have a chance to work share and index everything
-                    val lockedEntitySets = entitySets.values
-                            .filter { it.hasExpirationPolicy() }
-                            .filter { tryLockEntitySet(it) }
-                            .shuffled()
+        if (!taskLock.tryLock()) {
+            logger.debug("Not starting new expired data deletion job as an existing one is running.")
+            return
+        }
 
-                    val totalDeleted = lockedEntitySets
-                            .parallelStream()
-                            .filter { !it.isLinking }
-                            .mapToInt {
-                                try {
-                                    deleteExpiredData(it)
-                                } catch (e: Exception) {
-                                    logger.error("An error occurred while trying to delete expired data for entity set {}", it.id, e)
-                                    0
-                                }
-                            }
-                            .sum()
+        logger.info("Starting background expired data deletion task.")
+        try {
+            val w = Stopwatch.createStarted()
+            //We shuffle entity sets to make sure we have a chance to work share and index everything
+            val lockedEntitySets = entitySets.values
+                    .filter { it.hasExpirationPolicy() }
+                    .filter { tryLockEntitySet(it) }
+                    .shuffled()
 
-                    lockedEntitySets.forEach(this::deleteIndexingLock)
+            val totalDeleted = lockedEntitySets
+                    .filter { !it.isLinking }
+                    .map {
+                        try {
+                            deleteExpiredData(it)
+                        } catch (e: Exception) {
+                            logger.error("An error occurred while trying to delete expired data for entity set {}", it.id, e)
+                            0
+                        }
+                    }
+                    .sum()
 
-                    logger.info(
-                            "Completed deleting {} expired elements in {} ms.",
-                            totalDeleted,
-                            w.elapsed(TimeUnit.MILLISECONDS)
-                    )
-                } else {
-                    logger.info("Skipping expired data deletion as it is not enabled.")
-                }
-            } finally {
-                taskLock.unlock()
-            }
-        } else {
-            logger.info("Not starting new expired data deletion job as an existing one is running.")
+            lockedEntitySets.forEach(this::deleteIndexingLock)
+
+            logger.info(
+                    "Completed deleting {} expired elements in {} ms.",
+                    totalDeleted,
+                    w.elapsed(TimeUnit.MILLISECONDS)
+            )
+
+        } finally {
+            taskLock.unlock()
         }
     }
 
