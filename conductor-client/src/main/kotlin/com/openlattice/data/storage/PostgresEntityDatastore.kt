@@ -49,7 +49,7 @@ class PostgresEntityDatastore(
 
     companion object {
         private val logger = LoggerFactory.getLogger(PostgresEntityDatastore::class.java)
-        const val BATCH_INDEX_THRESHOLD = 25600000
+        const val BATCH_INDEX_THRESHOLD = 256
     }
 
     private val getEntitiesTimer = metricRegistry.timer(
