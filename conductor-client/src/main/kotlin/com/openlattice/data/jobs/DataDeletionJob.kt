@@ -337,11 +337,7 @@ class DataDeletionJob(
     }
 
     @JsonIgnore
-    private fun excludeClearedIfSoftDeleteSql(isEdges: Boolean = false): String {
-        if (isHardDelete() && isEdges) {
-            return ""
-        }
-
+    private fun excludeClearedIfSoftDeleteSql(): String {
         val operator = if (isHardDelete()) "<>" else ">"
         return "AND ${VERSION.name} $operator 0"
     }
@@ -400,7 +396,7 @@ class DataDeletionJob(
             SELECT ${EDGE_ENTITY_SET_ID.name}, ${EDGE_ENTITY_KEY_ID.name}
             FROM ${E.name}
             WHERE ( $entityMatches )
-            ${excludeClearedIfSoftDeleteSql(true)}
+            ${excludeClearedIfSoftDeleteSql()}
             LIMIT $BATCH_SIZE
         """.trimIndent()
     }
