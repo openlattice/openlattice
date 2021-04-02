@@ -18,6 +18,7 @@ import com.openlattice.postgres.PostgresColumn.ID
 import com.openlattice.postgres.PostgresColumn.PARTITION
 import com.openlattice.postgres.PostgresColumn.PROPERTY_TYPE_ID
 import com.openlattice.postgres.PostgresColumn.VERSION
+import com.openlattice.postgres.PostgresColumn.VERSIONS
 import com.openlattice.postgres.PostgresTable.DATA
 import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.streams.BasePostgresIterable
@@ -841,11 +842,11 @@ class PostgresEntityDataQueryService(
             expirationPolicy: DataExpiration,
             currentDateTime: OffsetDateTime
     ): BasePostgresIterable<UUID> {
-        val partitionsArr = PostgresArrays.createIntArray(hds.connection, partitionManager.getEntitySetPartitions(entitySetId))
+        val partitions = partitionManager.getEntitySetPartitions(entitySetId)
         return BasePostgresIterable(
                 PreparedStatementHolderSupplier(hds, getExpiringEntitiesUsingIdsQuery(expirationPolicy)) { ps ->
                     ps.setObject(1, entitySetId)
-                    ps.setArray(2, partitionsArr)
+                    ps.setArray(2, PostgresArrays.createIntArray(ps.connection, partitions))
                     bindExpirationDate(ps, 3, expirationPolicy, currentDateTime)
                     logger.info("expiring entities sql: {}", ps)
                 }
@@ -858,11 +859,11 @@ class PostgresEntityDataQueryService(
             expirationPropertyType: PropertyType,
             currentDateTime: OffsetDateTime
     ): BasePostgresIterable<UUID> {
-        val partitionsArr = PostgresArrays.createIntArray(hds.connection, partitionManager.getEntitySetPartitions(entitySetId))
+        val partitions = partitionManager.getEntitySetPartitions(entitySetId)
         return BasePostgresIterable(
                 PreparedStatementHolderSupplier(hds, getExpiringEntitiesUsingDataQuery(expirationPropertyType, expirationPolicy.deleteType)) { ps ->
                     ps.setObject(1, entitySetId)
-                    ps.setArray(2, partitionsArr)
+                    ps.setArray(2, PostgresArrays.createIntArray(ps.connection, partitions))
                     bindExpirationDate(ps, 3, expirationPolicy, currentDateTime, expirationPropertyType)
                     ps.setObject(4, expirationPropertyType.id)
                     logger.info("expiring entities sql: {}", ps)
@@ -929,7 +930,7 @@ class PostgresEntityDataQueryService(
         val clearedEntitiesClause = if (expirationPolicy.deleteType == DeleteType.Soft) "AND ${VERSION.name} >= 0 " else ""
 
         val expirationField = when (expirationPolicy.expirationBase) {
-            ExpirationBase.FIRST_WRITE -> "${PostgresColumn.VERSIONS.name}[array_upper(${PostgresColumn.VERSIONS.name},1)]" //gets the latest version from the versions column
+            ExpirationBase.FIRST_WRITE -> "(SELECT MIN(v) FROM UNNEST(${VERSIONS.name}) AS v WHERE v > 0)" //gets the first  version from the versions column
             ExpirationBase.LAST_WRITE -> DataTables.LAST_WRITE.name
             else -> throw IllegalArgumentException("Loading expired entities using ids is not supported for expiration base ${expirationPolicy.expirationBase}")
         }

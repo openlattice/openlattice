@@ -114,7 +114,6 @@ class HazelcastMap<K, V> internal constructor(val name: String) : TypedMapIdenti
         @JvmField val ASSEMBLIES = HazelcastMap<UUID, OrganizationAssembly>("ASSEMBLIES")
         @JvmField val ASSOCIATION_TYPES = HazelcastMap<UUID, AssociationType>("ASSOCIATION_TYPES")
         @JvmField val AUDIT_RECORD_ENTITY_SETS = HazelcastMap<AclKey, AuditRecordEntitySetConfiguration>("AUDIT_RECORD_ENTITY_SETS")
-        @JvmField val BACKGROUND_EXPIRED_DATA_DELETION_LOCKS = HazelcastMap<UUID, Long>("BACKGROUND_EXPIRED_DATA_DELETION_LOCKS")
         @JvmField val CODEX_LOCKS = HazelcastMap<SmsInformationKey, Long>("CODEX_LOCKS")
         @JvmField val CODEX_MEDIA = HazelcastMap<UUID, Base64Media>("CODEX_MEDIA")
         @JvmField val COLLABORATIONS = HazelcastMap<UUID, Collaboration>("COLLABORATIONS")
