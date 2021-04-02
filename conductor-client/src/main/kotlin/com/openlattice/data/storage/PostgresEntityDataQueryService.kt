@@ -837,7 +837,7 @@ class PostgresEntityDataQueryService(
 
     }
 
-    fun getExpiringEntitiesFromEntitySet(
+    fun getExpiringEntitiesFromEntitySetUsingIds(
             entitySetId: UUID,
             expirationPolicy: DataExpiration,
             currentDateTime: OffsetDateTime
@@ -848,7 +848,6 @@ class PostgresEntityDataQueryService(
                     ps.setObject(1, entitySetId)
                     ps.setArray(2, PostgresArrays.createIntArray(ps.connection, partitions))
                     bindExpirationDate(ps, 3, expirationPolicy, currentDateTime)
-                    logger.info("expiring entities sql: {}", ps)
                 }
         ) { rs -> ResultSetAdapters.id(rs) }
     }
@@ -866,7 +865,6 @@ class PostgresEntityDataQueryService(
                     ps.setArray(2, PostgresArrays.createIntArray(ps.connection, partitions))
                     bindExpirationDate(ps, 3, expirationPolicy, currentDateTime, expirationPropertyType)
                     ps.setObject(4, expirationPropertyType.id)
-                    logger.info("expiring entities sql: {}", ps)
                 }
         ) { rs -> ResultSetAdapters.id(rs) }
     }
@@ -936,7 +934,7 @@ class PostgresEntityDataQueryService(
             ExpirationBase.LAST_WRITE -> DataTables.LAST_WRITE.name
             else -> throw IllegalArgumentException("Loading expired entities using ids is not supported for expiration base ${expirationPolicy.expirationBase}")
         }
-        
+
         return """
             SELECT ${ID.name} FROM ${IDS.name}
             WHERE ${ENTITY_SET_ID.name} = ?

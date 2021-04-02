@@ -429,7 +429,7 @@ class PostgresEntityDatastore(
             )
         }
 
-        return dataQueryService.getExpiringEntitiesFromEntitySet(entitySetId, expirationPolicy, currentDateTime)
+        return dataQueryService.getExpiringEntitiesFromEntitySetUsingIds(entitySetId, expirationPolicy, currentDateTime)
     }
 
 }
