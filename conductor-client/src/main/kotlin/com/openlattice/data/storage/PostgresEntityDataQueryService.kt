@@ -910,13 +910,15 @@ class PostgresEntityDataQueryService(
                 expirationPropertyType.datatype
         ).name
 
-        return "SELECT DISTINCT ${ID.name} FROM ${DATA.name} " +
-                "WHERE ${ENTITY_SET_ID.name} = ? " +
-                "AND ${PARTITION.name} = ANY(?) " +
-                "AND $expirationColumnName <= ? " +
-                "AND ${PROPERTY_TYPE_ID.name} = ?" +
-                clearedEntitiesClause + // this clause ignores entities that have already been cleared
-                "LIMIT $EXPIRED_DATA_BATCH_SIZE"
+        return """
+            SELECT DISTINCT ${ID.name} FROM ${DATA.name}
+            WHERE ${ENTITY_SET_ID.name} = ?
+            AND ${PARTITION.name} = ANY(?)
+            AND $expirationColumnName <= ?
+            AND ${PROPERTY_TYPE_ID.name} = ?
+            $clearedEntitiesClause
+            LIMIT $EXPIRED_DATA_BATCH_SIZE
+        """.trimIndent()
     }
 
     /**
@@ -934,13 +936,15 @@ class PostgresEntityDataQueryService(
             ExpirationBase.LAST_WRITE -> DataTables.LAST_WRITE.name
             else -> throw IllegalArgumentException("Loading expired entities using ids is not supported for expiration base ${expirationPolicy.expirationBase}")
         }
-
-        return "SELECT ${ID.name} FROM ${IDS.name} " +
-                "WHERE ${ENTITY_SET_ID.name} = ? " +
-                "AND ${PARTITION.name} = ANY(?) " +
-                "AND $expirationField <= ? " +
-                clearedEntitiesClause + // this clause ignores entities that have already been cleared
-                "LIMIT $EXPIRED_DATA_BATCH_SIZE"
+        
+        return """
+            SELECT ${ID.name} FROM ${IDS.name}
+            WHERE ${ENTITY_SET_ID.name} = ?
+            AND ${PARTITION.name} = ANY(?)
+            AND $expirationField <= ?
+            $clearedEntitiesClause
+            LIMIT $EXPIRED_DATA_BATCH_SIZE
+        """.trimIndent()
     }
 }
 
