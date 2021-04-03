@@ -176,7 +176,7 @@ class PostgresProjectionService {
                     stmt.executeQuery("SELECT foreign_table_name FROM information_schema.foreign_tables " +
                             "WHERE foreign_table_schema = '$destinationSchema'").use { rs ->
                         while ( rs.next() ){
-                            existingTables.add(rs.getString(0))
+                            existingTables.add(rs.getString(1))
                         }
                     }
                 }
