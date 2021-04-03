@@ -68,24 +68,20 @@ class TransporterDatastore(
         val esName = es.name
         val orgHds = exConnMan.connectToOrg(organizationId)
 
-        linkOrgDbToTransporterDb(orgHds, organizationId)
+        linkOrgDbToTransporterDb(orgHds, organizationId, es.entityTypeId)
 
         destroyEdgeViewInOrgDb(orgHds, esName)
 
-        destroyEntitySetViewInOrgDb(orgHds, esName)
-
-        destroyTransportedEntityTypeTableInOrg(orgHds, es.entityTypeId)
+        // import edges table from foreign server
+        importEdgesTableToOrg(orgHds, organizationId)
 
         // import et table from foreign server
-        transportEdgesTableToOrg(orgHds, organizationId)
-
-        // import edges table from foreign server
-        transportTableToOrg(
+        PostgresProjectionService.importTableFromFdw(
                 orgHds,
-                organizationId,
-                Schemas.PUBLIC_SCHEMA,
-                tableName(es.entityTypeId),
-                Schemas.TRANSPORTER_SCHEMA
+                constructFdwName(organizationId),
+                Schemas.PUBLIC_SCHEMA.label,
+                quotedEtTableName(es.entityTypeId),
+                Schemas.TRANSPORTER_SCHEMA.label
         )
 
         // create edge view in org db
@@ -117,6 +113,7 @@ class TransporterDatastore(
 
     fun destroyTransportedEntitySet(
             organizationId: UUID,
+            entitySetId: UUID,
             entityTypeId: UUID,
             name: String,
             orgHds: HikariDataSource = exConnMan.connectToOrg(organizationId)
@@ -125,13 +122,15 @@ class TransporterDatastore(
 
         destroyEntitySetViewInOrgDb(orgHds, name)
 
-        destroyTransportedEntityTypeTableInOrg(orgHds, entityTypeId)
+        removePreviouslyTransported(orgHds, entitySetId, entityTypeId)
     }
 
     private fun linkOrgDbToTransporterDb(
             orgDatasource: HikariDataSource,
-            organizationId: UUID
+            organizationId: UUID,
+            entityTypeId: UUID
     ) {
+        val fdwName = constructFdwName(organizationId)
         PostgresProjectionService.createFdwBetweenDatabases(
                 orgDatasource,
                 assemblerConfiguration.server.getProperty("username"),
@@ -142,7 +141,15 @@ class TransporterDatastore(
                 ),
                 assemblerConfiguration.server.getProperty("username"),
                 Schemas.TRANSPORTER_SCHEMA,
-                constructFdwName(organizationId)
+                fdwName
+        )
+
+        PostgresProjectionService.importTablesFromFdw(
+                orgDatasource,
+                fdwName,
+                Schemas.PUBLIC_SCHEMA.label,
+                setOf(quotedEtTableName(entityTypeId)),
+                Schemas.TRANSPORTER_SCHEMA.label
         )
     }
 
@@ -157,29 +164,17 @@ class TransporterDatastore(
                 ENTERPRISE_FDW_NAME
         )
 
-        transporterHds.connection.use { conn ->
-            conn.createStatement().use { stmt ->
-                stmt.executeQuery("select count(*) from information_schema.foreign_tables where foreign_table_schema = '${Schemas.ENTERPRISE_FDW_SCHEMA}'").use { rs ->
-                    if (rs.next() && rs.getInt(1) > 0) {
-                        // don't bother if it's already there
-                        logger.info("schema already imported, not re-importing")
-                    } else {
-                        stmt.executeUpdate(
-                                importTablesFromForeignSchemaQuery(
-                                        Schemas.PUBLIC_SCHEMA,
-                                        setOf(
-                                                PostgresTable.IDS.name,
-                                                PostgresTable.DATA.name,
-                                                PostgresTable.E.name
-                                        ),
-                                        Schemas.ENTERPRISE_FDW_SCHEMA,
-                                        ENTERPRISE_FDW_NAME
-                                )
-                        )
-                    }
-                }
-            }
-        }
+        PostgresProjectionService.importTablesFromFdw(
+                transporterHds,
+                ENTERPRISE_FDW_NAME,
+                Schemas.PUBLIC_SCHEMA.label,
+                setOf(
+                        PostgresTable.IDS.name,
+                        PostgresTable.DATA.name,
+                        PostgresTable.E.name
+                ),
+                Schemas.ENTERPRISE_FDW_SCHEMA.label
+        )
 
         transporterHds.close()
         transporterHds = exConnMan.connectToTransporter()
@@ -193,13 +188,30 @@ class TransporterDatastore(
         return ApiHelpers.dbQuote("fdw_$organizationId")
     }
 
+    fun removePreviouslyTransported(
+            orgDatasource: HikariDataSource,
+            entitySetId: UUID,
+            entityTypeId: UUID
+    ) {
+        // update me to remove edges as well
+        orgDatasource.connection.use { conn ->
+            conn.createStatement().use { stmt ->
+                stmt.executeUpdate(
+                        removePreviouslyTransportedEntities(Schemas.TRANSPORTER_SCHEMA, entitySetId, entityTypeId)
+                )
+            }
+        }
+    }
+
     fun destroyTransportedEntityTypeTableInOrg(
             orgDatasource: HikariDataSource,
             entityTypeId: UUID
     ) {
         orgDatasource.connection.use { conn ->
             conn.createStatement().use { stmt ->
-                stmt.executeUpdate(dropForeignTypeTable(Schemas.TRANSPORTER_SCHEMA, entityTypeId))
+                stmt.executeUpdate(
+                        dropForeignTypeTable(Schemas.TRANSPORTER_SCHEMA, entityTypeId)
+                )
             }
         }
     }
@@ -289,27 +301,6 @@ class TransporterDatastore(
         )
     }
 
-    private fun transportTableToOrg(
-            orgDatasource: HikariDataSource,
-            organizationId: UUID,
-            fromSchema: Schemas,
-            fromTableName: String,
-            toSchema: Schemas
-    ) {
-        orgDatasource.connection.use { conn ->
-            conn.createStatement().use { stmt ->
-                stmt.executeUpdate(
-                        importTablesFromForeignSchemaQuery(
-                                fromSchema,
-                                setOf(fromTableName),
-                                toSchema,
-                                constructFdwName(organizationId)
-                        )
-                )
-            }
-        }
-    }
-
     private fun checkIfTableExists(
             orgDatasource: HikariDataSource,
             schema: Schemas,
@@ -324,7 +315,7 @@ class TransporterDatastore(
         }
     }
 
-    private fun transportEdgesTableToOrg(
+    private fun importEdgesTableToOrg(
             orgDatasource: HikariDataSource,
             organizationId: UUID
     ) {
@@ -337,12 +328,12 @@ class TransporterDatastore(
             return
         }
 
-        transportTableToOrg(
+        PostgresProjectionService.importTableFromFdw(
                 orgDatasource,
-                organizationId,
-                Schemas.PUBLIC_SCHEMA,
+                constructFdwName(organizationId),
+                Schemas.PUBLIC_SCHEMA.label,
                 MAT_EDGES_TABLE_NAME,
-                Schemas.TRANSPORTER_SCHEMA
+                Schemas.TRANSPORTER_SCHEMA.label
         )
     }
 }

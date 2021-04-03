@@ -132,6 +132,58 @@ class PostgresProjectionService {
             }
         }
 
+        fun importTablesFromFdw(
+                hds: HikariDataSource,
+                fdwName: String,
+                sourceSchema: String,
+                sourceTableNames: Set<String>,
+                destinationSchema: String
+        ) {
+            val actualTables = filterAlreadyImported(hds, destinationSchema, sourceTableNames)
+            if (actualTables.isEmpty()){
+                return
+            }
+            if ( actualTables.size != sourceTableNames.size ){
+                logger.info( "Some tables already imported, importing ${actualTables.joinToString()}" )
+            }
+            hds.connection.use { conn ->
+                val tablesClause = if (actualTables.isEmpty()) {
+                    ""
+                } else {
+                    "LIMIT TO (${actualTables.joinToString(",")})"
+                }
+                conn.createStatement().use { stmt ->
+                    stmt.execute(
+                            """
+                                 IMPORT FOREIGN SCHEMA ${quote(sourceSchema)}
+                                 $tablesClause 
+                                 FROM SERVER $fdwName 
+                                 INTO ${quote(destinationSchema)}
+                            """.trimIndent()
+                    )
+                }
+            }
+        }
+
+        private fun filterAlreadyImported(
+                hds: HikariDataSource,
+                destinationSchema: String,
+                tablesToImport: Set<String>
+        ): Set<String> {
+            val existingTables = mutableSetOf<String>()
+            hds.connection.use { conn ->
+                conn.createStatement().use { stmt ->
+                    stmt.executeQuery("SELECT foreign_table_name FROM information_schema.foreign_tables " +
+                            "WHERE foreign_table_schema = '$destinationSchema'").use { rs ->
+                        while ( rs.next() ){
+                            existingTables.add(rs.getString(0))
+                        }
+                    }
+                }
+            }
+            return tablesToImport.filterNot { existingTables.contains(it) }.toSet()
+        }
+
         fun dropTableImportedFromFdw(
                 hds: HikariDataSource,
                 schema: String,

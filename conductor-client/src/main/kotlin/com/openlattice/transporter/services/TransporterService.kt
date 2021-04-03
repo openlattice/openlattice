@@ -18,7 +18,7 @@ import com.openlattice.postgres.TableColumn
 import com.openlattice.transporter.MAT_EDGES_TABLE
 import com.openlattice.transporter.processors.TransporterPropagateDataEntryProcessor
 import com.openlattice.transporter.processors.TransporterSynchronizeTableDefinitionEntryProcessor
-import com.openlattice.transporter.tableName
+import com.openlattice.transporter.quotedEtTableName
 import com.openlattice.transporter.transportTable
 import com.openlattice.transporter.transporterNamespace
 import com.openlattice.transporter.types.TransporterColumnSet
@@ -147,10 +147,11 @@ final class TransporterService(
 
     fun disassembleEntitySet(
             organizationId: UUID,
+            entitySetId: UUID,
             entityTypeId: UUID,
             entitySetName: String
     ) {
-        transporter.destroyTransportedEntitySet(organizationId, entityTypeId, entitySetName)
+        transporter.destroyTransportedEntitySet(organizationId, entitySetId, entityTypeId, entitySetName)
     }
 
     fun assembleEntitySet(
@@ -188,7 +189,7 @@ final class TransporterService(
         executor.submit {
             transporter.datastore().connection.use { conn ->
                 val st = conn.createStatement()
-                st.execute("DROP TABLE ${tableName(e.entityTypeId)}")
+                st.execute("DROP TABLE ${quotedEtTableName(e.entityTypeId)}")
             }
         }
     }
