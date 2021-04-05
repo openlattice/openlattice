@@ -529,7 +529,9 @@ class ExternalDatabaseManagementService(
 
             Ace(principal, getPermissionsFromPrivileges(intersection))
         }
-        aclGrants.add(Acl(AclKey(table.id), tableAces))
+        if (tableAces.isNotEmpty()) {
+            aclGrants.add(Acl(AclKey(table.id), tableAces))
+        }
 
         authorizationManager.addPermissions(aclGrants)
 
