@@ -2,6 +2,7 @@ package com.openlattice.data
 
 import com.kryptnostic.rhizome.configuration.RhizomeConfiguration
 import com.kryptnostic.rhizome.configuration.service.ConfigurationService
+import com.openlattice.data.storage.BinaryDataWithMetadata
 import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.data.storage.LocalBlobDataService
 import com.zaxxer.hikari.HikariConfig
@@ -70,7 +71,7 @@ class LocalBlobDataServiceTest {
         }
         key1 = key1.plus(data.hashCode())
 
-        byteBlobDataManager.putObject(key1, data, "png")
+        byteBlobDataManager.putObject(key1, BinaryDataWithMetadata("png", data))
         val returnedDataList = byteBlobDataManager.getObjects(listOf(key1))
         val returnedData = returnedDataList[0] as ByteArray
         Assert.assertArrayEquals(data, returnedData)
@@ -86,7 +87,7 @@ class LocalBlobDataServiceTest {
         }
         key2 = key2.plus(data.hashCode())
 
-        byteBlobDataManager.putObject(key2, data, "png")
+        byteBlobDataManager.putObject(key2, BinaryDataWithMetadata("png", data))
         byteBlobDataManager.deleteObject(key2)
         val objects = byteBlobDataManager.getObjects(listOf(key2))
         Assert.assertEquals(objects.size, 0)

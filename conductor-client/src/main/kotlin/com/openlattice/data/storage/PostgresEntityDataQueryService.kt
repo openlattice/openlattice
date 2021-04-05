@@ -451,7 +451,7 @@ class PostgresEntityDataQueryService(
         //store entity set id/entity key id/property type id/property hash as key in S3
         val s3Key = "$entitySetId/$entityKeyId/$propertyTypeId/$digest"
 
-        byteBlobDataManager.putObject(s3Key, binaryData.data, binaryData.contentType, binaryData.contentDisposition)
+        byteBlobDataManager.putObject(s3Key, binaryData)
         return PostgresDataHasher.hashObject(s3Key, EdmPrimitiveTypeKind.String) to s3Key
     }
 

@@ -9,6 +9,7 @@ import com.google.common.util.concurrent.MoreExecutors
 import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration
 import com.kryptnostic.rhizome.configuration.amazon.AwsLaunchConfiguration
 import com.openlattice.ResourceConfigurationLoader
+import com.openlattice.data.storage.BinaryDataWithMetadata
 import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.data.storage.aws.AwsBlobDataService
 import com.openlattice.datastore.configuration.DatastoreConfiguration
@@ -82,7 +83,7 @@ class AwsBlobDataServiceTest {
         }
         key1 = key1.plus(data.hashCode())
 
-        byteBlobDataManager.putObject(key1, data, "png")
+        byteBlobDataManager.putObject(key1, BinaryDataWithMetadata("png", data))
         val returnedDataList = byteBlobDataManager.getObjects(listOf(key1))
         val returnedURL = returnedDataList[0] as URL
         val returnedData = returnedURL.readBytes()
@@ -100,7 +101,7 @@ class AwsBlobDataServiceTest {
         }
         key2 = key2.plus(data.hashCode())
 
-        byteBlobDataManager.putObject(key2, data, "png")
+        byteBlobDataManager.putObject(key2, BinaryDataWithMetadata("png", data))
         byteBlobDataManager.deleteObject(key2)
         val returnedDataList = byteBlobDataManager.getObjects(listOf(key2))
         val returnedURL = returnedDataList[0] as URL

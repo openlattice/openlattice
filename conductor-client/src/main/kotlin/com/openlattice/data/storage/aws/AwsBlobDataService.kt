@@ -18,6 +18,7 @@ import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.model.PutObjectRequest
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder
 import com.google.common.util.concurrent.ListeningExecutorService
+import com.openlattice.data.storage.BinaryDataWithMetadata
 import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.datastore.configuration.DatastoreConfiguration
 import org.slf4j.LoggerFactory
@@ -53,12 +54,12 @@ class AwsBlobDataService(
         return builder.build()
     }
 
-    override fun putObject(s3Key: String, data: ByteArray, contentType: String, contentDisposition: String?) {
+    override fun putObject(s3Key: String, binaryDataWithMetadata: BinaryDataWithMetadata) {
         val metadata = ObjectMetadata()
-        val dataInputStream = data.inputStream()
+        val dataInputStream = binaryDataWithMetadata.data.inputStream()
         metadata.contentLength = dataInputStream.available().toLong()
-        metadata.contentType = contentType
-        contentDisposition?.let { metadata.contentDisposition = it }
+        metadata.contentType = binaryDataWithMetadata.contentType
+        binaryDataWithMetadata.contentDisposition?.let { metadata.contentDisposition = it }
 
         val putRequest = PutObjectRequest(datastoreConfiguration.bucketName, s3Key, dataInputStream, metadata)
         val transferManager = TransferManagerBuilder.standard().withS3Client(s3).build()

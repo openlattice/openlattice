@@ -38,8 +38,8 @@ class LocalBlobDataService(private val hds: HikariDataSource) : ByteBlobDataMana
         throw UnsupportedOperationException()
     }
 
-    override fun putObject(s3Key: String, data: ByteArray, contentType: String, contentDisposition: String?) {
-        insertEntity(s3Key, data)
+    override fun putObject(s3Key: String, binaryDataWithMetadata: BinaryDataWithMetadata) {
+        insertEntity(s3Key, binaryDataWithMetadata.data)
     }
 
     override fun deleteObject(s3Key: String) {
