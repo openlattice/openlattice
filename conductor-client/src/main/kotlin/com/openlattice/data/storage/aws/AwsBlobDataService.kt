@@ -6,12 +6,16 @@ import com.amazonaws.HttpMethod
 import com.amazonaws.SdkClientException
 import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
-import com.amazonaws.retry.RetryPolicy
 import com.amazonaws.retry.PredefinedBackoffStrategies
 import com.amazonaws.retry.PredefinedRetryPolicies
+import com.amazonaws.retry.RetryPolicy
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
-import com.amazonaws.services.s3.model.*
+import com.amazonaws.services.s3.model.DeleteObjectRequest
+import com.amazonaws.services.s3.model.DeleteObjectsRequest
+import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest
+import com.amazonaws.services.s3.model.ObjectMetadata
+import com.amazonaws.services.s3.model.PutObjectRequest
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.openlattice.data.storage.ByteBlobDataManager
@@ -48,12 +52,14 @@ class AwsBlobDataService(
         builder.clientConfiguration = ClientConfiguration().withRetryPolicy(retryPolicy)
         return builder.build()
     }
-    
-    override fun putObject(s3Key: String, data: ByteArray, contentType: String) {
+
+    override fun putObject(s3Key: String, data: ByteArray, contentType: String, contentDisposition: String?) {
         val metadata = ObjectMetadata()
         val dataInputStream = data.inputStream()
         metadata.contentLength = dataInputStream.available().toLong()
         metadata.contentType = contentType
+        contentDisposition?.let { metadata.contentDisposition = it }
+
         val putRequest = PutObjectRequest(datastoreConfiguration.bucketName, s3Key, dataInputStream, metadata)
         val transferManager = TransferManagerBuilder.standard().withS3Client(s3).build()
         val upload = transferManager.upload(putRequest)

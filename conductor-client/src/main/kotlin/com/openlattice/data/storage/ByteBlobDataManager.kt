@@ -6,7 +6,7 @@ import java.util.*
 
 
 interface ByteBlobDataManager {
-    fun putObject(s3Key: String, data: ByteArray, contentType: String)
+    fun putObject(s3Key: String, data: ByteArray, contentType: String, contentDisposition: String? = null)
 
     fun deleteObject(s3Key: String)
 
