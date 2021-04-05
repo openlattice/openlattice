@@ -16,6 +16,7 @@ import com.amazonaws.services.s3.model.DeleteObjectsRequest
 import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest
 import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.model.PutObjectRequest
+import com.amazonaws.services.s3.model.ResponseHeaderOverrides
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.openlattice.data.storage.BinaryDataWithMetadata
@@ -102,6 +103,7 @@ class AwsBlobDataService(
                 httpMethod
         ).withExpiration(expiration)
         contentType?.let { urlRequest.contentType = it }
+        contentDisposition?.let { urlRequest.responseHeaders = ResponseHeaderOverrides().withContentDisposition(it) }
         lateinit var url: URL
         try {
             url = s3.generatePresignedUrl(urlRequest)
