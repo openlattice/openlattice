@@ -318,7 +318,7 @@ public interface DataApi {
      * @param digest         The digest string of the binary object.
      * @return A presigned URL for the requested binary object, with the specified content disposition
      */
-    @GET( BASE + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/" + PROPERTY_TYPE_ID_PATH + "/" + DIGEST_PATH )
+    @POST( BASE + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/" + PROPERTY_TYPE_ID_PATH + "/" + DIGEST_PATH )
     URL downloadBinaryPropertyWithContentDisposition(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Path( ENTITY_KEY_ID ) UUID entityKeyId,
