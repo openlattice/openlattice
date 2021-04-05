@@ -6,15 +6,36 @@ import java.util.*
 
 
 interface ByteBlobDataManager {
+
+    companion object {
+        @JvmStatic
+        fun generateS3Key(
+                entitySetId: UUID,
+                entityKeyId: UUID,
+                propertyTypeId: UUID,
+                digest: String
+        ): String {
+            return "$entitySetId/$entityKeyId/$propertyTypeId/$digest"
+        }
+    }
+
     fun putObject(s3Key: String, binaryDataWithMetadata: BinaryDataWithMetadata)
 
     fun deleteObject(s3Key: String)
 
     fun getObjects(keys: Collection<Any>): List<Any>
 
-    fun getPresignedUrl(key: Any, expiration: Date, httpMethod: HttpMethod = HttpMethod.GET, contentType: Optional<String>): URL
-  
+    fun getPresignedUrl(
+            key: Any,
+            expiration: Date,
+            httpMethod: HttpMethod = HttpMethod.GET,
+            contentType: String? = null,
+            contentDisposition: String? = null
+    ): URL
+
     fun getPresignedUrls(keys: Collection<Any>): List<URL>
-  
+
     fun deleteObjects(s3Keys: List<String>)
+
+    fun getDefaultExpirationDateTime(): Date
 }

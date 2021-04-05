@@ -137,8 +137,7 @@ class AwsBlobDataServiceTest {
         val url = byteBlobDataManager.getPresignedUrl(
                 "110a585b-fba1-49ab-a839-c7075cada6eb/5fde0000-0000-0000-8000-0000000024f7/19aa5ba7-647a-4185-ae91-54c466106df3/0bdb10ab6c099fa77840cef28e5ad43e",
                 expirationTime,
-                HttpMethod.GET,
-                Optional.empty())
+                HttpMethod.GET)
         logger.info("Presigned URL $url")
     }
 }

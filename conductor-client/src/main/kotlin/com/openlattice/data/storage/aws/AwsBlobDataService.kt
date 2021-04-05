@@ -84,20 +84,24 @@ class AwsBlobDataService(
     }
 
     override fun getPresignedUrls(keys: Collection<Any>): List<URL> {
-        val expirationTime = Date()
-        val timeToLive = expirationTime.time + datastoreConfiguration.timeToLive
-        expirationTime.time = timeToLive
+        val expirationTime = getDefaultExpirationDateTime()
 
         return keys
-                .map { executorService.submit(Callable<URL> { getPresignedUrl(it as String, expirationTime, HttpMethod.GET, Optional.empty()) }) }
+                .map { executorService.submit(Callable<URL> { getPresignedUrl(it as String, expirationTime, HttpMethod.GET) }) }
                 .map { it.get() }
     }
 
-    override fun getPresignedUrl(key: Any, expiration: Date, httpMethod: HttpMethod, contentType: Optional<String>): URL {
+    override fun getPresignedUrl(
+            key: Any,
+            expiration: Date,
+            httpMethod: HttpMethod,
+            contentType: String?,
+            contentDisposition: String?
+    ): URL {
         val urlRequest = GeneratePresignedUrlRequest(datastoreConfiguration.bucketName, key.toString()).withMethod(
                 httpMethod
         ).withExpiration(expiration)
-        contentType.ifPresent { urlRequest.contentType = contentType.get() }
+        contentType?.let { urlRequest.contentType = it }
         lateinit var url: URL
         try {
             url = s3.generatePresignedUrl(urlRequest)
@@ -107,6 +111,13 @@ class AwsBlobDataService(
             logger.warn("Amazon S3 couldn't be contacted or the client couldn't parse the response from S3")
         }
         return url
+    }
+
+    override fun getDefaultExpirationDateTime(): Date {
+        val expirationTime = Date()
+        val timeToLive = expirationTime.time + datastoreConfiguration.timeToLive
+        expirationTime.time = timeToLive
+        return expirationTime
     }
 
 

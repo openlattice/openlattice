@@ -26,6 +26,7 @@ import com.openlattice.search.requests.EntityNeighborsFilter;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import retrofit2.http.*;
 
+import java.net.URL;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
@@ -51,6 +52,7 @@ public interface DataApi {
 
     String ALL                   = "all";
     String BLOCK                 = "block";
+    String DIGEST                = "digest";
     String PROPERTIES            = "properties";
     String ENTITY_SET            = "set";
     String ENTITY_SET_ID         = "setId";
@@ -66,6 +68,7 @@ public interface DataApi {
     /*
      * These determine the service routing for the LB
      */
+    String DIGEST_PATH           = "{" + DIGEST + "}";
     String SET_ID_PATH           = "{" + ENTITY_SET_ID + "}";
     String S3_URL_PATH           = "{" + S3_URL + "}";
     String S3_URLS_PATH          = "{" + S3_URLS + "}";
@@ -304,6 +307,22 @@ public interface DataApi {
     Map<UUID, Map<UUID, Map<UUID, Map<FullQualifiedName, Set<Object>>>>> loadLinkedEntitySetBreakdown(
             @Path( ENTITY_SET_ID ) UUID linkedEntitySetId,
             @Body EntitySetSelection selection
+    );
+
+    /**
+     * Loads a single entity by its entityKeyId and entitySetId
+     *
+     * @param entitySetId The entity set which the request entity belongs to.
+     * @param entityKeyId The id of the requested entity.
+     * @return A entity details object, with property type FQNs as keys.
+     */
+    @GET( BASE + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/" + PROPERTY_TYPE_ID_PATH + "/" + DIGEST_PATH )
+    URL downloadBinaryPropertyWithFileName(
+            @Path( ENTITY_SET_ID ) UUID entitySetId,
+            @Path( ENTITY_KEY_ID ) UUID entityKeyId,
+            @Path( PROPERTY_TYPE_ID ) UUID propertyTypeId,
+            @Path( DIGEST ) String digest,
+            @Body String contentDisposition
     );
 
 }

@@ -29,12 +29,16 @@ class LocalBlobDataService(private val hds: HikariDataSource) : ByteBlobDataMana
     }
 
     override fun getPresignedUrl(
-            key: Any, expiration: Date, httpMethod: HttpMethod, contentType: Optional<String>
+            key: Any, expiration: Date, httpMethod: HttpMethod, contentType: String?, contentDisposition: String?
     ): URL {
         throw UnsupportedOperationException()
     }
 
     override fun getPresignedUrls(keys: Collection<Any>): List<URL> {
+        throw UnsupportedOperationException()
+    }
+
+    override fun getDefaultExpirationDateTime(): Date {
         throw UnsupportedOperationException()
     }
 

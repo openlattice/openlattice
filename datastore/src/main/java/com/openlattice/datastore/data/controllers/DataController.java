@@ -20,6 +20,7 @@
 
 package com.openlattice.datastore.data.controllers;
 
+import com.amazonaws.HttpMethod;
 import com.auth0.spring.security.api.authentication.PreAuthenticatedAuthenticationJsonWebToken;
 import com.codahale.metrics.annotation.Timed;
 import com.geekbeast.rhizome.jobs.HazelcastJobService;
@@ -43,6 +44,7 @@ import com.openlattice.data.graph.DataGraphServiceHelper;
 import com.openlattice.data.jobs.DataDeletionJobState;
 import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
+import com.openlattice.data.storage.ByteBlobDataManager;
 import com.openlattice.data.storage.DataDeletionService;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.EntitySetManager;
@@ -66,6 +68,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletResponse;
+import java.net.URL;
 import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -121,6 +124,9 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
 
     @Inject
     private HazelcastJobService jobService;
+
+    @Inject
+    private ByteBlobDataManager byteBlobDataManager;
 
     private static final int DELETION_BLOCKING_INTERVAL   = 1000; // 1 second
     private static final int MAX_DELETION_BLOCKING_CHECKS = 60 * 5; // 5 minutes
@@ -979,6 +985,33 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                 .collect( Collectors.toMap( esId -> esId, esId -> entityKeyIds ) );
 
         return dgm.getLinkedEntitySetBreakDown( entityKeyIdsOfEntitySets, authorizedPropertyTypesOfEntitySets );
+    }
+
+    @Timed
+    @Override
+    @PostMapping(
+            path = SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/" + PROPERTY_TYPE_ID_PATH + "/" + DIGEST_PATH,
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public URL downloadBinaryPropertyWithFileName(
+            @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
+            @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId,
+            @PathVariable( PROPERTY_TYPE_ID ) UUID propertyTypeId,
+            @PathVariable( DIGEST ) String digest,
+            @RequestBody String contentDisposition ) {
+        ensureReadAccess( new AclKey( entitySetId ) );
+        ensureReadAccess( new AclKey( entitySetId, propertyTypeId ) );
+
+        String key = ByteBlobDataManager.generateS3Key( entitySetId, entityKeyId, propertyTypeId, digest );
+
+        return byteBlobDataManager.getPresignedUrl(
+                key,
+                byteBlobDataManager.getDefaultExpirationDateTime(),
+                HttpMethod.GET,
+                null,
+                contentDisposition
+        );
     }
 
     @NotNull
