@@ -994,7 +994,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE
     )
-    public URL downloadBinaryPropertyWithFileName(
+    public URL downloadBinaryPropertyWithContentDisposition(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId,
             @PathVariable( PROPERTY_TYPE_ID ) UUID propertyTypeId,

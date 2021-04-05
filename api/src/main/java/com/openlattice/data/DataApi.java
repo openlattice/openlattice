@@ -310,14 +310,16 @@ public interface DataApi {
     );
 
     /**
-     * Loads a single entity by its entityKeyId and entitySetId
+     * Loads a presigned URL for a particular binary object with the requested content disposition
      *
-     * @param entitySetId The entity set which the request entity belongs to.
-     * @param entityKeyId The id of the requested entity.
-     * @return A entity details object, with property type FQNs as keys.
+     * @param entitySetId    The entity set which the request entity belongs to.
+     * @param entityKeyId    The id of the requested entity.
+     * @param propertyTypeId The propertyTypeId of the binary object
+     * @param digest         The digest string of the binary object.
+     * @return A presigned URL for the requested binary object, with the specified content disposition
      */
     @GET( BASE + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/" + PROPERTY_TYPE_ID_PATH + "/" + DIGEST_PATH )
-    URL downloadBinaryPropertyWithFileName(
+    URL downloadBinaryPropertyWithContentDisposition(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Path( ENTITY_KEY_ID ) UUID entityKeyId,
             @Path( PROPERTY_TYPE_ID ) UUID propertyTypeId,
