@@ -35,6 +35,8 @@ interface ByteBlobDataManager {
 
     fun getPresignedUrls(keys: Collection<Any>): List<URL>
 
+    fun getPresignedUrlsWithDispositions(keysToDispositions: Map<String, String?>): Map<String, URL>
+
     fun deleteObjects(s3Keys: List<String>)
 
     fun getDefaultExpirationDateTime(): Date

@@ -20,7 +20,6 @@
 
 package com.openlattice.datastore.data.controllers;
 
-import com.amazonaws.HttpMethod;
 import com.auth0.spring.security.api.authentication.PreAuthenticatedAuthenticationJsonWebToken;
 import com.codahale.metrics.annotation.Timed;
 import com.geekbeast.rhizome.jobs.HazelcastJobService;
@@ -990,28 +989,18 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     @Timed
     @Override
     @PostMapping(
-            path = SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/" + PROPERTY_TYPE_ID_PATH + "/" + DIGEST_PATH,
+            path = BINARY,
             consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE
     )
-    public URL downloadBinaryPropertyWithContentDisposition(
-            @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
-            @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId,
-            @PathVariable( PROPERTY_TYPE_ID ) UUID propertyTypeId,
-            @PathVariable( DIGEST ) String digest,
-            @RequestBody String contentDisposition ) {
-        ensureReadAccess( new AclKey( entitySetId ) );
-        ensureReadAccess( new AclKey( entitySetId, propertyTypeId ) );
+    public BinaryObjectResponse loadBinaryProperties( @RequestBody BinaryObjectRequest binaryObjectRequest ) {
+        binaryObjectRequest.getAclKeys().forEach( this::ensureReadAccess );
 
-        String key = ByteBlobDataManager.generateS3Key( entitySetId, entityKeyId, propertyTypeId, digest );
-
-        return byteBlobDataManager.getPresignedUrl(
-                key,
-                byteBlobDataManager.getDefaultExpirationDateTime(),
-                HttpMethod.GET,
-                null,
-                contentDisposition
+        Map<String, URL> result = byteBlobDataManager.getPresignedUrlsWithDispositions(
+                binaryObjectRequest.mapToS3KeysToDispositions()
         );
+
+        return BinaryObjectResponse.fromS3Response( result );
     }
 
     @NotNull

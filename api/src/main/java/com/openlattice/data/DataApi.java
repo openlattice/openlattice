@@ -26,7 +26,6 @@ import com.openlattice.search.requests.EntityNeighborsFilter;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import retrofit2.http.*;
 
-import java.net.URL;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
@@ -51,8 +50,8 @@ public interface DataApi {
      */
 
     String ALL                   = "all";
+    String BINARY                = "binary";
     String BLOCK                 = "block";
-    String DIGEST                = "digest";
     String PROPERTIES            = "properties";
     String ENTITY_SET            = "set";
     String ENTITY_SET_ID         = "setId";
@@ -68,7 +67,6 @@ public interface DataApi {
     /*
      * These determine the service routing for the LB
      */
-    String DIGEST_PATH           = "{" + DIGEST + "}";
     String SET_ID_PATH           = "{" + ENTITY_SET_ID + "}";
     String S3_URL_PATH           = "{" + S3_URL + "}";
     String S3_URLS_PATH          = "{" + S3_URLS + "}";
@@ -312,19 +310,12 @@ public interface DataApi {
     /**
      * Loads a presigned URL for a particular binary object with the requested content disposition
      *
-     * @param entitySetId    The entity set which the request entity belongs to.
-     * @param entityKeyId    The id of the requested entity.
-     * @param propertyTypeId The propertyTypeId of the binary object
-     * @param digest         The digest string of the binary object.
-     * @return A presigned URL for the requested binary object, with the specified content disposition
+     * @param binaryObjectRequest An object containing information about which binary properties to load from which
+     *                            entity sets, optionally mapping each to a desired content disposition.
+     * @return The same request structure, with the content disposition field replaced by a presigned URL for the
+     * requested binary object, with the specified content disposition
      */
-    @POST( BASE + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/" + PROPERTY_TYPE_ID_PATH + "/" + DIGEST_PATH )
-    URL downloadBinaryPropertyWithContentDisposition(
-            @Path( ENTITY_SET_ID ) UUID entitySetId,
-            @Path( ENTITY_KEY_ID ) UUID entityKeyId,
-            @Path( PROPERTY_TYPE_ID ) UUID propertyTypeId,
-            @Path( DIGEST ) String digest,
-            @Body String contentDisposition
-    );
+    @POST( BASE + "/" + BINARY )
+    BinaryObjectResponse loadBinaryProperties( @Body BinaryObjectRequest binaryObjectRequest );
 
 }

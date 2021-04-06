@@ -38,6 +38,10 @@ class LocalBlobDataService(private val hds: HikariDataSource) : ByteBlobDataMana
         throw UnsupportedOperationException()
     }
 
+    override fun getPresignedUrlsWithDispositions(keysToDispositions: Map<String, String?>): Map<String, URL> {
+        throw UnsupportedOperationException()
+    }
+
     override fun getDefaultExpirationDateTime(): Date {
         throw UnsupportedOperationException()
     }
