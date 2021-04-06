@@ -3,9 +3,11 @@ package com.openlattice.data
 import java.net.URL
 import java.util.*
 
-data class BinaryObjectResponse(
-        val esToEkToPtToDigestToUrl: Map<UUID, Map<UUID, Map<UUID, Map<String, URL>>>>
-) : Map<UUID, Map<UUID, Map<UUID, Map<String, URL>>>> by esToEkToPtToDigestToUrl {
+/**
+ * This class contains a single field, mapping:
+ * entitySetId -> entityKeyId -> propertyTypeId -> digest -> presigned URL
+ */
+data class BinaryObjectResponse(val value: Map<UUID, Map<UUID, Map<UUID, Map<String, URL>>>>) {
 
     companion object {
         @JvmStatic
