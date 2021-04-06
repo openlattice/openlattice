@@ -109,8 +109,7 @@ class PostgresProjectionService {
                 conn.autoCommit = false
 
                 conn.createStatement().use { stmt ->
-                    stmt.execute(
-                            """
+                    stmt.execute("""
                                  IMPORT FOREIGN SCHEMA ${quote(sourceSchema)}
                                  LIMIT TO ( ${quote(sourceTableName)} )
                                  FROM SERVER $fdwName 
@@ -141,6 +140,7 @@ class PostgresProjectionService {
         ) {
             val actualTables = filterAlreadyImported(hds, destinationSchema, sourceTableNames)
             if (actualTables.isEmpty()){
+                logger.info( "Not importing any tables from fdw, specified tables already imported" )
                 return
             }
             if ( actualTables.size != sourceTableNames.size ){

@@ -76,11 +76,11 @@ class TransporterDatastore(
         importEdgesTableToOrg(orgHds, organizationId)
 
         // import et table from foreign server
-        PostgresProjectionService.importTableFromFdw(
+        PostgresProjectionService.importTablesFromFdw(
                 orgHds,
                 constructFdwName(organizationId),
                 Schemas.PUBLIC_SCHEMA.label,
-                quotedEtTableName(es.entityTypeId),
+                setOf(entityTypeTableName(es.entityTypeId)),
                 Schemas.TRANSPORTER_SCHEMA.label
         )
 
