@@ -48,20 +48,4 @@ data class BinaryDataWithMetadata(
             )
         }
     }
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is BinaryDataWithMetadata) return false
-
-        if (contentType != other.contentType) return false
-        if (!data.contentEquals(other.data)) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        var result = contentType.hashCode()
-        result = 31 * result + data.contentHashCode()
-        return result
-    }
 }
