@@ -21,11 +21,12 @@
 
 package com.openlattice.organizations
 
-import com.dataloom.mappers.ObjectMappers
 import com.hazelcast.core.HazelcastInstance
 import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.AbstractSecurableObject
+import com.openlattice.data.DataDeletionManager
 import com.openlattice.data.DataGraphManager
+import com.openlattice.data.DeleteType
 import com.openlattice.data.EntityKey
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
@@ -37,7 +38,6 @@ import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.organization.OrganizationExternalDatabaseTable
 import com.openlattice.organization.roles.Role
 import com.openlattice.organizations.processors.OrganizationReadEntryProcessor
-import com.openlattice.postgres.DataTables.quote
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.springframework.stereotype.Service
 import java.util.*
@@ -53,10 +53,10 @@ class OrganizationMetadataEntitySetsService(
     private val principalsMapManager: PrincipalsMapManager,
     private val authorizationManager: AuthorizationManager
 ) {
-    private val mapper = ObjectMappers.newJsonMapper()
 
     protected val organizations = HazelcastMap.ORGANIZATIONS.getMap(hazelcastInstance)
 
+    lateinit var dataDeletionService: DataDeletionManager
     lateinit var dataGraphManager: DataGraphManager
     lateinit var entitySetsManager: EntitySetManager
     lateinit var organizationService: HazelcastOrganizationService
@@ -190,7 +190,10 @@ class OrganizationMetadataEntitySetsService(
         }
     }
 
-    fun addDatasetsAndColumns(entitySets: Collection<EntitySet>, propertyTypesByEntitySet: Map<UUID, Collection<PropertyType>>) {
+    fun addDatasetsAndColumns(
+        entitySets: Collection<EntitySet>,
+        propertyTypesByEntitySet: Map<UUID, Collection<PropertyType>>
+    ) {
         initializeFields()
         if (!isFullyInitialized() || entitySets.isEmpty()) {
             return
@@ -254,7 +257,7 @@ class OrganizationMetadataEntitySetsService(
         val organizationMetadataEntitySetIds = organizationService.getOrganizationMetadataEntitySetIds(organizationId)
         val datasetEntityKeyIds = getDatasetEntityKeyIds(
             organizationMetadataEntitySetIds,
-            tables.map { it.id }
+            tables.map { it.oid }
         )
         val columnEntityKeyIds = getColumnEntityKeyIds(
                 organizationMetadataEntitySetIds,
@@ -336,6 +339,42 @@ class OrganizationMetadataEntitySetsService(
         )
     }
 
+    fun deleteDatasets(organizationId: UUID, tablesToDelete: Set<OrganizationExternalDatabaseTable>) {
+
+        initializeFields()
+        if (!isFullyInitialized() || tablesToDelete.isEmpty()) {
+            return
+        }
+
+        ensureOrganizationMetadataEntitySetIdsFullyInitialized(organizationId)
+
+        val metadataIds = organizationService.getOrganizationMetadataEntitySetIds(organizationId)
+        val dataSetEntityKeyIds = getDatasetEntityKeyIds(metadataIds, tablesToDelete.map { it.oid })
+        dataDeletionService.clearOrDeleteEntities(
+            metadataIds.datasets,
+            dataSetEntityKeyIds.values.toMutableSet(),
+            DeleteType.Soft
+        )
+    }
+
+    fun deleteDatasetColumns(organizationId: UUID, columnIdsToDelete: Map<UUID, Set<UUID>>) {
+
+        initializeFields()
+        if (!isFullyInitialized() || columnIdsToDelete.isEmpty()) {
+            return
+        }
+
+        ensureOrganizationMetadataEntitySetIdsFullyInitialized(organizationId)
+
+        val metadataIds = organizationService.getOrganizationMetadataEntitySetIds(organizationId)
+        val dataSetColumnEntityKeyIds = getColumnEntityKeyIds(metadataIds, columnIdsToDelete)
+        dataDeletionService.clearOrDeleteEntities(
+            metadataIds.columns,
+            dataSetColumnEntityKeyIds.values.toMutableSet(),
+            DeleteType.Soft
+        )
+    }
+
     private fun getDatasetEntityKeyId(
             organizationMetadataEntitySetIds: OrganizationMetadataEntitySetIds,
             datasetId: Any
@@ -344,12 +383,11 @@ class OrganizationMetadataEntitySetsService(
     }
 
     private fun getDatasetEntityKeyIds(
-            organizationMetadataEntitySetIds: OrganizationMetadataEntitySetIds,
+            metadataIds: OrganizationMetadataEntitySetIds,
             datasetIds: List<Any>
     ): Map<Any, UUID> {
-        val entityKeyIds = dataGraphManager.getEntityKeyIds(
-                datasetIds.map { EntityKey(organizationMetadataEntitySetIds.datasets, it.toString()) }.toSet()
-        )
+        val entityKeys = datasetIds.map { EntityKey(metadataIds.datasets, it.toString()) }.toSet()
+        val entityKeyIds = dataGraphManager.getEntityKeyIds(entityKeys)
         return datasetIds.zip(entityKeyIds).toMap()
     }
 
