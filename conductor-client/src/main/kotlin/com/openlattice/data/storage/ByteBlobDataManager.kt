@@ -19,7 +19,7 @@ interface ByteBlobDataManager {
         }
     }
 
-    fun putObject(s3Key: String, binaryDataWithMetadata: BinaryDataWithMetadata)
+    fun putObject(s3Key: String, binaryObjectWithMetadata: BinaryObjectWithMetadata)
 
     fun deleteObject(s3Key: String)
 

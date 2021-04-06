@@ -7,7 +7,7 @@ import java.util.*
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-data class BinaryDataWithMetadata(
+data class BinaryObjectWithMetadata(
         val contentType: String,
         val data: ByteArray,
         val contentDisposition: String? = null
@@ -20,7 +20,7 @@ data class BinaryDataWithMetadata(
 
         private val decoder = Base64.getDecoder()
 
-        fun fromMap(value: Map<String, Any>): BinaryDataWithMetadata {
+        fun fromMap(value: Map<String, Any>): BinaryObjectWithMetadata {
             val contentType = value[CONTENT_TYPE]
             val data = value[DATA]
             val contentDisposition = value[CONTENT_DISPOSITION]
@@ -41,7 +41,7 @@ data class BinaryDataWithMetadata(
                     contentDisposition?.javaClass
             )
 
-            return BinaryDataWithMetadata(
+            return BinaryObjectWithMetadata(
                     (contentType as String?)!!,
                     decoder.decode(data as String?),
                     (contentDisposition as String?)
@@ -53,7 +53,7 @@ data class BinaryDataWithMetadata(
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
-        other as BinaryDataWithMetadata
+        other as BinaryObjectWithMetadata
 
         if (contentType != other.contentType) return false
         if (!`data`.contentEquals(other.`data`)) return false

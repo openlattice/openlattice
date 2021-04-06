@@ -445,7 +445,7 @@ class PostgresEntityDataQueryService(
         }
 
         //Data is expected to be of a specific type so that it can be stored in s3 bucket
-        val binaryData = value as BinaryDataWithMetadata
+        val binaryData = value as BinaryObjectWithMetadata
         val digest = PostgresDataHasher.hashObjectToHex(binaryData.data, EdmPrimitiveTypeKind.Binary)
 
         //store entity set id/entity key id/property type id/property hash as key in S3

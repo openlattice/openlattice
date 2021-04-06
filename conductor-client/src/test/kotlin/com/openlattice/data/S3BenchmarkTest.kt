@@ -9,7 +9,7 @@ import com.google.common.util.concurrent.MoreExecutors
 import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration
 import com.kryptnostic.rhizome.configuration.amazon.AwsLaunchConfiguration
 import com.openlattice.ResourceConfigurationLoader
-import com.openlattice.data.storage.BinaryDataWithMetadata
+import com.openlattice.data.storage.BinaryObjectWithMetadata
 import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.data.storage.aws.AwsBlobDataService
 import com.openlattice.datastore.configuration.DatastoreConfiguration
@@ -108,7 +108,7 @@ class S3BenchmarkTest {
         var count = 0
         for (key in keys) {
             val start = Stopwatch.createStarted()
-            byteBlobDataManager.putObject(key, BinaryDataWithMetadata("png", data))
+            byteBlobDataManager.putObject(key, BinaryObjectWithMetadata("image/png", data))
             durations.add(start.elapsed(TimeUnit.MILLISECONDS))
             count++
             if (count % LOG_STEP == 0) {

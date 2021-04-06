@@ -1,7 +1,7 @@
 package com.openlattice.postgres
 
 import com.google.common.base.Preconditions
-import com.openlattice.data.storage.BinaryDataWithMetadata
+import com.openlattice.data.storage.BinaryObjectWithMetadata
 import com.openlattice.edm.type.PropertyType
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
@@ -135,7 +135,7 @@ class JsonDeserializer {
                             value.javaClass
                     )
 
-                    return BinaryDataWithMetadata.fromMap(value as Map<String, Any>)
+                    return BinaryObjectWithMetadata.fromMap(value as Map<String, Any>)
                 }
                 EdmPrimitiveTypeKind.Date -> {
                     Preconditions.checkState(
