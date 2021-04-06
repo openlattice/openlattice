@@ -1,8 +1,8 @@
 package com.openlattice.data.storage
 
 import com.codahale.metrics.annotation.Timed
-import com.openlattice.IdConstants
 import com.openlattice.analysis.requests.Filter
+import com.openlattice.data.DataExpiration
 import com.openlattice.data.DeleteType
 import com.openlattice.data.FilteredDataPageDefinition
 import com.openlattice.data.WriteEvent
@@ -10,6 +10,7 @@ import com.openlattice.data.storage.PostgresEntitySetSizesInitializationTask.Com
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.data.util.PostgresDataHasher
+import com.openlattice.edm.set.ExpirationBase
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.*
 import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
@@ -17,6 +18,7 @@ import com.openlattice.postgres.PostgresColumn.ID
 import com.openlattice.postgres.PostgresColumn.PARTITION
 import com.openlattice.postgres.PostgresColumn.PROPERTY_TYPE_ID
 import com.openlattice.postgres.PostgresColumn.VERSION
+import com.openlattice.postgres.PostgresColumn.VERSIONS
 import com.openlattice.postgres.PostgresTable.DATA
 import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.streams.BasePostgresIterable
@@ -31,6 +33,9 @@ import java.nio.ByteBuffer
 import java.security.InvalidParameterException
 import java.sql.PreparedStatement
 import java.sql.ResultSet
+import java.sql.Types
+import java.time.OffsetDateTime
+import java.time.ZoneId
 import java.util.*
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.streams.asStream
@@ -832,43 +837,112 @@ class PostgresEntityDataQueryService(
 
     }
 
-    fun getExpiringEntitiesFromEntitySet(
+    fun getExpiringEntitiesFromEntitySetUsingIds(
             entitySetId: UUID,
-            expirationBaseColumn: String,
-            formattedDateMinusTTE: Any,
-            sqlFormat: Int,
-            deleteType: DeleteType
+            expirationPolicy: DataExpiration,
+            currentDateTime: OffsetDateTime
     ): BasePostgresIterable<UUID> {
-        val partitions = PostgresArrays.createIntArray(
-                hds.connection, partitionManager.getEntitySetPartitions(entitySetId)
-        )
+        val partitions = partitionManager.getEntitySetPartitions(entitySetId)
         return BasePostgresIterable(
-                PreparedStatementHolderSupplier(
-                        hds,
-                        getExpiringEntitiesQuery(expirationBaseColumn, deleteType),
-                        FETCH_SIZE,
-                        false
-                ) { stmt ->
-                    stmt.setObject(1, entitySetId)
-                    stmt.setArray(2, partitions)
-                    stmt.setObject(3, IdConstants.ID_ID.id)
-                    stmt.setObject(4, formattedDateMinusTTE, sqlFormat)
+                PreparedStatementHolderSupplier(hds, getExpiringEntitiesUsingIdsQuery(expirationPolicy)) { ps ->
+                    ps.setObject(1, entitySetId)
+                    ps.setArray(2, PostgresArrays.createIntArray(ps.connection, partitions))
+                    bindExpirationDate(ps, 3, expirationPolicy, currentDateTime)
                 }
         ) { rs -> ResultSetAdapters.id(rs) }
     }
 
-    private fun getExpiringEntitiesQuery(expirationBaseColumn: String, deleteType: DeleteType): String {
-        var ignoredClearedEntitiesClause = ""
-        if (deleteType == DeleteType.Soft) {
-            ignoredClearedEntitiesClause = "AND ${VERSION.name} >= 0 "
+    fun getExpiringEntitiesFromEntitySetUsingData(
+            entitySetId: UUID,
+            expirationPolicy: DataExpiration,
+            expirationPropertyType: PropertyType,
+            currentDateTime: OffsetDateTime
+    ): BasePostgresIterable<UUID> {
+        val partitions = partitionManager.getEntitySetPartitions(entitySetId)
+        return BasePostgresIterable(
+                PreparedStatementHolderSupplier(hds, getExpiringEntitiesUsingDataQuery(expirationPropertyType, expirationPolicy.deleteType)) { ps ->
+                    ps.setObject(1, entitySetId)
+                    ps.setArray(2, PostgresArrays.createIntArray(ps.connection, partitions))
+                    bindExpirationDate(ps, 3, expirationPolicy, currentDateTime, expirationPropertyType)
+                    ps.setObject(4, expirationPropertyType.id)
+                }
+        ) { rs -> ResultSetAdapters.id(rs) }
+    }
+
+    private fun bindExpirationDate(
+            ps: PreparedStatement,
+            index: Int,
+            expirationPolicy: DataExpiration,
+            currentDateTime: OffsetDateTime,
+            propertyType: PropertyType? = null
+    ) {
+        val expirationDateTime = currentDateTime.toInstant().minusMillis(expirationPolicy.timeToExpiration)
+
+        when (expirationPolicy.expirationBase) {
+            ExpirationBase.FIRST_WRITE -> {
+                ps.setLong(index, expirationDateTime.toEpochMilli())
+            }
+            ExpirationBase.LAST_WRITE -> {
+                ps.setObject(index, OffsetDateTime.ofInstant(expirationDateTime, ZoneId.systemDefault()))
+            }
+            else -> {
+                val sqlFormat = if (propertyType!!.datatype == EdmPrimitiveTypeKind.Date) Types.DATE else Types.TIMESTAMP_WITH_TIMEZONE
+                ps.setObject(index, OffsetDateTime.ofInstant(expirationDateTime, ZoneId.systemDefault()), sqlFormat)
+            }
         }
-        return "SELECT ${ID.name} FROM ${DATA.name} " +
-                "WHERE ${ENTITY_SET_ID.name} = ? " +
-                "AND ${PARTITION.name} = ANY(?) " +
-                "AND ${PROPERTY_TYPE_ID.name} != ? " +
-                "AND $expirationBaseColumn <= ? " +
-                ignoredClearedEntitiesClause + // this clause ignores entities that have already been cleared
-                "LIMIT $EXPIRED_DATA_BATCH_SIZE"
+    }
+
+    /**
+     * PreparedStatement bind order:
+     *
+     * 1) entitySetId
+     * 2) partitions
+     * 3) expiration date(time)
+     * 4) propertyTypeId
+     */
+    private fun getExpiringEntitiesUsingDataQuery(expirationPropertyType: PropertyType, deleteType: DeleteType): String {
+        val clearedEntitiesClause = if (deleteType == DeleteType.Soft) "AND ${VERSION.name} >= 0 " else ""
+
+        val expirationColumnName = PostgresDataTables.getColumnDefinition(
+                expirationPropertyType.postgresIndexType,
+                expirationPropertyType.datatype
+        ).name
+
+        return """
+            SELECT DISTINCT ${ID.name} FROM ${DATA.name}
+            WHERE ${ENTITY_SET_ID.name} = ?
+            AND ${PARTITION.name} = ANY(?)
+            AND $expirationColumnName <= ?
+            AND ${PROPERTY_TYPE_ID.name} = ?
+            $clearedEntitiesClause
+            LIMIT $EXPIRED_DATA_BATCH_SIZE
+        """.trimIndent()
+    }
+
+    /**
+     * PreparedStatement bind order:
+     *
+     * 1) entitySetId
+     * 2) partitions
+     * 3) expiration datetime
+     */
+    private fun getExpiringEntitiesUsingIdsQuery(expirationPolicy: DataExpiration): String {
+        val clearedEntitiesClause = if (expirationPolicy.deleteType == DeleteType.Soft) "AND ${VERSION.name} >= 0 " else ""
+
+        val expirationField = when (expirationPolicy.expirationBase) {
+            ExpirationBase.FIRST_WRITE -> "(SELECT MIN(v) FROM UNNEST(${VERSIONS.name}) AS v WHERE v > 0)" //gets the first  version from the versions column
+            ExpirationBase.LAST_WRITE -> DataTables.LAST_WRITE.name
+            else -> throw IllegalArgumentException("Loading expired entities using ids is not supported for expiration base ${expirationPolicy.expirationBase}")
+        }
+
+        return """
+            SELECT ${ID.name} FROM ${IDS.name}
+            WHERE ${ENTITY_SET_ID.name} = ?
+            AND ${PARTITION.name} = ANY(?)
+            AND $expirationField <= ?
+            $clearedEntitiesClause
+            LIMIT $EXPIRED_DATA_BATCH_SIZE
+        """.trimIndent()
     }
 }
 

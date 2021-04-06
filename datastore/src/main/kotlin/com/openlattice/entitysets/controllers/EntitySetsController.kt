@@ -520,9 +520,6 @@ constructor(
         val es = entitySetManager.getEntitySet(entitySetId)!!
         check(es.hasExpirationPolicy()) { "Entity set ${es.name} does not have an expiration policy" }
 
-        val expirationPolicy = es.expiration!!
-        val expirationPT = expirationPolicy.startDateProperty.map { edmManager.getPropertyType(it) }
-
         recordEvent(
                 AuditableEvent(
                         spm.currentUserId,
@@ -536,13 +533,7 @@ constructor(
                 )
         )
 
-        return dgm.getExpiringEntitiesFromEntitySet(
-                entitySetId,
-                expirationPolicy,
-                OffsetDateTime.parse(dateTime),
-                expirationPolicy.deleteType,
-                expirationPT
-        ).toSet()
+        return dgm.getExpiringEntitiesFromEntitySet(entitySetId, es.expiration!!, OffsetDateTime.parse(dateTime)).toSet()
     }
 
 
