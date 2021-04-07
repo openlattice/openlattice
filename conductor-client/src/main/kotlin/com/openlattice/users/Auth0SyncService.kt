@@ -120,7 +120,7 @@ class Auth0SyncService(
 
         processGlobalEnrollments(allUsersByPrincipal)
 
-        allUsersByPrincipal.forEach { principal, user ->
+        allUsersByPrincipal.forEach { (principal, user) ->
             processOrganizationEnrollments(principal, user)
 
             syncAuthenticationCache(principal.id)

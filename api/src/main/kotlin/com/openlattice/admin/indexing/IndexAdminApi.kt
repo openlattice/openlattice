@@ -21,7 +21,11 @@
 
 package com.openlattice.admin.indexing
 
-import retrofit2.http.*
+import retrofit2.http.Body
+import retrofit2.http.DELETE
+import retrofit2.http.GET
+import retrofit2.http.POST
+import retrofit2.http.PUT
 import java.util.*
 
 
@@ -36,8 +40,6 @@ const val PRINCIPALS = "/principals"
 
 const val ID = "id"
 const val ID_PATH = "/{$ID}"
-const val NAME = "name"
-const val NAME_PATH = "/{$NAME}"
 
 interface IndexAdminApi {
 

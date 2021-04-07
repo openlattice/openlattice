@@ -56,7 +56,7 @@ class OrganizationAssemblyStreamSerializer : SelfRegisteringStreamSerializer<Org
         out.writeBoolean(obj.initialized)
 
         out.writeInt(obj.materializedEntitySets.size)
-        obj.materializedEntitySets.forEach { entitySetId, flags ->
+        obj.materializedEntitySets.forEach { (entitySetId, flags) ->
             UUIDStreamSerializerUtils.serialize(out, entitySetId)
 
             out.writeInt(flags.size)

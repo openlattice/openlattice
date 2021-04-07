@@ -42,8 +42,9 @@ class ClauseBuildingVisitor(
 ) : BooleanClauseVisitorFunction<String> {
     private var sql: String = ""
     private val fqnMap = authorizedPropertyTypes.map { it.value.type to it.value }.toMap()
+
     //The insertion map is a public field that will be used by the prepared statement binder.
-    val clauses: MutableList<Pair<UUID, BooleanClauses>> = mutableListOf()
+    private val clauses: MutableList<Pair<UUID, BooleanClauses>> = mutableListOf()
 
     override fun apply(clauses: BooleanClauses): String {
         return when (clauses) {
@@ -63,7 +64,7 @@ class ClauseBuildingVisitor(
     }
 
     private fun executeQuery(clauses: ComparisonClause): String {
-        val propertyType = fqnMap[clauses.fqn]!!
+        val propertyType = fqnMap.getValue(clauses.fqn)
         this.clauses.add(propertyType.id to clauses)
 
         return if (propertyType.isMultiValued) {

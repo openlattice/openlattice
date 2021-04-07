@@ -7,8 +7,13 @@ import com.google.common.eventbus.EventBus
 import com.google.common.eventbus.Subscribe
 import com.openlattice.IdConstants
 import com.openlattice.apps.App
-import com.openlattice.authorization.*
+import com.openlattice.authorization.AccessCheck
+import com.openlattice.authorization.AclKey
+import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION
+import com.openlattice.authorization.Permission
+import com.openlattice.authorization.Principal
+import com.openlattice.authorization.Principals
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
 import com.openlattice.data.DataEdgeKey
@@ -38,7 +43,11 @@ import com.openlattice.organizations.events.OrganizationCreatedEvent
 import com.openlattice.organizations.events.OrganizationDeletedEvent
 import com.openlattice.organizations.events.OrganizationUpdatedEvent
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
-import com.openlattice.search.requests.*
+import com.openlattice.search.requests.DataSearchResult
+import com.openlattice.search.requests.EntityNeighborsFilter
+import com.openlattice.search.requests.SearchConstraints
+import com.openlattice.search.requests.SearchResult
+import com.openlattice.search.requests.SearchTerm
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -902,7 +911,7 @@ class SearchService(
     }
 
     fun triggerAllEntitySetDataIndex() {
-        entitySetService.getEntitySets().forEach { entitySet -> triggerEntitySetDataIndex(entitySet.getId()) }
+        entitySetService.getEntitySets().forEach { entitySet -> triggerEntitySetDataIndex(entitySet.id) }
     }
 
     fun triggerAppIndex(apps: List<App>) {

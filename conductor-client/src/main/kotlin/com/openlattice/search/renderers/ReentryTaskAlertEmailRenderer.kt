@@ -1,8 +1,6 @@
 package com.openlattice.search.renderers
 
-import com.google.common.collect.Maps
 import com.openlattice.data.requests.NeighborEntityDetails
-import com.openlattice.edm.EdmConstants
 import com.openlattice.mail.RenderableEmailRequest
 import com.openlattice.search.requests.PersistentSearch
 import org.apache.olingo.commons.api.edm.FullQualifiedName

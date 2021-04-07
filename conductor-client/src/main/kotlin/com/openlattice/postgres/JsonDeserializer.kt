@@ -230,9 +230,8 @@ class JsonDeserializer {
                         return point["y"].toString() + "," + point["x"]
                     }
                 } else if (value is Point) {
-                    val point = value
-                    if (point.geoType == Geospatial.Type.POINT && point.dimension == Geospatial.Dimension.GEOGRAPHY) {
-                        return point.y.toString() + "," + point.x
+                    if (value.geoType == Geospatial.Type.POINT && value.dimension == Geospatial.Dimension.GEOGRAPHY) {
+                        return value.y.toString() + "," + value.x
                     }
                 } else if (value is String) {
                     val m = geographyPointRegex.matcher(value as String?)

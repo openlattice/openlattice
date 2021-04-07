@@ -22,5 +22,5 @@ public enum Action {
     ADD,
     REMOVE,
     SET,
-    REQUEST;
+    REQUEST
 }

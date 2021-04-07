@@ -149,23 +149,23 @@ class AssemblerQueryService(
         // Filters
         val srcFilterSqls = srcFilters.map {
             val colName = " $SRC_TABLE_ALIAS.${DataTables.quote(it.key)} "
-            it.value.map {
-                it.asSql(colName)
-            }.joinToString(" AND ")
+            it.value.joinToString(" AND ") { filter ->
+                filter.asSql(colName)
+            }
         }
 
         val edgeFilterSqls = edgeFilters.map {
             val colName = " $EDGE_TABLE_ALIAS.${DataTables.quote(it.key)} "
-            it.value.map {
-                it.asSql(colName)
-            }.joinToString(" AND ")
+            it.value.joinToString(" AND ") { filter ->
+                filter.asSql(colName)
+            }
         }
 
         val dstFilterSqls = dstFilters.map {
             val colName = " $DST_TABLE_ALIAS.${DataTables.quote(it.key)} "
-            it.value.map {
-                it.asSql(colName)
-            }.joinToString(" AND ")
+            it.value.joinToString(" AND ") { filter ->
+                filter.asSql(colName)
+            }
         }
 
         val allFilters = (srcFilterSqls + edgeFilterSqls + dstFilterSqls)

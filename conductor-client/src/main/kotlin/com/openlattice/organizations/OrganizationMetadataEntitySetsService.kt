@@ -23,7 +23,12 @@ package com.openlattice.organizations
 
 import com.dataloom.mappers.ObjectMappers
 import com.hazelcast.core.HazelcastInstance
-import com.openlattice.authorization.*
+import com.openlattice.authorization.Ace
+import com.openlattice.authorization.Acl
+import com.openlattice.authorization.AclKey
+import com.openlattice.authorization.AuthorizationManager
+import com.openlattice.authorization.Permission
+import com.openlattice.authorization.PrincipalsMapManager
 import com.openlattice.authorization.securable.AbstractSecurableObject
 import com.openlattice.data.DataGraphManager
 import com.openlattice.data.EntityKey
@@ -37,7 +42,6 @@ import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.organization.OrganizationExternalDatabaseTable
 import com.openlattice.organization.roles.Role
 import com.openlattice.organizations.processors.OrganizationReadEntryProcessor
-import com.openlattice.postgres.DataTables.quote
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.springframework.stereotype.Service
 import java.util.*

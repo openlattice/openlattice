@@ -27,7 +27,12 @@ import com.openlattice.postgres.IndexType;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
-import java.util.*;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -73,14 +78,14 @@ public class MetadataUpdate {
             @JsonProperty( SerializationConstants.PARTITIONS ) Optional<LinkedHashSet<Integer>> partitions,
             @JsonProperty( SerializationConstants.EXPIRATION ) Optional<DataExpiration> dataExpiration ) {
         // WARNING These checks have to be consistent with the same check elsewhere.
-        Preconditions.checkArgument( !title.isPresent() || StringUtils.isNotBlank( title.get() ),
+        Preconditions.checkArgument( title.isEmpty() || StringUtils.isNotBlank( title.get() ),
                 "Title cannot be blank." );
-        Preconditions.checkArgument( !name.isPresent() || StringUtils.isNotBlank( name.get() ),
+        Preconditions.checkArgument( name.isEmpty() || StringUtils.isNotBlank( name.get() ),
                 "Entity set name cannot be blank." );
-        Preconditions.checkArgument( !contacts.isPresent() || !contacts.get().isEmpty(), "Contacts cannot be blank." );
-        Preconditions.checkArgument( !type.isPresent() || StringUtils.isNotBlank( type.get().getNamespace() ),
+        Preconditions.checkArgument( contacts.isEmpty() || !contacts.get().isEmpty(), "Contacts cannot be blank." );
+        Preconditions.checkArgument( type.isEmpty() || StringUtils.isNotBlank( type.get().getNamespace() ),
                 "Namespace of type is missing." );
-        Preconditions.checkArgument( !type.isPresent() || StringUtils.isNotBlank( type.get().getName() ),
+        Preconditions.checkArgument( type.isEmpty() || StringUtils.isNotBlank( type.get().getName() ),
                 "Name of type is missing." );
 
         this.title = title;

@@ -3,7 +3,6 @@ package com.openlattice.hazelcast.serializers
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.openlattice.hazelcast.StreamSerializerTypeIds
-import com.openlattice.organizations.GrantType
 import com.openlattice.postgres.PostgresDatatype
 import org.springframework.stereotype.Component
 

@@ -6,12 +6,16 @@ import com.amazonaws.HttpMethod
 import com.amazonaws.SdkClientException
 import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
-import com.amazonaws.retry.RetryPolicy
 import com.amazonaws.retry.PredefinedBackoffStrategies
 import com.amazonaws.retry.PredefinedRetryPolicies
+import com.amazonaws.retry.RetryPolicy
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
-import com.amazonaws.services.s3.model.*
+import com.amazonaws.services.s3.model.DeleteObjectRequest
+import com.amazonaws.services.s3.model.DeleteObjectsRequest
+import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest
+import com.amazonaws.services.s3.model.ObjectMetadata
+import com.amazonaws.services.s3.model.PutObjectRequest
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.openlattice.data.storage.ByteBlobDataManager
@@ -25,7 +29,6 @@ import java.util.concurrent.Callable
 
 private val logger = LoggerFactory.getLogger(AwsBlobDataService::class.java)
 const val MAX_ERROR_RETRIES = 5
-const val MAX_DELAY = 8L * 60L * 1000L
 
 @Service
 class AwsBlobDataService(

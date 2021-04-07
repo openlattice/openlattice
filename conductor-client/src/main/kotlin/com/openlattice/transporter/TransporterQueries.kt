@@ -4,8 +4,25 @@ import com.openlattice.ApiHelpers
 import com.openlattice.IdConstants
 import com.openlattice.edm.EdmConstants
 import com.openlattice.edm.PropertyTypeIdFqn
-import com.openlattice.postgres.*
-import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresArrays
+import com.openlattice.postgres.PostgresColumn.DST_ENTITY_KEY_ID
+import com.openlattice.postgres.PostgresColumn.DST_ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.EDGE_ENTITY_KEY_ID
+import com.openlattice.postgres.PostgresColumn.EDGE_ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.ID_VALUE
+import com.openlattice.postgres.PostgresColumn.LAST_TRANSPORT
+import com.openlattice.postgres.PostgresColumn.LINKING_ID
+import com.openlattice.postgres.PostgresColumn.ORIGIN_ID
+import com.openlattice.postgres.PostgresColumn.PARTITION
+import com.openlattice.postgres.PostgresColumn.PROPERTY_TYPE_ID
+import com.openlattice.postgres.PostgresColumn.SRC_ENTITY_KEY_ID
+import com.openlattice.postgres.PostgresColumn.SRC_ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.VERSION
+import com.openlattice.postgres.PostgresColumnDefinition
+import com.openlattice.postgres.PostgresExpressionIndexDefinition
+import com.openlattice.postgres.PostgresTable
+import com.openlattice.postgres.PostgresTableDefinition
 import com.openlattice.postgres.external.Schemas
 import com.openlattice.transporter.types.TransporterColumn
 import com.zaxxer.hikari.HikariDataSource
@@ -247,7 +264,7 @@ fun updateRowsForEdges(): String {
 }
 
 /**
- * Update [IDS] with new transport time
+ * Update [PostgresTable.IDS] with new transport time
  *
  * column bindings are
  * 1 - last write value being processed
@@ -359,11 +376,11 @@ fun createEntitySetViewInSchemaFromSchema(
         propertyTypes: Set<PropertyTypeIdFqn>,
         sourceSchema: Schemas
 ): String {
-    val colsSql = propertyTypes.map { (id, fqn) ->
+    val colsSql = propertyTypes.joinToString { (id, fqn) ->
         val column = ApiHelpers.dbQuote(id.toString())
         val quotedPt = ApiHelpers.dbQuote(fqn.toString())
         "$column as $quotedPt"
-    }.joinToString()
+    }
 
     return """
             CREATE OR REPLACE VIEW $destinationSchema.${ApiHelpers.dbQuote(entitySetName)} AS 

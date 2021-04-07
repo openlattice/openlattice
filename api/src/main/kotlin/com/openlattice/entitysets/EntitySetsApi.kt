@@ -171,7 +171,7 @@ interface EntitySetsApi {
 
     /**
      * Adds the entity sets as linked entity sets to the linking entity sets
-     * @param entitysetIds mapping of the ids of the entity sets to be linked with keys of the linking entity sets
+     * @param entitySetIds mapping of the ids of the entity sets to be linked with keys of the linking entity sets
      */
     @POST(BASE + LINKING)
     fun addEntitySetsToLinkingEntitySets(@Body entitySetIds: Map<UUID, Set<UUID>>): Int
@@ -179,14 +179,14 @@ interface EntitySetsApi {
     /**
      * Removes/unlinks the linked entity sets from the linking entity set
      * @param linkingEntitySetId the id of the linking entity set
-     * @param entitysetIds the ids of the entity sets to be removed/unlinked
+     * @param entitySetIds the ids of the entity sets to be removed/unlinked
      */
     @HTTP(method = "DELETE", path = BASE + LINKING + ID_PATH, hasBody = true)
     fun removeEntitySetsFromLinkingEntitySet(@Path(ID) linkingEntitySetId: UUID, @Body entitySetIds: Set<UUID>): Int
 
     /**
      * Removes/unlinks the linked entity sets as from the linking entity sets
-     * @param entitysetIds mapping of the ids of the entity sets to be unlinked with keys of the linking entity sets
+     * @param entitySetIds mapping of the ids of the entity sets to be unlinked with keys of the linking entity sets
      */
     @HTTP(method = "DELETE", path = BASE + LINKING, hasBody = true)
     fun removeEntitySetsFromLinkingEntitySets(@Body entitySetIds: Map<UUID, Set<UUID>>): Int
