@@ -147,16 +147,11 @@ class PostgresProjectionService {
                 logger.info( "Some tables already imported, importing ${actualTables.joinToString()}" )
             }
             hds.connection.use { conn ->
-                val tablesClause = if (actualTables.isEmpty()) {
-                    ""
-                } else {
-                    "LIMIT TO (${actualTables.joinToString(",")})"
-                }
                 conn.createStatement().use { stmt ->
                     stmt.execute(
                             """
                                  IMPORT FOREIGN SCHEMA ${quote(sourceSchema)}
-                                 $tablesClause 
+                                 LIMIT TO ( ${actualTables.joinToString(",")} )
                                  FROM SERVER $fdwName 
                                  INTO ${quote(destinationSchema)}
                             """.trimIndent()
@@ -174,7 +169,9 @@ class PostgresProjectionService {
             hds.connection.use { conn ->
                 conn.createStatement().use { stmt ->
                     stmt.executeQuery("SELECT foreign_table_name FROM information_schema.foreign_tables " +
-                            "WHERE foreign_table_schema = '$destinationSchema'").use { rs ->
+                            "WHERE foreign_table_schema = '$destinationSchema'" +
+                            "AND foreign_table_name = ANY('{${tablesToImport.joinToString { quote(it) } }}')"
+                    ).use { rs ->
                         while ( rs.next() ){
                             existingTables.add(rs.getString(1))
                         }
