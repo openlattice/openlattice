@@ -151,7 +151,7 @@ class PostgresProjectionService {
                     stmt.execute(
                             """
                                  IMPORT FOREIGN SCHEMA ${quote(sourceSchema)}
-                                 LIMIT TO ( ${actualTables.joinToString(",")} )
+                                 LIMIT TO ( ${actualTables.joinToString(",") {quote(it)} } )
                                  FROM SERVER $fdwName 
                                  INTO ${quote(destinationSchema)}
                             """.trimIndent()
@@ -169,7 +169,7 @@ class PostgresProjectionService {
             hds.connection.use { conn ->
                 conn.createStatement().use { stmt ->
                     stmt.executeQuery("SELECT foreign_table_name FROM information_schema.foreign_tables " +
-                            "WHERE foreign_table_schema = '$destinationSchema'" +
+                            "WHERE foreign_table_schema = '$destinationSchema' " +
                             "AND foreign_table_name = ANY('{${tablesToImport.joinToString { quote(it) } }}')"
                     ).use { rs ->
                         while ( rs.next() ){

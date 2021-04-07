@@ -148,7 +148,7 @@ class TransporterDatastore(
                 orgDatasource,
                 fdwName,
                 Schemas.PUBLIC_SCHEMA.label,
-                setOf(quotedEtTableName(entityTypeId)),
+                setOf(entityTypeTableName(entityTypeId)),
                 Schemas.TRANSPORTER_SCHEMA.label
         )
     }
