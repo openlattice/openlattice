@@ -1,5 +1,6 @@
 package com.openlattice.transporter.tasks
 
+import com.openlattice.edm.tasks.EdmSyncInitializerTask
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies
 import com.openlattice.tasks.Task
@@ -24,6 +25,7 @@ class TransporterInitializeServiceTask: HazelcastInitializationTask<TransporterR
 
     override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
         return setOf(
+                EdmSyncInitializerTask::class.java,
                 PostConstructInitializerTaskDependencies.PostConstructInitializerTask::class.java
         )
     }
