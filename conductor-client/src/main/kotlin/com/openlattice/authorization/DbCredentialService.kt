@@ -117,7 +117,7 @@ class DbCredentialService(
     private fun getOrCreateDbAccount(principalAclKey: AclKey, principalType: PrincipalType): MaterializedViewAccount {
         getDbAccount(principalAclKey)?.let { return it }
 
-        logger.info("Generating credentials for principal {}", principalAclKey)
+        logger.debug("Generating credentials for principal {}", principalAclKey)
 
         val username = when ( principalType ) {
             PrincipalType.ORGANIZATION, PrincipalType.ROLE  -> {
@@ -132,7 +132,7 @@ class DbCredentialService(
         }
         val cred = generateCredential()
 
-        logger.info("Generated credential for principal {} with username {}", principalAclKey, username)
+        logger.debug("Generated credential for principal {} with username {}", principalAclKey, username)
 
         val account = MaterializedViewAccount(username, cred)
         return MoreObjects.firstNonNull(dbCreds.putIfAbsent(principalAclKey, account), account)

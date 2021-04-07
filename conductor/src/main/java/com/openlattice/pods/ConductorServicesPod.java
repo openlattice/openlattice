@@ -115,6 +115,7 @@ import com.openlattice.subscriptions.SubscriptionNotificationTask;
 import com.openlattice.subscriptions.SubscriptionService;
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies;
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask;
+import com.openlattice.transporter.pods.TransporterInitPod;
 import com.openlattice.transporter.pods.TransporterPod;
 import com.openlattice.transporter.services.TransporterService;
 import com.openlattice.users.Auth0SyncInitializationTask;
@@ -139,7 +140,7 @@ import javax.inject.Inject;
 
 @Configuration
 @Import( { ByteBlobServicePod.class, AuditingConfigurationPod.class, AssemblerConfigurationPod.class,
-        TransporterPod.class } )
+        TransporterPod.class, TransporterInitPod.class } )
 public class ConductorServicesPod {
 
     @Inject

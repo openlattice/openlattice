@@ -109,8 +109,7 @@ class PostgresProjectionService {
                 conn.autoCommit = false
 
                 conn.createStatement().use { stmt ->
-                    stmt.execute(
-                            """
+                    stmt.execute("""
                                  IMPORT FOREIGN SCHEMA ${quote(sourceSchema)}
                                  LIMIT TO ( ${quote(sourceTableName)} )
                                  FROM SERVER $fdwName 
@@ -130,6 +129,60 @@ class PostgresProjectionService {
 
                 conn.autoCommit = true
             }
+        }
+
+        fun importTablesFromFdw(
+                hds: HikariDataSource,
+                fdwName: String,
+                sourceSchema: String,
+                sourceTableNames: Set<String>,
+                destinationSchema: String
+        ) {
+            val actualTables = filterAlreadyImported(hds, destinationSchema, sourceTableNames)
+            if (actualTables.isEmpty()){
+                logger.info( "Not importing any tables from fdw, specified tables already imported" )
+                return
+            }
+            if ( actualTables.size != sourceTableNames.size ){
+                logger.info( "Some tables already imported, importing ${actualTables.joinToString()}" )
+            }
+            hds.connection.use { conn ->
+                conn.createStatement().use { stmt ->
+                    stmt.execute(
+                            """
+                                 IMPORT FOREIGN SCHEMA ${quote(sourceSchema)}
+                                 LIMIT TO ( ${actualTables.joinToString(",") {quote(it)} } )
+                                 FROM SERVER $fdwName 
+                                 INTO ${quote(destinationSchema)}
+                            """.trimIndent()
+                    )
+                }
+            }
+        }
+
+        @SuppressFBWarnings(
+                value = ["SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE"],
+                justification = "Only internal values provided to SQL update statment"
+        )
+        private fun filterAlreadyImported(
+                hds: HikariDataSource,
+                destinationSchema: String,
+                tablesToImport: Set<String>
+        ): Set<String> {
+            val existingTables = mutableSetOf<String>()
+            hds.connection.use { conn ->
+                conn.createStatement().use { stmt ->
+                    stmt.executeQuery("SELECT foreign_table_name FROM information_schema.foreign_tables " +
+                            "WHERE foreign_table_schema = '$destinationSchema' " +
+                            "AND foreign_table_name = ANY('{${tablesToImport.joinToString { quote(it) } }}')"
+                    ).use { rs ->
+                        while ( rs.next() ){
+                            existingTables.add(rs.getString(1))
+                        }
+                    }
+                }
+            }
+            return tablesToImport.filterNot { existingTables.contains(it) }.toSet()
         }
 
         fun dropTableImportedFromFdw(

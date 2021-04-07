@@ -76,7 +76,7 @@ class TransporterQueriesTest {
         val mockMap = mutableMapOf(type to TransporterColumnSet(emptyMap()))
         val ep = TransporterSynchronizeTableDefinitionEntryProcessor(props).init(data)
         ep.process(mockMap.entries.first())
-        testTables.add(tableName(type))
+        testTables.add(quotedEtTableName(type))
     }
 
     @After
@@ -115,9 +115,9 @@ class TransporterQueriesTest {
         val entityType = TestDataFactory.entityType(prop)
         val es = TestDataFactory.entitySetWithType(entityType.id)
         val entitySetId = es.id
-        val table = tableName(entityType.id)
+        val table = quotedEtTableName(entityType.id)
         sync(entityType.id, listOf(prop))
-        val query = updatePrimaryKeyForEntitySets(table)
+        val query = updateEntityTypeTableEntries(table)
         transporter.connection.use {conn ->
             conn.prepareStatement(query).use {ps ->
                 ps.setArray(1, PostgresArrays.createIntArray(conn, listOf(1)))
@@ -137,7 +137,7 @@ class TransporterQueriesTest {
         val entityType = TestDataFactory.entityType(prop)
         val es = TestDataFactory.entitySetWithType(entityType.id)
         val entitySetId = es.id
-        val table = tableName(entityType.id)
+        val table = quotedEtTableName(entityType.id)
         sync(entityType.id, listOf(prop))
         val propCol = TransporterColumn(prop)
         val query = updateRowsForPropertyType(table, prop.id, propCol)

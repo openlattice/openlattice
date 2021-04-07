@@ -16,10 +16,19 @@ import com.openlattice.authorization.util.getLastAclKeySafely
 import com.openlattice.controllers.exceptions.ForbiddenException
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
-import com.openlattice.organization.*
+import com.openlattice.organization.OrganizationEntitySetFlag
+import com.openlattice.organization.OrganizationIntegrationAccount
+import com.openlattice.organization.OrganizationMember
+import com.openlattice.organization.OrganizationPrincipal
+import com.openlattice.organization.OrganizationsApi
 import com.openlattice.organization.OrganizationsApi.Companion.CONTROLLER
 import com.openlattice.organization.roles.Role
-import com.openlattice.organizations.*
+import com.openlattice.organizations.ExternalDatabaseManagementService
+import com.openlattice.organizations.Grant
+import com.openlattice.organizations.HazelcastOrganizationService
+import com.openlattice.organizations.Organization
+import com.openlattice.organizations.OrganizationMetadataEntitySetIds
+import com.openlattice.organizations.OrganizationMetadataEntitySetsService
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.commons.lang3.NotImplementedException
@@ -49,9 +58,6 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
 
     @Inject
     private lateinit var assembler: Assembler
-
-    @Inject
-    private lateinit var securableObjectTypes: SecurableObjectResolveTypeService
 
     @Inject
     private lateinit var principalService: SecurePrincipalsManager
