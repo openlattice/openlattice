@@ -160,6 +160,10 @@ class PostgresProjectionService {
             }
         }
 
+        @SuppressFBWarnings(
+                value = ["SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE"],
+                justification = "Only internal values provided to SQL update statment"
+        )
         private fun filterAlreadyImported(
                 hds: HikariDataSource,
                 destinationSchema: String,
