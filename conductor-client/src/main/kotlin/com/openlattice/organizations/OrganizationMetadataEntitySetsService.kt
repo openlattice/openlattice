@@ -257,7 +257,7 @@ class OrganizationMetadataEntitySetsService(
         val organizationMetadataEntitySetIds = organizationService.getOrganizationMetadataEntitySetIds(organizationId)
         val datasetEntityKeyIds = getDatasetEntityKeyIds(
             organizationMetadataEntitySetIds,
-            tables.map { it.oid }
+            tables.map { it.id }
         )
         val columnEntityKeyIds = getColumnEntityKeyIds(
                 organizationMetadataEntitySetIds,
@@ -303,7 +303,7 @@ class OrganizationMetadataEntitySetsService(
         val organizationMetadataEntitySetIds = organizationService.getOrganizationMetadataEntitySetIds(organizationId)
 
         val datasetEntity = buildDatasetEntity(organizationId, table)
-        val datasetEntityKeyId = getDatasetEntityKeyId(organizationMetadataEntitySetIds, table.oid)
+        val datasetEntityKeyId = getDatasetEntityKeyId(organizationMetadataEntitySetIds, table.id)
 
         dataGraphManager.partialReplaceEntities(
                 organizationMetadataEntitySetIds.datasets,
@@ -339,17 +339,17 @@ class OrganizationMetadataEntitySetsService(
         )
     }
 
-    fun deleteDatasets(organizationId: UUID, tablesToDelete: Set<OrganizationExternalDatabaseTable>) {
+    fun deleteDatasets(organizationId: UUID, tableIdsToDelete: Set<UUID>) {
 
         initializeFields()
-        if (!isFullyInitialized() || tablesToDelete.isEmpty()) {
+        if (!isFullyInitialized() || tableIdsToDelete.isEmpty()) {
             return
         }
 
         ensureOrganizationMetadataEntitySetIdsFullyInitialized(organizationId)
 
         val metadataIds = organizationService.getOrganizationMetadataEntitySetIds(organizationId)
-        val dataSetEntityKeyIds = getDatasetEntityKeyIds(metadataIds, tablesToDelete.map { it.oid })
+        val dataSetEntityKeyIds = getDatasetEntityKeyIds(metadataIds, tableIdsToDelete.toList())
         dataDeletionService.clearOrDeleteEntities(
             metadataIds.datasets,
             dataSetEntityKeyIds.values.toMutableSet(),
@@ -377,15 +377,15 @@ class OrganizationMetadataEntitySetsService(
 
     private fun getDatasetEntityKeyId(
             organizationMetadataEntitySetIds: OrganizationMetadataEntitySetIds,
-            datasetId: Any
+            datasetId: UUID
     ): UUID {
         return getDatasetEntityKeyIds(organizationMetadataEntitySetIds, listOf(datasetId)).getValue(datasetId)
     }
 
     private fun getDatasetEntityKeyIds(
             metadataIds: OrganizationMetadataEntitySetIds,
-            datasetIds: List<Any>
-    ): Map<Any, UUID> {
+            datasetIds: List<UUID>
+    ): Map<UUID, UUID> {
         val entityKeys = datasetIds.map { EntityKey(metadataIds.datasets, it.toString()) }.toSet()
         val entityKeyIds = dataGraphManager.getEntityKeyIds(entityKeys)
         return datasetIds.zip(entityKeyIds).toMap()

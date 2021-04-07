@@ -217,15 +217,14 @@ class BackgroundExternalDatabaseSyncingService(
 
         // delete missing tables
 
-        val tablesToDelete: Set<OrganizationExternalDatabaseTable> = organizationExternalDatabaseTables
-            .values(Predicates.equal(ORGANIZATION_ID_INDEX, orgId))
-            .filter { !existingTableIds.contains(it.id) }
+        val tableIdsToDelete: Set<UUID> = organizationExternalDatabaseTables
+            .keySet(Predicates.equal(ORGANIZATION_ID_INDEX, orgId))
+            .filter { !existingTableIds.contains(it) }
             .toSet()
-        val tableIdsToDelete = tablesToDelete.mapTo(mutableSetOf<UUID>()) { it.id }
 
         if (tableIdsToDelete.isNotEmpty()) {
             edms.deleteOrganizationExternalDatabaseTableObjects(tableIdsToDelete)
-            organizationMetadataEntitySetsService.deleteDatasets(orgId, tablesToDelete)
+            organizationMetadataEntitySetsService.deleteDatasets(orgId, tableIdsToDelete)
         }
 
 
