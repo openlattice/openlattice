@@ -142,7 +142,7 @@ class ExternalDatabaseManagementService(
             entitySets.lock(entitySetId, 10, TimeUnit.SECONDS)
             val es = entitySets.getValue(entitySetId)
 
-            transporterService.disassembleEntitySet(organizationId, es.entityTypeId, es.name)
+            transporterService.disassembleEntitySet(organizationId, es.id, es.entityTypeId, es.name)
 
             es.flags.remove(EntitySetFlag.TRANSPORTED)
             entitySets.set(entitySetId, es)
