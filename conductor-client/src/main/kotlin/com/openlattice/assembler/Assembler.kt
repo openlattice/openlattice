@@ -34,7 +34,6 @@ import com.openlattice.assembler.events.MaterializedEntitySetDataChangeEvent
 import com.openlattice.assembler.events.MaterializedEntitySetEdmChangeEvent
 import com.openlattice.assembler.processors.AddFlagsToMaterializedEntitySetProcessor
 import com.openlattice.assembler.processors.AddFlagsToOrganizationMaterializedEntitySetProcessor
-import com.openlattice.assembler.processors.IsAssemblyInitializedEntryProcessor
 import com.openlattice.assembler.processors.UpdateRefreshRateProcessor
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.AuthorizationManager
@@ -292,8 +291,7 @@ class Assembler(
     }
 
     private fun ensureAssemblyInitialized(organizationId: UUID) {
-        val isAssemblyInitialized = assemblies
-                .executeOnKey(organizationId, IsAssemblyInitializedEntryProcessor()) as Boolean
+        val isAssemblyInitialized = organizationDatabases.containsKey(organizationId)
         if (!isAssemblyInitialized) {
             throw IllegalStateException("Organization assembly is not initialized for organization $organizationId")
         }

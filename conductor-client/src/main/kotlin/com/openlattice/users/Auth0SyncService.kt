@@ -160,7 +160,7 @@ class Auth0SyncService(
                 )
         ).firstOrNull() ?: return
         authnPrincipalCache.set(principalId, sp)
-        val securablePrincipals = getAllPrincipals(sp) ?: return
+        val securablePrincipals = getAllPrincipals(sp)
 
         val currentPrincipals: NavigableSet<Principal> = TreeSet()
         currentPrincipals.add(sp.principal)
@@ -279,6 +279,3 @@ class Auth0SyncService(
     }
 
 }
-
-
-

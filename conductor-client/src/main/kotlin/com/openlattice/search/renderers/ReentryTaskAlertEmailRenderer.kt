@@ -9,7 +9,7 @@ import java.util.*
 
 
 private const val FROM_EMAIL = "courier@openlattice.com"
-private const val TEMPLATE_PATH = "mail/templates/shared/CAREIssueAlertTemplate.mustache"
+private const val TEMPLATE_PATH = "mail/templates/shared/ReentryTaskAlertTemplate.mustache"
 
 /* FQNs */
 private val PERSON_ID_FQN = FullQualifiedName("nc.SubjectIdentification")
