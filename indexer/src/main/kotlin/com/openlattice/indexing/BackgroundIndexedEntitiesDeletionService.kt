@@ -90,6 +90,7 @@ class BackgroundIndexedEntitiesDeletionService(
 
             //We shuffle entity sets to make sure we have a chance to work share and index everything
             val totalCurrentEntitySetUpdates = entitySets.values
+                    .filter { !it.isAudit }
                     .map { EntitySetForDeletion(it.id, it.name, it.partitions) }
                     .shuffled()
                     .map {
