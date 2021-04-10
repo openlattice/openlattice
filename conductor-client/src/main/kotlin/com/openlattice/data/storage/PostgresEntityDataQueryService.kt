@@ -682,7 +682,8 @@ class PostgresEntityDataQueryService(
                         connection,
                         deleteEntityKeys,
                         entitySetId,
-                        entitiesByPartition
+                        entitiesByPartition,
+                        batch = true
                 ) { ps, partition, entityKeyIds ->
                     val entityArr = PostgresArrays.createUuidArray(ps.connection, entityKeyIds)
                     ps.setObject(1, entitySetId)
