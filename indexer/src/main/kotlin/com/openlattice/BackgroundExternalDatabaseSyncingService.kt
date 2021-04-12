@@ -209,27 +209,36 @@ class BackgroundExternalDatabaseSyncingService(
         }.toSet()
     }
 
-    private fun removeNonexistentTablesAndColumnsForOrg(orgId: UUID, existingTableIds: Set<UUID>, existingColumnIds: Set<UUID>) {
+    private fun removeNonexistentTablesAndColumnsForOrg(
+        orgId: UUID,
+        existingTableIds: Set<UUID>,
+        existingColumnIds: Set<UUID>
+    ) {
 
         // delete missing tables
 
-        val tableIdsToDelete = organizationExternalDatabaseTables.keySet(Predicates.equal(ORGANIZATION_ID_INDEX, orgId)).filter {
-            !existingTableIds.contains(it)
-        }.toSet()
+        val tableIdsToDelete: Set<UUID> = organizationExternalDatabaseTables
+            .keySet(Predicates.equal(ORGANIZATION_ID_INDEX, orgId))
+            .filter { !existingTableIds.contains(it) }
+            .toSet()
 
         if (tableIdsToDelete.isNotEmpty()) {
             edms.deleteOrganizationExternalDatabaseTableObjects(tableIdsToDelete)
+            organizationMetadataEntitySetsService.deleteDatasets(orgId, tableIdsToDelete)
         }
 
 
         // delete missing columns
 
-        val columnIdsToDelete = organizationExternalDatabaseColumns.values(Predicates.equal(ORGANIZATION_ID_INDEX, orgId)).filter {
-            !existingColumnIds.contains(it.id)
-        }.groupBy { it.tableId }.mapValues { it.value.map { c -> c.id }.toSet() }
+        val columnIdsToDelete = organizationExternalDatabaseColumns
+            .values(Predicates.equal(ORGANIZATION_ID_INDEX, orgId))
+            .filter { !existingColumnIds.contains(it.id) }
+            .groupBy { it.tableId }
+            .mapValues { it.value.map { c -> c.id }.toSet() }
 
         if (columnIdsToDelete.isNotEmpty()) {
             edms.deleteOrganizationExternalDatabaseColumnObjects(orgId, columnIdsToDelete)
+            organizationMetadataEntitySetsService.deleteDatasetColumns(orgId, columnIdsToDelete)
         }
     }
 
