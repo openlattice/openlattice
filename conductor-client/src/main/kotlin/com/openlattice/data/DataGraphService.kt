@@ -115,7 +115,12 @@ class DataGraphService(
         return eds.getLinkingEntities(
                 entitySetIds.map { it to Optional.of(setOf(entityKeyId)) }.toMap(),
                 authorizedPropertyTypes
-        ).iterator().next()
+        )
+                .flatMap { it.entries }
+                .groupBy { it.key }
+                .mapValues {
+                    it.value.flatMap { e -> e.value }.toSet()
+                }
     }
 
     override fun getLinkedEntitySetBreakDown(

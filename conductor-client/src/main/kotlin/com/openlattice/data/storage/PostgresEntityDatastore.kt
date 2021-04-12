@@ -266,7 +266,7 @@ class PostgresEntityDatastore(
     override fun getLinkingEntities(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
-    ): Stream<MutableMap<FullQualifiedName, MutableSet<Any>>> {
+    ): Collection<MutableMap<FullQualifiedName, MutableSet<Any>>> {
         //If the query generated exceed 33.5M UUIDs good chance that it exceed Postgres's 1 GB max query buffer size
         return getLinkingEntitiesWithMetadata(
                 entityKeyIds,
@@ -280,7 +280,7 @@ class PostgresEntityDatastore(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             metadataOptions: EnumSet<MetadataOption>
-    ): Stream<MutableMap<FullQualifiedName, MutableSet<Any>>> {
+    ): Collection<MutableMap<FullQualifiedName, MutableSet<Any>>> {
         //If the query generated exceed 33.5M UUIDs good chance that it exceed Postgres's 1 GB max query buffer size
         return dataQueryService.getEntitiesWithPropertyTypeFqns(
                 entityKeyIds,
@@ -289,7 +289,7 @@ class PostgresEntityDatastore(
                 metadataOptions,
                 Optional.empty(),
                 true
-        ).values.stream()
+        ).values
     }
 
     /**
