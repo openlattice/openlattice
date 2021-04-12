@@ -31,7 +31,6 @@ import java.util.concurrent.Callable
 
 private val logger = LoggerFactory.getLogger(AwsBlobDataService::class.java)
 const val MAX_ERROR_RETRIES = 5
-const val MAX_DELAY = 8L * 60L * 1000L
 
 @Service
 class AwsBlobDataService(

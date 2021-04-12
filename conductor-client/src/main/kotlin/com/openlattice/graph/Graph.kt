@@ -290,7 +290,7 @@ class Graph(
 
                 val dst = authorizedFilteredNeighborsRanking.filteredNeighborsRanking.dst
 
-                var neighborsFilter = EntityNeighborsFilter(
+                val neighborsFilter = EntityNeighborsFilter(
                         srcEntities.keys,
                         if (dst) Optional.of(dstEntitySetIds) else Optional.of(entitySetIds),
                         if (dst) Optional.of(entitySetIds) else Optional.of(dstEntitySetIds),
@@ -444,7 +444,7 @@ class Graph(
                     associationEntityKeyIds as Map<UUID, Optional<Set<UUID>>>,
                     authorizedPropertyTypes
             ).toMap()
-            var neighbors = pgDataQueryService.getEntitiesWithPropertyTypeIds(
+            val neighbors = pgDataQueryService.getEntitiesWithPropertyTypeIds(
                     neighborEntityKeyIds as Map<UUID, Optional<Set<UUID>>>,
                     authorizedPropertyTypes
             ).toMap()
@@ -511,7 +511,7 @@ class Graph(
             )
 
 
-            var weight = authorizedFilteredNeighborsRanking.filteredNeighborsRanking.countWeight.orElse(1.0)
+            val weight = authorizedFilteredNeighborsRanking.filteredNeighborsRanking.countWeight.orElse(1.0)
 
             //TODO: Consider properly count edges.
             var score = weight * neighborEntityKeyIds.size
@@ -811,9 +811,8 @@ class Graph(
             )
             "FULL OUTER JOIN ($tableSql) as entity_table$index USING($joinColumns) "
         }.joinToString("\n")
-        val sql = "$associationSql \n$entitiesSql \nORDER BY score DESC \nLIMIT $limit"
 
-        return sql
+        return "$associationSql \n$entitiesSql \nORDER BY score DESC \nLIMIT $limit"
     }
 
 
@@ -943,8 +942,8 @@ class Graph(
                 authorizedFilteredRanking.filteredNeighborsRanking.associationFilters,
                 setOf(),
                 associationPropertyTypes.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary },
-                false,
-                false
+                linking = false,
+                omitEntitySetId = false
         )
 
         val joinColumns = entityKeyIdColumns
@@ -1114,15 +1113,10 @@ private val LOCK_BY_VERTEX_SQL = "$LOCK_SQL1 $VERTEX_FILTER_SQL $LOCK_SQL2"
 
 private val NEIGHBORHOOD_OF_ENTITY_SET_SQL = "SELECT * FROM ${E.name} WHERE " +
         "( (${SRC_ENTITY_SET_ID.name} = ?) OR (${EDGE_ENTITY_SET_ID.name} = ?) OR (${DST_ENTITY_SET_ID.name} = ?) )"
-private val NON_TOMBSTONED_NEIGHBORHOOD_OF_ENTITY_SET_SQL = "$NEIGHBORHOOD_OF_ENTITY_SET_SQL AND ${VERSION.name} > 0"
-
-private val SRC_ID_SQL = "${SRC_ENTITY_KEY_ID.name} = ? AND ${SRC_ENTITY_SET_ID.name} = ?"
-private val DST_ID_SQL = "${DST_ENTITY_KEY_ID.name} = ? AND ${DST_ENTITY_SET_ID.name} = ?"
 
 private val SRC_IDS_SQL = "${SRC_ENTITY_KEY_ID.name} = ANY(?) AND ${SRC_ENTITY_SET_ID.name} = ?"
 private val EDGE_IDS_SQL = "${EDGE_ENTITY_KEY_ID.name} = ANY(?) AND ${EDGE_ENTITY_SET_ID.name} = ?"
 private val DST_IDS_SQL = "${DST_ENTITY_KEY_ID.name} = ANY(?) AND ${DST_ENTITY_SET_ID.name} = ?"
-private val DST_IDS_AND_PARTITION_SQL = "${DST_ENTITY_KEY_ID.name} = ANY(?) AND ${DST_ENTITY_SET_ID.name} = ? AND ${PARTITION.name} = ANY(?)"
 
 private val DEFAULT_NEIGHBORHOOD_SRC_FILTER = "${SRC_ENTITY_KEY_ID.name} = ANY(?) AND ${SRC_ENTITY_SET_ID.name} = ANY(?) AND ${PARTITION.name} = ANY(?)"
 private val DEFAULT_NEIGHBORHOOD_DST_FILTER = "${DST_ENTITY_KEY_ID.name} = ANY(?) AND ${DST_ENTITY_SET_ID.name} = ANY(?)"
@@ -1309,14 +1303,14 @@ private fun buildSpineSql(
 
     val edgeClause = buildEdgeFilteringClause(selfEntitySetIds, authorizedFilteredRanking, association, isDst)
     val idSql = "SELECT ${PostgresColumn.ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${PostgresColumn.ID.name} as $SELF_ENTITY_KEY_ID, ${LINKING_ID.name} FROM ${IDS.name}"
-    val spineSql = if (linked) {
+
+
+    return if (linked) {
         "SELECT edges.*, ${LINKING_ID.name} FROM (SELECT DISTINCT $baseEntityColumnsSql FROM edges WHERE $edgeClause) as edges " +
                 "LEFT JOIN ($idSql) as ${IDS.name} USING ($SELF_ENTITY_SET_ID,$SELF_ENTITY_KEY_ID)"
     } else {
         "SELECT DISTINCT $baseEntityColumnsSql FROM edges WHERE $edgeClause"
     }
-
-    return spineSql
 }
 
 /**
@@ -1336,9 +1330,9 @@ private fun associationClauses(
     return Multimaps
             .asMap(associationFilters)
             .asSequence()
-            .map {
-                "($entitySetColumn = '$entitySetId' AND ${EDGE_ENTITY_SET_ID.name} = '${it.key}' " +
-                        "AND $neighborColumn IN (${it.value.joinToString(",") { "'$it'" }}) ) "
+            .map { (key, value) ->
+                "($entitySetColumn = '$entitySetId' AND ${EDGE_ENTITY_SET_ID.name} = '$key' " +
+                        "AND $neighborColumn IN (${value.joinToString(",") { "'$it'" }}) ) "
             }
             .joinToString(" OR ")
 }

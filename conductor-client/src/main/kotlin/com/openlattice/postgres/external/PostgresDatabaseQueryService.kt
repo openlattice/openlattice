@@ -706,9 +706,9 @@ internal fun dropAllConnectionsToDatabaseSql(dbName: String): String {
     """.trimIndent()
 }
 
-internal val checkIfDatabaseNameIsInUseSql = "SELECT 1 FROM pg_database WHERE datname = ?"
+internal const val checkIfDatabaseNameIsInUseSql = "SELECT 1 FROM pg_database WHERE datname = ?"
 
-internal val renameDatabaseSql = "SELECT rename_database(?, ?)"
+internal const val renameDatabaseSql = "SELECT rename_database(?, ?)"
 
 internal val createRenameDatabaseFunctionSql = """
     CREATE OR REPLACE FUNCTION rename_database(curr_name text, new_name text) RETURNS VOID AS $$
@@ -726,4 +726,4 @@ internal val createRenameServerDatabaseFunctionSql = """
     $$ LANGUAGE plpgsql
 """.trimIndent()
 
-internal val databaseOidSql = "SELECT oid FROM pg_database WHERE datname = ?"
+internal const val databaseOidSql = "SELECT oid FROM pg_database WHERE datname = ?"

@@ -1,6 +1,5 @@
 package com.openlattice.search.renderers
 
-import com.google.common.collect.Maps
 import com.openlattice.data.requests.NeighborEntityDetails
 import com.openlattice.edm.EdmConstants
 import com.openlattice.mail.RenderableEmailRequest

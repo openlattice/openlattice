@@ -40,8 +40,6 @@ interface OrganizationsApi {
         const val METADATA = "/metadata"
         const val METADATA_ENTITY_SET_IDS = "/metadata-entity-set-ids"
         const val PRINCIPALS = "/principals"
-        const val PRINCIPAL_ID = "pid"
-        const val PRINCIPAL_ID_PATH = "/{$PRINCIPAL_ID}"
         const val PROMOTE = "/promote"
         const val REFRESH = "/refresh"
         const val REFRESH_RATE = "/refresh-rate"

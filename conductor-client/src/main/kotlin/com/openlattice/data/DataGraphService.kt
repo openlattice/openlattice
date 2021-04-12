@@ -72,10 +72,6 @@ class DataGraphService(
         return idService.reserveEntityKeyIds(entityKeys)
     }
 
-    companion object {
-        const val ASSOCIATION_SIZE = 30_000
-    }
-
     /* Select */
 
     override fun getEntitySetData(

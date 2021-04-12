@@ -1,13 +1,15 @@
 package com.openlattice.organization
 
 import com.openlattice.authorization.Permission
-import com.openlattice.postgres.PostgresConnectionType
-import retrofit2.http.*
-import java.util.*
 import com.openlattice.edm.requests.MetadataUpdate
-import java.util.UUID
+import com.openlattice.postgres.PostgresConnectionType
+import retrofit2.http.Body
+import retrofit2.http.DELETE
+import retrofit2.http.GET
 import retrofit2.http.PATCH
-
+import retrofit2.http.POST
+import retrofit2.http.Path
+import java.util.*
 
 
 const val SERVICE = "/datastore"

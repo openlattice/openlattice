@@ -529,8 +529,8 @@ class EntitySetService(
                 GetNormalEntitySetIdsEntryProcessor()
         ).mapValues {
             val set = (it.value as DelegatedUUIDSet).unwrap()
-            set.forEach {
-                accessChecks.putIfAbsent(AclKey(it), permissions)
+            set.forEach { id ->
+                accessChecks.putIfAbsent(AclKey(id), permissions)
             }
             set
         }
@@ -640,7 +640,7 @@ class EntitySetService(
 
         return metadataMap.entries
                 .groupBy { it.key.entitySetId }
-                .mapValues { it.value.associateBy({ it.key.propertyTypeId }, { it.value }) }
+                .mapValues { it.value.associateBy({ e -> e.key.propertyTypeId }, { e -> e.value }) }
     }
 
     override fun updateEntitySetPropertyMetadata(entitySetId: UUID, propertyTypeId: UUID, update: MetadataUpdate) {

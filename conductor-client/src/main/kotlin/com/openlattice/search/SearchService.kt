@@ -911,7 +911,7 @@ class SearchService(
     }
 
     fun triggerAllEntitySetDataIndex() {
-        entitySetService.getEntitySets().forEach { entitySet -> triggerEntitySetDataIndex(entitySet.getId()) }
+        entitySetService.getEntitySets().forEach { entitySet -> triggerEntitySetDataIndex(entitySet.id) }
     }
 
     fun triggerAppIndex(apps: List<App>) {

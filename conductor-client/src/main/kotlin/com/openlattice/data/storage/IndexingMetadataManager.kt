@@ -209,16 +209,6 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
 
 /**
  * 1. entity set id
- * 2. entity key ids (uuid array)
- * 3. partition
- */
-private val entityKeyIdsInEntitySet =
-        " ${ENTITY_SET_ID.name} = ? " +
-        "AND ${ID.name} = ANY(?) " +
-        "AND ${PARTITION.name} = ? "
-
-/**
- * 1. entity set id
  * 2. entity key id
  * 3. partition
  */
@@ -226,16 +216,6 @@ private val entityKeyIdInEntitySet =
         " ${ENTITY_SET_ID.name} = ? " +
                 "AND ${ID.name} = ? " +
                 "AND ${PARTITION.name} = ? "
-
-/**
- * 1. entity set id
- * 2. linking ids (uuid array)
- * 3. partition
- */
-private val linkingIdsInEntitySet =
-        " ${ENTITY_SET_ID.name} = ? " +
-        "AND ${LINKING_ID.name} = ANY(?) " +
-        "AND ${PARTITION.name} = ? "
 
 /**
  * 1. entity set id

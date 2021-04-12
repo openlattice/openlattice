@@ -30,7 +30,7 @@ import com.openlattice.tasks.Task.AUTH0_SYNC_INITIALIZATION_TASK
 /**
  * This is the auth0 synchronization initialization task that loads all users on startup from auth0.
  */
-class Auth0SyncInitializationTask<T: Auth0SyncTask>(val clazz: Class<T>) : HazelcastInitializationTask<Auth0SyncTask> {
+class Auth0SyncInitializationTask<T : Auth0SyncTask>(private val clazz: Class<T>) : HazelcastInitializationTask<Auth0SyncTask> {
 
     override fun getInitialDelay(): Long {
         return 0L

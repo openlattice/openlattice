@@ -253,7 +253,7 @@ public final class TestDataFactory {
             SecurableObjectType category,
             PropertyType... keys ) {
         LinkedHashSet<UUID> k = keys.length > 0
-                ? Arrays.asList( keys ).stream().map( PropertyType::getId )
+                ? Arrays.stream( keys ).map( PropertyType::getId )
                 .collect( Collectors.toCollection( Sets::newLinkedHashSet ) )
                 : Sets.newLinkedHashSet( Arrays.asList( UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID() ) );
         var propertyTags = new LinkedHashMap<UUID, LinkedHashSet<String>>( k.size() );
@@ -498,8 +498,7 @@ public final class TestDataFactory {
     }
 
     public static EnumSet<Permission> permissions() {
-        return Arrays.asList( permissions )
-                .stream()
+        return Arrays.stream( permissions )
                 .filter( elem -> r.nextBoolean() )
                 .collect( Collectors.toCollection( () -> EnumSet.noneOf( Permission.class ) ) );
     }

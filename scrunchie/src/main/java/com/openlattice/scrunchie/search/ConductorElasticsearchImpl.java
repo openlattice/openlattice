@@ -187,14 +187,17 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         }
     }
 
-    private boolean createIndex( String indexName ) {
+    private void createIndex( String indexName ) {
         switch ( indexName ) {
             case ENTITY_SET_DATA_MODEL:
-                return initializeEntitySetDataModelIndex();
+                initializeEntitySetDataModelIndex();
+                break;
             case ORGANIZATIONS:
-                return initializeOrganizationIndex();
+                initializeOrganizationIndex();
+                break;
             default: {
-                return initializeDefaultIndex( indexName, typeNamesByIndexName.get( indexName ) );
+                initializeDefaultIndex( indexName, typeNamesByIndexName.get( indexName ) );
+                break;
             }
         }
     }

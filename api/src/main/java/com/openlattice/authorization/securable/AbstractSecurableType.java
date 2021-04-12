@@ -18,18 +18,17 @@
 
 package com.openlattice.authorization.securable;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkArgument;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.openlattice.client.serialization.SerializationConstants;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 import java.util.Optional;
 import java.util.UUID;
 
-import org.apache.commons.lang3.StringUtils;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
-
-import com.openlattice.client.serialization.SerializationConstants;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -59,7 +58,7 @@ public abstract class AbstractSecurableType extends AbstractSecurableObject {
         checkArgument( StringUtils.isNotBlank( type.getNamespace() ), "Namespace of type is missing." );
         checkArgument( StringUtils.isNotBlank( type.getName() ), "Name of type is missing." );
         checkArgument( type.getFullQualifiedNameAsString().length() <= MAX_FQN_LENGTH,
-                "Type FQN cannot be longer than " + String.valueOf( MAX_FQN_LENGTH ) + " characters" );
+                "Type FQN cannot be longer than " + MAX_FQN_LENGTH + " characters" );
         this.type = type;
     }
 

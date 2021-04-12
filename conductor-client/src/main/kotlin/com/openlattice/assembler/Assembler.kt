@@ -228,7 +228,7 @@ class Assembler(
                     .filter { isEntitySetMaterialized(EntitySetAssemblyKey(it.key, event.organizationId)) }
             val authorizedPropertyTypesByEntitySets = authorizedPropertyTypeAcls.toList()
                     .groupBy { it[0] }
-                    .map { it.key to it.value.map { it[1] } }
+                    .map { it.key to it.value.map { ak -> ak[1] } }
                     .toMap()
 
             allEntitySets.values

@@ -1,6 +1,5 @@
 package com.openlattice.hazelcast.serializers
 
-import com.dataloom.mappers.ObjectMappers
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers

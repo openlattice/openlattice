@@ -15,10 +15,7 @@ interface CollectionsApi {
         const val ENTITY_TYPE_PATH = "/entity/type"
         const val ENTITY_SET_PATH = "/entity/set"
         const val TEMPLATE_PATH = "/template"
-
-        const val ENTITY_TYPE_ID = "entityTypeId"
-        const val ENTITY_TYPE_ID_PATH = "/{$ENTITY_TYPE_ID}"
-
+        
         const val ENTITY_TYPE_COLLECTION_ID = "entityTypeCollectionId"
         const val ENTITY_TYPE_COLLECTION_ID_PATH = "/{$ENTITY_TYPE_COLLECTION_ID}"
 
