@@ -37,7 +37,10 @@ import com.openlattice.indexing.configuration.IndexerConfiguration
 import com.openlattice.postgres.DataTables.LAST_INDEX
 import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresArrays
-import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.ID
+import com.openlattice.postgres.PostgresColumn.PARTITION
+import com.openlattice.postgres.PostgresColumn.VERSION
 import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.mapstores.EntitySetMapstore
@@ -101,9 +104,9 @@ class BackgroundIndexingService(
             //We shuffle entity sets to make sure we have a chance to work share and index everything
 
             val lockedEntitySets = entitySets.values(
-                    Predicates.notEqual<UUID,EntitySet>(EntitySetMapstore.FLAGS_INDEX, EntitySetFlag.LINKING)
+                    Predicates.notEqual<UUID, EntitySet>(EntitySetMapstore.FLAGS_INDEX, EntitySetFlag.LINKING)
             )
-                    .filter { it.name != "OpenLattice Audit Entity Set" } //TODO: Clean out audit entity set from prod
+                    .filter { !it.isAudit }
                     .filter { tryLockEntitySet(it.id) == null }
                     .shuffled()
 
