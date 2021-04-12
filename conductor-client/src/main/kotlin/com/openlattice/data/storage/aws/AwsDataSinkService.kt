@@ -29,7 +29,7 @@ class AwsDataSinkService(
         entities.forEach {
             val key = "${it.entitySetId}/${it.entityKeyId}/${it.propertyTypeId}/${it.propertyHash}"
             val url = byteBlobDataManager
-                    .getPresignedUrl(key, expirationTime, HttpMethod.PUT, Optional.empty())
+                    .getPresignedUrl(key, expirationTime, HttpMethod.PUT)
                     .toString()
 
             data
