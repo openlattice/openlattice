@@ -128,7 +128,7 @@ class BackgroundIndexedEntitiesDeletionService(
     }
 
     private fun processDeletedEntitiesForEntitySet(entitySet: EntitySetForDeletion, isCurrentEntitySet: Boolean): Int {
-        logger.info("Starting entity deletion for entity set ${entitySet.name} with id ${entitySet.id}")
+        logger.debug("Starting entity deletion for entity set ${entitySet.name} with id ${entitySet.id}")
 
         val esw = Stopwatch.createStarted()
         var deletableIds = getDeletedIdsBatch(entitySet, isCurrentEntitySet).toSet()
@@ -141,7 +141,7 @@ class BackgroundIndexedEntitiesDeletionService(
             deletableIds = getDeletedIdsBatch(entitySet, isCurrentEntitySet).toSet()
         }
 
-        logger.info(
+        logger.debug(
                 "Finished deleting $deleteCount elements from entity set ${entitySet.name} in " +
                         "${esw.elapsed(TimeUnit.MILLISECONDS)} ms."
         )
