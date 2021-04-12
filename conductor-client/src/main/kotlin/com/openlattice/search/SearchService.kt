@@ -834,7 +834,7 @@ class SearchService(
             entityKeyIds: Set<UUID>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             linking: Boolean
-    ): List<Map<FullQualifiedName, Set<Any>>> {
+    ): Collection<Map<FullQualifiedName, Set<Any>>> {
         if (entityKeyIds.isEmpty()) {
             return ImmutableList.of()
         }
@@ -850,7 +850,7 @@ class SearchService(
                     linkingIdsByEntitySetIds,
                     authorizedPropertiesOfNormalEntitySets,
                     EnumSet.of(MetadataOption.LAST_WRITE)
-            ).toList()
+            )
         } else {
             return dataManager
                     .getEntitiesWithMetadata(
