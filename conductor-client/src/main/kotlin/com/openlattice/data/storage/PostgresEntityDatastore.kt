@@ -7,6 +7,7 @@ import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
 import com.google.common.eventbus.EventBus
 import com.openlattice.assembler.events.MaterializedEntitySetDataChangeEvent
+import com.openlattice.data.DataExpiration
 import com.openlattice.data.DeleteType
 import com.openlattice.data.EntitySetData
 import com.openlattice.data.FilteredDataPageDefinition
@@ -26,6 +27,7 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.nio.ByteBuffer
+import java.time.OffsetDateTime
 import java.util.*
 import java.util.stream.Stream
 import kotlin.streams.asSequence
@@ -264,7 +266,7 @@ class PostgresEntityDatastore(
     override fun getLinkingEntities(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
-    ): Stream<MutableMap<FullQualifiedName, MutableSet<Any>>> {
+    ): Collection<MutableMap<FullQualifiedName, MutableSet<Any>>> {
         //If the query generated exceed 33.5M UUIDs good chance that it exceed Postgres's 1 GB max query buffer size
         return getLinkingEntitiesWithMetadata(
                 entityKeyIds,
@@ -278,7 +280,7 @@ class PostgresEntityDatastore(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             metadataOptions: EnumSet<MetadataOption>
-    ): Stream<MutableMap<FullQualifiedName, MutableSet<Any>>> {
+    ): Collection<MutableMap<FullQualifiedName, MutableSet<Any>>> {
         //If the query generated exceed 33.5M UUIDs good chance that it exceed Postgres's 1 GB max query buffer size
         return dataQueryService.getEntitiesWithPropertyTypeFqns(
                 entityKeyIds,
@@ -287,7 +289,7 @@ class PostgresEntityDatastore(
                 metadataOptions,
                 Optional.empty(),
                 true
-        ).values.stream()
+        ).values
     }
 
     /**
@@ -415,14 +417,19 @@ class PostgresEntityDatastore(
 
     override fun getExpiringEntitiesFromEntitySet(
             entitySetId: UUID,
-            expirationBaseColumn: String,
-            formattedDateMinusTTE: Any,
-            sqlFormat: Int,
-            deleteType: DeleteType
+            expirationPolicy: DataExpiration,
+            currentDateTime: OffsetDateTime
     ): BasePostgresIterable<UUID> {
-        return dataQueryService.getExpiringEntitiesFromEntitySet(
-                entitySetId, expirationBaseColumn, formattedDateMinusTTE, sqlFormat, deleteType
-        )
+        if (expirationPolicy.startDateProperty.isPresent) {
+            return dataQueryService.getExpiringEntitiesFromEntitySetUsingData(
+                    entitySetId,
+                    expirationPolicy,
+                    edmManager.getPropertyType(expirationPolicy.startDateProperty.get()),
+                    currentDateTime
+            )
+        }
+
+        return dataQueryService.getExpiringEntitiesFromEntitySetUsingIds(entitySetId, expirationPolicy, currentDateTime)
     }
 
 }

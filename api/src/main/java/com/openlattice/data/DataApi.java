@@ -50,6 +50,7 @@ public interface DataApi {
      */
 
     String ALL                   = "all";
+    String BINARY                = "binary";
     String BLOCK                 = "block";
     String PROPERTIES            = "properties";
     String ENTITY_SET            = "set";
@@ -305,5 +306,16 @@ public interface DataApi {
             @Path( ENTITY_SET_ID ) UUID linkedEntitySetId,
             @Body EntitySetSelection selection
     );
+
+    /**
+     * Loads a presigned URL for a particular binary object with the requested content disposition
+     *
+     * @param binaryObjectRequest An object containing information about which binary properties to load from which
+     *                            entity sets, optionally mapping each to a desired content disposition.
+     * @return The same request structure, with the content disposition field replaced by a presigned URL for the
+     * requested binary object, with the specified content disposition
+     */
+    @POST( BASE + "/" + BINARY )
+    BinaryObjectResponse loadBinaryProperties( @Body BinaryObjectRequest binaryObjectRequest );
 
 }

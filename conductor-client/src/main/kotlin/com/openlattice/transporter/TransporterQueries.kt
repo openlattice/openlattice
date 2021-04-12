@@ -20,19 +20,18 @@ private val transportTimestampColumn: PostgresColumnDefinition = LAST_TRANSPORT
 private const val BATCH_LIMIT = 10_000
 
 val MAT_EDGES_TABLE = edgesTableDefinition()
-val MAT_EDGES_COLUMNS_LIST = MAT_EDGES_TABLE.columns.map { it.name }.toList()
 const val MAT_EDGES_TABLE_NAME = "et_edges"
 
-fun unquotedTableName(entityTypeId: UUID): String {
+fun entityTypeTableName(entityTypeId: UUID): String {
     return "et_$entityTypeId"
 }
 
-internal fun tableName(entityTypeId: UUID): String {
-    return ApiHelpers.dbQuote(unquotedTableName(entityTypeId))
+internal fun quotedEtTableName(entityTypeId: UUID): String {
+    return ApiHelpers.dbQuote(entityTypeTableName(entityTypeId))
 }
 
 internal fun tableNameWithSchema(schema: Schemas, entityTypeId: UUID): String {
-    return "${schema}.${tableName(entityTypeId)}"
+    return "${schema}.${quotedEtTableName(entityTypeId)}"
 }
 
 fun edgesTableDefinition(): PostgresTableDefinition {
@@ -58,7 +57,7 @@ fun edgesTableDefinition(): PostgresTableDefinition {
 
 fun tableDefinition(entityTypeId: UUID, propertyColumns: Collection<PostgresColumnDefinition>): PostgresTableDefinition {
     val definition = PostgresTableDefinition(tableNameWithSchema(Schemas.PUBLIC_SCHEMA, entityTypeId))
-    val indexPrefix = unquotedTableName(entityTypeId) + "_"
+    val indexPrefix = entityTypeTableName(entityTypeId) + "_"
     definition.addColumns(
             ENTITY_SET_ID,
             ID_VALUE,
@@ -156,7 +155,7 @@ fun updateRowsForPropertyType(
  * 1 - partitions array
  * 2 - entity set ids array
  */
-fun updatePrimaryKeyForEntitySets(destTable: String): String {
+fun updateEntityTypeTableEntries(destTable: String): String {
     val selectFromIds = "SELECT " +
             "${ENTITY_SET_ID.name},${ID_VALUE.name},${LINKING_ID.name},${VERSION.name} " +
             "FROM ${PostgresTable.IDS.name} " +
@@ -264,20 +263,6 @@ fun updateLastWriteForId(): String {
             " AND abs(${VERSION.name}) > ${transportTimestampColumn.name} "
 }
 
-internal fun importTablesFromForeignSchemaQuery(
-        remoteSchema: Schemas,
-        remoteTables: Set<String>,
-        localSchema: Schemas,
-        usingFdwName: String
-): String {
-    val tablesClause = if (remoteTables.isEmpty()) {
-        ""
-    } else {
-        "LIMIT TO (${remoteTables.joinToString(",")})"
-    }
-    return "import foreign schema $remoteSchema $tablesClause from server $usingFdwName INTO $localSchema;"
-}
-
 internal fun checkIfTableExistsQuery(
         schema: Schemas,
         table: String
@@ -331,16 +316,17 @@ internal fun setUserInhertRolePrivileges(role: String): String {
     return "ALTER ROLE ${ApiHelpers.dbQuote(role)} INHERIT"
 }
 
-internal fun revokeTablePermissionsForRole(schema: Schemas, entitySetName: String, role: String): String {
-    return "REVOKE ALL PRIVILEGES ON $schema.${ApiHelpers.dbQuote(entitySetName)} FROM ${ApiHelpers.dbQuote(role)}"
-}
-
 internal fun grantUsageOnSchemaSql(schema: Schemas, orgUserId: String): String {
     return "GRANT USAGE ON SCHEMA $schema TO ${ApiHelpers.dbQuote(orgUserId)}"
 }
 
+internal fun removePreviouslyTransportedEntities(schema: Schemas, entitySetId: UUID, entityTypeId: UUID): String {
+    return "DELETE FROM $schema.${quotedEtTableName(entityTypeId)} " +
+            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId'"
+}
+
 internal fun dropForeignTypeTable(schema: Schemas, entityTypeId: UUID): String {
-    return "DROP FOREIGN TABLE IF EXISTS $schema.${tableName(entityTypeId)}"
+    return "DROP FOREIGN TABLE IF EXISTS $schema.${quotedEtTableName(entityTypeId)}"
 }
 
 internal fun destroyEdgeView(schema: Schemas, entitySetName: String): String {
@@ -368,7 +354,7 @@ fun createEntitySetViewInSchemaFromSchema(
     return """
             CREATE OR REPLACE VIEW $destinationSchema.${ApiHelpers.dbQuote(entitySetName)} AS 
                 SELECT ${ID_VALUE.name} as ${ApiHelpers.dbQuote(EdmConstants.ID_FQN.toString())}, 
-                    $colsSql FROM $sourceSchema.${tableName(entityTypeId)}
+                    $colsSql FROM $sourceSchema.${quotedEtTableName(entityTypeId)}
                 WHERE ${ENTITY_SET_ID.name} = '$entitySetId'
         """.trimIndent()
 }

@@ -142,7 +142,7 @@ class ExternalDatabaseManagementService(
             entitySets.lock(entitySetId, 10, TimeUnit.SECONDS)
             val es = entitySets.getValue(entitySetId)
 
-            transporterService.disassembleEntitySet(organizationId, es.entityTypeId, es.name)
+            transporterService.disassembleEntitySet(organizationId, es.id, es.entityTypeId, es.name)
 
             es.flags.remove(EntitySetFlag.TRANSPORTED)
             entitySets.set(entitySetId, es)
@@ -515,6 +515,24 @@ class ExternalDatabaseManagementService(
 
             aclGrants.add(Acl(objAclKey, aces))
         }
+
+        val tableAces = columnToUserToPrivileges.values.flatMap { it.entries }.groupBy { it.key }.mapNotNull { (username, privilegesMap) ->
+            if (privilegesMap.isEmpty()) {
+                return@mapNotNull null
+            }
+            val principal = usernameToPrincipal[username] ?: return@mapNotNull null
+
+            val intersection = privilegesMap.first().value.toMutableSet()
+            privilegesMap.map { it.value }.forEach { privileges ->
+                intersection.removeIf { !privileges.contains(it) }
+            }
+
+            Ace(principal, getPermissionsFromPrivileges(intersection))
+        }
+        if (tableAces.isNotEmpty()) {
+            aclGrants.add(Acl(AclKey(table.id), tableAces))
+        }
+
         authorizationManager.addPermissions(aclGrants)
 
         return aclGrants

@@ -59,17 +59,12 @@ import com.openlattice.collaborations.PostgresCollaborationDatabaseService;
 import com.openlattice.collections.CollectionsManager;
 import com.openlattice.conductor.rpc.ConductorConfiguration;
 import com.openlattice.conductor.rpc.MapboxConfiguration;
+import com.openlattice.data.DataDeletionManager;
 import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.DataGraphService;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
-import com.openlattice.data.storage.ByteBlobDataManager;
-import com.openlattice.data.storage.EntityDatastore;
-import com.openlattice.data.storage.IndexingMetadataManager;
-import com.openlattice.data.storage.PostgresEntityDataQueryService;
-import com.openlattice.data.storage.PostgresEntityDatastore;
-import com.openlattice.data.storage.PostgresEntitySetSizesInitializationTask;
-import com.openlattice.data.storage.PostgresEntitySetSizesTaskDependency;
+import com.openlattice.data.storage.*;
 import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
@@ -120,6 +115,7 @@ import com.openlattice.subscriptions.SubscriptionNotificationTask;
 import com.openlattice.subscriptions.SubscriptionService;
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies;
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask;
+import com.openlattice.transporter.pods.TransporterInitPod;
 import com.openlattice.transporter.pods.TransporterPod;
 import com.openlattice.transporter.services.TransporterService;
 import com.openlattice.users.Auth0SyncInitializationTask;
@@ -144,7 +140,7 @@ import javax.inject.Inject;
 
 @Configuration
 @Import( { ByteBlobServicePod.class, AuditingConfigurationPod.class, AssemblerConfigurationPod.class,
-        TransporterPod.class } )
+        TransporterPod.class, TransporterInitPod.class } )
 public class ConductorServicesPod {
 
     @Inject
@@ -717,9 +713,24 @@ public class ConductorServicesPod {
         return new ScheduledTaskService();
     }
 
+    @Bean
+    public DataDeletionManager dataDeletionService() {
+        return new DataDeletionService(
+                entitySetManager(),
+                authorizationManager(),
+                entityDatastore(),
+                graphService(),
+                jobService(),
+                partitionManager()
+        );
+    }
+
     @PostConstruct
     void initPrincipals() {
         Principals.init( securePrincipalsManager(), hazelcastInstance );
-        organizationMetadataEntitySetsService().dataGraphManager = dataGraphService();
+
+        OrganizationMetadataEntitySetsService metadataService = organizationMetadataEntitySetsService();
+        metadataService.dataDeletionService = dataDeletionService();
+        metadataService.dataGraphManager = dataGraphService();
     }
 }

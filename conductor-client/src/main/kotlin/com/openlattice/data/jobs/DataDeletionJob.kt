@@ -45,7 +45,6 @@ import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import java.sql.PreparedStatement
 import java.util.*
-import java.util.concurrent.atomic.AtomicLong
 
 class DataDeletionJob(
         state: DataDeletionJobState
@@ -293,7 +292,6 @@ class DataDeletionJob(
             entityKeyIds: Collection<UUID>,
             propertyTypeIds: Collection<UUID>
     ) {
-        val count = AtomicLong()
         val s3Keys = BasePostgresIterable<String>(
                 PreparedStatementHolderSupplier(hds, selectEntitiesTextProperties, FETCH_SIZE) { ps ->
                     val connection = ps.connection
@@ -306,8 +304,13 @@ class DataDeletionJob(
                 }
         ) { it.getString(getMergedDataColumnName(PostgresDatatype.TEXT)) }.toList()
 
-        byteBlobDataManager.deleteObjects(s3Keys)
-        count.addAndGet(s3Keys.size.toLong())
+        if (s3Keys.isNotEmpty()) {
+            try {
+                byteBlobDataManager.deleteObjects(s3Keys)
+            } catch (e: Exception) {
+                logger.error("Unable to delete object from s3 for entity sets {} with ids {}", entitySetIds, entityKeyIds, e)
+            }
+        }
     }
 
     @JsonIgnore
@@ -334,11 +337,7 @@ class DataDeletionJob(
     }
 
     @JsonIgnore
-    private fun excludeClearedIfSoftDeleteSql(isEdges: Boolean = false): String {
-        if (isHardDelete() && isEdges) {
-            return ""
-        }
-
+    private fun excludeClearedIfSoftDeleteSql(): String {
         val operator = if (isHardDelete()) "<>" else ">"
         return "AND ${VERSION.name} $operator 0"
     }
@@ -397,7 +396,7 @@ class DataDeletionJob(
             SELECT ${EDGE_ENTITY_SET_ID.name}, ${EDGE_ENTITY_KEY_ID.name}
             FROM ${E.name}
             WHERE ( $entityMatches )
-            ${excludeClearedIfSoftDeleteSql(true)}
+            ${excludeClearedIfSoftDeleteSql()}
             LIMIT $BATCH_SIZE
         """.trimIndent()
     }

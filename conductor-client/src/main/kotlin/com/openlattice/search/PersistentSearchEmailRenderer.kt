@@ -5,6 +5,7 @@ import com.openlattice.mail.RenderableEmailRequest
 import com.openlattice.search.renderers.AlprAlertEmailRenderer
 import com.openlattice.search.renderers.BHRAlertEmailRenderer
 import com.openlattice.search.renderers.CAREIssueAlertEmailRenderer
+import com.openlattice.search.renderers.ReentryTaskAlertEmailRenderer
 import com.openlattice.search.renderers.CodexAlertEmailRenderer
 import com.openlattice.search.requests.PersistentSearch
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -30,6 +31,7 @@ class PersistentSearchEmailRenderer {
                 PersistentSearchNotificationType.BHR_ALERT -> email = BHRAlertEmailRenderer.renderEmail(persistentSearch, entity, userEmail, neighbors)
                 PersistentSearchNotificationType.CODEX_ALERT -> email = CodexAlertEmailRenderer.renderEmail(persistentSearch, entity, userEmail, neighbors)
                 PersistentSearchNotificationType.CARE_ISSUE_ALERT -> email = CAREIssueAlertEmailRenderer.renderEmail(persistentSearch, entity, userEmail, neighbors)
+                PersistentSearchNotificationType.REENTRY_TASK_ALERT -> email = ReentryTaskAlertEmailRenderer.renderEmail(persistentSearch, entity, userEmail, neighbors)
 
                 else -> {
                     logger.error("Unable to render email for type {}", persistentSearch.type)

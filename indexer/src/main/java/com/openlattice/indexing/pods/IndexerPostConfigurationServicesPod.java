@@ -228,6 +228,7 @@ public class IndexerPostConfigurationServicesPod {
 
     @PostConstruct
     void initOrganizationMetadataEntitySetsService() {
+        this.organizationMetadataEntitySetsService.dataDeletionService = dataDeletionManager;
         this.organizationMetadataEntitySetsService.dataGraphManager = dataGraphService;
     }
 }

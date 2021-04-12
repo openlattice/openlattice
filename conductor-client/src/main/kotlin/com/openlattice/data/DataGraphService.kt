@@ -32,25 +32,18 @@ import com.openlattice.analysis.requests.AggregationResult
 import com.openlattice.analysis.requests.FilteredNeighborsRankingAggregation
 import com.openlattice.data.storage.EntityDatastore
 import com.openlattice.data.storage.MetadataOption
-import com.openlattice.edm.set.ExpirationBase
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.core.GraphService
 import com.openlattice.graph.core.NeighborSets
 import com.openlattice.graph.partioning.RepartitioningJob
-import com.openlattice.postgres.DataTables
-import com.openlattice.postgres.PostgresColumn
-import com.openlattice.postgres.PostgresDataTables
 import com.openlattice.postgres.streams.BasePostgresIterable
 import org.apache.commons.lang3.NotImplementedException
 import org.apache.commons.lang3.tuple.Pair
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.nio.ByteBuffer
-import java.sql.Types
 import java.time.OffsetDateTime
-import java.time.ZoneId
 import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.stream.Stream
@@ -122,7 +115,12 @@ class DataGraphService(
         return eds.getLinkingEntities(
                 entitySetIds.map { it to Optional.of(setOf(entityKeyId)) }.toMap(),
                 authorizedPropertyTypes
-        ).iterator().next()
+        )
+                .flatMap { it.entries }
+                .groupBy { it.key }
+                .mapValues {
+                    it.value.flatMap { e -> e.value }.toSet()
+                }
     }
 
     override fun getLinkedEntitySetBreakDown(
@@ -273,56 +271,11 @@ class DataGraphService(
     }
 
     override fun getExpiringEntitiesFromEntitySet(
-            entitySetId: UUID, expirationPolicy: DataExpiration,
-            dateTime: OffsetDateTime, deleteType: DeleteType,
-            expirationPropertyType: Optional<PropertyType>
+            entitySetId: UUID,
+            expirationPolicy: DataExpiration,
+            currentDateTime: OffsetDateTime
     ): BasePostgresIterable<UUID> {
-        val sqlParams = getSqlParameters(expirationPolicy, dateTime, expirationPropertyType)
-        val expirationBaseColumn = sqlParams.first
-        val formattedDateMinusTTE = sqlParams.second
-        val sqlFormat = sqlParams.third
-        return eds.getExpiringEntitiesFromEntitySet(
-                entitySetId, expirationBaseColumn, formattedDateMinusTTE,
-                sqlFormat, deleteType
-        )
+        return eds.getExpiringEntitiesFromEntitySet(entitySetId, expirationPolicy, currentDateTime)
     }
 
-    private fun getSqlParameters(
-            expirationPolicy: DataExpiration, dateTime: OffsetDateTime, expirationPT: Optional<PropertyType>
-    ): Triple<String, Any, Int> {
-        val expirationBaseColumn: String
-        val formattedDateMinusTTE: Any
-        val sqlFormat: Int
-        val dateMinusTTEAsInstant = dateTime.toInstant().minusMillis(expirationPolicy.timeToExpiration)
-        when (expirationPolicy.expirationBase) {
-            ExpirationBase.DATE_PROPERTY -> {
-                val expirationPropertyType = expirationPT.get()
-                val columnData = Pair(
-                        expirationPropertyType.postgresIndexType,
-                        expirationPropertyType.datatype
-                )
-                expirationBaseColumn = PostgresDataTables.getColumnDefinition(columnData.first, columnData.second).name
-                if (columnData.second == EdmPrimitiveTypeKind.Date) {
-                    formattedDateMinusTTE = OffsetDateTime.ofInstant(
-                            dateMinusTTEAsInstant, ZoneId.systemDefault()
-                    ).toLocalDate()
-                    sqlFormat = Types.DATE
-                } else { //only other TypeKind for date property type is OffsetDateTime
-                    formattedDateMinusTTE = OffsetDateTime.ofInstant(dateMinusTTEAsInstant, ZoneId.systemDefault())
-                    sqlFormat = Types.TIMESTAMP_WITH_TIMEZONE
-                }
-            }
-            ExpirationBase.FIRST_WRITE -> {
-                expirationBaseColumn = "${PostgresColumn.VERSIONS.name}[array_upper(${PostgresColumn.VERSIONS.name},1)]" //gets the latest version from the versions column
-                formattedDateMinusTTE = dateMinusTTEAsInstant.toEpochMilli()
-                sqlFormat = Types.BIGINT
-            }
-            ExpirationBase.LAST_WRITE -> {
-                expirationBaseColumn = DataTables.LAST_WRITE.name
-                formattedDateMinusTTE = OffsetDateTime.ofInstant(dateMinusTTEAsInstant, ZoneId.systemDefault())
-                sqlFormat = Types.TIMESTAMP_WITH_TIMEZONE
-            }
-        }
-        return Triple(expirationBaseColumn, formattedDateMinusTTE, sqlFormat)
-    }
 }

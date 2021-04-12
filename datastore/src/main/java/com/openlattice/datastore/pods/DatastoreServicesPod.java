@@ -712,6 +712,9 @@ public class DatastoreServicesPod {
     @PostConstruct
     void initPrincipals() {
         Principals.init( securePrincipalsManager(), hazelcastInstance );
-        organizationMetadataEntitySetsService().dataGraphManager = dataGraphService();
+
+        OrganizationMetadataEntitySetsService metadataService = organizationMetadataEntitySetsService();
+        metadataService.dataDeletionService = dataDeletionManager();
+        metadataService.dataGraphManager = dataGraphService();
     }
 }

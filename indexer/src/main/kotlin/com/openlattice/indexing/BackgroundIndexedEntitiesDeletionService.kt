@@ -21,9 +21,7 @@
 package com.openlattice.indexing
 
 import com.google.common.base.Stopwatch
-import com.hazelcast.config.IndexType
 import com.hazelcast.core.HazelcastInstance
-import com.hazelcast.query.QueryConstants
 import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.indexing.configuration.IndexerConfiguration
@@ -50,7 +48,6 @@ import java.util.concurrent.locks.ReentrantLock
 
 
 const val DELETE_SIZE = 10_000
-const val DELETE_EXPIRATION_MILLIS = 60_000L
 const val DELETE_RATE = 30_000L
 
 /**
@@ -69,12 +66,6 @@ class BackgroundIndexedEntitiesDeletionService(
 
     private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
     private val deletedEntitySets = HazelcastMap.DELETED_ENTITY_SETS.getMap(hazelcastInstance)
-
-    private val deletionLocks = HazelcastMap.DELETION_LOCKS.getMap(hazelcastInstance)
-
-    init {
-        deletionLocks.addIndex(IndexType.SORTED, QueryConstants.THIS_ATTRIBUTE_NAME.value())
-    }
 
     private val taskLock = ReentrantLock()
 
@@ -96,20 +87,13 @@ class BackgroundIndexedEntitiesDeletionService(
             }
 
             val w = Stopwatch.createStarted()
+
             //We shuffle entity sets to make sure we have a chance to work share and index everything
-            val lockedEntitySets = entitySets.values
+            val totalCurrentEntitySetUpdates = entitySets.values
+                    .filter { !it.isAudit }
                     .map { EntitySetForDeletion(it.id, it.name, it.partitions) }
                     .shuffled()
-                    .filter { tryLockEntitySet(it.id) }
-
-            val lockedDeletedEntitySets = deletedEntitySets
-                    .map { (id, partitions) -> EntitySetForDeletion(id, "Deleted entity set [$id]", partitions) }
-                    .shuffled()
-                    .filter { tryLockEntitySet(it.id) }
-
-            val totalCurrentEntitySetUpdates = lockedEntitySets
-                    .parallelStream()
-                    .mapToInt {
+                    .map {
                         try {
                             processDeletedEntitiesForEntitySet(it, true)
                         } catch (e: Exception) {
@@ -118,12 +102,13 @@ class BackgroundIndexedEntitiesDeletionService(
                         }
                     }.sum()
 
-            val totalDeletedEntitySetUpdates = lockedDeletedEntitySets
-                    .parallelStream()
-                    .mapToInt {
+            val totalDeletedEntitySetUpdates = deletedEntitySets
+                    .map { (id, partitions) -> EntitySetForDeletion(id, "Deleted entity set [$id]", partitions) }
+                    .shuffled()
+                    .map {
                         try {
                             val numUpdates = processDeletedEntitiesForEntitySet(it, false)
-                            deletedEntitySets.delete(it.id)
+                            this.deletedEntitySets.delete(it.id)
                             numUpdates
                         } catch (e: Exception) {
                             logger.error("An error occurred while deleting entities for entity set {}", it.id, e)
@@ -131,8 +116,6 @@ class BackgroundIndexedEntitiesDeletionService(
                             0
                         }
                     }.sum()
-
-            lockedEntitySets.forEach { deleteDeletionLock(it.id) }
 
             logger.info(
                     "Completed deletion of {} entities in {} ms",
@@ -144,22 +127,21 @@ class BackgroundIndexedEntitiesDeletionService(
         }
     }
 
-    private fun processDeletedEntitiesForEntitySet(entitySet: EntitySetForDeletion, indexedOnly: Boolean): Int {
-        logger.info("Starting entity deletion for entity set ${entitySet.name} with id ${entitySet.id}")
+    private fun processDeletedEntitiesForEntitySet(entitySet: EntitySetForDeletion, isCurrentEntitySet: Boolean): Int {
+        logger.debug("Starting entity deletion for entity set ${entitySet.name} with id ${entitySet.id}")
 
         val esw = Stopwatch.createStarted()
-        var deletableIds = getDeletedIdsBatch(entitySet, indexedOnly).toSet()
+        var deletableIds = getDeletedIdsBatch(entitySet, isCurrentEntitySet).toSet()
 
         var deleteCount = 0
 
         while (deletableIds.isNotEmpty()) {
-            updateExpiration(entitySet.id)
             deleteCount += dataQueryService.deleteEntities(entitySet.id, deletableIds, entitySet.partitions).numUpdates
             deleteFromSyncIds(entitySet.id, deletableIds)
-            deletableIds = getDeletedIdsBatch(entitySet, indexedOnly).toSet()
+            deletableIds = getDeletedIdsBatch(entitySet, isCurrentEntitySet).toSet()
         }
 
-        logger.info(
+        logger.debug(
                 "Finished deleting $deleteCount elements from entity set ${entitySet.name} in " +
                         "${esw.elapsed(TimeUnit.MILLISECONDS)} ms."
         )
@@ -170,8 +152,11 @@ class BackgroundIndexedEntitiesDeletionService(
     /**
      * Select all ids, which have been hard deleted and already un-indexed.
      */
-    private fun getDeletedIdsBatch(entitySet: EntitySetForDeletion, indexedOnly: Boolean = true): BasePostgresIterable<UUID> {
-        val sql = if (indexedOnly) selectDeletedIndexedIdsBatch else selectDeletedIdsBatch
+    private fun getDeletedIdsBatch(
+            entitySet: EntitySetForDeletion,
+            isCurrentEntitySet: Boolean = true
+    ): BasePostgresIterable<UUID> {
+        val sql = if (isCurrentEntitySet) selectCurrentEntitySetIdsBatch else selectDeletedEntitySetIdsBatch
 
         return BasePostgresIterable(
                 PreparedStatementHolderSupplier(hds, sql) {
@@ -182,7 +167,7 @@ class BackgroundIndexedEntitiesDeletionService(
         ) { rs -> ResultSetAdapters.id(rs) }
     }
 
-    private val selectDeletedIdsBatch = """
+    private val selectDeletedEntitySetIdsBatch = """
         SELECT ${ID.name}
         FROM ${IDS.name}
         WHERE
@@ -195,7 +180,7 @@ class BackgroundIndexedEntitiesDeletionService(
     // get all ids where version = 0 and either
     // a: last_index >= last_write
     // b: last_link_index >= last_write and linking_id is not null
-    private val selectDeletedIndexedIdsBatch =
+    private val selectCurrentEntitySetIdsBatch =
             """
                 SELECT ${ID.name}
                 FROM ${IDS.name}
@@ -233,18 +218,6 @@ class BackgroundIndexedEntitiesDeletionService(
           ${ENTITY_SET_ID.name} = ?
           AND ${ID.name} = ANY(?)
     """.trimIndent()
-
-    private fun tryLockEntitySet(entitySetId: UUID): Boolean {
-        return deletionLocks.putIfAbsent(entitySetId, System.currentTimeMillis() + DELETE_EXPIRATION_MILLIS) == null
-    }
-
-    private fun deleteDeletionLock(entitySetId: UUID) {
-        deletionLocks.delete(entitySetId)
-    }
-
-    private fun updateExpiration(entitySetId: UUID) {
-        deletionLocks.set(entitySetId, System.currentTimeMillis() + DELETE_EXPIRATION_MILLIS)
-    }
 
     data class EntitySetForDeletion(
             val id: UUID,
