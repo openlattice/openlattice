@@ -21,14 +21,41 @@ import com.openlattice.hazelcast.processors.organizations.UpdateOrganizationExte
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.organization.OrganizationExternalDatabaseTable
 import com.openlattice.organization.OrganizationExternalDatabaseTableColumnsPair
-import com.openlattice.organizations.mapstores.*
-import com.openlattice.postgres.*
+import com.openlattice.organizations.mapstores.NAME_INDEX
+import com.openlattice.organizations.mapstores.ORGANIZATION_ID_INDEX
+import com.openlattice.organizations.mapstores.SCHEMA_INDEX
+import com.openlattice.organizations.mapstores.TABLE_ID_INDEX
 import com.openlattice.postgres.DataTables.quote
-import com.openlattice.postgres.PostgresColumn.*
-import com.openlattice.postgres.ResultSetAdapters.*
+import com.openlattice.postgres.PostgresAuthenticationRecord
+import com.openlattice.postgres.PostgresColumn
+import com.openlattice.postgres.PostgresColumn.COLUMN_NAMES_FIELD
+import com.openlattice.postgres.PostgresColumn.CONNECTION_TYPE
+import com.openlattice.postgres.PostgresColumn.DATABASE
+import com.openlattice.postgres.PostgresColumn.IP_ADDRESS
+import com.openlattice.postgres.PostgresColumn.NAME
+import com.openlattice.postgres.PostgresColumn.OID
+import com.openlattice.postgres.PostgresColumn.SCHEMA_NAME_FIELD
+import com.openlattice.postgres.PostgresConnectionType
+import com.openlattice.postgres.PostgresPrivileges
+import com.openlattice.postgres.PostgresTable
+import com.openlattice.postgres.PostgresTableDefinition
+import com.openlattice.postgres.ResultSetAdapters.columnName
+import com.openlattice.postgres.ResultSetAdapters.columnNames
+import com.openlattice.postgres.ResultSetAdapters.constraintType
+import com.openlattice.postgres.ResultSetAdapters.name
+import com.openlattice.postgres.ResultSetAdapters.oid
+import com.openlattice.postgres.ResultSetAdapters.ordinalPosition
+import com.openlattice.postgres.ResultSetAdapters.postgresAuthenticationRecord
+import com.openlattice.postgres.ResultSetAdapters.privilegeType
+import com.openlattice.postgres.ResultSetAdapters.schemaName
+import com.openlattice.postgres.ResultSetAdapters.sqlDataType
+import com.openlattice.postgres.ResultSetAdapters.user
+import com.openlattice.postgres.TableColumn
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService
-import com.openlattice.postgres.external.Schemas.*
+import com.openlattice.postgres.external.Schemas.INTEGRATIONS_SCHEMA
+import com.openlattice.postgres.external.Schemas.OPENLATTICE_SCHEMA
+import com.openlattice.postgres.external.Schemas.STAGING_SCHEMA
 import com.openlattice.postgres.external.dropAllConnectionsToDatabaseSql
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.StatementHolderSupplier
@@ -45,6 +72,7 @@ import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import java.util.*
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 
 @Service
@@ -151,7 +179,7 @@ class ExternalDatabaseManagementService(
         }
     }
 
-    fun transportEntitySet(organizationId: UUID, entitySetId: UUID) {
+    fun transportEntitySet(organizationId: UUID, entitySetId: UUID): CompletableFuture<Any>? {
         val ptIds = entitySets.submitToKey(
                 entitySetId,
                 GetEntityTypeFromEntitySetEntryProcessor()
@@ -185,7 +213,7 @@ class ExternalDatabaseManagementService(
             Acl(it.key, it.value)
         }
 
-        ptIdsToFqns.thenCombine(tableCols) { asPtFqns, colsById ->
+        return ptIdsToFqns.thenCombineAsync(tableCols) { asPtFqns, colsById ->
             try {
                 entitySets.lock(entitySetId, 10, TimeUnit.SECONDS)
                 val es = entitySets.getValue(entitySetId)
@@ -197,10 +225,12 @@ class ExternalDatabaseManagementService(
                         colsById
                 )
                 entitySets.executeOnKey(entitySetId, AddFlagsOnEntitySetEntryProcessor(EnumSet.of(EntitySetFlag.TRANSPORTED)))
+            } catch (ex: Exception) {
+                logger.error("error while transporting entityset $entitySetId: ", ex)
             } finally {
                 entitySets.unlock(entitySetId)
             }
-        }.toCompletableFuture().get()
+        }.toCompletableFuture()
     }
 
     /*GET*/
