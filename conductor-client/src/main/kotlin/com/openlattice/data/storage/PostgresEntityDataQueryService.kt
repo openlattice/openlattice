@@ -174,7 +174,7 @@ class PostgresEntityDataQueryService(
             linking: Boolean = false,
             filteredDataPageDefinition: FilteredDataPageDefinition? = null
     ): Map<UUID, MutableMap<FullQualifiedName, MutableSet<Any>>> {
-        return getEntitySetIterable(
+        val entitiesById = getEntitySetIterable(
                 entityKeyIds,
                 authorizedPropertyTypes,
                 propertyTypeFilters,
@@ -190,7 +190,17 @@ class PostgresEntityDataQueryService(
                     metadataOptions,
                     byteBlobDataManager
             )
-        }.toMap()
+        }
+
+        if (!linking) {
+            return entitiesById.toMap()
+        }
+
+        return entitiesById.toList().groupBy { it.first }.mapValues { (_, normalEntitiesByLinkingId) ->
+            normalEntitiesByLinkingId.flatMap { it.second.entries }.groupBy { it.key }.mapValues { (_, valuesByFqn) ->
+                valuesByFqn.flatMap { it.value }.toMutableSet()
+            }.toMutableMap()
+        }
     }
 
     /**
