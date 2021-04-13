@@ -32,6 +32,7 @@ import com.openlattice.organizations.OrganizationMetadataEntitySetsService
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.commons.lang3.NotImplementedException
+import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
@@ -79,6 +80,10 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
 
     @Inject
     private lateinit var edmService: EdmManager
+
+    companion object {
+        private val logger = LoggerFactory.getLogger(OrganizationsController::class.java)
+    }
 
     @Timed
     @GetMapping(value = ["", "/"], produces = [MediaType.APPLICATION_JSON_VALUE])
@@ -162,9 +167,20 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
             @PathVariable(OrganizationsApi.ID) organizationId: UUID,
             @PathVariable(OrganizationsApi.SET_ID) entitySetId: UUID
     ): Void? {
-        ensureRead(organizationId)
+        if ( !organizations.organizationExists(organizationId) ) {
+            throw IllegalArgumentException("Organization $organizationId doesn't exist")
+        }
+        if ( !entitySetManager.exists(entitySetId) ) {
+            throw IllegalArgumentException("EntitySet $entitySetId doesn't exist")
+        }
+
+        ensureReadAccess(AclKey(organizationId))
         ensureTransportAccess(AclKey(entitySetId))
-        edms.transportEntitySet(organizationId, entitySetId)
+        val transportFuture = edms.transportEntitySet(organizationId, entitySetId)
+        checkNotNull( transportFuture ) {
+            logger.error("Error while transporting entityset $entitySetId to organization $organizationId")
+        }
+        transportFuture.get()
         return null
     }
 
