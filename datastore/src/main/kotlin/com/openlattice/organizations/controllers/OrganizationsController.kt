@@ -177,10 +177,9 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
         ensureReadAccess(AclKey(organizationId))
         ensureTransportAccess(AclKey(entitySetId))
         val transportFuture = edms.transportEntitySet(organizationId, entitySetId)
-        checkNotNull( transportFuture ) {
+        check( transportFuture.get() ) {
             logger.error("Error while transporting entityset $entitySetId to organization $organizationId")
         }
-        transportFuture.get()
         return null
     }
 
