@@ -629,7 +629,7 @@ internal fun grantUsageOnSchemaToRolesSql(schemaName: String, roles: Iterable<St
 }
 
 internal fun revokeUsageOnSchemaToRolesSql(schemaName: String, roles: Iterable<String>): String {
-    return "REVOKE USAGE ON SCHEMA ${quote(schemaName)} TO ${roles.joinToString { quote(it) }}"
+    return "REVOKE USAGE ON SCHEMA ${quote(schemaName)} FROM ${roles.joinToString { quote(it) }}"
 }
 
 internal fun grantOrgUserPrivilegesOnSchemaSql(schemaName: Schemas, orgUserId: String): String {

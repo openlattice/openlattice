@@ -259,7 +259,7 @@ class ExternalDatabaseManagementService(
     }
 
     fun getTableInfoForOrganization(organizationId: UUID): List<TableInfo> {
-            return BasePostgresIterable(StatementHolderSupplier(
+        return BasePostgresIterable(StatementHolderSupplier(
                 externalDbManager.connectToOrg(organizationId),
                 getCurrentTableAndColumnNamesSql(),
                 FETCH_SIZE
@@ -707,11 +707,9 @@ class ExternalDatabaseManagementService(
             throw IllegalArgumentException("Cannot promote table -- there is no table named $tableName in the staging schema of org $organizationId")
         }
 
-        externalDbManager.connectToOrg(organizationId).use { hds ->
-            hds.connection.use { conn ->
-                conn.createStatement().use { stmt ->
-                    stmt.execute(publishStagingTableSql(tableName))
-                }
+        externalDbManager.connectToOrg(organizationId).connection.use { conn ->
+            conn.createStatement().use { stmt ->
+                stmt.execute(publishStagingTableSql(tableName))
             }
         }
 
