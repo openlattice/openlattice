@@ -361,7 +361,6 @@ class HazelcastAuthorizationService(
             principals: Set<Principal>,
             requiredPermissions: EnumSet<Permission>
     ): Boolean {
-
         val aceKeys = principals.map { AceKey(key, it) }.toSet()
 
         return aces.executeOnKeys(aceKeys, AuthorizationEntryProcessor())

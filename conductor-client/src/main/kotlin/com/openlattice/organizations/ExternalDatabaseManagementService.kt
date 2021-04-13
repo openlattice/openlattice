@@ -179,7 +179,7 @@ class ExternalDatabaseManagementService(
         }
     }
 
-    fun transportEntitySet(organizationId: UUID, entitySetId: UUID): CompletableFuture<Any>? {
+    fun transportEntitySet(organizationId: UUID, entitySetId: UUID): CompletableFuture<Boolean> {
         val ptIds = entitySets.submitToKey(
                 entitySetId,
                 GetEntityTypeFromEntitySetEntryProcessor()
@@ -204,7 +204,8 @@ class ExternalDatabaseManagementService(
 
         val acls = permissions.entrySet(Predicates.and(
                 Predicates.equal<AceKey, AceValue>(PermissionMapstore.ROOT_OBJECT_INDEX, entitySetId),
-                Predicates.equal<AceKey, AceValue>(PermissionMapstore.SECURABLE_OBJECT_TYPE_INDEX, SecurableObjectType.PropertyTypeInEntitySet))
+                Predicates.equal<AceKey, AceValue>(PermissionMapstore.SECURABLE_OBJECT_TYPE_INDEX, SecurableObjectType.PropertyTypeInEntitySet),
+                Predicates.`in`<AceKey, AceValue>(PermissionMapstore.PRINCIPAL_TYPE_INDEX, PrincipalType.USER, PrincipalType.ROLE, PrincipalType.ORGANIZATION))
         ).groupBy({ (aceKey, _) ->
             aceKey.aclKey
         }, { (aceKey, aceValue) ->
@@ -227,9 +228,11 @@ class ExternalDatabaseManagementService(
                 entitySets.executeOnKey(entitySetId, AddFlagsOnEntitySetEntryProcessor(EnumSet.of(EntitySetFlag.TRANSPORTED)))
             } catch (ex: Exception) {
                 logger.error("error while transporting entityset $entitySetId: ", ex)
+                return@thenCombineAsync false
             } finally {
                 entitySets.unlock(entitySetId)
             }
+            return@thenCombineAsync true
         }.toCompletableFuture()
     }
 
