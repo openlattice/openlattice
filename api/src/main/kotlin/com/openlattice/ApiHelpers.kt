@@ -24,7 +24,7 @@ class ApiHelpers {
                     encoder.encodeToString(sorted.array())
                 }
             }.joinToString { joined ->
-                encoder.encodeToString(ApiHelpers.toUtf8Bytes(joined))
+                encoder.encodeToString(toUtf8Bytes(joined))
             }
             Preconditions.checkArgument(entityId.isNotEmpty(), "Entity ids cannot be empty strings")
             return entityId

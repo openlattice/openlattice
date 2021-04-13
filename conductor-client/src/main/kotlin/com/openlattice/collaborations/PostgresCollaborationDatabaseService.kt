@@ -18,7 +18,6 @@ import com.openlattice.postgres.external.DatabaseQueryManager
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService
 import com.openlattice.postgres.external.Schemas
-import org.slf4j.LoggerFactory
 import java.util.*
 
 class PostgresCollaborationDatabaseService(
@@ -37,10 +36,6 @@ class PostgresCollaborationDatabaseService(
     private val externalTables = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE.getMap(hazelcast)
     private val externalColumns = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_COLUMN.getMap(hazelcast)
     private val projectedTables = HazelcastMap.PROJECTED_TABLES.getMap(hazelcast)
-
-    companion object {
-        private val logger = LoggerFactory.getLogger(PostgresCollaborationDatabaseService::class.java)
-    }
 
     override fun getDatabaseInfo(collaborationId: UUID): OrganizationDatabase {
         return organizationDatabases[collaborationId]!!

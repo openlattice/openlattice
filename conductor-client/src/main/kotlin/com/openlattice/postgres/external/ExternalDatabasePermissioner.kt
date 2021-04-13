@@ -562,11 +562,6 @@ class ExternalDatabasePermissioner(
         return "${action.name} ${ApiHelpers.dbQuote(roleName)} ${action.verb} $targets"
     }
 
-    private fun filteredAcePermissions(permissions: Set<Permission>, tableType: TableType): Set<Permission> {
-        val accessTargetPermissions = if (tableType == TableType.TABLE) allTablePermissions else allViewPermissions
-        return permissions.filter { accessTargetPermissions.contains(it) }.toSet()
-    }
-
     internal fun createRoleIfNotExistsSql(dbRole: String): String {
         return "DO\n" +
                 "\$do\$\n" +

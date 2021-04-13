@@ -25,7 +25,7 @@ class AuditingTypes(
     }
 
     lateinit var entityType: EntityType
-    lateinit var edgeEntityType: AssociationType
+    private lateinit var edgeEntityType: AssociationType
     lateinit var auditingEntityTypeId: UUID
     lateinit var auditingEdgeEntityTypeId: UUID
 

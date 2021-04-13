@@ -7,7 +7,16 @@ import com.openlattice.edm.PostgresEdmTypeConverter
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.DataTables.quote
-import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.HASH
+import com.openlattice.postgres.PostgresColumn.ID_VALUE
+import com.openlattice.postgres.PostgresColumn.LAST_PROPAGATE
+import com.openlattice.postgres.PostgresColumn.LAST_TRANSPORT
+import com.openlattice.postgres.PostgresColumn.ORIGIN_ID
+import com.openlattice.postgres.PostgresColumn.PARTITION
+import com.openlattice.postgres.PostgresColumn.PROPERTY_TYPE_ID
+import com.openlattice.postgres.PostgresColumn.VERSION
+import com.openlattice.postgres.PostgresColumn.VERSIONS
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 
 /**
@@ -35,12 +44,12 @@ class PostgresDataTables {
 
         //The associate is collapsing edm primitive type kinds such that only 1 is preserved for converted type.
         //If you change this such that columns generated are sensitive to being discarded make sure you update logic.
-        val dataColumns = supportedEdmPrimitiveTypeKinds
+        private val dataColumns = supportedEdmPrimitiveTypeKinds
                 .map(PostgresEdmTypeConverter::map)
                 .associateWith { nonIndexedValueColumn(it) to btreeIndexedValueColumn(it) }
 
-        val nonIndexedColumns = dataColumns.map { it.value.first }
-        val btreeIndexedColumns = dataColumns.map { it.value.second }
+        private val nonIndexedColumns = dataColumns.map { it.value.first }
+        private val btreeIndexedColumns = dataColumns.map { it.value.second }
 
         val dataTableMetadataColumns = listOf(
                 ENTITY_SET_ID,
