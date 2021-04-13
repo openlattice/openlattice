@@ -14,7 +14,11 @@ import com.hazelcast.query.Predicates
 import com.openlattice.assembler.events.MaterializePermissionChangeEvent
 import com.openlattice.authorization.aggregators.AuthorizationSetAggregator
 import com.openlattice.authorization.aggregators.PrincipalAggregator
-import com.openlattice.authorization.mapstores.PermissionMapstore.*
+import com.openlattice.authorization.mapstores.PermissionMapstore.ACL_KEY_INDEX
+import com.openlattice.authorization.mapstores.PermissionMapstore.PERMISSIONS_INDEX
+import com.openlattice.authorization.mapstores.PermissionMapstore.PRINCIPAL_INDEX
+import com.openlattice.authorization.mapstores.PermissionMapstore.PRINCIPAL_TYPE_INDEX
+import com.openlattice.authorization.mapstores.PermissionMapstore.SECURABLE_OBJECT_TYPE_INDEX
 import com.openlattice.authorization.processors.AuthorizationEntryProcessor
 import com.openlattice.authorization.processors.PermissionMerger
 import com.openlattice.authorization.processors.PermissionRemover
@@ -349,7 +353,6 @@ class HazelcastAuthorizationService(
             principals: Set<Principal>,
             requiredPermissions: EnumSet<Permission>
     ): Boolean {
-
         val aceKeys = principals.map { AceKey(key, it) }.toSet()
 
         return aces.executeOnKeys(aceKeys, AuthorizationEntryProcessor())
