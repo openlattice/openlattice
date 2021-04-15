@@ -348,7 +348,9 @@ public class HzAuthzTest extends TestServer {
     public static void init() {
         hzAuthz = new HazelcastAuthorizationService(
                 hazelcastInstance,
-                testServer.getContext().getBean( EventBus.class )
+                testServer.getContext().getBean( EventBus.class ),
+                new HazelcastPrincipalsMapManager( hazelcastInstance,
+                        new HazelcastAclKeyReservationService( hazelcastInstance ) )
         );
     }
 
