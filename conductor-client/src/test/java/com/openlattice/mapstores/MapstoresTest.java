@@ -37,6 +37,13 @@ import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.hazelcast.HazelcastMap;
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
+import org.junit.Assert;
+import org.junit.Ignore;
+import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
@@ -44,12 +51,6 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
-import org.junit.Assert;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class MapstoresTest extends HzAuthzTest {
     private static final Logger                                       logger   = LoggerFactory
@@ -127,7 +128,7 @@ public class MapstoresTest extends HzAuthzTest {
         edm.createEntityType( entityType );
 
         EntitySet entitySet = TestDataFactory.entitySetWithType( entityType.getId() );
-        Principal p = TestDataFactory.userPrincipal();
+        Principal p = initializePrincipal( TestDataFactory.userPrincipal() );
         esm.createEntitySet( p, entitySet );
     }
 

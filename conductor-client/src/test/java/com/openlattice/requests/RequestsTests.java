@@ -32,26 +32,25 @@ import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.requests.util.RequestUtil;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.stream.Collectors;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 public class RequestsTests extends HzAuthzTest {
     protected static final HazelcastRequestsManager hzRequests;
-    protected static final Status                   expected  = TestDataFactory.status();
+    protected static final Status                   expected  = randomStatus();
     protected static final Status                   expected2 = new Status(
             expected.getRequest(),
-            TestDataFactory.userPrincipal(),
+            initializePrincipal( TestDataFactory.userPrincipal() ),
             RequestStatus.SUBMITTED );
     protected static final Status                   expected3 = new Status(
             expected.getRequest(),
-            TestDataFactory.userPrincipal(),
+            initializePrincipal( TestDataFactory.userPrincipal() ),
             RequestStatus.SUBMITTED );
     protected static final Status                   expected4 = new Status(
             TestDataFactory.aclKey(),
@@ -63,14 +62,20 @@ public class RequestsTests extends HzAuthzTest {
             expected2,
             expected3,
             expected4,
-            TestDataFactory.status(),
-            TestDataFactory.status(),
-            TestDataFactory.status() );
+            randomStatus(),
+            randomStatus(),
+            randomStatus() );
     protected static final Set<Status>              submitted = ImmutableSet.of(
             expected2,
             expected3,
             expected4 );
     private static final   Logger                   logger    = LoggerFactory.getLogger( RequestsTests.class );
+
+    private static Status randomStatus() {
+        Status s = TestDataFactory.status();
+        initializePrincipal( s.getPrincipal() );
+        return s;
+    }
 
     static {
         IMap<AclKey, SecurableObjectType> objectTypes = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap( hazelcastInstance );
