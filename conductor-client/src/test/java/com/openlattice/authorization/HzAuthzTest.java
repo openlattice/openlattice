@@ -44,6 +44,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static com.openlattice.authorization.initializers.AuthorizationInitializationTask.GLOBAL_ADMIN_ROLE;
+
 public class HzAuthzTest extends TestServer {
     private static final Logger logger = LoggerFactory.getLogger( HzAuthzTest.class );
 
@@ -398,6 +400,9 @@ public class HzAuthzTest extends TestServer {
                 principalsMapManager,
                 extDbPermsMan
         );
+
+        spm.createSecurablePrincipalIfNotExists( SystemRole.ADMIN.getPrincipal(), GLOBAL_ADMIN_ROLE );
+
         isInitialized = true;
     }
 
