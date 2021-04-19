@@ -118,15 +118,7 @@ import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstr
 import com.openlattice.transporter.pods.TransporterInitPod;
 import com.openlattice.transporter.pods.TransporterPod;
 import com.openlattice.transporter.services.TransporterService;
-import com.openlattice.users.Auth0SyncInitializationTask;
-import com.openlattice.users.Auth0SyncService;
-import com.openlattice.users.Auth0SyncTask;
-import com.openlattice.users.Auth0SyncTaskDependencies;
-import com.openlattice.users.Auth0UserListingService;
-import com.openlattice.users.DefaultAuth0SyncTask;
-import com.openlattice.users.LocalAuth0SyncTask;
-import com.openlattice.users.LocalUserListingService;
-import com.openlattice.users.UserListingService;
+import com.openlattice.users.*;
 import com.openlattice.users.export.Auth0ApiExtension;
 import com.zaxxer.hikari.HikariDataSource;
 import org.slf4j.LoggerFactory;
@@ -251,7 +243,7 @@ public class ConductorServicesPod {
 
     @Bean
     public AuthorizationManager authorizationManager() {
-        return new HazelcastAuthorizationService( hazelcastInstance, eventBus );
+        return new HazelcastAuthorizationService( hazelcastInstance, eventBus, principalsMapManager() );
     }
 
     @Bean
