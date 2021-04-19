@@ -81,8 +81,8 @@ class EdmAuthorizationHelperTest : HzAuthzTest() {
         )
         val entitySet = TestDataFactory.entitySetWithType(entityType.id)
 
-        val principal1 = TestDataFactory.userPrincipal()
-        val principal2 = TestDataFactory.userPrincipal()
+        val principal1 = initializePrincipal(TestDataFactory.userPrincipal())
+        val principal2 = initializePrincipal(TestDataFactory.userPrincipal())
 
         val property1Acl = AclKey(entitySet.id, propertyType1.id)
         hzAuthz.setSecurableObjectType(property1Acl, SecurableObjectType.PropertyTypeInEntitySet)

@@ -63,13 +63,7 @@ import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.graph.DataGraphServiceHelper;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
-import com.openlattice.data.storage.ByteBlobDataManager;
-import com.openlattice.data.storage.DataDeletionService;
-import com.openlattice.data.storage.EntityDatastore;
-import com.openlattice.data.storage.IndexingMetadataManager;
-import com.openlattice.data.storage.PostgresEntityDataQueryService;
-import com.openlattice.data.storage.PostgresEntityDatastore;
-import com.openlattice.data.storage.PostgresEntitySetSizesTaskDependency;
+import com.openlattice.data.storage.*;
 import com.openlattice.data.storage.aws.AwsDataSinkService;
 import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datastore.configuration.DatastoreConfiguration;
@@ -265,7 +259,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public AuthorizationManager authorizationManager() {
-        return new HazelcastAuthorizationService( hazelcastInstance, eventBus );
+        return new HazelcastAuthorizationService( hazelcastInstance, eventBus, principalsMapManager() );
     }
 
     @Bean
