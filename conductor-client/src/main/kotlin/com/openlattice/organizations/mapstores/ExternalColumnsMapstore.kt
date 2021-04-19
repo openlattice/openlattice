@@ -6,7 +6,7 @@ import com.hazelcast.config.IndexType
 import com.hazelcast.config.MapConfig
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.mapstores.TestDataFactory
-import com.openlattice.organization.OrganizationExternalDatabaseTable
+import com.openlattice.organization.ExternalColumn
 import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore
@@ -15,33 +15,35 @@ import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.util.*
 
-const val NAME_INDEX = "name"
-const val SCHEMA_INDEX = "schema"
+const val TABLE_ID_INDEX = "tableId"
+const val ORGANIZATION_ID_INDEX = "organizationId"
 
-open class OrganizationExternalDatabaseTableMapstore(
-        hds: HikariDataSource
-) : AbstractBasePostgresMapstore<UUID, OrganizationExternalDatabaseTable>
-(HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE, PostgresTable.ORGANIZATION_EXTERNAL_DATABASE_TABLE, hds) {
+open class ExternalColumnsMapstore(hds: HikariDataSource) : AbstractBasePostgresMapstore<UUID, ExternalColumn>(
+        HazelcastMap.EXTERNAL_COLUMNS, PostgresTable.ORGANIZATION_EXTERNAL_DATABASE_COLUMN, hds
+) {
 
-    override fun bind(ps: PreparedStatement, key: UUID, value: OrganizationExternalDatabaseTable) {
+    override fun bind(ps: PreparedStatement, key: UUID, value: ExternalColumn) {
         var index = bind(ps, key, 1)
 
         //create
         ps.setString(index++, value.name)
-        ps.setInt(index++, value.oid)
         ps.setString(index++, value.title)
         ps.setString(index++, value.description)
+        ps.setObject(index++, value.tableId)
         ps.setObject(index++, value.organizationId)
-        ps.setString(index++, value.schema)
+        ps.setString(index++, value.dataType.toString())
+        ps.setBoolean(index++, value.primaryKey)
+        ps.setInt(index++, value.ordinalPosition)
 
         //update
         ps.setString(index++, value.name)
-        ps.setInt(index++, value.oid)
         ps.setString(index++, value.title)
         ps.setString(index++, value.description)
+        ps.setObject(index++, value.tableId)
         ps.setObject(index++, value.organizationId)
-        ps.setString(index++, value.schema)
-
+        ps.setString(index++, value.dataType.toString())
+        ps.setBoolean(index++, value.primaryKey)
+        ps.setInt(index++, value.ordinalPosition)
     }
 
     override fun bind(ps: PreparedStatement, key: UUID, offset: Int): Int {
@@ -54,15 +56,14 @@ open class OrganizationExternalDatabaseTableMapstore(
         return ResultSetAdapters.id(rs)
     }
 
-    override fun mapToValue(rs: ResultSet): OrganizationExternalDatabaseTable {
-        return ResultSetAdapters.organizationExternalDatabaseTable(rs)
+    override fun mapToValue(rs: ResultSet): ExternalColumn {
+        return ResultSetAdapters.externalColumn(rs)
     }
 
     override fun getMapConfig(): MapConfig {
         return super.getMapConfig()
+                .addIndexConfig(IndexConfig(IndexType.HASH, TABLE_ID_INDEX))
                 .addIndexConfig(IndexConfig(IndexType.HASH, ORGANIZATION_ID_INDEX))
-                .addIndexConfig(IndexConfig(IndexType.HASH, NAME_INDEX))
-                .addIndexConfig(IndexConfig(IndexType.HASH, SCHEMA_INDEX))
                 .setInMemoryFormat(InMemoryFormat.OBJECT)
     }
 
@@ -70,7 +71,7 @@ open class OrganizationExternalDatabaseTableMapstore(
         return UUID.randomUUID()
     }
 
-    override fun generateTestValue(): OrganizationExternalDatabaseTable {
-        return TestDataFactory.organizationExternalDatabaseTable()
+    override fun generateTestValue(): ExternalColumn {
+        return TestDataFactory.externalColumn()
     }
 }

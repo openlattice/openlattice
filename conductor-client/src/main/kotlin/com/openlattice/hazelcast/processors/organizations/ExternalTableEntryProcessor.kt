@@ -1,17 +1,17 @@
 package com.openlattice.hazelcast.processors.organizations
 
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
-import com.openlattice.organization.OrganizationExternalDatabaseTable
+import com.openlattice.organization.ExternalTable
 import org.slf4j.LoggerFactory
 import java.util.*
 
-private val logger = LoggerFactory.getLogger(ExternalDatabaseTableEntryProcessor::class.java)
+private val logger = LoggerFactory.getLogger(ExternalTableEntryProcessor::class.java)
 
-class ExternalDatabaseTableEntryProcessor(
-        val update: (OrganizationExternalDatabaseTable) -> Result
-) : AbstractRhizomeEntryProcessor<UUID, OrganizationExternalDatabaseTable, Any?>() {
+class ExternalTableEntryProcessor(
+        val update: (ExternalTable) -> Result
+) : AbstractRhizomeEntryProcessor<UUID, ExternalTable, Any?>() {
 
-    override fun process(entry: MutableMap.MutableEntry<UUID, OrganizationExternalDatabaseTable?>): Any? {
+    override fun process(entry: MutableMap.MutableEntry<UUID, ExternalTable?>): Any? {
         val table = entry.value
         if (table != null) {
             val (value, modified) = update(table)
