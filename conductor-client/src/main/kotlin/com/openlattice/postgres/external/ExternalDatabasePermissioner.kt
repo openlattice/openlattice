@@ -24,6 +24,7 @@ import com.openlattice.transporter.grantUsageOnSchemaSql
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
+import java.sql.Connection
 import java.util.*
 
 /**
@@ -36,7 +37,6 @@ class ExternalDatabasePermissioner(
         private val dbCredentialService: DbCredentialService,
         private val principalsMapManager: PrincipalsMapManager
 ) : ExternalDatabasePermissioningService {
-    private val atlas: HikariDataSource = extDbManager.connectAsSuperuser()
 
     private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
     private val securableObjectTypes = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap(hazelcastInstance)
@@ -58,11 +58,15 @@ class ExternalDatabasePermissioner(
         private val allTablePermissions = setOf(Permission.READ, Permission.WRITE, Permission.OWNER)
     }
 
+    private fun getAtlasConnection(): Connection {
+        return extDbManager.connectAsSuperuser().connection
+    }
+
     override fun createRole(role: Role) {
         val (dbRole, _) = dbCredentialService.getOrCreateRoleAccount(role)
 
         logger.debug("Creating role if not exists {}", dbRole)
-        atlas.connection.use { connection ->
+        getAtlasConnection().use { connection ->
             connection.createStatement().use { statement ->
                 statement.execute(createRoleIfNotExistsSql(dbRole))
                 //Don't allow users to access public schema which will contain foreign data wrapper tables.
@@ -81,7 +85,7 @@ class ExternalDatabasePermissioner(
         val (dbUser, dbUserPassword) = dbCredentialService.getOrCreateDbAccount(principal)
 
         logger.debug("Creating user if not exists {}", dbUser)
-        atlas.connection.use { connection ->
+        getAtlasConnection().use { connection ->
             connection.createStatement().use { statement ->
                 //TODO: Go through every database and for old users clean them out.
 //                    logger.info("Attempting to drop owned by old name {}", user.name)
@@ -196,7 +200,7 @@ class ExternalDatabasePermissioner(
         }
 
         logger.debug("attempting to grant $sourceRole to $grantTargets")
-        atlas.connection.use { connection ->
+        getAtlasConnection().use { connection ->
             connection.createStatement().use { stmt ->
                 stmt.execute(grantRoleToRole(sourceRole, grantTargets))
             }
@@ -208,7 +212,7 @@ class ExternalDatabasePermissioner(
         val removeSqls = dbCredentialService.getDbUsernames(principalsToRemove).map { roleName ->
             revokeRoleSql(roleName, removeFrom)
         }
-        atlas.connection.use { connection ->
+        getAtlasConnection().use { connection ->
             connection.createStatement().use { stmt ->
                 removeSqls.forEach { sql ->
                     stmt.addBatch(sql)
