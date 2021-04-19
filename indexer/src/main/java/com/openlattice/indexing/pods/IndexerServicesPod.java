@@ -157,7 +157,7 @@ public class IndexerServicesPod {
 
     @Bean
     public AuthorizationManager authorizationManager() {
-        return new HazelcastAuthorizationService( hazelcastInstance, eventBus );
+        return new HazelcastAuthorizationService( hazelcastInstance, eventBus, principalsMapManager() );
     }
 
     @Bean
