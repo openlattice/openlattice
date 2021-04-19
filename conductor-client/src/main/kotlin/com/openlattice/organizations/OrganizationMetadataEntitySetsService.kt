@@ -39,8 +39,8 @@ import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.organization.OrganizationExternalDatabaseColumn
-import com.openlattice.organization.OrganizationExternalDatabaseTable
+import com.openlattice.organization.ExternalColumn
+import com.openlattice.organization.ExternalTable
 import com.openlattice.organization.roles.Role
 import com.openlattice.organizations.processors.OrganizationReadEntryProcessor
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -251,8 +251,8 @@ class OrganizationMetadataEntitySetsService(
 
     fun addDatasetsAndColumns(
             organizationId: UUID,
-            tables: Collection<OrganizationExternalDatabaseTable>,
-            columnsByTableId: Map<UUID, Collection<OrganizationExternalDatabaseColumn>>
+            tables: Collection<ExternalTable>,
+            columnsByTableId: Map<UUID, Collection<ExternalColumn>>
     ) {
         initializeFields()
         if (!isFullyInitialized() || tables.isEmpty()) {
@@ -299,7 +299,7 @@ class OrganizationMetadataEntitySetsService(
         )
     }
 
-    fun addDataset(organizationId: UUID, table: OrganizationExternalDatabaseTable) {
+    fun addDataset(organizationId: UUID, table: ExternalTable) {
         initializeFields()
         if (!isFullyInitialized()) {
             return
@@ -318,9 +318,9 @@ class OrganizationMetadataEntitySetsService(
     }
 
     fun addDatasetColumns(
-        organizationId: UUID,
-        table: OrganizationExternalDatabaseTable,
-        columns: Collection<OrganizationExternalDatabaseColumn>
+            organizationId: UUID,
+            table: ExternalTable,
+            columns: Collection<ExternalColumn>
     ) {
         initializeFields()
         if (!isFullyInitialized()) {
@@ -454,8 +454,8 @@ class OrganizationMetadataEntitySetsService(
     private fun buildColumnEntitySetName(organizationId: UUID): String = "columns-$organizationId"
 
     private fun buildDatasetEntity(
-        organizationId: UUID,
-        table: OrganizationExternalDatabaseTable
+            organizationId: UUID,
+            table: ExternalTable
     ): MutableMap<UUID, Set<Any>> {
         return mutableMapOf(
             propertyTypes.getValue(DATASET_NAME).id to setOf(table.name),
@@ -485,9 +485,9 @@ class OrganizationMetadataEntitySetsService(
     }
 
     private fun buildColumnEntity(
-        organizationId: UUID,
-        table: OrganizationExternalDatabaseTable,
-        column: OrganizationExternalDatabaseColumn
+            organizationId: UUID,
+            table: ExternalTable,
+            column: ExternalColumn
     ): MutableMap<UUID, Set<Any>> {
         return mutableMapOf(
             propertyTypes.getValue(COL_NAME).id to setOf(column.name),

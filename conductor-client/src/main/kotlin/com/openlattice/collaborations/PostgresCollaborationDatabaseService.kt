@@ -33,8 +33,8 @@ class PostgresCollaborationDatabaseService(
 
     private val collaborations = HazelcastMap.COLLABORATIONS.getMap(hazelcast)
     private val organizationDatabases = HazelcastMap.ORGANIZATION_DATABASES.getMap(hazelcast)
-    private val externalTables = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE.getMap(hazelcast)
-    private val externalColumns = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_COLUMN.getMap(hazelcast)
+    private val externalTables = HazelcastMap.EXTERNAL_TABLES.getMap(hazelcast)
+    private val externalColumns = HazelcastMap.EXTERNAL_COLUMNS.getMap(hazelcast)
     private val projectedTables = HazelcastMap.PROJECTED_TABLES.getMap(hazelcast)
 
     override fun getDatabaseInfo(collaborationId: UUID): OrganizationDatabase {

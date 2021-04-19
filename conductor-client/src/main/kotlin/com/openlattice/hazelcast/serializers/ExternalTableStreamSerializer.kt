@@ -5,15 +5,15 @@ import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.mapstores.TestDataFactory
-import com.openlattice.organization.OrganizationExternalDatabaseTable
+import com.openlattice.organization.ExternalTable
 import org.springframework.stereotype.Component
 import java.util.*
 
 @Component
-class OrganizationExternalDatabaseTableStreamSerializer : TestableSelfRegisteringStreamSerializer<OrganizationExternalDatabaseTable> {
+class ExternalTableStreamSerializer : TestableSelfRegisteringStreamSerializer<ExternalTable> {
 
     companion object {
-        fun serialize(output: ObjectDataOutput, obj: OrganizationExternalDatabaseTable) {
+        fun serialize(output: ObjectDataOutput, obj: ExternalTable) {
             UUIDStreamSerializerUtils.serialize(output, obj.id)
             output.writeUTF(obj.name)
             output.writeUTF(obj.title)
@@ -23,7 +23,7 @@ class OrganizationExternalDatabaseTableStreamSerializer : TestableSelfRegisterin
             output.writeUTF(obj.schema)
         }
 
-        fun deserialize(input: ObjectDataInput): OrganizationExternalDatabaseTable {
+        fun deserialize(input: ObjectDataInput): ExternalTable {
             val id = UUIDStreamSerializerUtils.deserialize(input)
             val name = input.readUTF()
             val title = input.readUTF()
@@ -31,27 +31,27 @@ class OrganizationExternalDatabaseTableStreamSerializer : TestableSelfRegisterin
             val orgId = UUIDStreamSerializerUtils.deserialize(input)
             val oid = input.readInt()
             val schema = input.readUTF()
-            return OrganizationExternalDatabaseTable(id, name, title, Optional.of(description), orgId, oid, schema)
+            return ExternalTable(id, name, title, Optional.of(description), orgId, oid, schema)
         }
     }
 
-    override fun write(output: ObjectDataOutput, obj: OrganizationExternalDatabaseTable) {
+    override fun write(output: ObjectDataOutput, obj: ExternalTable) {
         serialize(output, obj)
     }
 
-    override fun read(input: ObjectDataInput): OrganizationExternalDatabaseTable {
+    override fun read(input: ObjectDataInput): ExternalTable {
         return deserialize(input)
     }
 
-    override fun getClazz(): Class<out OrganizationExternalDatabaseTable> {
-        return OrganizationExternalDatabaseTable::class.java
+    override fun getClazz(): Class<out ExternalTable> {
+        return ExternalTable::class.java
     }
 
     override fun getTypeId(): Int {
-        return StreamSerializerTypeIds.ORGANIZATION_EXTERNAL_DATABASE_TABLE.ordinal
+        return StreamSerializerTypeIds.EXTERNAL_TABLE.ordinal
     }
 
-    override fun generateTestValue(): OrganizationExternalDatabaseTable {
-        return TestDataFactory.organizationExternalDatabaseTable()
+    override fun generateTestValue(): ExternalTable {
+        return TestDataFactory.externalTable()
     }
 }

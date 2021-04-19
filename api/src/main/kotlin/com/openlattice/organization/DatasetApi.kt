@@ -81,7 +81,7 @@ interface DatasetApi {
      * @param organizationId The organization's UUID
      */
     @GET(BASE + ID_PATH + EXTERNAL_DATABASE_TABLE)
-    fun getExternalDatabaseTables(@Path(ID) organizationId: UUID): Set<OrganizationExternalDatabaseTable>
+    fun getExternalDatabaseTables(@Path(ID) organizationId: UUID): Set<ExternalTable>
 
     /**
      * Gets a map of all OrganizationExternalDatabaseTable objects to
@@ -89,7 +89,7 @@ interface DatasetApi {
      * @param organizationId The organization's UUID
      */
     @GET(BASE + ID_PATH + EXTERNAL_DATABASE_TABLE + EXTERNAL_DATABASE_COLUMN)
-    fun getExternalDatabaseTablesWithColumnMetadata(@Path(ID) organizationId: UUID): Set<OrganizationExternalDatabaseTableColumnsPair>
+    fun getExternalDatabaseTablesWithColumnMetadata(@Path(ID) organizationId: UUID): Set<ExternalTableColumnsPair>
 
     /**
      * Gets a map of all OrganizationExternalDatabaseTable objects to
@@ -102,7 +102,7 @@ interface DatasetApi {
     fun getAuthorizedExternalDbTablesWithColumnMetadata(
             @Path(ID) organizationId: UUID,
             @Path(PERMISSION) permission: Permission
-    ): Set<OrganizationExternalDatabaseTableColumnsPair>
+    ): Set<ExternalTableColumnsPair>
 
     /**
      * Gets an object containing an OrganizationExternalDatabaseTable
@@ -115,7 +115,7 @@ interface DatasetApi {
     fun getExternalDatabaseTableWithColumnMetadata(
             @Path(ID) organizationId: UUID,
             @Path(TABLE_ID) tableId: UUID
-    ): OrganizationExternalDatabaseTableColumnsPair
+    ): ExternalTableColumnsPair
 
     /**
      * Gets an OrganizationExternalDatabaseTable object with
@@ -143,7 +143,7 @@ interface DatasetApi {
     fun getExternalDatabaseTable(
             @Path(ID) organizationId: UUID,
             @Path(TABLE_ID) tableId: UUID
-    ): OrganizationExternalDatabaseTable
+    ): ExternalTable
 
     @GET(BASE + ID_PATH + TABLE_ID_PATH + SCHEMA_PATH)
     fun getExternalDatabaseTableSchema(@Path(ID) organizationId: UUID, @Path(TABLE_ID) tableId: UUID): String?
@@ -160,7 +160,7 @@ interface DatasetApi {
             @Path(ID) organizationId: UUID,
             @Path(TABLE_NAME) tableName: String,
             @Path(COLUMN_NAME) columnName: String
-    ): OrganizationExternalDatabaseColumn
+    ): ExternalColumn
 
     //update
 

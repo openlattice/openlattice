@@ -10,12 +10,12 @@ import com.openlattice.auditing.AuditableEvent
 import com.openlattice.auditing.AuditingManager
 import com.openlattice.authorization.*
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.hazelcast.HazelcastMap.Companion.EXTERNAL_COLUMNS
+import com.openlattice.hazelcast.HazelcastMap.Companion.EXTERNAL_TABLES
 import com.openlattice.hazelcast.HazelcastMap.Companion.ORGANIZATION_DATABASES
-import com.openlattice.hazelcast.HazelcastMap.Companion.ORGANIZATION_EXTERNAL_DATABASE_COLUMN
-import com.openlattice.hazelcast.HazelcastMap.Companion.ORGANIZATION_EXTERNAL_DATABASE_TABLE
 import com.openlattice.indexing.configuration.IndexerConfiguration
-import com.openlattice.organization.OrganizationExternalDatabaseColumn
-import com.openlattice.organization.OrganizationExternalDatabaseTable
+import com.openlattice.organization.ExternalColumn
+import com.openlattice.organization.ExternalTable
 import com.openlattice.organizations.ExternalDatabaseManagementService
 import com.openlattice.organizations.OrganizationMetadataEntitySetsService
 import com.openlattice.organizations.mapstores.ORGANIZATION_ID_INDEX
@@ -51,8 +51,8 @@ class BackgroundExternalDatabaseSyncingService(
         const val SCAN_RATE = 1_000L * 30 // 30 seconds
     }
 
-    private val organizationExternalDatabaseColumns = ORGANIZATION_EXTERNAL_DATABASE_COLUMN.getMap(hazelcastInstance)
-    private val organizationExternalDatabaseTables = ORGANIZATION_EXTERNAL_DATABASE_TABLE.getMap(hazelcastInstance)
+    private val organizationExternalDatabaseColumns = EXTERNAL_COLUMNS.getMap(hazelcastInstance)
+    private val organizationExternalDatabaseTables = EXTERNAL_TABLES.getMap(hazelcastInstance)
     private val organizationDatabases = ORGANIZATION_DATABASES.getMap(hazelcastInstance)
     private val organizations = HazelcastMap.ORGANIZATIONS.getMap(hazelcastInstance)
 
@@ -128,8 +128,8 @@ class BackgroundExternalDatabaseSyncingService(
 
     private fun initializeTablePermissions(
             organizationId: UUID,
-            table: OrganizationExternalDatabaseTable,
-            columns: Set<OrganizationExternalDatabaseColumn>,
+            table: ExternalTable,
+            columns: Set<ExternalColumn>,
             adminRolePrincipal: Principal
     ) {
         // initialize database permissions
@@ -153,8 +153,8 @@ class BackgroundExternalDatabaseSyncingService(
         recordAuditableEvents(acls, AuditEventType.ADD_PERMISSION)
     }
 
-    private fun getOrCreateTable(orgId: UUID, oid: Int, tableName: String, schemaName: String): OrganizationExternalDatabaseTable {
-        val table = OrganizationExternalDatabaseTable(
+    private fun getOrCreateTable(orgId: UUID, oid: Int, tableName: String, schemaName: String): ExternalTable {
+        val table = ExternalTable(
                 Optional.empty(),
                 tableName,
                 tableName,
@@ -176,7 +176,7 @@ class BackgroundExternalDatabaseSyncingService(
 
     private fun createSecurableTableObject(
             orgId: UUID,
-            table: OrganizationExternalDatabaseTable
+            table: ExternalTable
     ): UUID {
         val newTableId = edms.createOrganizationExternalDatabaseTable(orgId, table)
 
@@ -188,7 +188,7 @@ class BackgroundExternalDatabaseSyncingService(
         return newTableId
     }
 
-    private fun syncTableColumns(table: OrganizationExternalDatabaseTable): Set<OrganizationExternalDatabaseColumn> {
+    private fun syncTableColumns(table: ExternalTable): Set<ExternalColumn> {
         val tableCols = edms.getColumnMetadata(table)
         val tableColNames = tableCols.map { it.getUniqueName() }.toSet()
 
@@ -196,7 +196,7 @@ class BackgroundExternalDatabaseSyncingService(
 
         return tableCols.groupBy { existingColumnIdsByName.contains(it.getUniqueName()) }.flatMap { (shouldUpdate, cols) ->
             if (cols.isEmpty()) {
-                return@flatMap listOf<OrganizationExternalDatabaseColumn>()
+                return@flatMap listOf<ExternalColumn>()
             }
 
             if (shouldUpdate) {
@@ -223,7 +223,7 @@ class BackgroundExternalDatabaseSyncingService(
             .toSet()
 
         if (tableIdsToDelete.isNotEmpty()) {
-            edms.deleteOrganizationExternalDatabaseTableObjects(tableIdsToDelete)
+            edms.deleteExternalTableObjects(tableIdsToDelete)
             organizationMetadataEntitySetsService.deleteDatasets(orgId, tableIdsToDelete)
         }
 
@@ -237,33 +237,33 @@ class BackgroundExternalDatabaseSyncingService(
             .mapValues { it.value.map { c -> c.id }.toSet() }
 
         if (columnIdsToDelete.isNotEmpty()) {
-            edms.deleteOrganizationExternalDatabaseColumnObjects(orgId, columnIdsToDelete)
+            edms.deleteExternalColumnObjects(orgId, columnIdsToDelete)
             organizationMetadataEntitySetsService.deleteDatasetColumns(orgId, columnIdsToDelete)
         }
     }
 
     private fun createColumns(
-            table: OrganizationExternalDatabaseTable,
-            columns: List<OrganizationExternalDatabaseColumn>
-    ): List<OrganizationExternalDatabaseColumn> {
+            table: ExternalTable,
+            columns: List<ExternalColumn>
+    ): List<ExternalColumn> {
         createSecurableColumnObjects(columns, table)
 
         return columns
     }
 
     private fun updateColumns(
-            columns: List<OrganizationExternalDatabaseColumn>,
+            columns: List<ExternalColumn>,
             existingColumnIdsByName: Map<String, UUID>
-    ): List<OrganizationExternalDatabaseColumn> {
+    ): List<ExternalColumn> {
 
         val currentColumnsById = columns.associateBy { existingColumnIdsByName.getValue(it.getUniqueName()) }
         val storedColumns = organizationExternalDatabaseColumns.getAll(existingColumnIdsByName.values.toSet())
 
-        val fullExistingColumns = mutableListOf<OrganizationExternalDatabaseColumn>()
+        val fullExistingColumns = mutableListOf<ExternalColumn>()
 
         val updatedColumns = storedColumns.mapNotNull { (id, storedColumn) ->
             val currentColumn = currentColumnsById.getValue(id)
-            val updatedColumn = OrganizationExternalDatabaseColumn(
+            val updatedColumn = ExternalColumn(
                     id = storedColumn.id,
                     name = currentColumn.name,
                     title = storedColumn.title,
@@ -288,14 +288,14 @@ class BackgroundExternalDatabaseSyncingService(
     }
 
     private fun createSecurableColumnObjects(
-            columns: List<OrganizationExternalDatabaseColumn>,
-            table: OrganizationExternalDatabaseTable
+            columns: List<ExternalColumn>,
+            table: ExternalTable
     ): Int {
         var totalSynced = 0
 
         organizationMetadataEntitySetsService.addDatasetColumns(
                 table.organizationId,
-                edms.getOrganizationExternalDatabaseTable(columns.first().tableId),
+                edms.getExternalTable(columns.first().tableId),
                 columns
         )
 

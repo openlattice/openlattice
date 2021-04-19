@@ -2,13 +2,13 @@ package com.openlattice.hazelcast.processors.organizations
 
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.edm.requests.MetadataUpdate
-import com.openlattice.organization.OrganizationExternalDatabaseTable
+import com.openlattice.organization.ExternalTable
 import java.util.*
 
-data class UpdateOrganizationExternalDatabaseTableEntryProcessor(val update: MetadataUpdate):
-        AbstractRhizomeEntryProcessor<UUID, OrganizationExternalDatabaseTable, OrganizationExternalDatabaseTable>() {
+data class UpdateExternalTableEntryProcessor(val update: MetadataUpdate) :
+        AbstractRhizomeEntryProcessor<UUID, ExternalTable, ExternalTable>() {
 
-    override fun process(entry: MutableMap.MutableEntry<UUID, OrganizationExternalDatabaseTable>): OrganizationExternalDatabaseTable {
+    override fun process(entry: MutableMap.MutableEntry<UUID, ExternalTable>): ExternalTable {
         val table = entry.value
 
         update.title.ifPresent {

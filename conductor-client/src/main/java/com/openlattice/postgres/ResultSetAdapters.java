@@ -72,9 +72,9 @@ import com.openlattice.linking.EntityKeyPair;
 import com.openlattice.linking.EntityLinkingFeedback;
 import com.openlattice.notifications.sms.SmsEntitySetInformation;
 import com.openlattice.notifications.sms.SmsInformationKey;
+import com.openlattice.organization.ExternalColumn;
+import com.openlattice.organization.ExternalTable;
 import com.openlattice.organization.OrganizationEntitySetFlag;
-import com.openlattice.organization.OrganizationExternalDatabaseColumn;
-import com.openlattice.organization.OrganizationExternalDatabaseTable;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.OrganizationDatabase;
 import com.openlattice.requests.Request;
@@ -1091,7 +1091,7 @@ public final class ResultSetAdapters {
         return new CollectionTemplateKey( entitySetCollectionId, templateTypeId );
     }
 
-    public static OrganizationExternalDatabaseTable organizationExternalDatabaseTable( ResultSet rs )
+    public static ExternalTable externalTable( ResultSet rs )
             throws SQLException {
         UUID id = id( rs );
         String name = name( rs );
@@ -1101,10 +1101,10 @@ public final class ResultSetAdapters {
         int oid = oid( rs );
         String schema = schema( rs );
 
-        return new OrganizationExternalDatabaseTable( id, name, title, description, organizationId, oid, schema );
+        return new ExternalTable( id, name, title, description, organizationId, oid, schema );
     }
 
-    public static OrganizationExternalDatabaseColumn organizationExternalDatabaseColumn( ResultSet rs )
+    public static ExternalColumn externalColumn( ResultSet rs )
             throws SQLException {
         UUID id = id( rs );
         String name = name( rs );
@@ -1116,7 +1116,7 @@ public final class ResultSetAdapters {
         boolean isPrimaryKey = rs.getBoolean( IS_PRIMARY_KEY.getName() );
         Integer ordinalPosition = ordinalPosition( rs );
 
-        return new OrganizationExternalDatabaseColumn( id,
+        return new ExternalColumn( id,
                 name,
                 title,
                 description,
