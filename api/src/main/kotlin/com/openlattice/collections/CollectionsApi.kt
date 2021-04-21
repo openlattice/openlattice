@@ -76,7 +76,7 @@ interface CollectionsApi {
      */
     @PATCH(BASE + ENTITY_TYPE_PATH + ENTITY_TYPE_COLLECTION_ID_PATH)
     fun updateEntityTypeCollectionMetadata(
-            @Path(ENTITY_SET_COLLECTION_ID) entityTypeCollectionId: UUID,
+            @Path(ENTITY_TYPE_COLLECTION_ID) entityTypeCollectionId: UUID,
             @Body metadataUpdate: MetadataUpdate)
 
     /**
