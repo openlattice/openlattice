@@ -4,8 +4,25 @@ import com.openlattice.ApiHelpers
 import com.openlattice.IdConstants
 import com.openlattice.edm.EdmConstants
 import com.openlattice.edm.PropertyTypeIdFqn
-import com.openlattice.postgres.*
-import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresArrays
+import com.openlattice.postgres.PostgresColumn.DST_ENTITY_KEY_ID
+import com.openlattice.postgres.PostgresColumn.DST_ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.EDGE_ENTITY_KEY_ID
+import com.openlattice.postgres.PostgresColumn.EDGE_ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.ID_VALUE
+import com.openlattice.postgres.PostgresColumn.LAST_TRANSPORT
+import com.openlattice.postgres.PostgresColumn.LINKING_ID
+import com.openlattice.postgres.PostgresColumn.ORIGIN_ID
+import com.openlattice.postgres.PostgresColumn.PARTITION
+import com.openlattice.postgres.PostgresColumn.PROPERTY_TYPE_ID
+import com.openlattice.postgres.PostgresColumn.SRC_ENTITY_KEY_ID
+import com.openlattice.postgres.PostgresColumn.SRC_ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.VERSION
+import com.openlattice.postgres.PostgresColumnDefinition
+import com.openlattice.postgres.PostgresExpressionIndexDefinition
+import com.openlattice.postgres.PostgresTable
+import com.openlattice.postgres.PostgresTableDefinition
 import com.openlattice.postgres.external.Schemas
 import com.openlattice.transporter.types.TransporterColumn
 import com.zaxxer.hikari.HikariDataSource
@@ -20,19 +37,18 @@ private val transportTimestampColumn: PostgresColumnDefinition = LAST_TRANSPORT
 private const val BATCH_LIMIT = 10_000
 
 val MAT_EDGES_TABLE = edgesTableDefinition()
-val MAT_EDGES_COLUMNS_LIST = MAT_EDGES_TABLE.columns.map { it.name }.toList()
 const val MAT_EDGES_TABLE_NAME = "et_edges"
 
-fun unquotedTableName(entityTypeId: UUID): String {
+fun entityTypeTableName(entityTypeId: UUID): String {
     return "et_$entityTypeId"
 }
 
-internal fun tableName(entityTypeId: UUID): String {
-    return ApiHelpers.dbQuote(unquotedTableName(entityTypeId))
+internal fun quotedEtTableName(entityTypeId: UUID): String {
+    return ApiHelpers.dbQuote(entityTypeTableName(entityTypeId))
 }
 
 internal fun tableNameWithSchema(schema: Schemas, entityTypeId: UUID): String {
-    return "${schema}.${tableName(entityTypeId)}"
+    return "${schema}.${quotedEtTableName(entityTypeId)}"
 }
 
 fun edgesTableDefinition(): PostgresTableDefinition {
@@ -58,7 +74,7 @@ fun edgesTableDefinition(): PostgresTableDefinition {
 
 fun tableDefinition(entityTypeId: UUID, propertyColumns: Collection<PostgresColumnDefinition>): PostgresTableDefinition {
     val definition = PostgresTableDefinition(tableNameWithSchema(Schemas.PUBLIC_SCHEMA, entityTypeId))
-    val indexPrefix = unquotedTableName(entityTypeId) + "_"
+    val indexPrefix = entityTypeTableName(entityTypeId) + "_"
     definition.addColumns(
             ENTITY_SET_ID,
             ID_VALUE,
@@ -156,7 +172,7 @@ fun updateRowsForPropertyType(
  * 1 - partitions array
  * 2 - entity set ids array
  */
-fun updatePrimaryKeyForEntitySets(destTable: String): String {
+fun updateEntityTypeTableEntries(destTable: String): String {
     val selectFromIds = "SELECT " +
             "${ENTITY_SET_ID.name},${ID_VALUE.name},${LINKING_ID.name},${VERSION.name} " +
             "FROM ${PostgresTable.IDS.name} " +
@@ -247,7 +263,7 @@ fun updateRowsForEdges(): String {
 }
 
 /**
- * Update [IDS] with new transport time
+ * Update [PostgresTable.IDS] with new transport time
  *
  * column bindings are
  * 1 - last write value being processed
@@ -262,20 +278,6 @@ fun updateLastWriteForId(): String {
             " AND ${ENTITY_SET_ID.name} = ANY(?) " +
             " AND ${ID_VALUE.name} = ? " +
             " AND abs(${VERSION.name}) > ${transportTimestampColumn.name} "
-}
-
-internal fun importTablesFromForeignSchemaQuery(
-        remoteSchema: Schemas,
-        remoteTables: Set<String>,
-        localSchema: Schemas,
-        usingFdwName: String
-): String {
-    val tablesClause = if (remoteTables.isEmpty()) {
-        ""
-    } else {
-        "LIMIT TO (${remoteTables.joinToString(",")})"
-    }
-    return "import foreign schema $remoteSchema $tablesClause from server $usingFdwName INTO $localSchema;"
 }
 
 internal fun checkIfTableExistsQuery(
@@ -331,16 +333,17 @@ internal fun setUserInhertRolePrivileges(role: String): String {
     return "ALTER ROLE ${ApiHelpers.dbQuote(role)} INHERIT"
 }
 
-internal fun revokeTablePermissionsForRole(schema: Schemas, entitySetName: String, role: String): String {
-    return "REVOKE ALL PRIVILEGES ON $schema.${ApiHelpers.dbQuote(entitySetName)} FROM ${ApiHelpers.dbQuote(role)}"
-}
-
 internal fun grantUsageOnSchemaSql(schema: Schemas, orgUserId: String): String {
     return "GRANT USAGE ON SCHEMA $schema TO ${ApiHelpers.dbQuote(orgUserId)}"
 }
 
+internal fun removePreviouslyTransportedEntities(schema: Schemas, entitySetId: UUID, entityTypeId: UUID): String {
+    return "DELETE FROM $schema.${quotedEtTableName(entityTypeId)} " +
+            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId'"
+}
+
 internal fun dropForeignTypeTable(schema: Schemas, entityTypeId: UUID): String {
-    return "DROP FOREIGN TABLE IF EXISTS $schema.${tableName(entityTypeId)}"
+    return "DROP FOREIGN TABLE IF EXISTS $schema.${quotedEtTableName(entityTypeId)}"
 }
 
 internal fun destroyEdgeView(schema: Schemas, entitySetName: String): String {
@@ -359,16 +362,16 @@ fun createEntitySetViewInSchemaFromSchema(
         propertyTypes: Set<PropertyTypeIdFqn>,
         sourceSchema: Schemas
 ): String {
-    val colsSql = propertyTypes.map { (id, fqn) ->
+    val colsSql = propertyTypes.joinToString { (id, fqn) ->
         val column = ApiHelpers.dbQuote(id.toString())
         val quotedPt = ApiHelpers.dbQuote(fqn.toString())
         "$column as $quotedPt"
-    }.joinToString()
+    }
 
     return """
             CREATE OR REPLACE VIEW $destinationSchema.${ApiHelpers.dbQuote(entitySetName)} AS 
                 SELECT ${ID_VALUE.name} as ${ApiHelpers.dbQuote(EdmConstants.ID_FQN.toString())}, 
-                    $colsSql FROM $sourceSchema.${tableName(entityTypeId)}
+                    $colsSql FROM $sourceSchema.${quotedEtTableName(entityTypeId)}
                 WHERE ${ENTITY_SET_ID.name} = '$entitySetId'
         """.trimIndent()
 }

@@ -32,9 +32,8 @@ import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principals;
 import com.openlattice.collections.CollectionTemplateType;
 import com.openlattice.collections.CollectionsManager;
+import com.openlattice.collections.EntityTypeCollection;
 import com.openlattice.edm.requests.MetadataUpdate;
-import com.openlattice.organizations.HazelcastOrganizationService;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -56,9 +55,6 @@ public class AppController implements AppApi, AuthorizingComponent {
 
     @Inject
     private AppService appService;
-
-    @Inject
-    private HazelcastOrganizationService organizations;
 
     @Inject
     private CollectionsManager collectionsManager;
@@ -199,10 +195,10 @@ public class AppController implements AppApi, AuthorizingComponent {
     )
     public Map<UUID, AppType> getAppTypesBulk( @RequestBody Set<UUID> collectionTemplateTypeIds ) {
         Map<UUID, AppType> result = Maps.newHashMapWithExpectedSize(collectionTemplateTypeIds.size());
-        collectionsManager.getAllEntityTypeCollections().forEach( collection -> {
+        for ( EntityTypeCollection collection : collectionsManager.getAllEntityTypeCollections() ) {
             collection.getTemplate().forEach( templateType -> {
 
-                if (collectionTemplateTypeIds.contains( templateType.getId() )) {
+                if ( collectionTemplateTypeIds.contains( templateType.getId() ) ) {
                     result.put( templateType.getId(), new AppType(
                             templateType.getId(),
                             templateType.getName(),
@@ -213,7 +209,7 @@ public class AppController implements AppApi, AuthorizingComponent {
                     ) );
                 }
             } );
-        } );
+        }
         return result;
     }
 

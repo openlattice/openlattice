@@ -35,13 +35,13 @@ interface EntityDatastore {
     fun getLinkingEntities(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
-    ): Stream<MutableMap<FullQualifiedName, MutableSet<Any>>>
+    ): Collection<MutableMap<FullQualifiedName, MutableSet<Any>>>
 
     fun getLinkingEntitiesWithMetadata(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             metadataOptions: EnumSet<MetadataOption>
-    ): Stream<MutableMap<FullQualifiedName, MutableSet<Any>>>
+    ): Collection<MutableMap<FullQualifiedName, MutableSet<Any>>>
 
     fun getLinkedEntityDataByLinkingIdWithMetadata(
             linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>>>,

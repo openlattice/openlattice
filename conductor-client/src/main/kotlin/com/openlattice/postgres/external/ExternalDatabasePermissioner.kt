@@ -10,10 +10,10 @@ import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.edm.EdmConstants
 import com.openlattice.edm.PropertyTypeIdFqn
 import com.openlattice.edm.processors.GetOrganizationIdFromEntitySetEntryProcessor
-import com.openlattice.edm.processors.GetSchemaFromOrganizationExternalTableEntryProcessor
+import com.openlattice.edm.processors.GetSchemaFromExternalTableEntryProcessor
 import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.organization.OrganizationExternalDatabaseColumn
-import com.openlattice.organization.OrganizationExternalDatabaseTable
+import com.openlattice.organization.ExternalColumn
+import com.openlattice.organization.ExternalTable
 import com.openlattice.organization.roles.Role
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.DataTables.quote
@@ -24,6 +24,7 @@ import com.openlattice.transporter.grantUsageOnSchemaSql
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
+import java.sql.Connection
 import java.util.*
 
 /**
@@ -36,12 +37,11 @@ class ExternalDatabasePermissioner(
         private val dbCredentialService: DbCredentialService,
         private val principalsMapManager: PrincipalsMapManager
 ) : ExternalDatabasePermissioningService {
-    private val atlas: HikariDataSource = extDbManager.connectAsSuperuser()
 
     private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
     private val securableObjectTypes = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap(hazelcastInstance)
-    private val organizationExternalDatabaseColumns = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_COLUMN.getMap(hazelcastInstance)
-    private val organizationExternalTables = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE.getMap(hazelcastInstance)
+    private val externalColumns = HazelcastMap.EXTERNAL_COLUMNS.getMap(hazelcastInstance)
+    private val externalTables = HazelcastMap.EXTERNAL_TABLES.getMap(hazelcastInstance)
     private val externalRoleNames = HazelcastMap.EXTERNAL_PERMISSION_ROLES.getMap(hazelcastInstance)
 
     companion object {
@@ -58,11 +58,15 @@ class ExternalDatabasePermissioner(
         private val allTablePermissions = setOf(Permission.READ, Permission.WRITE, Permission.OWNER)
     }
 
+    private fun getAtlasConnection(): Connection {
+        return extDbManager.connectAsSuperuser().connection
+    }
+
     override fun createRole(role: Role) {
         val (dbRole, _) = dbCredentialService.getOrCreateRoleAccount(role)
 
         logger.debug("Creating role if not exists {}", dbRole)
-        atlas.connection.use { connection ->
+        getAtlasConnection().use { connection ->
             connection.createStatement().use { statement ->
                 statement.execute(createRoleIfNotExistsSql(dbRole))
                 //Don't allow users to access public schema which will contain foreign data wrapper tables.
@@ -81,7 +85,7 @@ class ExternalDatabasePermissioner(
         val (dbUser, dbUserPassword) = dbCredentialService.getOrCreateDbAccount(principal)
 
         logger.debug("Creating user if not exists {}", dbUser)
-        atlas.connection.use { connection ->
+        getAtlasConnection().use { connection ->
             connection.createStatement().use { statement ->
                 //TODO: Go through every database and for old users clean them out.
 //                    logger.info("Attempting to drop owned by old name {}", user.name)
@@ -104,7 +108,7 @@ class ExternalDatabasePermissioner(
         val assemblyCols = aclsByType.getValue(SecurableObjectType.PropertyTypeInEntitySet)
         executePrivilegesUpdateOnPropertyTypes(action, assemblyCols)
 
-        // for organizationexternalDatabaseColumns:
+        // for ExternalColumns:
         val externalTableColAcls = aclsByType.getValue(SecurableObjectType.OrganizationExternalDatabaseColumn)
         executePrivilegesUpdateOnOrgExternalDbColumns(action, externalTableColAcls)
     }
@@ -118,11 +122,11 @@ class ExternalDatabasePermissioner(
             extTableColIds.add(it.aclKey[1])
             it.aclKey[0]
         }
-        val extTablesById = organizationExternalTables.submitToKeys(extTableIds, GetSchemaFromOrganizationExternalTableEntryProcessor()).toCompletableFuture().get().mapValues {
+        val extTablesById = externalTables.submitToKeys(extTableIds, GetSchemaFromExternalTableEntryProcessor()).toCompletableFuture().get().mapValues {
             Schemas.fromName(it.value)
         }
 
-        val columnsById = organizationExternalDatabaseColumns.getAll(extTableColIds).values.associate {
+        val columnsById = externalColumns.getAll(extTableColIds).values.associate {
             AclKey(it.tableId, it.id) to TableColumn(it.organizationId, it.tableId, it.id, extTablesById[it.tableId])
         }
         updateExternalTablePermissions(action, externalTableColAcls, columnsById)
@@ -196,7 +200,7 @@ class ExternalDatabasePermissioner(
         }
 
         logger.debug("attempting to grant $sourceRole to $grantTargets")
-        atlas.connection.use { connection ->
+        getAtlasConnection().use { connection ->
             connection.createStatement().use { stmt ->
                 stmt.execute(grantRoleToRole(sourceRole, grantTargets))
             }
@@ -208,7 +212,7 @@ class ExternalDatabasePermissioner(
         val removeSqls = dbCredentialService.getDbUsernames(principalsToRemove).map { roleName ->
             revokeRoleSql(roleName, removeFrom)
         }
-        atlas.connection.use { connection ->
+        getAtlasConnection().use { connection ->
             connection.createStatement().use { stmt ->
                 removeSqls.forEach { sql ->
                     stmt.addBatch(sql)
@@ -279,8 +283,8 @@ class ExternalDatabasePermissioner(
      */
     override fun initializeExternalTablePermissions(
             organizationId: UUID,
-            table: OrganizationExternalDatabaseTable,
-            columns: Set<OrganizationExternalDatabaseColumn>
+            table: ExternalTable,
+            columns: Set<ExternalColumn>
     ) {
         initializePermissionSetForExternalTable(
                 hikariDataSource = extDbManager.connectToOrg(organizationId),
@@ -298,8 +302,8 @@ class ExternalDatabasePermissioner(
     override fun initializeProjectedTableViewPermissions(
             collaborationId: UUID,
             schema: String,
-            table: OrganizationExternalDatabaseTable,
-            columns: Set<OrganizationExternalDatabaseColumn>
+            table: ExternalTable,
+            columns: Set<ExternalColumn>
     ) {
         initializePermissionSetForExternalTable(
                 hikariDataSource = extDbManager.connectToOrg(collaborationId),
@@ -315,10 +319,10 @@ class ExternalDatabasePermissioner(
             hikariDataSource: HikariDataSource,
             tableSchema: String,
             tableName: String,
-            columns: Set<OrganizationExternalDatabaseColumn>,
+            columns: Set<ExternalColumn>,
             permissions: Set<Permission>
     ) {
-        val targetsToColumns = mutableMapOf<AccessTarget, OrganizationExternalDatabaseColumn>()
+        val targetsToColumns = mutableMapOf<AccessTarget, ExternalColumn>()
 
         val targets = columns.flatMapTo(mutableSetOf()) { column ->
             permissions.map { permission ->
@@ -560,11 +564,6 @@ class ExternalDatabasePermissioner(
             ApiHelpers.dbQuote(it)
         }
         return "${action.name} ${ApiHelpers.dbQuote(roleName)} ${action.verb} $targets"
-    }
-
-    private fun filteredAcePermissions(permissions: Set<Permission>, tableType: TableType): Set<Permission> {
-        val accessTargetPermissions = if (tableType == TableType.TABLE) allTablePermissions else allViewPermissions
-        return permissions.filter { accessTargetPermissions.contains(it) }.toSet()
     }
 
     internal fun createRoleIfNotExistsSql(dbRole: String): String {

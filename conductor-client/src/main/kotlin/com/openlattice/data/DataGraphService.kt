@@ -72,10 +72,6 @@ class DataGraphService(
         return idService.reserveEntityKeyIds(entityKeys)
     }
 
-    companion object {
-        const val ASSOCIATION_SIZE = 30_000
-    }
-
     /* Select */
 
     override fun getEntitySetData(
@@ -115,7 +111,7 @@ class DataGraphService(
         return eds.getLinkingEntities(
                 entitySetIds.map { it to Optional.of(setOf(entityKeyId)) }.toMap(),
                 authorizedPropertyTypes
-        ).iterator().next()
+        ).first()
     }
 
     override fun getLinkedEntitySetBreakDown(

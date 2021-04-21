@@ -18,7 +18,7 @@ import com.openlattice.postgres.TableColumn
 import com.openlattice.transporter.MAT_EDGES_TABLE
 import com.openlattice.transporter.processors.TransporterPropagateDataEntryProcessor
 import com.openlattice.transporter.processors.TransporterSynchronizeTableDefinitionEntryProcessor
-import com.openlattice.transporter.tableName
+import com.openlattice.transporter.quotedEtTableName
 import com.openlattice.transporter.transportTable
 import com.openlattice.transporter.transporterNamespace
 import com.openlattice.transporter.types.TransporterColumnSet
@@ -72,20 +72,21 @@ final class TransporterService(
      * Initialization called by [TransporterInitializeServiceTask]
      */
     fun initializeTransporterDatastore() {
-        executor.submit {
-            val entityTypes = dataModelService.entityTypes.toList()
-            logger.info("initializing DataTransporterService with {} types", entityTypes.size)
-            val tablesCreated = entityTypes
-                    .map { et -> this.syncTable(et) }
-                    .filter { it.isPresent }
-                    .map { it.get().get() }
-                    .count()
-            logger.info("Creating edges table")
-            transporter.datastore().connection.use { connection ->
-                transportTable(MAT_EDGES_TABLE, connection, logger)
-            }
-            logger.info("synchronization finished with {} entity type tables updated", tablesCreated)
+        val syncEtTimer = pollTimer.startTimer()
+        val entityTypes = dataModelService.entityTypes.toList()
+        logger.info("initializing transporter entity type tables with {} types", entityTypes.size)
+        val tableFutures = entityTypes
+                .map { et -> this.syncTable(et) }
+                .filter { it.isPresent }
+        logger.info("Creating edges table")
+        transporter.datastore().connection.use { connection ->
+            transportTable(MAT_EDGES_TABLE, connection, logger)
         }
+        val tablesCreated = tableFutures.map {
+            it.get().get()
+        }.count()
+        logger.info("synchronization finished with {} entity type tables updated in {} ms", tablesCreated, syncEtTimer.observeDuration())
+        syncEtTimer.close()
     }
 
     /**
@@ -114,6 +115,8 @@ final class TransporterService(
      * Regular poll executed by [TransporterRunSyncTask]
      */
     fun pollOnce() {
+        initializeTransporterDatastore()
+
         val timer = pollTimer.startTimer()
         val futures = this.transporterState.keys.map { entityTypeId ->
             val relevantEntitySets = validEntitySets(entityTypeId)
@@ -138,6 +141,7 @@ final class TransporterService(
         }
         val duration = timer.observeDuration()
         logger.info("Total poll duration time for {} entity sets in {} entity types: {} sec", setsPolled, futures.size, duration)
+        timer.close()
         exception.ifExceptionThrow()
     }
 
@@ -147,10 +151,11 @@ final class TransporterService(
 
     fun disassembleEntitySet(
             organizationId: UUID,
+            entitySetId: UUID,
             entityTypeId: UUID,
             entitySetName: String
     ) {
-        transporter.destroyTransportedEntitySet(organizationId, entityTypeId, entitySetName)
+        transporter.destroyTransportedEntitySet(organizationId, entitySetId, entityTypeId, entitySetName)
     }
 
     fun assembleEntitySet(
@@ -188,7 +193,7 @@ final class TransporterService(
         executor.submit {
             transporter.datastore().connection.use { conn ->
                 val st = conn.createStatement()
-                st.execute("DROP TABLE ${tableName(e.entityTypeId)}")
+                st.execute("DROP TABLE ${quotedEtTableName(e.entityTypeId)}")
             }
         }
     }

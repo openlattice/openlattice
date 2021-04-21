@@ -34,7 +34,6 @@ import com.openlattice.assembler.events.MaterializedEntitySetDataChangeEvent
 import com.openlattice.assembler.events.MaterializedEntitySetEdmChangeEvent
 import com.openlattice.assembler.processors.AddFlagsToMaterializedEntitySetProcessor
 import com.openlattice.assembler.processors.AddFlagsToOrganizationMaterializedEntitySetProcessor
-import com.openlattice.assembler.processors.IsAssemblyInitializedEntryProcessor
 import com.openlattice.assembler.processors.UpdateRefreshRateProcessor
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.AuthorizationManager
@@ -42,7 +41,6 @@ import com.openlattice.authorization.DbCredentialService
 import com.openlattice.authorization.EdmAuthorizationHelper
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.controllers.exceptions.ResourceNotFoundException
-import com.openlattice.datastore.util.Util
 import com.openlattice.directory.MaterializedViewAccount
 import com.openlattice.edm.events.EntitySetDeletedEvent
 import com.openlattice.edm.events.EntitySetNameUpdatedEvent
@@ -230,7 +228,7 @@ class Assembler(
                     .filter { isEntitySetMaterialized(EntitySetAssemblyKey(it.key, event.organizationId)) }
             val authorizedPropertyTypesByEntitySets = authorizedPropertyTypeAcls.toList()
                     .groupBy { it[0] }
-                    .map { it.key to it.value.map { it[1] } }
+                    .map { it.key to it.value.map { ak -> ak[1] } }
                     .toMap()
 
             allEntitySets.values
@@ -293,8 +291,7 @@ class Assembler(
     }
 
     private fun ensureAssemblyInitialized(organizationId: UUID) {
-        val isAssemblyInitialized = assemblies
-                .executeOnKey(organizationId, IsAssemblyInitializedEntryProcessor()) as Boolean
+        val isAssemblyInitialized = organizationDatabases.containsKey(organizationId)
         if (!isAssemblyInitialized) {
             throw IllegalStateException("Organization assembly is not initialized for organization $organizationId")
         }

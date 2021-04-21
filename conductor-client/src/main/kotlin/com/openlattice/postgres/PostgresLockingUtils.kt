@@ -3,7 +3,6 @@ package com.openlattice.postgres
 import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
-import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import java.sql.Connection
 import java.sql.PreparedStatement
@@ -61,7 +60,7 @@ fun lockIdsAndExecute(
         }
 
         val lockCount = lock.executeBatch().sum()
-        logger.info("Locked $lockCount entity key ids for entity set $entitySetId and partition $partition")
+        logger.debug("Locked $lockCount entity key ids for entity set $entitySetId and partition $partition")
         execute()
     } catch (ex: Exception) {
         connection.rollback()
@@ -111,7 +110,7 @@ fun lockIdsAndExecute(
             }
 
             val lockCount = lock.executeBatch().sum()
-            logger.info("Locked $lockCount entity key ids for entity set $entitySetId and partition $partition")
+            logger.debug("Locked $lockCount entity key ids for entity set $entitySetId and partition $partition")
 
             execute(ps, partition, entityKeyIds)
             if (batch) {
@@ -129,49 +128,6 @@ fun lockIdsAndExecute(
     } catch (ex: Exception) {
         connection.rollback()
         throw ex
-    }
-}
-
-fun lockIdsAndExecuteAndCommit(
-        hds: HikariDataSource,
-        preparableQuery: String,
-        entitySetId: UUID,
-        partition: Int,
-        entityKeyIds: Collection<UUID> = listOf(),
-        shouldLockEntireEntitySet: Boolean = false,
-        bind: (PreparedStatement) -> Unit
-): Int {
-    if (!shouldLockEntireEntitySet && entityKeyIds.isEmpty()) {
-        return 0
-    }
-
-    return hds.connection.use { connection ->
-
-        connection.autoCommit = false
-        val lockSql = if (shouldLockEntireEntitySet) LOCK_ENTITY_SET_PARTITION else LOCKING_WITH_ID
-        val lock = connection.prepareStatement(lockSql)
-
-        try {
-            if (shouldLockEntireEntitySet) {
-                lockEntitySet(lock, entitySetId, partition)
-            } else {
-                batchLockIds(lock, entitySetId, partition, entityKeyIds)
-            }
-
-            val lockCount = lock.executeBatch().sum()
-            logger.info("Locked $lockCount entity key ids for entity set $entitySetId and partition $partition")
-
-            val ps = connection.prepareStatement(preparableQuery)
-            bind(ps)
-            val updateCount = ps.executeUpdate()
-
-            connection.commit()
-            connection.autoCommit = true
-            return@use updateCount
-        } catch (ex: Exception) {
-            connection.rollback()
-            throw ex
-        }
     }
 }
 

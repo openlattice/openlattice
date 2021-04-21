@@ -66,10 +66,6 @@ constructor(
         template.removeIf { it.id == id }
     }
 
-    fun removeTemplateTypeFromTemplate(name: String) {
-        template.removeIf { it.name == name }
-    }
-
     @JsonIgnore
     override fun getCategory(): SecurableObjectType {
         return SecurableObjectType.EntityTypeCollection

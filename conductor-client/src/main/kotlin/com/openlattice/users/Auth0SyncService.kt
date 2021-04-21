@@ -120,7 +120,7 @@ class Auth0SyncService(
 
         processGlobalEnrollments(allUsersByPrincipal)
 
-        allUsersByPrincipal.forEach { principal, user ->
+        allUsersByPrincipal.forEach { (principal, user) ->
             processOrganizationEnrollments(principal, user)
 
             syncAuthenticationCache(principal.id)
@@ -160,7 +160,7 @@ class Auth0SyncService(
                 )
         ).firstOrNull() ?: return
         authnPrincipalCache.set(principalId, sp)
-        val securablePrincipals = getAllPrincipals(sp) ?: return
+        val securablePrincipals = getAllPrincipals(sp)
 
         val currentPrincipals: NavigableSet<Principal> = TreeSet()
         currentPrincipals.add(sp.principal)
@@ -279,6 +279,3 @@ class Auth0SyncService(
     }
 
 }
-
-
-

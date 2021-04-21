@@ -19,7 +19,7 @@ import com.zaxxer.hikari.HikariDataSource
 import org.springframework.stereotype.Component
 import java.sql.PreparedStatement
 import java.sql.ResultSet
-import java.util.UUID
+import java.util.*
 
 const val CONNECTIONS_INDEX = "connections[any]"
 const val MEMBERS_INDEX = "members[any]"
@@ -49,7 +49,7 @@ class OrganizationsMapstore(
     }
 
     override fun bind(ps: PreparedStatement, key: UUID, value: Organization) {
-        var offset = bind(ps, key, 1)
+        val offset = bind(ps, key, 1)
         val orgJson = mapper.writeValueAsString(value)
         ps.setObject(offset, orgJson)
     }

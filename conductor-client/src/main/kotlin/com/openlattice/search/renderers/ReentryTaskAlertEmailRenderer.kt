@@ -1,8 +1,6 @@
 package com.openlattice.search.renderers
 
-import com.google.common.collect.Maps
 import com.openlattice.data.requests.NeighborEntityDetails
-import com.openlattice.edm.EdmConstants
 import com.openlattice.mail.RenderableEmailRequest
 import com.openlattice.search.requests.PersistentSearch
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -11,7 +9,7 @@ import java.util.*
 
 
 private const val FROM_EMAIL = "courier@openlattice.com"
-private const val TEMPLATE_PATH = "mail/templates/shared/CAREIssueAlertTemplate.mustache"
+private const val TEMPLATE_PATH = "mail/templates/shared/ReentryTaskAlertTemplate.mustache"
 
 /* FQNs */
 private val PERSON_ID_FQN = FullQualifiedName("nc.SubjectIdentification")

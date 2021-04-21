@@ -11,7 +11,6 @@ import com.openlattice.collaborations.mapstores.ProjectedTablesMapstore
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organizations.OrganizationDatabase
 import com.openlattice.organizations.roles.SecurePrincipalsManager
-import org.slf4j.LoggerFactory
 import java.util.*
 
 class CollaborationService(
@@ -25,10 +24,9 @@ class CollaborationService(
     private val collaborations = HazelcastMap.COLLABORATIONS.getMap(hazelcast)
     private val organizations = HazelcastMap.ORGANIZATIONS.getMap(hazelcast)
     private val projectedTables = HazelcastMap.PROJECTED_TABLES.getMap(hazelcast)
-    private val externalTables = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE.getMap(hazelcast)
+    private val externalTables = HazelcastMap.EXTERNAL_TABLES.getMap(hazelcast)
 
     companion object {
-        private val logger = LoggerFactory.getLogger(CollaborationService::class.java)
         private val READ_PERMISSIONS = EnumSet.of(Permission.READ)
     }
 

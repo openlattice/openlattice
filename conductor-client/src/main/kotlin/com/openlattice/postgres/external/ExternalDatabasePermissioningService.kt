@@ -5,8 +5,8 @@ import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.Action
 import com.openlattice.authorization.SecurablePrincipal
 import com.openlattice.edm.PropertyTypeIdFqn
-import com.openlattice.organization.OrganizationExternalDatabaseColumn
-import com.openlattice.organization.OrganizationExternalDatabaseTable
+import com.openlattice.organization.ExternalColumn
+import com.openlattice.organization.ExternalTable
 import com.openlattice.organization.roles.Role
 import com.openlattice.postgres.TableColumn
 import com.zaxxer.hikari.HikariDataSource
@@ -66,8 +66,8 @@ interface ExternalDatabasePermissioningService {
      */
     fun initializeExternalTablePermissions(
             organizationId: UUID,
-            table: OrganizationExternalDatabaseTable,
-            columns: Set<OrganizationExternalDatabaseColumn>
+            table: ExternalTable,
+            columns: Set<ExternalColumn>
     )
 
     /**
@@ -76,8 +76,8 @@ interface ExternalDatabasePermissioningService {
     fun initializeProjectedTableViewPermissions(
             collaborationId: UUID,
             schema: String,
-            table: OrganizationExternalDatabaseTable,
-            columns: Set<OrganizationExternalDatabaseColumn>
+            table: ExternalTable,
+            columns: Set<ExternalColumn>
     )
 
     /**

@@ -333,6 +333,10 @@ class HazelcastOrganizationService(
         return organizations[organizationId]?.emailDomains ?: setOf()
     }
 
+    fun organizationExists(id: UUID): Boolean {
+        return organizations.containsKey(id)
+    }
+
     fun ensureOrganizationExists(id: UUID) {
         Preconditions.checkState(
                 organizations.containsKey(id),

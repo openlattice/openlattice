@@ -54,8 +54,6 @@ class PostgresDatabaseQueryService(
         private val dbCredentialService: DbCredentialService
 ) : DatabaseQueryManager {
 
-    private val atlas: HikariDataSource = extDbManager.connectAsSuperuser()
-
     companion object {
         const val PUBLIC_ROLE = "public"
 
@@ -84,6 +82,10 @@ class PostgresDatabaseQueryService(
         fun entitySetNameTableName(entitySetName: String): String {
             return "$OPENLATTICE_SCHEMA.${quote(entitySetName)}"
         }
+    }
+
+    private fun getAtlasConnection(): Connection {
+        return extDbManager.connectAsSuperuser().connection
     }
 
     /**
@@ -303,7 +305,7 @@ class PostgresDatabaseQueryService(
     override fun updateCredentialInDatabase(unquotedUserId: String, credential: String) {
         val updateSql = updateUserCredentialSql(quote(unquotedUserId), credential)
 
-        atlas.connection.use { connection ->
+        getAtlasConnection().use { connection ->
             connection.createStatement().use { stmt ->
                 stmt.execute(updateSql)
             }
@@ -319,7 +321,7 @@ class PostgresDatabaseQueryService(
         val revokeAll = "REVOKE ALL ON DATABASE $db FROM $PUBLIC_ROLE"
 
 //        We connect to default db in order to do initial db setup
-        atlas.connection.use { connection ->
+        getAtlasConnection().use { connection ->
             connection.createStatement().use { statement ->
                 statement.execute(createOrgDbUser)
                 if (!exists(dbName)) {
@@ -341,7 +343,7 @@ class PostgresDatabaseQueryService(
         val revokeAll = "REVOKE ALL ON DATABASE $db FROM $PUBLIC_ROLE"
 
         //We connect to default db in order to do initial db setup
-        atlas.connection.use { connection ->
+        getAtlasConnection().use { connection ->
             connection.createStatement().use { statement ->
                 if (!exists(dbName)) {
                     statement.execute(createDb)
@@ -360,7 +362,7 @@ class PostgresDatabaseQueryService(
 
         // Drop organization-specific database roles
 
-        atlas.connection.use { connection ->
+        getAtlasConnection().use { connection ->
             connection.createStatement().use { statement ->
                 statement.execute(dropDbUser)
             }
@@ -373,7 +375,7 @@ class PostgresDatabaseQueryService(
 
         //We connect to default db in order to do initial db setup
 
-        atlas.connection.use { connection ->
+        getAtlasConnection().use { connection ->
             connection.createStatement().use { stmt ->
                 stmt.execute(dropAllConnectionsToDatabaseSql(dbName))
             }
@@ -434,7 +436,7 @@ class PostgresDatabaseQueryService(
     }
 
     internal fun exists(dbName: String): Boolean {
-        atlas.connection.use { connection ->
+        getAtlasConnection().use { connection ->
             connection.createStatement().use { stmt ->
                 stmt.executeQuery("select count(*) from pg_database where datname = '$dbName'").use { rs ->
                     rs.next()
@@ -472,7 +474,7 @@ class PostgresDatabaseQueryService(
     }
 
     override fun dropUserIfExists(user: SecurablePrincipal) {
-        atlas.connection.use { connection ->
+        getAtlasConnection().use { connection ->
             connection.createStatement().use { statement ->
                 //TODO: Go through every database and for old users clean them out.
 //                    logger.info("Attempting to drop owned by old name {}", user.name)
@@ -492,7 +494,7 @@ class PostgresDatabaseQueryService(
         val dbName = extDbManager.getDatabaseName(organizationId)
         logger.info("Configuring users $userIds in database $dbName")
         //First we will grant all privilege which for database is connect, temporary, and create schema
-        atlas.connection.use { connection ->
+        getAtlasConnection().use { connection ->
             connection.createStatement().use { statement ->
                 statement.execute(
                         "GRANT ${MEMBER_ORG_DATABASE_PERMISSIONS.joinToString(", ")} " +
@@ -549,7 +551,7 @@ class PostgresDatabaseQueryService(
             throw IllegalStateException("Cannot rename database $currentDatabaseName to $newDatabaseName because database $newDatabaseName already exists")
         }
 
-        atlas.connection.use { conn ->
+        getAtlasConnection().use { conn ->
             conn.createStatement().use { stmt ->
                 stmt.execute(dropAllConnectionsToDatabaseSql(currentDatabaseName))
             }
@@ -565,7 +567,7 @@ class PostgresDatabaseQueryService(
     override fun getDatabaseOid(dbName: String): Int {
         var oid = -1
         return try {
-            atlas.connection.use { conn ->
+            getAtlasConnection().use { conn ->
                 conn.prepareStatement(databaseOidSql).use { ps ->
                     ps.setString(1, dbName)
                     val rs = ps.executeQuery()
@@ -582,7 +584,7 @@ class PostgresDatabaseQueryService(
     }
 
     override fun createRenameDatabaseFunctionIfNotExists() {
-        atlas.connection.use { conn ->
+        getAtlasConnection().use { conn ->
             conn.createStatement().use { stmt ->
                 stmt.execute(createRenameDatabaseFunctionSql)
             }
@@ -598,7 +600,7 @@ class PostgresDatabaseQueryService(
     }
 
     private fun checkIfDatabaseExists(dbName: String): Boolean {
-        atlas.connection.use { conn ->
+        getAtlasConnection().use { conn ->
             conn.prepareStatement(checkIfDatabaseNameIsInUseSql).use { ps ->
                 ps.setString(1, dbName)
                 val rs = ps.executeQuery()
@@ -629,7 +631,7 @@ internal fun grantUsageOnSchemaToRolesSql(schemaName: String, roles: Iterable<St
 }
 
 internal fun revokeUsageOnSchemaToRolesSql(schemaName: String, roles: Iterable<String>): String {
-    return "REVOKE USAGE ON SCHEMA ${quote(schemaName)} TO ${roles.joinToString { quote(it) }}"
+    return "REVOKE USAGE ON SCHEMA ${quote(schemaName)} FROM ${roles.joinToString { quote(it) }}"
 }
 
 internal fun grantOrgUserPrivilegesOnSchemaSql(schemaName: Schemas, orgUserId: String): String {
@@ -706,9 +708,9 @@ internal fun dropAllConnectionsToDatabaseSql(dbName: String): String {
     """.trimIndent()
 }
 
-internal val checkIfDatabaseNameIsInUseSql = "SELECT 1 FROM pg_database WHERE datname = ?"
+internal const val checkIfDatabaseNameIsInUseSql = "SELECT 1 FROM pg_database WHERE datname = ?"
 
-internal val renameDatabaseSql = "SELECT rename_database(?, ?)"
+internal const val renameDatabaseSql = "SELECT rename_database(?, ?)"
 
 internal val createRenameDatabaseFunctionSql = """
     CREATE OR REPLACE FUNCTION rename_database(curr_name text, new_name text) RETURNS VOID AS $$
@@ -726,4 +728,4 @@ internal val createRenameServerDatabaseFunctionSql = """
     $$ LANGUAGE plpgsql
 """.trimIndent()
 
-internal val databaseOidSql = "SELECT oid FROM pg_database WHERE datname = ?"
+internal const val databaseOidSql = "SELECT oid FROM pg_database WHERE datname = ?"

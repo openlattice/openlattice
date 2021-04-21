@@ -243,7 +243,7 @@ class AdminController : AdminApi, AuthorizingComponent {
     ): Map<UUID, AbstractDistributedJob<*, *>> {
         ensureAdminAccess()
         val jobs = setOf(jobId)
-        jobService.updateJob(jobs, update.status)
+        jobService.updateJob(jobId, update.status)
 
         if (update.reload) jobService.reload(jobs, true)
 

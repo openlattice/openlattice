@@ -90,7 +90,7 @@ data class EntitySet
         this.flags.remove(flag)
     }
 
-    internal fun addPartitions(partitions: Collection<Int>) {
+    private fun addPartitions(partitions: Collection<Int>) {
         this.partitions.addAll(partitions)
     }
 

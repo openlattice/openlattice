@@ -174,7 +174,7 @@ class PostgresEntityDataQueryService(
             linking: Boolean = false,
             filteredDataPageDefinition: FilteredDataPageDefinition? = null
     ): Map<UUID, MutableMap<FullQualifiedName, MutableSet<Any>>> {
-        return getEntitySetIterable(
+        val entitiesById = getEntitySetIterable(
                 entityKeyIds,
                 authorizedPropertyTypes,
                 propertyTypeFilters,
@@ -190,7 +190,17 @@ class PostgresEntityDataQueryService(
                     metadataOptions,
                     byteBlobDataManager
             )
-        }.toMap()
+        }
+
+        if (!linking) {
+            return entitiesById.toMap()
+        }
+
+        return entitiesById.toList().groupBy { it.first }.mapValues { (_, normalEntitiesByLinkingId) ->
+            normalEntitiesByLinkingId.flatMap { it.second.entries }.groupBy { it.key }.mapValues { (_, valuesByFqn) ->
+                valuesByFqn.flatMap { it.value }.toMutableSet()
+            }.toMutableMap()
+        }
     }
 
     /**
@@ -445,13 +455,13 @@ class PostgresEntityDataQueryService(
         }
 
         //Data is expected to be of a specific type so that it can be stored in s3 bucket
-        val binaryData = value as BinaryDataWithContentType
+        val binaryData = value as BinaryObjectWithMetadata
         val digest = PostgresDataHasher.hashObjectToHex(binaryData.data, EdmPrimitiveTypeKind.Binary)
 
         //store entity set id/entity key id/property type id/property hash as key in S3
-        val s3Key = "$entitySetId/$entityKeyId/$propertyTypeId/$digest"
+        val s3Key = ByteBlobDataManager.generateS3Key(entitySetId, entityKeyId, propertyTypeId, digest)
 
-        byteBlobDataManager.putObject(s3Key, binaryData.data, binaryData.contentType)
+        byteBlobDataManager.putObject(s3Key, binaryData)
         return PostgresDataHasher.hashObject(s3Key, EdmPrimitiveTypeKind.String) to s3Key
     }
 

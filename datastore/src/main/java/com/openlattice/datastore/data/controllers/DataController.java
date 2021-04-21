@@ -43,6 +43,7 @@ import com.openlattice.data.graph.DataGraphServiceHelper;
 import com.openlattice.data.jobs.DataDeletionJobState;
 import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
+import com.openlattice.data.storage.ByteBlobDataManager;
 import com.openlattice.data.storage.DataDeletionService;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.EntitySetManager;
@@ -66,6 +67,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletResponse;
+import java.net.URL;
 import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -121,6 +123,9 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
 
     @Inject
     private HazelcastJobService jobService;
+
+    @Inject
+    private ByteBlobDataManager byteBlobDataManager;
 
     private static final int DELETION_BLOCKING_INTERVAL   = 1000; // 1 second
     private static final int MAX_DELETION_BLOCKING_CHECKS = 60 * 5; // 5 minutes
@@ -979,6 +984,23 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                 .collect( Collectors.toMap( esId -> esId, esId -> entityKeyIds ) );
 
         return dgm.getLinkedEntitySetBreakDown( entityKeyIdsOfEntitySets, authorizedPropertyTypesOfEntitySets );
+    }
+
+    @Timed
+    @Override
+    @PostMapping(
+            path = BINARY,
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public BinaryObjectResponse loadBinaryProperties( @RequestBody BinaryObjectRequest binaryObjectRequest ) {
+        binaryObjectRequest.getAclKeys().forEach( this::ensureReadAccess );
+
+        Map<String, URL> result = byteBlobDataManager.getPresignedUrlsWithDispositions(
+                binaryObjectRequest.mapToS3KeysToDispositions()
+        );
+
+        return BinaryObjectResponse.fromS3Response( result );
     }
 
     @NotNull
