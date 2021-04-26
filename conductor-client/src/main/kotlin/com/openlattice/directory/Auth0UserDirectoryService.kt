@@ -48,14 +48,12 @@ class Auth0UserDirectoryService(
 
         // https://auth0.com/docs/users/user-search/user-search-query-syntax
         // TODO - support multiple fields and construct a valid Lucene query string to pass to Auth0
-        if (fields.email.isPresent) {
-            searchQuery = "email:${fields.email.get()}"
+        if (fields.email != null) {
+            searchQuery = "email:${fields.email}"
         }
-        else if (fields.name.isPresent) {
-            searchQuery = "name:${fields.name.get()}"
+        else if (fields.name != null) {
+            searchQuery = "name:${fields.name}"
         }
-
-        require(searchQuery.isNotBlank()) { "search query cannot be blank" }
 
         logger.info("searching auth0 users with query: $searchQuery")
 

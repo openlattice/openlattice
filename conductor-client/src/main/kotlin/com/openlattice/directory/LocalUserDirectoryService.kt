@@ -23,8 +23,8 @@ class LocalUserDirectoryService(auth0Configuration: Auth0Configuration) : UserDi
     }
 
     override fun searchAllUsers(fields: Auth0UserSearchFields): Map<String, User> {
-        val email = fields.email.orElse("")
-        val name = fields.name.orElse("")
+        val email = fields.email ?: ""
+        val name = fields.name ?: ""
         return users.values.filter { user ->
             (listOf(user.email, user.name, user.nickname, user.givenName, user.familyName, user.username)
                     + user.identities.map { it.userId }

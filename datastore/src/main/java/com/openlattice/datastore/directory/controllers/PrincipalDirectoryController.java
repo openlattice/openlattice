@@ -212,7 +212,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
             path = USERS + SEARCH + SEARCH_QUERY_PATH,
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Map<String, Auth0UserBasic> searchAllUsers( @PathVariable( SEARCH_QUERY ) String searchQuery ) {
-        Auth0UserSearchFields fields = new Auth0UserSearchFields( Optional.empty(), Optional.of(searchQuery + "*") );
+        Auth0UserSearchFields fields = new Auth0UserSearchFields( null, searchQuery + "*" );
         return userDirectoryService.searchAllUsers( fields )
                 .entrySet()
                 .stream()
@@ -231,7 +231,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
             path = USERS + SEARCH_EMAIL + EMAIL_SEARCH_QUERY_PATH,
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Map<String, Auth0UserBasic> searchAllUsersByEmail( @PathVariable( SEARCH_QUERY ) String emailSearchQuery ) {
-        Auth0UserSearchFields fields = new Auth0UserSearchFields( Optional.of( emailSearchQuery ), Optional.empty() );
+        Auth0UserSearchFields fields = new Auth0UserSearchFields( emailSearchQuery, null );
         return userDirectoryService.searchAllUsers( fields )
                 .entrySet()
                 .stream()
