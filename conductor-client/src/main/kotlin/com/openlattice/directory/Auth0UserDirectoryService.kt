@@ -48,6 +48,7 @@ class Auth0UserDirectoryService(
 
         // https://auth0.com/docs/users/user-search/user-search-query-syntax
         // TODO - support multiple fields and construct a valid Lucene query string to pass to Auth0
+        // https://jira.openlattice.com/browse/LATTICE-2805
         if (fields.email != null) {
             searchQuery = "email:${fields.email}"
         }
