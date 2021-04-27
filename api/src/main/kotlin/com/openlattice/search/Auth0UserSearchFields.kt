@@ -1,11 +1,9 @@
 package com.openlattice.search
 
-import com.fasterxml.jackson.annotation.JsonProperty
-
 // https://auth0.com/docs/users/user-search/user-search-query-syntax
 data class Auth0UserSearchFields(
-    @JsonProperty val email: String?,
-    @JsonProperty val name: String?
+    val email: String?,
+    val name: String?
 ) {
     init {
         // TODO - support multiple fields and construct a valid Lucene query string to pass to Auth0
