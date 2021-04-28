@@ -136,7 +136,7 @@ class PostgresDatabaseQueryService(
 
     override fun collaborationMemberGrantSql(dbName: String, memberRoles: Iterable<String>): String {
         return """
-            GRANT ${MEMBER_COLLAB_DATABASE_PERMISSIONS.joinToString()}
+            GRANT ${MEMBER_DATABASE_PERMISSIONS.joinToString()}
             ON DATABASE ${quote(dbName)}
             TO ${memberRoles.joinToString()}
         """.trimIndent()
@@ -327,7 +327,7 @@ class PostgresDatabaseQueryService(
                 if (!exists(dbName)) {
                     statement.execute(createDb)
                     statement.execute(
-                            "GRANT ${MEMBER_ORG_DATABASE_PERMISSIONS.joinToString(", ")} " +
+                            "GRANT ${MEMBER_DATABASE_PERMISSIONS.joinToString(", ")} " +
                                     "ON DATABASE $db TO ${quote(dbOrgRole)}"
                     )
                 }
@@ -497,7 +497,7 @@ class PostgresDatabaseQueryService(
         getAtlasConnection().use { connection ->
             connection.createStatement().use { statement ->
                 statement.execute(
-                        "GRANT ${MEMBER_ORG_DATABASE_PERMISSIONS.joinToString(", ")} " +
+                        "GRANT ${MEMBER_DATABASE_PERMISSIONS.joinToString(", ")} " +
                                 "ON DATABASE ${quote(dbName)} TO $userIdsSql"
                 )
             }
@@ -611,8 +611,7 @@ class PostgresDatabaseQueryService(
     }
 }
 
-val MEMBER_COLLAB_DATABASE_PERMISSIONS = setOf("CREATE", "TEMPORARY", "TEMP")
-val MEMBER_ORG_DATABASE_PERMISSIONS = setOf("CREATE", "CONNECT", "TEMPORARY", "TEMP")
+val MEMBER_DATABASE_PERMISSIONS = setOf("CREATE", "CONNECT", "TEMPORARY", "TEMP")
 
 internal fun createSchemaSql(schemaName: String): String {
     return "CREATE SCHEMA IF NOT EXISTS ${quote(schemaName)}"
@@ -653,7 +652,7 @@ private fun setSearchPathSql(granteeId: String, isUser: Boolean, vararg schemas:
 }
 
 private fun revokePrivilegesOnDatabaseSql(dbName: String, usersSql: String): String {
-    return "REVOKE ${MEMBER_ORG_DATABASE_PERMISSIONS.joinToString(", ")} ON DATABASE ${quote(dbName)} FROM $usersSql"
+    return "REVOKE ${MEMBER_DATABASE_PERMISSIONS.joinToString(", ")} ON DATABASE ${quote(dbName)} FROM $usersSql"
 }
 
 private fun revokePrivilegesOnSchemaSql(schemaName: Schemas, usersSql: String): String {
