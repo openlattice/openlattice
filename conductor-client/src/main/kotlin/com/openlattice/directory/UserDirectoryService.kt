@@ -23,9 +23,10 @@ package com.openlattice.directory
 
 import com.auth0.json.mgmt.users.User
 import com.codahale.metrics.annotation.Timed
-import com.openlattice.directory.pojo.Auth0UserBasic
+import com.openlattice.search.Auth0UserSearchFields
 
 internal const val DEFAULT_PAGE_SIZE = 100
+internal const val SEARCH_ENGINE_VERSION = "v3"
 
 interface UserDirectoryService {
 
@@ -40,7 +41,7 @@ interface UserDirectoryService {
 
     //TODO: Switch over to a Hazelcast map to relieve pressure from Auth0
     @Timed
-    fun searchAllUsers(searchQuery: String): Map<String, Auth0UserBasic>
+    fun searchAllUsers(fields: Auth0UserSearchFields): Map<String, User>
 
     @Timed
     fun deleteUser(userId: String)
