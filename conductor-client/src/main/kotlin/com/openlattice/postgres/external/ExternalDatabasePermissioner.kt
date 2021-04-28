@@ -10,10 +10,10 @@ import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.edm.EdmConstants
 import com.openlattice.edm.PropertyTypeIdFqn
 import com.openlattice.edm.processors.GetOrganizationIdFromEntitySetEntryProcessor
-import com.openlattice.edm.processors.GetSchemaFromOrganizationExternalTableEntryProcessor
+import com.openlattice.edm.processors.GetSchemaFromExternalTableEntryProcessor
 import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.organization.OrganizationExternalDatabaseColumn
-import com.openlattice.organization.OrganizationExternalDatabaseTable
+import com.openlattice.organization.ExternalColumn
+import com.openlattice.organization.ExternalTable
 import com.openlattice.organization.roles.Role
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.DataTables.quote
@@ -40,8 +40,8 @@ class ExternalDatabasePermissioner(
 
     private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
     private val securableObjectTypes = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap(hazelcastInstance)
-    private val organizationExternalDatabaseColumns = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_COLUMN.getMap(hazelcastInstance)
-    private val organizationExternalTables = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE.getMap(hazelcastInstance)
+    private val externalColumns = HazelcastMap.EXTERNAL_COLUMNS.getMap(hazelcastInstance)
+    private val externalTables = HazelcastMap.EXTERNAL_TABLES.getMap(hazelcastInstance)
     private val externalRoleNames = HazelcastMap.EXTERNAL_PERMISSION_ROLES.getMap(hazelcastInstance)
 
     companion object {
@@ -108,7 +108,7 @@ class ExternalDatabasePermissioner(
         val assemblyCols = aclsByType.getValue(SecurableObjectType.PropertyTypeInEntitySet)
         executePrivilegesUpdateOnPropertyTypes(action, assemblyCols)
 
-        // for organizationexternalDatabaseColumns:
+        // for ExternalColumns:
         val externalTableColAcls = aclsByType.getValue(SecurableObjectType.OrganizationExternalDatabaseColumn)
         executePrivilegesUpdateOnOrgExternalDbColumns(action, externalTableColAcls)
     }
@@ -122,11 +122,11 @@ class ExternalDatabasePermissioner(
             extTableColIds.add(it.aclKey[1])
             it.aclKey[0]
         }
-        val extTablesById = organizationExternalTables.submitToKeys(extTableIds, GetSchemaFromOrganizationExternalTableEntryProcessor()).toCompletableFuture().get().mapValues {
+        val extTablesById = externalTables.submitToKeys(extTableIds, GetSchemaFromExternalTableEntryProcessor()).toCompletableFuture().get().mapValues {
             Schemas.fromName(it.value)
         }
 
-        val columnsById = organizationExternalDatabaseColumns.getAll(extTableColIds).values.associate {
+        val columnsById = externalColumns.getAll(extTableColIds).values.associate {
             AclKey(it.tableId, it.id) to TableColumn(it.organizationId, it.tableId, it.id, extTablesById[it.tableId])
         }
         updateExternalTablePermissions(action, externalTableColAcls, columnsById)
@@ -283,8 +283,8 @@ class ExternalDatabasePermissioner(
      */
     override fun initializeExternalTablePermissions(
             organizationId: UUID,
-            table: OrganizationExternalDatabaseTable,
-            columns: Set<OrganizationExternalDatabaseColumn>
+            table: ExternalTable,
+            columns: Set<ExternalColumn>
     ) {
         initializePermissionSetForExternalTable(
                 hikariDataSource = extDbManager.connectToOrg(organizationId),
@@ -302,8 +302,8 @@ class ExternalDatabasePermissioner(
     override fun initializeProjectedTableViewPermissions(
             collaborationId: UUID,
             schema: String,
-            table: OrganizationExternalDatabaseTable,
-            columns: Set<OrganizationExternalDatabaseColumn>
+            table: ExternalTable,
+            columns: Set<ExternalColumn>
     ) {
         initializePermissionSetForExternalTable(
                 hikariDataSource = extDbManager.connectToOrg(collaborationId),
@@ -319,10 +319,10 @@ class ExternalDatabasePermissioner(
             hikariDataSource: HikariDataSource,
             tableSchema: String,
             tableName: String,
-            columns: Set<OrganizationExternalDatabaseColumn>,
+            columns: Set<ExternalColumn>,
             permissions: Set<Permission>
     ) {
-        val targetsToColumns = mutableMapOf<AccessTarget, OrganizationExternalDatabaseColumn>()
+        val targetsToColumns = mutableMapOf<AccessTarget, ExternalColumn>()
 
         val targets = columns.flatMapTo(mutableSetOf()) { column ->
             permissions.map { permission ->

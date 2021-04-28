@@ -53,8 +53,8 @@ import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.EntityTypePropertyMetadata;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.notifications.sms.SmsEntitySetInformation;
-import com.openlattice.organization.OrganizationExternalDatabaseColumn;
-import com.openlattice.organization.OrganizationExternalDatabaseTable;
+import com.openlattice.organization.ExternalColumn;
+import com.openlattice.organization.ExternalTable;
 import com.openlattice.organization.OrganizationPrincipal;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.Grant;
@@ -786,9 +786,9 @@ public final class TestDataFactory {
                 app().getDefaultSettings() );
     }
 
-    public static OrganizationExternalDatabaseColumn organizationExternalDatabaseColumn() {
-        OrganizationExternalDatabaseTable table = organizationExternalDatabaseTable();
-        return new OrganizationExternalDatabaseColumn(
+    public static ExternalColumn externalColumn() {
+        ExternalTable table = externalTable();
+        return new ExternalColumn(
                 UUID.randomUUID(),
                 randomAlphanumeric( 5 ),
                 randomAlphanumeric( 5 ),
@@ -801,8 +801,8 @@ public final class TestDataFactory {
         );
     }
 
-    public static OrganizationExternalDatabaseTable organizationExternalDatabaseTable() {
-        return new OrganizationExternalDatabaseTable(
+    public static ExternalTable externalTable() {
+        return new ExternalTable(
                 UUID.randomUUID(),
                 randomAlphanumeric( 5 ),
                 randomAlphanumeric( 5 ),

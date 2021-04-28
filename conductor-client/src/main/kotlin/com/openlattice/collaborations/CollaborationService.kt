@@ -24,7 +24,7 @@ class CollaborationService(
     private val collaborations = HazelcastMap.COLLABORATIONS.getMap(hazelcast)
     private val organizations = HazelcastMap.ORGANIZATIONS.getMap(hazelcast)
     private val projectedTables = HazelcastMap.PROJECTED_TABLES.getMap(hazelcast)
-    private val externalTables = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE.getMap(hazelcast)
+    private val externalTables = HazelcastMap.EXTERNAL_TABLES.getMap(hazelcast)
 
     companion object {
         private val READ_PERMISSIONS = EnumSet.of(Permission.READ)

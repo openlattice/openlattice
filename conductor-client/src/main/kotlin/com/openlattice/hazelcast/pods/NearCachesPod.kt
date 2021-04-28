@@ -1,6 +1,10 @@
 package com.openlattice.hazelcast.pods
 
-import com.hazelcast.config.*
+import com.hazelcast.config.EvictionConfig
+import com.hazelcast.config.EvictionPolicy
+import com.hazelcast.config.InMemoryFormat
+import com.hazelcast.config.MaxSizePolicy
+import com.hazelcast.config.NearCacheConfig
 import com.openlattice.hazelcast.HazelcastMap
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
