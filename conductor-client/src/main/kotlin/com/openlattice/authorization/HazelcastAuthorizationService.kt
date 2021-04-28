@@ -24,7 +24,6 @@ import com.openlattice.authorization.processors.PermissionMerger
 import com.openlattice.authorization.processors.PermissionRemover
 import com.openlattice.authorization.processors.SecurableObjectTypeUpdater
 import com.openlattice.authorization.securable.SecurableObjectType
-import com.openlattice.authorization.util.toAceKeys
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organizations.PrincipalSet
 import org.slf4j.LoggerFactory
@@ -110,56 +109,23 @@ class HazelcastAuthorizationService(
         aces.executeOnEntries(SecurableObjectTypeUpdater(objectType), hasAclKey(aclKey))
     }
 
+
     /** Add Permissions **/
 
-    override fun addPermission(key: AclKey, principal: Principal, permissions: EnumSet<Permission>) {
-        addPermission(key, principal, permissions, OffsetDateTime.MAX)
-    }
-
     override fun addPermission(
-            key: AclKey,
+            aclKey: AclKey,
             principal: Principal,
-            permissions: Set<Permission>,
+            permissions: EnumSet<Permission>,
             expirationDate: OffsetDateTime
     ) {
+        ensurePrincipalsExist(setOf(principal))
+
         //TODO: We should do something better than reading the securable object type.
-        val securableObjectType = getDefaultObjectType(securableObjectTypes, key)
+        val securableObjectType = getDefaultObjectType(securableObjectTypes, aclKey)
 
-        addPermission(key, principal, permissions, securableObjectType, expirationDate)
-    }
+        aces.executeOnKey(AceKey(aclKey, principal), PermissionMerger(permissions, securableObjectType, expirationDate))
 
-    override fun addPermission(
-            key: AclKey,
-            principal: Principal,
-            permissions: Set<Permission>,
-            securableObjectType: SecurableObjectType,
-            expirationDate: OffsetDateTime
-    ) {
-        ensurePrincipalsExist(setOf(principal))
-        aces.executeOnKey(AceKey(key, principal), PermissionMerger(permissions, securableObjectType, expirationDate))
-
-        signalMaterializationPermissionChange(key, principal, permissions, securableObjectType)
-    }
-
-    override fun addPermissions(
-            keys: Set<AclKey>,
-            principal: Principal,
-            permissions: EnumSet<Permission>,
-            securableObjectType: SecurableObjectType
-    ) {
-        addPermissions(keys, principal, permissions, securableObjectType, OffsetDateTime.MAX)
-    }
-
-    override fun addPermissions(
-            keys: Set<AclKey>,
-            principal: Principal,
-            permissions: EnumSet<Permission>,
-            securableObjectType: SecurableObjectType,
-            expirationDate: OffsetDateTime
-    ) {
-        ensurePrincipalsExist(setOf(principal))
-        val aceKeys = toAceKeys(keys, principal)
-        aces.executeOnKeys(aceKeys, PermissionMerger(permissions, securableObjectType, expirationDate))
+        signalMaterializationPermissionChange(aclKey, principal, permissions, securableObjectType)
     }
 
     override fun addPermissions(acls: List<Acl>) {
@@ -171,50 +137,6 @@ class HazelcastAuthorizationService(
         }
     }
 
-    /** Remove Permissions **/
-
-    override fun removePermissions(acls: List<Acl>) {
-        acls.map {
-            AclKey(it.aclKey) to it.aces
-                    .filter { ace -> ace.permissions.contains(Permission.OWNER) }
-                    .map { ace -> ace.principal }
-                    .toSet()
-        }.filter { (_, owners) -> owners.isNotEmpty() }.forEach { (aclKey, owners) ->
-            ensureAclKeysHaveOtherUserOwners(ImmutableSet.of(aclKey), owners)
-        }
-
-        val updates = getAceValueToAceKeyMap(acls)
-
-        updates.keySet().forEach {
-            aces.executeOnKeys(updates[it], PermissionRemover(it.permissions))
-        }
-    }
-
-
-    override fun removePermission(
-            key: AclKey,
-            principal: Principal,
-            permissions: EnumSet<Permission>
-    ) {
-        if (permissions.contains(Permission.OWNER)) {
-            ensureAclKeysHaveOtherUserOwners(setOf(key), setOf(principal))
-        }
-
-        signalMaterializationPermissionChange(
-                key, principal, permissions, getDefaultObjectType(securableObjectTypes, key)
-        )
-
-        aces.executeOnKey(AceKey(key, principal), PermissionRemover(permissions))
-    }
-
-    override fun deletePermissions(aclKey: AclKey) {
-        securableObjectTypes.delete(aclKey)
-        aces.removeAll(hasAclKey(aclKey))
-    }
-
-    override fun deletePrincipalPermissions(principal: Principal) {
-        aces.removeAll(hasPrincipal(principal))
-    }
 
     /** Set Permissions **/
 
@@ -239,76 +161,37 @@ class HazelcastAuthorizationService(
         aces.putAll(updates)
     }
 
-    override fun setPermission(
-            key: AclKey,
-            principal: Principal,
-            permissions: EnumSet<Permission>
-    ) {
-        setPermission(key, principal, permissions, OffsetDateTime.MAX)
-    }
 
-    override fun setPermission(
-            key: AclKey,
-            principal: Principal,
-            permissions: EnumSet<Permission>,
-            expirationDate: OffsetDateTime
-    ) {
-        ensurePrincipalsExist(setOf(principal))
-        if (!permissions.contains(Permission.OWNER)) {
-            ensureAclKeysHaveOtherUserOwners(setOf(key), setOf(principal))
+    /** Remove Permissions **/
+
+    override fun removePermissions(acls: List<Acl>) {
+        acls.map {
+            AclKey(it.aclKey) to it.aces
+                    .filter { ace -> ace.permissions.contains(Permission.OWNER) }
+                    .map { ace -> ace.principal }
+                    .toSet()
+        }.filter { (_, owners) -> owners.isNotEmpty() }.forEach { (aclKey, owners) ->
+            ensureAclKeysHaveOtherUserOwners(ImmutableSet.of(aclKey), owners)
         }
 
-        //This should be a rare call to overwrite all permissions, so it's okay to do a read before write.
-        val securableObjectType = getDefaultObjectType(securableObjectTypes, key)
-        signalMaterializationPermissionChange(key, principal, permissions, securableObjectType)
-        aces[AceKey(key, principal)] = AceValue(permissions, securableObjectType, expirationDate)
+        val updates = getAceValueToAceKeyMap(acls)
+
+        updates.keySet().forEach {
+            aces.executeOnKeys(updates[it], PermissionRemover(it.permissions))
+        }
     }
 
-    override fun setPermission(aclKeys: Set<AclKey>, principals: Set<Principal>, permissions: EnumSet<Permission>) {
-        //This should be a rare call to overwrite all permissions, so it's okay to do a read before write.
-        ensurePrincipalsExist(principals)
-        if (!permissions.contains(Permission.OWNER)) {
-            ensureAclKeysHaveOtherUserOwners(aclKeys, principals)
-        }
 
-        val securableObjectTypesForAclKeys = securableObjectTypes.getAll(aclKeys)
-        val newPermissions: MutableMap<AceKey, AceValue> = HashMap(aclKeys.size * principals.size)
-
-        aclKeys.forEach {
-            val objectType = getDefaultObjectType(securableObjectTypesForAclKeys, it)
-            val aceValue = AceValue(permissions, objectType, OffsetDateTime.MAX)
-
-            principals.forEach { principal ->
-                newPermissions[AceKey(it, principal)] = aceValue
-                signalMaterializationPermissionChange(it, principal, permissions, objectType)
-            }
-        }
-
-        aces.putAll(newPermissions)
+    /** Handle cleanup for deleted objects **/
+    override fun deletePermissions(aclKey: AclKey) {
+        securableObjectTypes.delete(aclKey)
+        aces.removeAll(hasAclKey(aclKey))
     }
 
-    override fun setPermissions(permissions: Map<AceKey, EnumSet<Permission>>) {
-        ensurePrincipalsExist(permissions.keys.mapTo(mutableSetOf()) { it.principal })
-
-        permissions.entries
-                .filter { entry -> !entry.value.contains(Permission.OWNER) }
-                .groupBy { e -> e.key.aclKey }
-                .mapValues { it.value.map { entry -> entry.key.principal }.toSet() }
-                .forEach { (aclKey, principals) -> ensureAclKeysHaveOtherUserOwners(setOf(aclKey), principals) }
-
-        val securableObjectTypesForAclKeys = securableObjectTypes.getAll(permissions.keys.map { it.aclKey }.toSet())
-
-        val newPermissions: MutableMap<AceKey, AceValue> = Maps.newHashMap()
-
-        permissions.forEach { (aceKey: AceKey, acePermissions: EnumSet<Permission>) ->
-            val aclKey = aceKey.aclKey
-            val objectType = getDefaultObjectType(securableObjectTypesForAclKeys, aclKey)
-            newPermissions[aceKey] = AceValue(acePermissions, objectType, OffsetDateTime.MAX)
-            signalMaterializationPermissionChange(aclKey, aceKey.principal, acePermissions, objectType)
-        }
-
-        aces.putAll(newPermissions)
+    override fun deletePrincipalPermissions(principal: Principal) {
+        aces.removeAll(hasPrincipal(principal))
     }
+
 
     /*** AUTH CHECKS ***/
 
@@ -424,25 +307,6 @@ class HazelcastAuthorizationService(
     }
 
     @Timed
-    override fun getAuthorizedObjectsOfType(
-            principals: Set<Principal>,
-            objectType: SecurableObjectType,
-            permissions: EnumSet<Permission>,
-            additionalFilter: Predicate<*, *>
-    ): Stream<AclKey> {
-        val p = Predicates.and<AceKey, AceValue>(
-                hasAnyPrincipals(principals),
-                hasType(objectType),
-                hasExactPermissions(permissions),
-                additionalFilter
-        )
-        return aces.keySet(p)
-                .stream()
-                .map { obj: AceKey -> obj.aclKey }
-                .distinct()
-    }
-
-    @Timed
     override fun getAllSecurableObjectPermissions(key: AclKey): Acl {
         val acesWithPermissions = aces.entrySet(hasAclKey(key))
                 .filter { it.value.isNotEmpty() }
@@ -471,11 +335,6 @@ class HazelcastAuthorizationService(
                 .getResult()
                 .getValue(key)
                 .unwrap()
-    }
-
-    @Timed
-    override fun getSecurableObjectOwners(key: AclKey): Set<Principal> {
-        return getAuthorizedPrincipalsOnSecurableObject(key, EnumSet.of(Permission.OWNER))
     }
 
     @Timed

@@ -350,78 +350,81 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     public List<NeighborEntityDetails> executeEntityNeighborSearch(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId ) {
-        List<NeighborEntityDetails> neighbors = Lists.newArrayList();
+        return executeFilteredEntityNeighborSearch( entitySetId,
+                new EntityNeighborsFilter( ImmutableSet.of( entityKeyId ) ) ).get( entityKeyId );
 
-        Set<Principal> principals = Principals.getCurrentPrincipals();
-
-        if ( authorizations.checkIfHasPermissions( new AclKey( entitySetId ), principals,
-                EnumSet.of( Permission.READ ) ) ) {
-            EntitySet es = entitySetManager.getEntitySet( entitySetId );
-
-            checkState( es != null, "Could not find entity set with id: " + entitySetId.toString() );
-
-            final var entitySets = ( es.isLinking() ) ? es.getLinkedEntitySets() : Set.of( entitySetId );
-            final var authorizedEntitySets = entitySets.stream()
-                    .filter( linkedEntitySetId ->
-                            authorizations.checkIfHasPermissions( new AclKey( linkedEntitySetId ),
-                                    Principals.getCurrentPrincipals(),
-                                    EnumSet.of( Permission.READ ) ) )
-                    .collect( Collectors.toSet() );
-            if ( authorizedEntitySets.size() != entitySets.size() ) {
-                logger.warn( "Read authorization failed some of the normal entity sets of linking entity set or it " +
-                        "is empty." );
-            } else {
-                neighbors = searchService
-                        .executeEntityNeighborSearch( ImmutableSet.of( entitySetId ),
-                                new PagedNeighborRequest( new EntityNeighborsFilter( ImmutableSet.of( entityKeyId ) ) ),
-                                principals )
-                        .getNeighbors()
-
-                        .getOrDefault( entityKeyId, ImmutableList.of() );
-            }
-        }
-
-        UUID userId = spm.getCurrentUserId();
-
-        SetMultimap<UUID, UUID> neighborsByEntitySet = HashMultimap.create();
-        neighbors.forEach( neighborEntityDetails -> {
-            neighborsByEntitySet.put( neighborEntityDetails.getAssociationEntitySet().getId(),
-                    getEntityKeyId( neighborEntityDetails.getAssociationDetails() ) );
-            if ( neighborEntityDetails.getNeighborEntitySet().isPresent() && neighborEntityDetails.getNeighborDetails()
-                    .isPresent() ) {
-                neighborsByEntitySet.put( neighborEntityDetails.getNeighborEntitySet().get().getId(),
-                        getEntityKeyId( neighborEntityDetails.getNeighborDetails().get() ) );
-            }
-        } );
-
-        List<AuditableEvent> events = new ArrayList<>( neighborsByEntitySet.keySet().size() + 1 );
-        events.add( new AuditableEvent(
-                userId,
-                new AclKey( entitySetId ),
-                AuditEventType.LOAD_ENTITY_NEIGHBORS,
-                "Load entity neighbors through SearchApi.executeEntityNeighborSearch",
-                Optional.of( ImmutableSet.of( entityKeyId ) ),
-                ImmutableMap.of(),
-                OffsetDateTime.now(),
-                Optional.empty()
-        ) );
-
-        for ( UUID neighborEntitySetId : neighborsByEntitySet.keySet() ) {
-            events.add( new AuditableEvent(
-                    userId,
-                    new AclKey( neighborEntitySetId ),
-                    AuditEventType.READ_ENTITIES,
-                    "Read entities as neighbors through SearchApi.executeEntityNeighborSearch",
-                    Optional.of( neighborsByEntitySet.get( neighborEntitySetId ) ),
-                    ImmutableMap.of( "aclKeySearched", new AclKey( entitySetId, entityKeyId ) ),
-                    OffsetDateTime.now(),
-                    Optional.empty()
-            ) );
-        }
-
-        recordEvents( events );
-
-        return neighbors;
+        //        List<NeighborEntityDetails> neighbors = Lists.newArrayList();
+        //
+        //        Set<Principal> principals = Principals.getCurrentPrincipals();
+        //
+        //        if ( authorizations.checkIfHasPermissions( new AclKey( entitySetId ), principals,
+        //                EnumSet.of( Permission.READ ) ) ) {
+        //            EntitySet es = entitySetManager.getEntitySet( entitySetId );
+        //
+        //            checkState( es != null, "Could not find entity set with id: " + entitySetId.toString() );
+        //
+        //            final var entitySets = ( es.isLinking() ) ? es.getLinkedEntitySets() : Set.of( entitySetId );
+        //            final var authorizedEntitySets = entitySets.stream()
+        //                    .filter( linkedEntitySetId ->
+        //                            authorizations.checkIfHasPermissions( new AclKey( linkedEntitySetId ),
+        //                                    Principals.getCurrentPrincipals(),
+        //                                    EnumSet.of( Permission.READ ) ) )
+        //                    .collect( Collectors.toSet() );
+        //            if ( authorizedEntitySets.size() != entitySets.size() ) {
+        //                logger.warn( "Read authorization failed some of the normal entity sets of linking entity set or it " +
+        //                        "is empty." );
+        //            } else {
+        //                neighbors = searchService
+        //                        .executeEntityNeighborSearch( ImmutableSet.of( entitySetId ),
+        //                                new PagedNeighborRequest( new EntityNeighborsFilter( ImmutableSet.of( entityKeyId ) ) ),
+        //                                principals )
+        //                        .getNeighbors()
+        //
+        //                        .getOrDefault( entityKeyId, ImmutableList.of() );
+        //            }
+        //        }
+        //
+        //        UUID userId = spm.getCurrentUserId();
+        //
+        //        SetMultimap<UUID, UUID> neighborsByEntitySet = HashMultimap.create();
+        //        neighbors.forEach( neighborEntityDetails -> {
+        //            neighborsByEntitySet.put( neighborEntityDetails.getAssociationEntitySet().getId(),
+        //                    getEntityKeyId( neighborEntityDetails.getAssociationDetails() ) );
+        //            if ( neighborEntityDetails.getNeighborEntitySet().isPresent() && neighborEntityDetails.getNeighborDetails()
+        //                    .isPresent() ) {
+        //                neighborsByEntitySet.put( neighborEntityDetails.getNeighborEntitySet().get().getId(),
+        //                        getEntityKeyId( neighborEntityDetails.getNeighborDetails().get() ) );
+        //            }
+        //        } );
+        //
+        //        List<AuditableEvent> events = new ArrayList<>( neighborsByEntitySet.keySet().size() + 1 );
+        //        events.add( new AuditableEvent(
+        //                userId,
+        //                new AclKey( entitySetId ),
+        //                AuditEventType.LOAD_ENTITY_NEIGHBORS,
+        //                "Load entity neighbors through SearchApi.executeEntityNeighborSearch",
+        //                Optional.of( ImmutableSet.of( entityKeyId ) ),
+        //                ImmutableMap.of(),
+        //                OffsetDateTime.now(),
+        //                Optional.empty()
+        //        ) );
+        //
+        //        for ( UUID neighborEntitySetId : neighborsByEntitySet.keySet() ) {
+        //            events.add( new AuditableEvent(
+        //                    userId,
+        //                    new AclKey( neighborEntitySetId ),
+        //                    AuditEventType.READ_ENTITIES,
+        //                    "Read entities as neighbors through SearchApi.executeEntityNeighborSearch",
+        //                    Optional.of( neighborsByEntitySet.get( neighborEntitySetId ) ),
+        //                    ImmutableMap.of( "aclKeySearched", new AclKey( entitySetId, entityKeyId ) ),
+        //                    OffsetDateTime.now(),
+        //                    Optional.empty()
+        //            ) );
+        //        }
+        //
+        //        recordEvents( events );
+        //
+        //        return neighbors;
     }
 
     @RequestMapping(

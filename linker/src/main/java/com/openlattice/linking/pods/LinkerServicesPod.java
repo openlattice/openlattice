@@ -114,12 +114,18 @@ public class LinkerServicesPod {
     private ExternalDatabaseConnectionManager externalDbConnMan;
 
     @Bean
+    public PrincipalPermissionQueryService principalPermissionQueryService() {
+        return new PrincipalPermissionQueryService( hazelcastInstance, hikariDataSource, principalsMapManager() );
+    }
+
+    @Bean
     public ExternalDatabasePermissioningService externalDatabasePermissionsManager() {
         return new ExternalDatabasePermissioner(
                 hazelcastInstance,
                 externalDbConnMan,
                 dbcs(),
-                principalsMapManager()
+                principalsMapManager(),
+                principalPermissionQueryService()
         );
     }
 

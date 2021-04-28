@@ -21,7 +21,9 @@
 package com.openlattice.authorization;
 
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.eventbus.EventBus;
 import com.openlattice.IdConstants;
@@ -39,6 +41,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -88,7 +91,7 @@ public class HzAuthzTest extends TestServer {
         EnumSet<Permission> permissions = EnumSet.of( Permission.DISCOVER, Permission.READ );
         Assert.assertFalse(
                 hzAuthz.checkIfHasPermissions( key, ImmutableSet.of( p ), permissions ) );
-        hzAuthz.addPermission( key, p, permissions );
+        hzAuthz.addPermission( key, p, permissions, OffsetDateTime.MAX );
         Assert.assertTrue(
                 hzAuthz.checkIfHasPermissions( key, ImmutableSet.of( p ), permissions ) );
     }
@@ -103,7 +106,11 @@ public class HzAuthzTest extends TestServer {
         aclKeys.forEach( key ->
                 Assert.assertFalse(
                         hzAuthz.checkIfHasPermissions( key, ImmutableSet.of( p ), permissions ) ) );
-        hzAuthz.addPermissions( aclKeys, p, permissions, SecurableObjectType.EntitySet );
+        List<Acl> acls = Lists.newArrayListWithCapacity( 3 );
+        for ( AclKey aclKey : aclKeys ) {
+            acls.add( new Acl( aclKey, ImmutableList.of( new Ace( p, permissions ) ) ) );
+        }
+        hzAuthz.addPermissions( acls );
         aclKeys.forEach( key ->
                 Assert.assertTrue(
                         hzAuthz.checkIfHasPermissions( key, ImmutableSet.of( p ), permissions ) ) );
@@ -116,7 +123,7 @@ public class HzAuthzTest extends TestServer {
         Assert.assertFalse(
                 hzAuthz.checkIfHasPermissions( key, ImmutableSet.of( p ), permissions ) );
         hzAuthz.setSecurableObjectType( key, SecurableObjectType.EntitySet );
-        hzAuthz.addPermission( key, p, permissions );
+        hzAuthz.addPermission( key, p, permissions, OffsetDateTime.MAX );
         UUID badkey = UUID.randomUUID();
         Assert.assertFalse(
                 hzAuthz.checkIfHasPermissions( new AclKey( badkey ), ImmutableSet.of( p ), permissions ) );
@@ -131,13 +138,13 @@ public class HzAuthzTest extends TestServer {
         Assert.assertFalse(
                 hzAuthz.checkIfHasPermissions( key, ImmutableSet.of( p2 ), permissions ) );
         hzAuthz.setSecurableObjectType( key, SecurableObjectType.EntitySet );
-        hzAuthz.addPermission( key, p, permissions );
-        hzAuthz.addPermission( key, p2, permissions );
+        hzAuthz.addPermission( key, p, permissions, OffsetDateTime.MAX );
+        hzAuthz.addPermission( key, p2, permissions, OffsetDateTime.MAX );
         Assert.assertTrue(
                 hzAuthz.checkIfHasPermissions( new AclKey( key ), ImmutableSet.of( p ), permissions ) );
         Assert.assertTrue(
                 hzAuthz.checkIfHasPermissions( new AclKey( key ), ImmutableSet.of( p2 ), permissions ) );
-        hzAuthz.removePermission( key, p, permissions );
+        hzAuthz.removePermissions( ImmutableList.of( new Acl( key, ImmutableList.of( new Ace( p, permissions ) ) ) ) );
         Assert.assertFalse(
                 hzAuthz.checkIfHasPermissions( key, ImmutableSet.of( p ), permissions ) );
     }
@@ -153,8 +160,8 @@ public class HzAuthzTest extends TestServer {
                 hzAuthz.checkIfHasPermissions( key, ImmutableSet.of( p2 ), permissions ) );
 
         hzAuthz.setSecurableObjectType( key, SecurableObjectType.EntitySet );
-        hzAuthz.setPermission( key, p, permissions );
-        hzAuthz.setPermission( key, p2, permissions );
+        hzAuthz.setPermissions( ImmutableList.of( new Acl( key, ImmutableList.of( new Ace( p, permissions ) ) ) ) );
+        hzAuthz.setPermissions( ImmutableList.of( new Acl( key, ImmutableList.of( new Ace( p2, permissions ) ) ) ) );
 
         Assert.assertFalse(
                 hzAuthz.checkIfHasPermissions( key, ImmutableSet.of( p ), badPermissions ) );
@@ -182,8 +189,8 @@ public class HzAuthzTest extends TestServer {
                 hzAuthz.checkIfHasPermissions( key, ImmutableSet.of( p2 ), permissions2 ) );
 
         hzAuthz.setSecurableObjectType( key, SecurableObjectType.EntitySet );
-        hzAuthz.addPermission( key, p1, permissions1 );
-        hzAuthz.addPermission( key, p2, permissions2 );
+        hzAuthz.addPermission( key, p1, permissions1, OffsetDateTime.MAX );
+        hzAuthz.addPermission( key, p2, permissions2, OffsetDateTime.MAX );
 
         Assert.assertTrue(
                 hzAuthz.checkIfHasPermissions( key, ImmutableSet.of( p1 ), permissions1 ) );
@@ -249,8 +256,8 @@ public class HzAuthzTest extends TestServer {
                     hzAuthz.checkIfHasPermissions( key, ImmutableSet.of( user2 ), permissions2 ) );
 
             hzAuthz.setSecurableObjectType( key, SecurableObjectType.EntitySet );
-            hzAuthz.addPermission( key, user1, permissions1 );
-            hzAuthz.addPermission( key, user2, permissions2 );
+            hzAuthz.addPermission( key, user1, permissions1, OffsetDateTime.MAX );
+            hzAuthz.addPermission( key, user2, permissions2, OffsetDateTime.MAX );
 
             Assert.assertTrue( hzAuthz.checkIfHasPermissions( key, ImmutableSet.of( user1 ), permissions1 ) );
 
@@ -303,8 +310,8 @@ public class HzAuthzTest extends TestServer {
         Principal user2 = initializePrincipal( TestDataFactory.userPrincipal() );
 
         EnumSet<Permission> permissions = EnumSet.of( Permission.READ );
-        hzAuthz.addPermission( key, user1, permissions );
-        hzAuthz.addPermission( key, user2, permissions );
+        hzAuthz.addPermission( key, user1, permissions, OffsetDateTime.MAX );
+        hzAuthz.addPermission( key, user2, permissions, OffsetDateTime.MAX );
         PrincipalSet authorizedPrincipals = new PrincipalSet(
                 hzAuthz.getAuthorizedPrincipalsOnSecurableObject( key, permissions ) );
 
@@ -330,21 +337,21 @@ public class HzAuthzTest extends TestServer {
         // has read for all 3 acls, owner for 2, write for 2
         var aclKeySet1 = Set.of( key1, key2, key3 );
 
-        hzAuthz.addPermission( key1, principal, read );
-        hzAuthz.addPermission( key2, principal, read );
-        hzAuthz.addPermission( key3, principal, read );
+        hzAuthz.addPermission( key1, principal, read, OffsetDateTime.MAX );
+        hzAuthz.addPermission( key2, principal, read, OffsetDateTime.MAX );
+        hzAuthz.addPermission( key3, principal, read, OffsetDateTime.MAX );
 
-        hzAuthz.addPermission( key1, principal, write );
-        hzAuthz.addPermission( key2, principal, write );
+        hzAuthz.addPermission( key1, principal, write, OffsetDateTime.MAX );
+        hzAuthz.addPermission( key2, principal, write, OffsetDateTime.MAX );
 
-        hzAuthz.addPermission( key2, principal, owner );
-        hzAuthz.addPermission( key3, principal, owner );
+        hzAuthz.addPermission( key2, principal, owner, OffsetDateTime.MAX );
+        hzAuthz.addPermission( key3, principal, owner, OffsetDateTime.MAX );
 
         // has all 3 on one, none on other
         var aclKeySet2 = Set.of( key4, key5 );
 
-        hzAuthz.addPermission( key4, principal, materialize );
-        hzAuthz.addPermission( key4, principal, discover );
+        hzAuthz.addPermission( key4, principal, materialize, OffsetDateTime.MAX );
+        hzAuthz.addPermission( key4, principal, discover, OffsetDateTime.MAX );
 
         // no permissions at all
         var aclKeySet3 = Set.of( key5, key6 );
@@ -362,12 +369,12 @@ public class HzAuthzTest extends TestServer {
         Principal p2 = initializePrincipal( TestDataFactory.userPrincipal() );
         Principal p3 = initializePrincipal( TestDataFactory.userPrincipal() );
 
-        hzAuthz.addPermission( key1, p1, read );
-        hzAuthz.addPermission( key1, p1, write );
-        hzAuthz.addPermission( key2, p2, read );
-        hzAuthz.addPermission( key2, p2, owner );
-        hzAuthz.addPermission( key3, p3, read );
-        hzAuthz.addPermission( key3, p3, materialize );
+        hzAuthz.addPermission( key1, p1, read, OffsetDateTime.MAX );
+        hzAuthz.addPermission( key1, p1, write, OffsetDateTime.MAX );
+        hzAuthz.addPermission( key2, p2, read, OffsetDateTime.MAX );
+        hzAuthz.addPermission( key2, p2, owner, OffsetDateTime.MAX );
+        hzAuthz.addPermission( key3, p3, read, OffsetDateTime.MAX );
+        hzAuthz.addPermission( key3, p3, materialize, OffsetDateTime.MAX );
 
         final var reducedPermissionsMap2 = hzAuthz.getSecurableObjectSetsPermissions(
                 List.of( aclKeySet1 ),

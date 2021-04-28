@@ -28,6 +28,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.OffsetDateTime;
 import java.util.EnumSet;
 import java.util.NavigableSet;
 import java.util.Set;
@@ -64,11 +65,11 @@ public class PagingSecurableObjectsTest extends HzAuthzTest {
         currentPrincipals.add( r2 );
         currentPrincipals.add( r3 );
 
-        hzAuthz.addPermission( key1, u1, EnumSet.allOf( Permission.class ) );
+        hzAuthz.addPermission( key1, u1, EnumSet.allOf( Permission.class ), OffsetDateTime.MAX );
         hzAuthz.setSecurableObjectType( key1, SecurableObjectType.EntitySet );
-        hzAuthz.addPermission( key2, r1, EnumSet.of( Permission.READ, Permission.WRITE ) );
+        hzAuthz.addPermission( key2, r1, EnumSet.of( Permission.READ, Permission.WRITE ), OffsetDateTime.MAX );
         hzAuthz.setSecurableObjectType( key2, SecurableObjectType.EntitySet );
-        hzAuthz.addPermission( key3, r2, EnumSet.of( Permission.READ ) );
+        hzAuthz.addPermission( key3, r2, EnumSet.of( Permission.READ ), OffsetDateTime.MAX );
         hzAuthz.setSecurableObjectType( key3, SecurableObjectType.EntitySet );
     }
 

@@ -20,8 +20,6 @@ package com.openlattice.authorization;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
 import com.openlattice.client.serialization.SerializationConstants;
 
 import java.time.OffsetDateTime;
@@ -31,10 +29,10 @@ import java.util.Optional;
 import java.util.Set;
 
 public class Ace {
-    private final     Principal                principal;
-    private final     ImmutableSet<Permission> permissions;
-    private final     OffsetDateTime           expirationDate;
-    private transient int                      hashValue = 0;
+    private final     Principal           principal;
+    private final     EnumSet<Permission> permissions;
+    private final     OffsetDateTime      expirationDate;
+    private transient int                 hashValue = 0;
 
     @JsonCreator
     public Ace(
@@ -42,7 +40,7 @@ public class Ace {
             @JsonProperty( SerializationConstants.PERMISSIONS ) Set<Permission> permissions,
             @JsonProperty( SerializationConstants.EXPIRATION ) Optional<OffsetDateTime> expirationDate ) {
         this.principal = principal;
-        this.permissions = Sets.immutableEnumSet( permissions );
+        this.permissions = EnumSet.copyOf( permissions );
         this.expirationDate = expirationDate.orElse( OffsetDateTime.MAX );
     }
 
@@ -65,7 +63,7 @@ public class Ace {
     }
 
     @JsonProperty( SerializationConstants.PERMISSIONS )
-    public ImmutableSet<Permission> getPermissions() {
+    public EnumSet<Permission> getPermissions() {
         return permissions;
     }
 

@@ -41,8 +41,8 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.openlattice.authorization.EdmAuthorizationHelper.TRANSPORT_PERMISSION;
 import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
+import static com.openlattice.authorization.EdmAuthorizationHelper.TRANSPORT_PERMISSION;
 import static com.openlattice.authorization.EdmAuthorizationHelper.WRITE_PERMISSION;
 
 public interface AuthorizingComponent {
@@ -158,17 +158,6 @@ public interface AuthorizingComponent {
                 Principals.getCurrentPrincipals(),
                 securableObjectType,
                 requiredPermissions );
-    }
-
-    default Stream<AclKey> getAccessibleObjects(
-            SecurableObjectType securableObjectType,
-            EnumSet<Permission> requiredPermissions,
-            com.hazelcast.query.Predicate additionalFilters ) {
-        return getAuthorizationManager().getAuthorizedObjectsOfType(
-                Principals.getCurrentPrincipals(),
-                securableObjectType,
-                requiredPermissions,
-                additionalFilters );
     }
 
     default void ensureObjectCanBeDeleted( UUID objectId ) {

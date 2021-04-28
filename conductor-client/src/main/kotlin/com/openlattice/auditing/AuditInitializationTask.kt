@@ -3,6 +3,8 @@ package com.openlattice.auditing
 import com.hazelcast.core.HazelcastInstance
 import com.openlattice.IdConstants
 import com.openlattice.assembler.tasks.UsersAndRolesInitializationTask
+import com.openlattice.authorization.Ace
+import com.openlattice.authorization.Acl
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.Permission
 import com.openlattice.authorization.SystemRole
@@ -96,15 +98,13 @@ class AuditInitializationTask(
 
             val edmAuditAclKeys = dependencies.entitySetManager.getAuditRecordEntitySetsManager().auditingTypes
                     .propertyTypeIds.values.map {
-                AclKey(edmAuditEntitySet!!.id, it)
-            }.toMutableSet()
+                        AclKey(edmAuditEntitySet!!.id, it)
+                    }.toMutableSet()
             edmAuditAclKeys.add(AclKey(edmAuditEntitySet!!.id))
 
-            dependencies.authorizationManager.setPermission(
-                    edmAuditAclKeys,
-                    setOf(SystemRole.ADMIN.principal),
-                    EnumSet.allOf(Permission::class.java)
-            )
+            dependencies.authorizationManager.setPermissions(edmAuditAclKeys.map {
+                Acl(it, listOf(Ace(SystemRole.ADMIN.principal, EnumSet.allOf(Permission::class.java))))
+            })
 
         }
     }

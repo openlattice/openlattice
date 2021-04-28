@@ -34,6 +34,7 @@ class Auth0SyncService(
     private val principals = HazelcastMap.PRINCIPALS.getMap(hazelcastInstance)
     private val authnPrincipalCache = HazelcastMap.SECURABLE_PRINCIPALS.getMap(hazelcastInstance)
     private val authnRolesCache = HazelcastMap.RESOLVED_PRINCIPAL_TREES.getMap(hazelcastInstance)
+    private val authnRoleParentsCache = HazelcastMap.RESOLVED_PRINCIPAL_PARENTS.getMap(hazelcastInstance)
     private val principalTrees = HazelcastMap.PRINCIPAL_TREES.getMap(hazelcastInstance)
 
     /**

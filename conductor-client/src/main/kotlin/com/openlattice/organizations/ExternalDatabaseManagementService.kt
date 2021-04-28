@@ -47,6 +47,7 @@ import com.openlattice.postgres.ResultSetAdapters.sqlDataType
 import com.openlattice.postgres.ResultSetAdapters.user
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService
+import com.openlattice.postgres.external.Schemas
 import com.openlattice.postgres.external.Schemas.INTEGRATIONS_SCHEMA
 import com.openlattice.postgres.external.Schemas.OPENLATTICE_SCHEMA
 import com.openlattice.postgres.external.Schemas.STAGING_SCHEMA
@@ -190,12 +191,6 @@ class ExternalDatabaseManagementService(
             ptIdToFqn.mapTo(mutableSetOf()) { PropertyTypeIdFqn(it.key, it.value) }
         }
 
-        val tableCols = ptIds.thenApply { transporterPtIds ->
-            transporterPtIds.associate {
-                AclKey(entitySetId, it) to TableColumn(organizationId, entitySetId, it)
-            }
-        }
-
         val acls = permissions.entrySet(Predicates.and(
                 Predicates.equal<AceKey, AceValue>(PermissionMapstore.ROOT_OBJECT_INDEX, entitySetId),
                 Predicates.equal<AceKey, AceValue>(PermissionMapstore.SECURABLE_OBJECT_TYPE_INDEX, SecurableObjectType.PropertyTypeInEntitySet),
@@ -208,10 +203,22 @@ class ExternalDatabaseManagementService(
             Acl(it.key, it.value)
         }
 
-        return ptIdsToFqns.thenCombineAsync(tableCols) { asPtFqns, colsById ->
+        return ptIdsToFqns.thenApply { asPtFqns ->
+            val es = entitySets.getValue(entitySetId)
+
+            val colsById = asPtFqns.associate {
+                AclKey(entitySetId, it.id) to TableColumn(
+                        organizationId,
+                        entitySetId,
+                        it.id,
+                        Schemas.ASSEMBLED_ENTITY_SETS,
+                        es.name,
+                        it.fqn.fullQualifiedNameAsString
+                )
+            }
+
             try {
                 entitySets.lock(entitySetId, 10, TimeUnit.SECONDS)
-                val es = entitySets.getValue(entitySetId)
                 transporterService.assembleEntitySet(
                         organizationId,
                         es,
@@ -222,11 +229,11 @@ class ExternalDatabaseManagementService(
                 entitySets.executeOnKey(entitySetId, AddFlagsOnEntitySetEntryProcessor(EnumSet.of(EntitySetFlag.TRANSPORTED)))
             } catch (ex: Exception) {
                 logger.error("error while transporting entityset $entitySetId: ", ex)
-                return@thenCombineAsync false
+                return@thenApply false
             } finally {
                 entitySets.unlock(entitySetId)
             }
-            return@thenCombineAsync true
+            return@thenApply true
         }.toCompletableFuture()
     }
 
@@ -398,8 +405,6 @@ class ExternalDatabaseManagementService(
             }
             externalColumns.removeAll(idsPredicate(columnIds))
         }
-
-        extDbPermsManager.destroyExternalTablePermissions(organizationId, columnIdsByTableId)
     }
 
     /**

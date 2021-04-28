@@ -25,11 +25,7 @@ import com.google.common.collect.ImmutableSet
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
-import com.openlattice.authorization.AclKey
-import com.openlattice.authorization.AuthorizationManager
-import com.openlattice.authorization.Permission
-import com.openlattice.authorization.Principal
-import com.openlattice.authorization.PrincipalType
+import com.openlattice.authorization.*
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EntitySet
@@ -165,7 +161,9 @@ class AuditRecordEntitySetsManager(
         val auditAclKeys = auditingTypes.propertyTypeIds.values.map { AclKey(entitySet.id, it) }.toMutableSet()
         auditAclKeys.add(AclKey(entitySet.id))
 
-        authorizationManager.setPermission(auditAclKeys, ownerPrincipals, EnumSet.allOf(Permission::class.java))
+        authorizationManager.setPermissions(auditAclKeys.map {
+            Acl(it, ownerPrincipals.map { p -> Ace(p, EnumSet.allOf(Permission::class.java)) })
+        })
     }
 
     fun initializeAuditEdgeEntitySet(aclKey: AclKey) {

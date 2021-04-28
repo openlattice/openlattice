@@ -22,7 +22,6 @@ package com.openlattice.apps.services
 
 import com.google.common.base.Preconditions
 import com.google.common.collect.ImmutableSet
-import com.google.common.collect.Maps
 import com.google.common.collect.Sets
 import com.google.common.eventbus.EventBus
 import com.hazelcast.core.HazelcastInstance
@@ -137,7 +136,7 @@ class AppService(
             entitySetCollectionId: UUID,
             appPrincipal: Principal,
             userPrincipal: Principal): MutableMap<UUID, AclKey> {
-        val permissionsToGrant = Maps.newHashMap<AceKey, EnumSet<Permission>>()
+        val aclsToGrant = mutableListOf<Acl>()
 
         val entitySetCollection = collectionsManager.getEntitySetCollection(entitySetCollectionId)
         val entityTypeCollection = collectionsManager
@@ -159,8 +158,11 @@ class AppService(
                 principalsService.lookup(rolePrincipal)
 
             /* Track permissions that need to be granted to the role */
-            permissionsToGrant[AceKey(AclKey(entitySetCollectionId), rolePrincipal)] = EnumSet.of(Permission.READ)
-            permissionsToGrant[AceKey(AclKey(entitySetCollectionId), appPrincipal)] = EnumSet.of(Permission.READ)
+            aclsToGrant.add(Acl(AclKey(entitySetCollectionId), listOf(
+                    Ace(rolePrincipal, EnumSet.of(Permission.READ)),
+                    Ace(appPrincipal, EnumSet.of(Permission.READ))
+            )))
+
             it.permissions.forEach { (permission, requiredTemplateTypes) ->
 
                 requiredTemplateTypes.forEach { (templateTypeId, maybePropertyTypeIds) ->
@@ -169,12 +171,11 @@ class AppService(
                     val propertyTypeIds = maybePropertyTypeIds
                             .orElse(entityTypesById.getValue(entitySetsById.getValue(entitySetId).entityTypeId).properties)
 
-                    propertyTypeIds.map { id -> AclKey(entitySetId, id) }.plusElement(AclKey(entitySetId)).forEach { ak ->
-                        val aceKey = AceKey(ak, rolePrincipal)
-                        val permissionEnumSet = permissionsToGrant.getOrDefault(aceKey, EnumSet.noneOf(Permission::class.java))
-                        permissionEnumSet.add(permission)
-                        permissionsToGrant[aceKey] = permissionEnumSet
-                        permissionsToGrant[AceKey(ak, appPrincipal)] = EnumSet.of(Permission.READ)
+                    propertyTypeIds.map { id -> AclKey(entitySetId, id) }.plusElement(AclKey(entitySetId)).forEach { aclKey ->
+                        aclsToGrant.add(Acl(aclKey, listOf(
+                                Ace(appPrincipal, EnumSet.of(Permission.READ)),
+                                Ace(rolePrincipal, EnumSet.of(permission))
+                        )))
                     }
                 }
             }
@@ -183,7 +184,7 @@ class AppService(
         }.toMutableMap()
 
         /* Grant the required permissions to app roles */
-        authorizationService.setPermissions(permissionsToGrant)
+        authorizationService.setPermissions(aclsToGrant)
 
         return roles
     }

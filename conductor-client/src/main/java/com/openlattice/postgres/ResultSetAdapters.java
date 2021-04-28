@@ -35,7 +35,12 @@ import com.openlattice.apps.AppTypeSetting;
 import com.openlattice.assembler.EntitySetAssemblyKey;
 import com.openlattice.assembler.MaterializedEntitySet;
 import com.openlattice.auditing.AuditRecordEntitySetConfiguration;
-import com.openlattice.authorization.*;
+import com.openlattice.authorization.AceKey;
+import com.openlattice.authorization.AclKey;
+import com.openlattice.authorization.Permission;
+import com.openlattice.authorization.Principal;
+import com.openlattice.authorization.PrincipalType;
+import com.openlattice.authorization.SecurablePrincipal;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.collaborations.Collaboration;
 import com.openlattice.collaborations.ProjectedTableKey;
@@ -522,9 +527,17 @@ public final class ResultSetAdapters {
         return rs.getString( URL.getName() );
     }
 
+    public static String principalId( ResultSet rs ) throws SQLException {
+        return rs.getString( PRINCIPAL_ID_FIELD );
+    }
+
+    public static PrincipalType principalType( ResultSet rs ) throws SQLException {
+        return PrincipalType.valueOf( rs.getString( PRINCIPAL_TYPE_FIELD ) );
+    }
+
     public static Principal principal( ResultSet rs ) throws SQLException {
-        PrincipalType principalType = PrincipalType.valueOf( rs.getString( PRINCIPAL_TYPE_FIELD ) );
-        String principalId = rs.getString( PRINCIPAL_ID_FIELD );
+        PrincipalType principalType = principalType( rs );
+        String principalId = principalId( rs );
         return new Principal( principalType, principalId );
     }
 
@@ -1245,10 +1258,6 @@ public final class ResultSetAdapters {
 
     @NotNull public static Permission permission( @NotNull ResultSet rs ) throws SQLException {
         return Permission.valueOf( rs.getString( PERMISSION.getName() ) );
-    }
-
-    @NotNull public static AccessTarget accessTarget( @NotNull ResultSet rs ) throws SQLException {
-        return new AccessTarget( aclKey( rs ), permission( rs ) );
     }
 
     @NotNull public static ProjectedTableKey projectedTableKey( @NotNull ResultSet rs ) throws SQLException {

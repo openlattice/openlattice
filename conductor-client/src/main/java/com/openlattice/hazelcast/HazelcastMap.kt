@@ -30,7 +30,6 @@ import com.openlattice.assembler.EntitySetAssemblyKey
 import com.openlattice.assembler.MaterializedEntitySet
 import com.openlattice.assembler.OrganizationAssembly
 import com.openlattice.auditing.AuditRecordEntitySetConfiguration
-import com.openlattice.authorization.AccessTarget
 import com.openlattice.authorization.AceKey
 import com.openlattice.authorization.AceValue
 import com.openlattice.authorization.AclKey
@@ -126,7 +125,6 @@ class HazelcastMap<K, V> internal constructor(val name: String) : TypedMapIdenti
         @JvmField val ENTITY_TYPE_COLLECTIONS = HazelcastMap<UUID, EntityTypeCollection>("ENTITY_TYPE_COLLECTIONS")
         @JvmField val ENTITY_TYPE_PROPERTY_METADATA = HazelcastMap<EntityTypePropertyKey, EntityTypePropertyMetadata>("ENTITY_TYPE_PROPERTY_METADATA")
         @JvmField val ENTITY_TYPES = HazelcastMap<UUID, EntityType>("ENTITY_TYPES")
-        @JvmField val EXTERNAL_PERMISSION_ROLES = HazelcastMap<AccessTarget, UUID>("EXTERNAL_PERMISSION_ROLES")
         @JvmField val EXTERNAL_COLUMNS = HazelcastMap<UUID, ExternalColumn>("EXTERNAL_COLUMNS")
         @JvmField val EXTERNAL_TABLES = HazelcastMap<UUID, ExternalTable>("EXTERNAL_TABLES")
         @JvmField val ID_GENERATION = HazelcastMap<Long, Range>("ID_GENERATION")
@@ -153,6 +151,7 @@ class HazelcastMap<K, V> internal constructor(val name: String) : TypedMapIdenti
         @JvmField val PROPERTY_TYPES = HazelcastMap<UUID, PropertyType>("PROPERTY_TYPES")
         @JvmField val REQUESTS = HazelcastMap<AceKey, Status>("REQUESTS")
         @JvmField val RESOLVED_PRINCIPAL_TREES = HazelcastMap<String, SortedPrincipalSet>("RESOLVED_PRINCIPAL_TREES")
+        @JvmField val RESOLVED_PRINCIPAL_PARENTS = HazelcastMap<String, SortedPrincipalSet>("RESOLVED_PRINCIPAL_PARENTS")
         @JvmField val SCHEDULED_TASK_LOCKS = HazelcastMap<UUID, Long>("SCHEDULED_TASK_LOCKS")
         @JvmField val SCHEDULED_TASKS = HazelcastMap<UUID, ScheduledTask>("SCHEDULED_TASKS")
         @JvmField val SCHEMAS = HazelcastMap<String, DelegatedStringSet>("SCHEMAS")

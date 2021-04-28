@@ -38,7 +38,6 @@ import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.auth0.AwsAuth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
-import com.openlattice.authorization.AccessTarget;
 import com.openlattice.authorization.AceKey;
 import com.openlattice.authorization.AceValue;
 import com.openlattice.authorization.AclKey;
@@ -132,11 +131,6 @@ public class MapstoresPod {
     @Bean
     public SelfRegisteringMapStore<AceKey, AceValue> permissionMapstore() {
         return new PermissionMapstore( hikariDataSource, eventBus );
-    }
-
-    @Bean
-    public SelfRegisteringMapStore<AccessTarget, UUID> externalPermissionRoleMapstore() {
-        return new ExternalPermissionRolesMapstore( hikariDataSource );
     }
 
     @Bean

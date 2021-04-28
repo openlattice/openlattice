@@ -241,26 +241,13 @@ class CollectionsManager(
         val propertyTypeIds = edmManager.getEntityType(collectionTemplateType.entityTypeId).properties
         val ownerPermissions = EnumSet.allOf(Permission::class.java)
 
-        val permissionsToAdd = mutableMapOf<AceKey, EnumSet<Permission>>()
-
-        entitySetsCreated.forEach {
-            val entitySetCollectionId = it.key
-            val entitySetId = it.value
-
-            entitySetCollectionOwners.get(AclKey(entitySetCollectionId)).forEach { owner ->
-                permissionsToAdd[AceKey(AclKey(entitySetId), owner)] = ownerPermissions
-                propertyTypeIds.forEach { ptId ->
-                    permissionsToAdd[AceKey(
-                            AclKey(entitySetId, ptId),
-                            owner
-                    )] = ownerPermissions
-                }
+        val acls = entitySetsCreated.flatMap { (entitySetCollectionId, entitySetId) ->
+            (propertyTypeIds.map { AclKey(entitySetId, it) } + listOf(AclKey(entitySetId))).map { aclKey ->
+                Acl(aclKey, entitySetCollectionOwners.get(AclKey(entitySetCollectionId)).map { Ace(it, ownerPermissions) })
             }
-
-            entitySetCollectionsToUpdate.getValue(entitySetCollectionId).template[collectionTemplateType.id] = entitySetId
         }
 
-        authorizations.setPermissions(permissionsToAdd)
+        authorizations.setPermissions(acls)
         entitySetCollectionConfig.putAll(entitySetCollectionsToUpdate.keys.associate {
             CollectionTemplateKey(
                     it,

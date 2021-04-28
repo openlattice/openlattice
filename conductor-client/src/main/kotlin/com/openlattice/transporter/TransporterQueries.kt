@@ -333,6 +333,10 @@ internal fun setUserInhertRolePrivileges(role: String): String {
     return "ALTER ROLE ${ApiHelpers.dbQuote(role)} INHERIT"
 }
 
+internal fun grantUsageOnSchemaToUsersSql(schema: Schemas, quotedUsers: String): String {
+    return "GRANT USAGE ON SCHEMA $schema TO $quotedUsers"
+}
+
 internal fun grantUsageOnSchemaSql(schema: Schemas, orgUserId: String): String {
     return "GRANT USAGE ON SCHEMA $schema TO ${ApiHelpers.dbQuote(orgUserId)}"
 }

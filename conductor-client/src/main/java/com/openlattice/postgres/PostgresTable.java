@@ -112,7 +112,6 @@ import static com.openlattice.postgres.PostgresColumn.ORGANIZATION_IDS;
 import static com.openlattice.postgres.PostgresColumn.PARTITION;
 import static com.openlattice.postgres.PostgresColumn.PARTITIONS;
 import static com.openlattice.postgres.PostgresColumn.PARTITION_INDEX;
-import static com.openlattice.postgres.PostgresColumn.PERMISSION;
 import static com.openlattice.postgres.PostgresColumn.PHONE_NUMBER;
 import static com.openlattice.postgres.PostgresColumn.PII;
 import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_ID;
@@ -126,7 +125,6 @@ import static com.openlattice.postgres.PostgresColumn.QUERY_ID;
 import static com.openlattice.postgres.PostgresColumn.REASON;
 import static com.openlattice.postgres.PostgresColumn.REFRESH_RATE;
 import static com.openlattice.postgres.PostgresColumn.ROLES;
-import static com.openlattice.postgres.PostgresColumn.ROLE_ID;
 import static com.openlattice.postgres.PostgresColumn.SCHEDULED_DATE;
 import static com.openlattice.postgres.PostgresColumn.SCHEMA;
 import static com.openlattice.postgres.PostgresColumn.SCOPE;
@@ -315,10 +313,6 @@ public final class PostgresTable {
                             ANALYZER,
                             MULTI_VALUED,
                             INDEX_TYPE );
-    public static final PostgresTableDefinition EXTERNAL_PERMISSION_ROLES     =
-            new PostgresTableDefinition( "external_permission_roles" )
-                    .addColumns( ACL_KEY, PERMISSION, ROLE_ID )
-                    .primaryKey( ACL_KEY, PERMISSION );
 
     public static final PostgresTableDefinition GRAPH_QUERIES              =
             new PostgresTableDefinition( "graph_queries" )

@@ -212,12 +212,18 @@ public class DatastoreServicesPod {
     }
 
     @Bean
+    public PrincipalPermissionQueryService principalPermissionQueryService() {
+        return new PrincipalPermissionQueryService( hazelcastInstance, hikariDataSource, principalsMapManager() );
+    }
+
+    @Bean
     public ExternalDatabasePermissioningService externalDatabasePermissionsManager() {
         return new ExternalDatabasePermissioner(
                 hazelcastInstance,
                 externalDbConnMan,
                 dcs(),
-                principalsMapManager()
+                principalsMapManager(),
+                principalPermissionQueryService()
         );
     }
 
