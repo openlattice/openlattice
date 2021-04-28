@@ -25,6 +25,7 @@ package com.openlattice.datastore.services;
 import java.util.Map;
 import java.util.Set;
 
+import com.auth0.json.mgmt.users.User;
 import com.openlattice.directory.pojo.Auth0UserBasic;
 
 import retrofit2.http.*;
@@ -53,7 +54,7 @@ public interface Auth0ManagementApi {
     Void resetRolesOfUser( @Path( USER_ID ) String userId, @Body Map<String, Object> app_metadata );
 
     @GET( USERS )
-    Set<Auth0UserBasic> searchAllUsers(
+    Set<User> searchAllUsers(
             @Query( QUERY ) String searchQuery,
             @Query( PAGE ) int page,
             @Query( PER_PAGE ) int perPage,
