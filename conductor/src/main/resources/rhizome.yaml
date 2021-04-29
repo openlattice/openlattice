@@ -8,6 +8,7 @@ session-clustering-enabled: false
 
 hazelcast:
     server: true
+    healthcheck: true
     group: "local"
     password: "trellis"
     cp-member-count: 0
