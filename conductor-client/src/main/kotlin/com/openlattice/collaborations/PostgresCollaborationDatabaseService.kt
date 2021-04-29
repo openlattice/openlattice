@@ -7,7 +7,6 @@ import com.openlattice.assembler.AssemblerConfiguration
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.DbCredentialService
-import com.openlattice.authorization.Permission
 import com.openlattice.collaborations.mapstores.ProjectedTablesMapstore
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organizations.OrganizationDatabase
@@ -61,21 +60,10 @@ class PostgresCollaborationDatabaseService(
                 spm.getOrganizationMembers(organizationIds).flatMap { it.value }.map { it.aclKey }.toSet()
         ).map { it.value.username }
 
-        /* Identify schemas to create, and which pg roles should have permissions on those schemas */
-        val schemaNames = organizationDatabases.getAll(organizationIds).mapValues { it.value.name }
-
-        val orgIdToPrincipals = authorizations.getAllSecurableObjectPermissions(organizationIds.map { AclKey(it) }.toSet()).associate { acl ->
-            acl.aclKey[0] to acl.aces.filter { it.permissions.contains(Permission.READ) }.map { it.principal }
-        }
-
-        val principalToAclKey = spm.getSecurablePrincipals(orgIdToPrincipals.flatMap { it.value }).associate {
-            it.principal to it.aclKey
-        }
-        val aclKeyToDbUsername = dbCreds.getDbAccounts(principalToAclKey.values.toSet()).mapValues { it.value.username }
-
-        val schemaNameToPostgresRoles = orgIdToPrincipals.entries.associate { (orgId, principals) ->
-            schemaNames.getValue(orgId) to principals.mapNotNull { aclKeyToDbUsername[principalToAclKey[it]] }
-        }
+        /* Identify schemas to create, and identify participating organization pg roles */
+        val allOrgIds = collaborations.getValue(collaborationId).organizationIds + organizationIds
+        val allOrgPgRoles = dbCreds.getDbUsernames(allOrgIds.mapTo(mutableSetOf()) { AclKey(it) })
+        val schemaNameToPostgresRoles = organizationDatabases.getAll(allOrgIds).map { it.value.name }.associateWith { allOrgPgRoles }
 
         /* Perform updates on the database */
         dbQueryManager.addMembersToCollaboration(collaborationId, orgMemberRoles)
@@ -110,10 +98,17 @@ class PostgresCollaborationDatabaseService(
         /* Identify schemas to drop */
         val schemaNames = organizationDatabases.getAll(organizationIds).map { it.value.name }
 
+        /* Identify schemas the removed organization principal will lose usage on */
+        val allOrgPgRoles = dbCreds.getDbUsernames(organizationIds.mapTo(mutableSetOf()) { AclKey(it) })
+        val schemaNameToPostgresRoles = organizationDatabases.getAll(allOrgIds).map { it.value.name }.associateWith { allOrgPgRoles }
+
         /* Perform updates on the database */
         projectedTableIds.forEach { (tableId, organizationId) ->
             removeTableProjection(collaborationId, organizationId, tableId)
             projectedTables.delete(ProjectedTableKey(tableId, collaborationId))
+        }
+        schemaNameToPostgresRoles.forEach { (schemaName, rolesLosingAccess) ->
+            dbQueryManager.removeMembersFromSchemaInCollab(collaborationId, schemaName, rolesLosingAccess)
         }
         dbQueryManager.removeMembersFromCollaboration(collaborationId, rolesToRemove)
         dbQueryManager.dropSchemas(collaborationId, schemaNames)
@@ -142,12 +137,10 @@ class PostgresCollaborationDatabaseService(
             membersToRemoveFromSchema: Set<AclKey>,
             membersToRemoveFromDatabase: Set<AclKey>
     ) {
-        val schemaName = organizationDatabases.getValue(organizationId).name
         val roleNamesByAclKey = dbCreds.getDbAccounts(membersToRemoveFromSchema + membersToRemoveFromDatabase).mapValues { it.value.username }
 
         val roleNamesToRemoveFromDatabase = membersToRemoveFromDatabase.mapNotNull { roleNamesByAclKey[it] }
 
-        dbQueryManager.removeMembersFromSchemaInCollab(collaborationId, schemaName, roleNamesByAclKey.values)
         dbQueryManager.removeMembersFromDatabaseInCollab(collaborationId, roleNamesToRemoveFromDatabase)
     }
 
