@@ -182,12 +182,8 @@ class PostgresCollaborationDatabaseService(
                 viewName = viewName
         )
 
-        externalDbPermissioner.initializeProjectedTableViewPermissions(
-                collaborationId,
-                viewSchema,
-                table,
-                columns
-        )
+        // TODO: INITIALIZE PERMISSIONS
+
     }
 
     override fun removeTableProjection(collaborationId: UUID, organizationId: UUID, tableId: UUID) {

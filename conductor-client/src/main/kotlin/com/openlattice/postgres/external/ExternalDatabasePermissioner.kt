@@ -7,15 +7,19 @@ import com.openlattice.ApiHelpers
 import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.edm.EdmConstants
+import com.openlattice.edm.EntitySet
 import com.openlattice.edm.processors.GetFqnFromPropertyTypeEntryProcessor
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.organization.ExternalColumn
+import com.openlattice.organization.ExternalTable
 import com.openlattice.organization.roles.Role
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.PostgresPrivileges
 import com.openlattice.postgres.TableColumn
 import com.openlattice.postgres.mapstores.SecurableObjectTypeMapstore
 import com.openlattice.transporter.grantUsageOnSchemaSql
+import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.sql.Connection
@@ -121,17 +125,42 @@ class ExternalDatabasePermissioner(
         val externalTablesById = externalTables.getAll(extTableIds)
 
         val columnsById = externalColumns.getAll(extTableColIds).values.associate {
-            val table = externalTablesById.getValue(it.tableId)
-            AclKey(it.tableId, it.id) to TableColumn(
-                    it.organizationId,
-                    it.tableId,
-                    it.id,
-                    Schemas.fromName(table.schema),
-                    it.name,
-                    table.name
-            )
+            it.getAclKey() to externalColumnToTableColumn(it, externalTablesById)
         }
         updateExternalTablePermissions(action, externalTableColAcls, columnsById)
+    }
+
+    private fun externalColumnToTableColumn(
+            column: ExternalColumn
+            tablesById: Map<UUID, ExternalTable>
+    ): TableColumn {
+        val table = tablesById.getValue(column.tableId)
+
+        return TableColumn(
+                column.organizationId,
+                column.tableId,
+                column.id,
+                Schemas.fromName(table.schema),
+                column.name,
+                table.name
+        )
+    }
+
+    private fun entitySetToTableColumn(
+            aclKey: AclKey,
+            entitySetsById: Map<UUID, EntitySet>,
+            propertyTypeFqnsById: Map<UUID, FullQualifiedName>
+    ): TableColumn {
+        val entitySet = entitySetsById.getValue(aclKey[0])
+
+        return TableColumn(
+                entitySet.organizationId,
+                aclKey[0],
+                aclKey[1],
+                Schemas.ASSEMBLED_ENTITY_SETS,
+                entitySet.name,
+                propertyTypeFqnsById.getValue(aclKey[1]).fullQualifiedNameAsString
+        )
     }
 
     fun executePrivilegesUpdateOnPropertyTypes(action: Action, assemblyAcls: List<Acl>) {
@@ -142,17 +171,9 @@ class ExternalDatabasePermissioner(
         val propertyTypesById = propertyTypes.executeOnKeys(ptIds, GetFqnFromPropertyTypeEntryProcessor())
 
         val aclKeyToTableCols = assemblyAcls.associate {
-            val entitySet = entitySetsById.getValue(it.aclKey[0])
-            it.aclKey to TableColumn(
-                    entitySet.organizationId,
-                    it.aclKey[0],
-                    it.aclKey[1],
-                    Schemas.ASSEMBLED_ENTITY_SETS,
-                    entitySet.name,
-                    propertyTypesById.getValue(it.aclKey[1]).fullQualifiedNameAsString
-            )
-
+            it.aclKey to entitySetToTableColumn(it.aclKey, entitySetsById, propertyTypesById)
         }
+
         updateAssemblyPermissions(action, assemblyAcls, aclKeyToTableCols)
     }
 
@@ -205,26 +226,20 @@ class ExternalDatabasePermissioner(
                 it.key.aclKey
             }.mapValues { it.value }
 
-            val tablesById = entitySets.getAll(ptUpdates.keys.mapTo(mutableSetOf()) { it.first() }).filter {
+            val entitySetsById = entitySets.getAll(ptUpdates.keys.mapTo(mutableSetOf()) { it.first() }).filter {
                 it.value.flags.contains(EntitySetFlag.TRANSPORTED)
             }
-            val columnsById = propertyTypes.getAll(ptUpdates.keys.mapTo(mutableSetOf()) { it.last() })
+            val propertyTypeFqnsById = propertyTypes.executeOnKeys(
+                    ptUpdates.keys.mapTo(mutableSetOf()) { it.last() },
+                    GetFqnFromPropertyTypeEntryProcessor()
+            )
 
-            val aclUpdates = ptUpdates.filter { tablesById.containsKey(it.key.first()) }.map { (aclKey, permissionUpdates) ->
+            val aclUpdates = ptUpdates.filter { entitySetsById.containsKey(it.key.first()) }.map { (aclKey, permissionUpdates) ->
                 Acl(aclKey, permissionUpdates.map { Ace(it.key.principal, it.value) })
             }
 
-            val tableColumns = ptUpdates.keys.filter { tablesById.containsKey(it.first()) }.associateWith {
-                val col = columnsById.getValue(it.last())
-                val table = tablesById.getValue(it.first())
-                TableColumn(
-                        table.organizationId,
-                        table.id,
-                        col.id,
-                        Schemas.ASSEMBLED_ENTITY_SETS,
-                        col.type.fullQualifiedNameAsString,
-                        table.name
-                )
+            val tableColumns = ptUpdates.keys.filter { entitySetsById.containsKey(it.first()) }.associateWith {
+                entitySetToTableColumn(it, entitySetsById, propertyTypeFqnsById)
             }
 
             updateTablePermissions(
@@ -250,16 +265,7 @@ class ExternalDatabasePermissioner(
             }
 
             val tableColumns = colUpdates.keys.filter { tablesById.containsKey(it.first()) }.associateWith {
-                val col = columnsById.getValue(it.last())
-                val table = tablesById.getValue(it.first())
-                TableColumn(
-                        table.organizationId,
-                        table.id,
-                        col.id,
-                        Schemas.fromName(table.schema),
-                        col.name,
-                        table.name
-                )
+                externalColumnToTableColumn(columnsById.getValue(it.last()), tablesById)
             }
 
             updateTablePermissions(
@@ -307,6 +313,8 @@ class ExternalDatabasePermissioner(
         if (!actionTypeIsValid(action)) {
             return
         }
+
+        principalPermissionQueryService.resolvePermissionChangeOnPrincipalTreeChange()
 
         updateTablePermissions(action, columnAcls, columnsById, TableType.TABLE)
     }
