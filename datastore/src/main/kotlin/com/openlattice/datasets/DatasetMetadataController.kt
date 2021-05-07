@@ -9,6 +9,7 @@ import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
 import com.openlattice.authorization.EdmAuthorizationHelper
 import com.openlattice.authorization.Permission
+import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.data.DataDeletionManager
 import com.openlattice.data.DataGraphManager
 import com.openlattice.datasets.Dataset
@@ -25,6 +26,7 @@ import com.openlattice.datasets.DatasetService
 import com.openlattice.datasets.SecurableObjectMetadataUpdate
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
+import com.openlattice.organizations.ExternalDatabaseManagementService
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.springframework.http.MediaType
@@ -53,7 +55,8 @@ constructor(
         private val authzHelper: EdmAuthorizationHelper,
         private val deletionManager: DataDeletionManager,
         private val entitySetManager: EntitySetManager,
-        private val datasetService: DatasetService
+        private val datasetService: DatasetService,
+        private val edms: ExternalDatabaseManagementService
 ) : DatasetMetadataApi, AuthorizingComponent, AuditingComponent {
 
     @Timed
@@ -115,7 +118,10 @@ constructor(
     override fun updateDatasetMetadata(@PathVariable(ID) id: UUID, @RequestBody update: SecurableObjectMetadataUpdate) {
         val aclKey = AclKey(id)
         ensureOwnerAccess(aclKey)
+
+        updateSecurableObjectMetadata(aclKey, update)
         datasetService.updateObjectMetadata(aclKey, update)
+
     }
 
     @Timed
@@ -131,7 +137,28 @@ constructor(
     ) {
         val aclKey = AclKey(datasetId, id)
         ensureOwnerAccess(aclKey)
+
+        updateSecurableObjectMetadata(aclKey, update)
         datasetService.updateObjectMetadata(aclKey, update)
+    }
+
+    private fun updateSecurableObjectMetadata(aclKey: AclKey, update: SecurableObjectMetadataUpdate) {
+        val metadataUpdate = SecurableObjectMetadataUpdate.toMetadataUpdate(update)
+
+        when (val objectType = datasetService.getObjectType(aclKey)) {
+            SecurableObjectType.EntitySet -> {
+                entitySetManager.updateEntitySetMetadata(aclKey.first(), metadataUpdate)
+            }
+            SecurableObjectType.OrganizationExternalDatabaseTable -> {
+                edms.updateExternalTableMetadata(aclKey.first(), metadataUpdate)
+            }
+            SecurableObjectType.OrganizationExternalDatabaseColumn -> {
+                edms.updateExternalColumnMetadata(aclKey.first(), aclKey.last(), metadataUpdate)
+            }
+            SecurableObjectType.PropertyTypeInEntitySet -> {
+            }
+            else -> throw IllegalArgumentException("Cannot update metadata for object of type $objectType")
+        }
     }
 
     override fun getAuthorizationManager(): AuthorizationManager {

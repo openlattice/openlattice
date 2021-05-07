@@ -45,10 +45,10 @@ import com.openlattice.authorization.securable.SecurableObjectType.PropertyTypeI
 import com.openlattice.controllers.exceptions.ResourceNotFoundException
 import com.openlattice.data.storage.PostgresEntitySetSizesInitializationTask
 import com.openlattice.data.storage.partitions.PartitionManager
+import com.openlattice.datasets.DatasetService
 import com.openlattice.datasets.ObjectMetadataMapstore
 import com.openlattice.datasets.SecurableObjectMetadata
 import com.openlattice.datasets.SecurableObjectMetadataUpdate
-import com.openlattice.datasets.SecurableObjectMetadataUpdateEntryProcessor
 import com.openlattice.datastore.util.Util
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.events.*
@@ -98,6 +98,7 @@ class EntitySetService(
         private val edm: EdmManager,
         private val hds: HikariDataSource,
         private val organizationMetadataEntitySetsService: OrganizationMetadataEntitySetsService,
+        private val datasetService: DatasetService,
         auditingConfiguration: AuditingConfiguration
 ) : EntitySetManager {
     init {
@@ -655,18 +656,10 @@ class EntitySetService(
 
     override fun updateEntitySetPropertyMetadata(entitySetId: UUID, propertyTypeId: UUID, update: MetadataUpdate) {
         val key = AclKey(entitySetId, propertyTypeId)
-
-        val title = if (update.title.isPresent) update.title.get() else null
-        val description = if (update.description.isPresent) update.description.get() else null
-
-        val metadataUpdate = SecurableObjectMetadataUpdate(
-                title = title,
-                description = description
-        )
-        objectMetadata.executeOnKey(key, SecurableObjectMetadataUpdateEntryProcessor(metadataUpdate))
+        datasetService.updateObjectMetadata(key, SecurableObjectMetadataUpdate.fromMetadataUpdate(update))
     }
 
-    override fun updateEntitySetMetadata(entitySetId: UUID, update: MetadataUpdate) {
+    override fun updateEntitySet(entitySetId: UUID, update: MetadataUpdate) {
         if (update.name.isPresent || update.organizationId.isPresent) {
             val oldEntitySet = getEntitySet(entitySetId)!!
 
@@ -712,8 +705,13 @@ class EntitySetService(
             }
         }
 
-        val newEntitySet = entitySets.executeOnKey(entitySetId, UpdateEntitySetMetadataProcessor(update)) as EntitySet
+        val newEntitySet = updateEntitySetMetadata(entitySetId, update)
+        datasetService.updateObjectMetadata(AclKey(entitySetId), SecurableObjectMetadataUpdate.fromMetadataUpdate(update))
         eventBus.post(EntitySetMetadataUpdatedEvent(newEntitySet))
+    }
+
+    override fun updateEntitySetMetadata(entitySetId: UUID, update: MetadataUpdate): EntitySet {
+        return entitySets.executeOnKey(entitySetId, UpdateEntitySetMetadataProcessor(update))
     }
 
     override fun addLinkedEntitySets(entitySetId: UUID, linkedEntitySets: Set<UUID>): Int {

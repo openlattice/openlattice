@@ -8,6 +8,8 @@ import com.hazelcast.query.QueryConstants
 import com.openlattice.authorization.*
 import com.openlattice.authorization.mapstores.PermissionMapstore
 import com.openlattice.authorization.securable.SecurableObjectType
+import com.openlattice.datasets.DatasetService
+import com.openlattice.datasets.SecurableObjectMetadataUpdate
 import com.openlattice.edm.PropertyTypeIdFqn
 import com.openlattice.edm.processors.AddFlagsOnEntitySetEntryProcessor
 import com.openlattice.edm.processors.GetEntityTypeFromEntitySetEntryProcessor
@@ -80,7 +82,8 @@ class ExternalDatabaseManagementService(
         private val extDbPermsManager: ExternalDatabasePermissioningService,
         private val transporterService: TransporterService,
         private val dbCredentialService: DbCredentialService,
-        private val hds: HikariDataSource
+        private val hds: HikariDataSource,
+        private val datasetService: DatasetService
 ) {
 
     private val logger = LoggerFactory.getLogger(ExternalDatabaseManagementService::class.java)
@@ -312,7 +315,12 @@ class ExternalDatabaseManagementService(
             aclKeyReservations.renameReservation(tableFqnToId.second, newTableFqn.fullQualifiedNameAsString)
         }
 
-        externalTables.submitToKey(tableFqnToId.second, UpdateExternalTableEntryProcessor(update))
+        updateExternalTableMetadata(tableFqnToId.second, update)
+        datasetService.updateObjectMetadata(AclKey(tableFqnToId.second), SecurableObjectMetadataUpdate.fromMetadataUpdate(update))
+    }
+
+    fun updateExternalTableMetadata(tableId: UUID, update: MetadataUpdate) {
+        externalTables.submitToKey(tableId, UpdateExternalTableEntryProcessor(update))
     }
 
     fun updateExternalColumn(orgId: UUID, tableFqnToId: Pair<String, UUID>, columnFqnToId: Pair<String, UUID>, update: MetadataUpdate) {
@@ -327,7 +335,15 @@ class ExternalDatabaseManagementService(
             }
             aclKeyReservations.renameReservation(columnFqnToId.second, newColumnFqn.fullQualifiedNameAsString)
         }
-        externalColumns.submitToKey(columnFqnToId.second, UpdateExternalColumnEntryProcessor(update))
+        updateExternalColumnMetadata(tableFqnToId.second, columnFqnToId.second, update)
+        datasetService.updateObjectMetadata(
+                AclKey(tableFqnToId.second, columnFqnToId.second),
+                SecurableObjectMetadataUpdate.fromMetadataUpdate(update)
+        )
+    }
+
+    fun updateExternalColumnMetadata(tableId: UUID, columnId: UUID, update: MetadataUpdate) {
+        externalColumns.submitToKey(columnId, UpdateExternalColumnEntryProcessor(update))
     }
 
     /*DELETE*/

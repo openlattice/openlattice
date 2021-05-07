@@ -101,4 +101,8 @@ class DatasetService(val hazelcast: HazelcastInstance) {
 
         return columnsAsMap
     }
+
+    fun getObjectType(aclKey: AclKey): SecurableObjectType {
+        return securableObjectTypes.getValue(aclKey)
+    }
 }

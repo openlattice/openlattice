@@ -136,6 +136,22 @@ public class MetadataUpdate {
                 dataExpiration );
     }
 
+    public MetadataUpdate( String title, String description, Set<String> contacts ) {
+        this( Optional.ofNullable( title ),
+                Optional.ofNullable( description ),
+                Optional.empty(),
+                Optional.ofNullable( contacts ),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty() );
+    }
+
     @JsonProperty( SerializationConstants.TITLE_FIELD )
     public Optional<String> getTitle() {
         return title;
@@ -224,7 +240,7 @@ public class MetadataUpdate {
     public boolean equals( Object o ) {
         if ( this == o ) { return true; }
         if ( !( o instanceof MetadataUpdate ) ) { return false; }
-        MetadataUpdate that = ( MetadataUpdate ) o;
+        MetadataUpdate that = (MetadataUpdate) o;
         return title.equals( that.title ) &&
                 description.equals( that.description ) &&
                 indexType.equals( that.indexType ) &&
