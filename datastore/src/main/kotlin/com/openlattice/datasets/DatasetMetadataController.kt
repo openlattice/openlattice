@@ -135,7 +135,7 @@ constructor(
     }
 
     override fun getAuthorizationManager(): AuthorizationManager {
-        return authorizationManager
+        return authorizations
     }
 
     override fun getAuditingManager(): AuditingManager {
