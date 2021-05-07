@@ -224,7 +224,12 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
             @PathVariable(OrganizationsApi.ID) organizationId: UUID
     ): OrganizationIntegrationAccount {
         ensureOwner(organizationId)
-        val account = dbCCredentialService.getDbAccount(organizations.getOrganization(organizationId).adminRoleAclKey)
+        val org = checkNotNull(organizations.getOrganization(organizationId)) {
+            "Organization $organizationId does not exist"
+        }
+        val account = checkNotNull(dbCCredentialService.getDbAccount(org.adminRoleAclKey)) {
+            "No database creds found for admin role of organization $organizationId"
+        }
         return OrganizationIntegrationAccount(account.username, account.credential)
     }
 
