@@ -81,6 +81,9 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
     @Inject
     private lateinit var edmService: EdmManager
 
+    @Inject
+    private lateinit var dbCCredentialService: DbCredentialService
+
     companion object {
         private val logger = LoggerFactory.getLogger(OrganizationsController::class.java)
     }
@@ -210,6 +213,19 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
     ): OrganizationIntegrationAccount {
         ensureOwner(organizationId)
         return assembler.getOrganizationIntegrationAccount(organizationId)
+    }
+
+    @Timed
+    @GetMapping(
+            value = [OrganizationsApi.ID_PATH + OrganizationsApi.INTEGRATION + OrganizationsApi.ROLES],
+            produces = [MediaType.APPLICATION_JSON_VALUE]
+    )
+    override fun getOrganizationAdminRoleDatabaseAccount(
+            @PathVariable(OrganizationsApi.ID) organizationId: UUID
+    ): OrganizationIntegrationAccount {
+        ensureOwner(organizationId)
+        val account = dbCCredentialService.getDbAccount(organizations.getOrganization(organizationId).adminRoleAclKey)
+        return OrganizationIntegrationAccount(account.username, account.credential)
     }
 
     @Timed
