@@ -376,6 +376,7 @@ class ExternalDatabaseManagementService(
     fun deleteExternalTableObjects(tableIds: Set<UUID>) {
         tableIds.forEach {
             val aclKey = AclKey(it)
+            datasetService.deleteObjectMetadataForRootObject(it)
             authorizationManager.deletePermissions(aclKey)
             securableObjectTypes.remove(aclKey)
             aclKeyReservations.release(it)
@@ -408,6 +409,7 @@ class ExternalDatabaseManagementService(
         columnIdsByTableId.forEach { (tableId, columnIds) ->
             columnIds.forEach { columnId ->
                 val aclKey = AclKey(tableId, columnId)
+                datasetService.deleteObjectMetadata(aclKey)
                 authorizationManager.deletePermissions(aclKey)
                 securableObjectTypes.remove(aclKey)
                 aclKeyReservations.release(columnId)

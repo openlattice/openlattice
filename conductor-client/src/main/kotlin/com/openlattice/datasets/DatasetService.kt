@@ -1,9 +1,13 @@
 package com.openlattice.datasets
 
+import com.google.common.eventbus.EventBus
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicates
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.securable.SecurableObjectType
+import com.openlattice.datasets.events.DatasetColumnsUpdatedEvent
+import com.openlattice.datasets.events.DatasetCreatedEvent
+import com.openlattice.datasets.events.DatasetDeletedEvent
 import com.openlattice.edm.EntitySet
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organization.ExternalTable
@@ -11,7 +15,10 @@ import com.openlattice.organizations.mapstores.ExternalTablesMapstore
 import com.openlattice.postgres.mapstores.EntitySetMapstore
 import java.util.*
 
-class DatasetService(val hazelcast: HazelcastInstance) {
+class DatasetService(
+        val hazelcast: HazelcastInstance,
+        val eventBus: EventBus
+) {
 
     private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcast)
     private val propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap(hazelcast)
@@ -29,11 +36,14 @@ class DatasetService(val hazelcast: HazelcastInstance) {
     }
 
     fun updateObjectMetadata(aclKey: AclKey, update: SecurableObjectMetadataUpdate): Boolean {
-        return objectMetadata.executeOnKey(aclKey, SecurableObjectMetadataUpdateEntryProcessor(update))
+        val success = objectMetadata.executeOnKey(aclKey, SecurableObjectMetadataUpdateEntryProcessor(update))
+        indexUpdatedObject(aclKey)
+        return success
     }
 
     fun deleteObjectMetadata(aclKey: AclKey) {
         objectMetadata.delete(aclKey)
+        indexDeletedObject(aclKey)
     }
 
     fun deleteObjectMetadataForRootObject(id: UUID) {
@@ -106,6 +116,14 @@ class DatasetService(val hazelcast: HazelcastInstance) {
         return columnsAsMap
     }
 
+    fun getColumnsInDataset(datasetId: UUID): List<DatasetColumn> {
+        val columnKeys = objectMetadata.keySet(
+                Predicates.equal(ObjectMetadataMapstore.ROOT_OBJECT_INDEX, datasetId)
+        ).filter { it.size > 1 }.toSet()
+
+        return getDatasetColumns(columnKeys).values.toList()
+    }
+
     fun getObjectType(aclKey: AclKey): SecurableObjectType {
         return securableObjectTypes.getValue(aclKey)
     }
@@ -126,5 +144,23 @@ class DatasetService(val hazelcast: HazelcastInstance) {
         )
 
         return entitySetIds + tableIds
+    }
+
+    private fun indexUpdatedObject(aclKey: AclKey) {
+        val rootObjectId = aclKey.first()
+
+        if (aclKey.size == 1) {
+            eventBus.post(DatasetCreatedEvent(rootObjectId))
+        } else {
+            eventBus.post(DatasetColumnsUpdatedEvent(rootObjectId))
+        }
+    }
+
+    private fun indexDeletedObject(aclKey: AclKey) {
+        if (aclKey.size != 1) {
+            return
+        }
+
+        eventBus.post(DatasetDeletedEvent(aclKey.first()))
     }
 }

@@ -27,6 +27,9 @@ import com.openlattice.data.storage.EntityDatastore
 import com.openlattice.data.storage.IndexingMetadataManager
 import com.openlattice.data.storage.MetadataOption
 import com.openlattice.datasets.DatasetService
+import com.openlattice.datasets.events.DatasetColumnsUpdatedEvent
+import com.openlattice.datasets.events.DatasetCreatedEvent
+import com.openlattice.datasets.events.DatasetDeletedEvent
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EdmConstants
@@ -472,6 +475,24 @@ class SearchService(
                         SecurableObjectType.EntitySetCollection,
                         entitySetCollectionId
                 )
+    }
+
+    @Subscribe
+    fun createDataset(event: DatasetCreatedEvent) {
+        val dataset = datasetService.getDataset(event.id)
+        val columns = datasetService.getColumnsInDataset(event.id)
+        elasticsearchApi.saveDatasetToElasticsearch(dataset, columns)
+    }
+
+    @Subscribe
+    fun deleteDataset(event: DatasetDeletedEvent) {
+        elasticsearchApi.deleteDatasetFromElasticsearch(event.id)
+    }
+
+    @Subscribe
+    fun updateDatasetColumns(event: DatasetColumnsUpdatedEvent) {
+        val columns = datasetService.getColumnsInDataset(event.datasetId)
+        elasticsearchApi.updateColumnsInDataset(event.datasetId, columns)
     }
 
     /**
