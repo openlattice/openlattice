@@ -37,6 +37,7 @@ import com.openlattice.data.storage.EntityDatastore;
 import com.openlattice.data.storage.IndexingMetadataManager;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
 import com.openlattice.data.storage.partitions.PartitionManager;
+import com.openlattice.datasets.DatasetService;
 import com.openlattice.datastore.services.EntitySetManager;
 import com.openlattice.indexing.BackgroundExpiredDataDeletionService;
 import com.openlattice.indexing.BackgroundIndexedEntitiesDeletionService;
@@ -133,6 +134,9 @@ public class IndexerPostConfigurationServicesPod {
     @Inject
     private HazelcastJobService jobService;
 
+    @Inject
+    private DatasetService datasetService;
+
     @Bean
     public PartitionManager partitionManager() {
         return new PartitionManager( hazelcastInstance, hikariDataSource );
@@ -200,7 +204,8 @@ public class IndexerPostConfigurationServicesPod {
                 externalDatabasePermissioningService,
                 transporterService,
                 dbcs,
-                hikariDataSource );
+                hikariDataSource,
+                datasetService );
     }
 
     @Bean

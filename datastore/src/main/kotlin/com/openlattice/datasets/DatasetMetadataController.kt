@@ -1,4 +1,4 @@
-package com.openlattice.datastore.services.com.openlattice.datasets
+package com.openlattice.datasets
 
 import com.codahale.metrics.annotation.Timed
 import com.openlattice.auditing.AuditRecordEntitySetsManager
@@ -12,9 +12,6 @@ import com.openlattice.authorization.Permission
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.data.DataDeletionManager
 import com.openlattice.data.DataGraphManager
-import com.openlattice.datasets.Dataset
-import com.openlattice.datasets.DatasetColumn
-import com.openlattice.datasets.DatasetMetadataApi
 import com.openlattice.datasets.DatasetMetadataApi.Companion.COLUMN_PATH
 import com.openlattice.datasets.DatasetMetadataApi.Companion.DATASET_ID
 import com.openlattice.datasets.DatasetMetadataApi.Companion.DATASET_ID_PATH
@@ -22,8 +19,6 @@ import com.openlattice.datasets.DatasetMetadataApi.Companion.DATASET_PATH
 import com.openlattice.datasets.DatasetMetadataApi.Companion.ID
 import com.openlattice.datasets.DatasetMetadataApi.Companion.ID_PATH
 import com.openlattice.datasets.DatasetMetadataApi.Companion.UPDATE_PATH
-import com.openlattice.datasets.DatasetService
-import com.openlattice.datasets.SecurableObjectMetadataUpdate
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.organizations.ExternalDatabaseManagementService
