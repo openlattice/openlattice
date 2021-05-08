@@ -16,6 +16,8 @@ import com.openlattice.client.serialization.SerializationConstants
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
 import com.openlattice.conductor.rpc.SearchConfiguration
 import com.openlattice.data.EntityDataKey
+import com.openlattice.datasets.Dataset
+import com.openlattice.datasets.DatasetColumn
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.Analyzer
 import com.openlattice.edm.type.AssociationType
@@ -147,6 +149,7 @@ class DatastoreKotlinElasticsearchImpl(
         return when (indexName) {
             ConductorElasticsearchApi.ENTITY_SET_DATA_MODEL -> initializeEntitySetDataModelIndex()
             ConductorElasticsearchApi.ORGANIZATIONS -> initializeOrganizationIndex()
+            ConductorElasticsearchApi.DATASET_INDEX -> initializeDatasetIndex()
             else -> {
                 initializeDefaultIndex(indexName, typeNamesByIndexName[indexName])
             }
@@ -282,6 +285,36 @@ class DatastoreKotlinElasticsearchImpl(
                 )
                 .execute().actionGet()
         return true
+    }
+
+    private fun initializeDatasetIndex(): Boolean {
+        if (!verifyElasticsearchConnection()) {
+            return false
+        }
+        if (indexExists(ConductorElasticsearchApi.DATASET_INDEX)) {
+            return true
+        }
+
+        // entity_set type mapping
+        val properties = ImmutableMap.builder<String, Any>()
+        properties.put(ConductorElasticsearchApi.COLUMNS, ImmutableMap.of(ConductorElasticsearchApi.TYPE, ConductorElasticsearchApi.NESTED))
+        properties.put(ConductorElasticsearchApi.DATASET, ImmutableMap.of(ConductorElasticsearchApi.TYPE, ConductorElasticsearchApi.OBJECT))
+        val typeTextAnalyzerMetaphoneAnalyzer: Map<String, String> = ImmutableMap
+                .of(ConductorElasticsearchApi.TYPE, ConductorElasticsearchApi.TEXT, ConductorElasticsearchApi.ANALYZER, ConductorElasticsearchApi.METAPHONE_ANALYZER)
+        properties.put(ConductorElasticsearchApi.DATASET + "." + SerializationConstants.TITLE_FIELD, typeTextAnalyzerMetaphoneAnalyzer)
+        properties.put(ConductorElasticsearchApi.DATASET + "." + SerializationConstants.DESCRIPTION_FIELD, typeTextAnalyzerMetaphoneAnalyzer)
+        val mapping: Map<String, Any> = ImmutableMap
+                .of<String, Any>(ConductorElasticsearchApi.DATASET, ImmutableMap.of(ConductorElasticsearchApi.MAPPING_PROPERTIES, properties.build()))
+        return try {
+            client.admin().indices().prepareCreate(ConductorElasticsearchApi.DATASET_INDEX)
+                    .setSettings(getMetaphoneSettings(5))
+                    .addMapping(ConductorElasticsearchApi.DATASET, mapping)
+                    .execute().actionGet()
+            true
+        } catch (e: IOException) {
+            logger.error("Unable to initialize entity set data model index", e)
+            false
+        }
     }
 
     private fun initializeDefaultIndex(indexName: String?, typeName: String?): Boolean {
@@ -1057,6 +1090,81 @@ class DatastoreKotlinElasticsearchImpl(
         val indexName = indexNamesByObjectType[securableObjectType]
         val typeName = typeNamesByIndexName[indexName]
         return deleteObjectById(indexName, typeName, objectId.toString())
+    }
+
+    override fun saveDatasetToElasticsearch(dataset: Dataset, columns: List<DatasetColumn?>): Boolean {
+        if (!verifyElasticsearchConnection()) {
+            return false
+        }
+        val datasetMapping: Map<String, Any> = ImmutableMap.of(
+                ConductorElasticsearchApi.DATASET, dataset,
+                ConductorElasticsearchApi.COLUMNS, columns)
+        try {
+            val s = ObjectMappers.getJsonMapper().writeValueAsString(datasetMapping)
+            client.prepareIndex(ConductorElasticsearchApi.DATASET_INDEX, ConductorElasticsearchApi.DATASET, dataset.id.toString())
+                    .setSource(s, XContentType.JSON)
+                    .execute().actionGet()
+            return true
+        } catch (e: JsonProcessingException) {
+            logger.debug("error saving dataset to elasticsearch")
+        }
+        return false
+    }
+
+    override fun updateColumnsInDataset(datasetId: UUID, updatedColumns: List<DatasetColumn?>): Boolean {
+        if (!verifyElasticsearchConnection()) {
+            return false
+        }
+        val columns: Map<String, Any> = ImmutableMap.of<String, Any>(ConductorElasticsearchApi.COLUMNS, updatedColumns)
+        try {
+            val s = ObjectMappers.getJsonMapper().writeValueAsString(columns)
+            val updateRequest = UpdateRequest(
+                    ConductorElasticsearchApi.DATASET_INDEX,
+                    datasetId.toString()).doc(s, XContentType.JSON)
+            client.update(updateRequest).actionGet()
+            return true
+        } catch (e: IOException) {
+            logger.debug("error updating columns of dataset in elasticsearch")
+        }
+        return false
+    }
+
+    override fun deleteDatasetFromElasticsearch(id: UUID): Boolean {
+        if (!verifyElasticsearchConnection()) {
+            return false
+        }
+        client.prepareDelete(ConductorElasticsearchApi.DATASET_INDEX, ConductorElasticsearchApi.DATASET, id.toString()).execute().actionGet()
+        return true
+    }
+
+    override fun executeDatasetSearch(
+            searchTerm: String?,
+            start: Int,
+            maxHits: Int,
+            authorizedIds: Set<UUID>,
+            excludeColumns: Boolean): SearchResult? {
+        if (!verifyElasticsearchConnection()) {
+            return SearchResult(0, Lists.newArrayList())
+        }
+        val query = BoolQueryBuilder()
+        query.must(QueryBuilders.queryStringQuery(getFormattedFuzzyString(searchTerm!!)).lenient(true))
+        query.filter(QueryBuilders.idsQuery().addIds(*authorizedIds.map { it.toString() }.toTypedArray()))
+        val response = client.prepareSearch(ConductorElasticsearchApi.DATASET_INDEX)
+                .setQuery(query)
+                .setFetchSource(arrayOf(ConductorElasticsearchApi.DATASET, ConductorElasticsearchApi.COLUMNS), null)
+                .setFrom(start)
+                .setSize(maxHits)
+                .execute()
+                .actionGet()
+        val hits: MutableList<Map<String, Any>> = Lists.newArrayList()
+        response.hits.forEach(Consumer { hit: SearchHit ->
+            val datasetResult = hit.sourceAsMap
+            if (excludeColumns) {
+                datasetResult.remove(ConductorElasticsearchApi.COLUMNS)
+            }
+            hits.add(datasetResult)
+        })
+        return SearchResult(response.hits.totalHits.value, hits)
     }
 
     override fun updateEntitySetMetadata(entitySet: EntitySet): Boolean {

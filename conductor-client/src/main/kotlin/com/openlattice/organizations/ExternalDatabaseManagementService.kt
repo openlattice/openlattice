@@ -23,9 +23,9 @@ import com.openlattice.hazelcast.processors.organizations.UpdateExternalTableEnt
 import com.openlattice.organization.ExternalColumn
 import com.openlattice.organization.ExternalTable
 import com.openlattice.organization.ExternalTableColumnsPair
-import com.openlattice.organizations.mapstores.NAME_INDEX
+import com.openlattice.organizations.mapstores.ExternalTablesMapstore.Companion.NAME_INDEX
+import com.openlattice.organizations.mapstores.ExternalTablesMapstore.Companion.SCHEMA_INDEX
 import com.openlattice.organizations.mapstores.ORGANIZATION_ID_INDEX
-import com.openlattice.organizations.mapstores.SCHEMA_INDEX
 import com.openlattice.organizations.mapstores.TABLE_ID_INDEX
 import com.openlattice.postgres.*
 import com.openlattice.postgres.DataTables.quote

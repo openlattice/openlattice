@@ -4,7 +4,11 @@ import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicates
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.securable.SecurableObjectType
+import com.openlattice.edm.EntitySet
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.organization.ExternalTable
+import com.openlattice.organizations.mapstores.ExternalTablesMapstore
+import com.openlattice.postgres.mapstores.EntitySetMapstore
 import java.util.*
 
 class DatasetService(val hazelcast: HazelcastInstance) {
@@ -104,5 +108,23 @@ class DatasetService(val hazelcast: HazelcastInstance) {
 
     fun getObjectType(aclKey: AclKey): SecurableObjectType {
         return securableObjectTypes.getValue(aclKey)
+    }
+
+    fun filterDatasetIdsByOrganizations(datasetIds: Collection<UUID>, organizationIds: Collection<UUID>): Set<UUID> {
+        val entitySetIds = entitySets.keySet(
+                Predicates.and(
+                        Predicates.`in`<UUID, EntitySet>(EntitySetMapstore.ORGANIZATION_INDEX, *organizationIds.toTypedArray()),
+                        Predicates.`in`<UUID, EntitySet>(EntitySetMapstore.ID_INDEX, *datasetIds.toTypedArray())
+                )
+        )
+
+        val tableIds = externalTables.keySet(
+                Predicates.and(
+                        Predicates.`in`<UUID, ExternalTable>(ExternalTablesMapstore.ORGANIZATION_ID_INDEX, *organizationIds.toTypedArray()),
+                        Predicates.`in`<UUID, ExternalTable>(ExternalTablesMapstore.ID_INDEX, *datasetIds.toTypedArray())
+                )
+        )
+
+        return entitySetIds + tableIds
     }
 }

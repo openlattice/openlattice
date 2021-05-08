@@ -89,6 +89,10 @@ class HazelcastAuthorizationService(
             return Predicates.equal(SECURABLE_OBJECT_TYPE_INDEX, objectType)
         }
 
+        private fun hasAnyType(objectTypes: Collection<SecurableObjectType>): Predicate<AceKey, AceValue> {
+            return Predicates.`in`(SECURABLE_OBJECT_TYPE_INDEX, *objectTypes.toTypedArray())
+        }
+
         private fun hasPrincipal(principal: Principal): Predicate<AceKey, AceValue> {
             return Predicates.equal(PRINCIPAL_INDEX, principal)
         }
@@ -414,6 +418,27 @@ class HazelcastAuthorizationService(
         val p = Predicates.and<AceKey, AceValue>(
                 principalPredicate,
                 hasType(objectType),
+                hasExactPermissions(permissions)
+        )
+
+        return aces.keySet(p)
+                .stream()
+                .map { it.aclKey }
+                .distinct()
+    }
+
+    @Timed
+    override fun getAuthorizedObjectsOfTypes(
+            principals: Set<Principal>,
+            objectTypes: Collection<SecurableObjectType>,
+            permissions: EnumSet<Permission>
+    ): Stream<AclKey> {
+        val principalPredicate = if (principals.size == 1) hasPrincipal(principals.first()) else hasAnyPrincipals(
+                principals
+        )
+        val p = Predicates.and<AceKey, AceValue>(
+                principalPredicate,
+                hasAnyType(objectTypes),
                 hasExactPermissions(permissions)
         )
 
