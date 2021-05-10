@@ -20,7 +20,9 @@
 
 package com.openlattice.indexing.pods;
 
+import com.codahale.metrics.MetricRegistry;
 import com.geekbeast.rhizome.jobs.HazelcastJobService;
+import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
 import com.openlattice.BackgroundExternalDatabaseSyncingService;
@@ -38,7 +40,9 @@ import com.openlattice.data.storage.IndexingMetadataManager;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
 import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datasets.DatasetService;
+import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.EntitySetManager;
+import com.openlattice.graph.core.GraphService;
 import com.openlattice.indexing.BackgroundExpiredDataDeletionService;
 import com.openlattice.indexing.BackgroundIndexedEntitiesDeletionService;
 import com.openlattice.indexing.BackgroundIndexingService;
@@ -51,6 +55,7 @@ import com.openlattice.organizations.OrganizationMetadataEntitySetsService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService;
+import com.openlattice.search.SearchService;
 import com.openlattice.transporter.services.TransporterService;
 import com.zaxxer.hikari.HikariDataSource;
 import org.springframework.context.annotation.Bean;
@@ -136,6 +141,18 @@ public class IndexerPostConfigurationServicesPod {
 
     @Inject
     private DatasetService datasetService;
+
+    @Inject
+    private EventBus eventBus;
+
+    @Inject
+    private MetricRegistry metricRegistry;
+
+    @Inject
+    private EdmService dataModelService;
+
+    @Inject
+    private GraphService graphApi;
 
     @Bean
     public PartitionManager partitionManager() {
@@ -230,6 +247,22 @@ public class IndexerPostConfigurationServicesPod {
                 partitionManager(),
                 executor,
                 hazelcastInstance );
+    }
+
+    @Bean
+    public SearchService searchService() {
+        return new SearchService(
+                eventBus,
+                metricRegistry,
+                authorizationManager,
+                elasticsearchApi,
+                dataModelService,
+                entitySetManager,
+                graphApi,
+                entityDatastore,
+                indexingMetadataManager(),
+                datasetService
+        );
     }
 
     @PostConstruct
