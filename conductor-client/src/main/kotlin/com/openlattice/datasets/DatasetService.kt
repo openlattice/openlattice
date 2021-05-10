@@ -158,6 +158,10 @@ class DatasetService(
         eventBus.post(DatasetCreatedEvent(datasetId))
     }
 
+    fun getExternalTables(): Iterable<ExternalTable> {
+        return externalTables.values
+    }
+
     private fun indexUpdatedObject(aclKey: AclKey) {
         val rootObjectId = aclKey.first()
 

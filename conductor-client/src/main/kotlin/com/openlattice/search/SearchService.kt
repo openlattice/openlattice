@@ -42,7 +42,6 @@ import com.openlattice.graph.NeighborPage
 import com.openlattice.graph.PagedNeighborRequest
 import com.openlattice.graph.core.GraphService
 import com.openlattice.graph.edge.Edge
-import com.openlattice.organizations.ExternalDatabaseManagementService
 import com.openlattice.organizations.Organization
 import com.openlattice.organizations.events.OrganizationCreatedEvent
 import com.openlattice.organizations.events.OrganizationDeletedEvent
@@ -76,8 +75,7 @@ class SearchService(
         val graphService: GraphService,
         val dataManager: EntityDatastore,
         val indexingMetadataManager: IndexingMetadataManager,
-        val datasetService: DatasetService,
-        val edms: ExternalDatabaseManagementService
+        val datasetService: DatasetService
 ) {
 
     companion object {
@@ -987,7 +985,7 @@ class SearchService(
             createDataset(DatasetCreatedEvent(it.id))
         }
 
-        edms.getExternalTables().forEach {
+        datasetService.getExternalTables().forEach {
             createDataset(DatasetCreatedEvent(it.id))
         }
     }

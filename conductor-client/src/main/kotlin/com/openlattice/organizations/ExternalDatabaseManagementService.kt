@@ -286,10 +286,6 @@ class ExternalDatabaseManagementService(
         return dataByColumnId
     }
 
-    fun getExternalTables(): Iterable<ExternalTable> {
-        return externalTables.values
-    }
-
     fun getExternalTable(tableId: UUID): ExternalTable {
         return externalTables.getValue(tableId)
     }
