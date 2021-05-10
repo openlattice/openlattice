@@ -94,7 +94,8 @@ class DatastoreKotlinElasticsearchImpl(
                 ConductorElasticsearchApi.PROPERTY_TYPE_INDEX,
                 ConductorElasticsearchApi.APP_INDEX,
                 ConductorElasticsearchApi.ENTITY_TYPE_COLLECTION_INDEX,
-                ConductorElasticsearchApi.ENTITY_SET_COLLECTION_INDEX
+                ConductorElasticsearchApi.ENTITY_SET_COLLECTION_INDEX,
+                ConductorElasticsearchApi.DATASET_INDEX
         )
 
         private val indexNamesByObjectType = mapOf(

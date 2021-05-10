@@ -123,7 +123,8 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             PROPERTY_TYPE_INDEX,
             APP_INDEX,
             ENTITY_TYPE_COLLECTION_INDEX,
-            ENTITY_SET_COLLECTION_INDEX
+            ENTITY_SET_COLLECTION_INDEX,
+            DATASET_INDEX
     };
 
     private static final Map<SecurableObjectType, String> indexNamesByObjectType = Map.of(
