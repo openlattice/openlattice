@@ -9,6 +9,7 @@ import com.openlattice.authorization.*
 import com.openlattice.authorization.mapstores.PermissionMapstore
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.datasets.DatasetService
+import com.openlattice.datasets.SecurableObjectMetadata
 import com.openlattice.datasets.SecurableObjectMetadataUpdate
 import com.openlattice.edm.PropertyTypeIdFqn
 import com.openlattice.edm.processors.AddFlagsOnEntitySetEntryProcessor
@@ -114,6 +115,9 @@ class ExternalDatabaseManagementService(
         val tableAclKey = AclKey(table.id)
         authorizationManager.setSecurableObjectType(tableAclKey, SecurableObjectType.OrganizationExternalDatabaseTable)
 
+        datasetService.initializeMetadata(tableAclKey, SecurableObjectMetadata.fromExternalTable(table))
+        datasetService.signalDatasetCreated(table.id)
+
         return table.id
     }
 
@@ -127,6 +131,8 @@ class ExternalDatabaseManagementService(
         aclKeyReservations.reserveIdAndValidateType(column) { columnUniqueName }
 
         authorizationManager.setSecurableObjectType(column.getAclKey(), SecurableObjectType.OrganizationExternalDatabaseColumn)
+
+        datasetService.initializeMetadata(column.getAclKey(), SecurableObjectMetadata.fromExternalColumn(column))
 
         return column.id
     }

@@ -182,6 +182,7 @@ class EntitySetService(
 
             val ownablePropertyTypes = propertyTypes.getAll(entityType.properties).values.toList()
             eventBus.post(EntitySetCreatedEvent(entitySet, ownablePropertyTypes))
+            datasetService.signalDatasetCreated(entitySet.id)
 
         } catch (e: Exception) {
             logger.error("Unable to create entity set ${entitySet.name} (${entitySet.id}) for principal $principal", e)
@@ -310,7 +311,7 @@ class EntitySetService(
         aclKeyReservations.reserveIdAndValidateType(entitySet)
 
         checkState(entitySets.putIfAbsent(entitySet.id, entitySet) == null, "Entity set already exists.")
-        objectMetadata[AclKey(entitySet.id)] = SecurableObjectMetadata.fromEntitySet(entitySet)
+        datasetService.initializeMetadata(AclKey(entitySet.id), SecurableObjectMetadata.fromEntitySet(entitySet))
         return entitySet.id
     }
 
@@ -319,7 +320,7 @@ class EntitySetService(
         val propertyTags = entityType.propertyTags
         val propertyTypes = edm.getPropertyTypes(entityType.properties)
 
-        objectMetadata.putAll(propertyTypes.associate {
+        datasetService.initializeMetadata(propertyTypes.associate {
             val flags = propertyTags.getOrDefault(it.id, LinkedHashSet())
             AclKey(entitySetId, it.id) to SecurableObjectMetadata.fromPropertyType(it, flags)
         })
@@ -356,6 +357,7 @@ class EntitySetService(
         deleteEntitySet(entitySet, entityType)
 
         eventBus.post(EntitySetDeletedEvent(entitySet.id, entityType.id))
+        datasetService.deleteObjectMetadata(AclKey(entitySet.id))
         logger.info("Entity set ${entitySet.name} (${entitySet.id}) deleted successfully.")
     }
 

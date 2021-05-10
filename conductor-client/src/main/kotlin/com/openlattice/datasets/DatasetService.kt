@@ -35,6 +35,14 @@ class DatasetService(
         return objectMetadata.getAll(aclKeys)
     }
 
+    fun initializeMetadata(aclKey: AclKey, metadata: SecurableObjectMetadata) {
+        objectMetadata[aclKey] = metadata
+    }
+
+    fun initializeMetadata(metadata: Map<AclKey, SecurableObjectMetadata>) {
+        objectMetadata.putAll(metadata)
+    }
+
     fun updateObjectMetadata(aclKey: AclKey, update: SecurableObjectMetadataUpdate): Boolean {
         val success = objectMetadata.executeOnKey(aclKey, SecurableObjectMetadataUpdateEntryProcessor(update))
         indexUpdatedObject(aclKey)
@@ -144,6 +152,10 @@ class DatasetService(
         )
 
         return entitySetIds + tableIds
+    }
+
+    fun signalDatasetCreated(datasetId: UUID) {
+        eventBus.post(DatasetCreatedEvent(datasetId))
     }
 
     private fun indexUpdatedObject(aclKey: AclKey) {

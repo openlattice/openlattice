@@ -219,7 +219,8 @@ public class IndexerPostConfigurationServicesPod {
                 indexerConfiguration,
                 organizationMetadataEntitySetsService,
                 reservationService,
-                principalsMapManager );
+                principalsMapManager,
+                datasetService );
     }
 
     @Bean

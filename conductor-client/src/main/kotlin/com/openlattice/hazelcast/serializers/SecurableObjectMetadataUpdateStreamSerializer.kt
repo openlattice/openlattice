@@ -60,7 +60,7 @@ class SecurableObjectMetadataUpdateStreamSerializer : TestableSelfRegisteringStr
                 SetStreamSerializers.fastStringSetSerialize(o, v)
             }
             serializeNullable(out, `object`.metadata) { o, v ->
-                mapper.writeValueAsString(v)
+                o.writeUTF(mapper.writeValueAsString(v))
             }
 
         }
