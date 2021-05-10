@@ -25,7 +25,7 @@ open class ObjectMetadataMapstore(
     companion object {
         private val mapper = ObjectMappers.getJsonMapper()
 
-        const val ROOT_OBJECT_INDEX = "__key[0]";
+        const val ROOT_OBJECT_INDEX = "__key.root";
     }
 
     override fun generateTestKey(): AclKey {
