@@ -3,7 +3,7 @@ package com.openlattice.datasets
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.authorization.AclKey
 
-class SecurableObjectMetadataUpdateEntryProcessor(
+data class SecurableObjectMetadataUpdateEntryProcessor(
         val update: SecurableObjectMetadataUpdate
 ) : AbstractRhizomeEntryProcessor<AclKey, SecurableObjectMetadata?, Boolean>() {
 
