@@ -66,6 +66,16 @@ interface DatasetMetadataApi {
     @POST(BASE + COLUMN_PATH)
     fun getDatasetColumns(@Body datasetColumnAclKeys: Set<AclKey>): Map<AclKey, DatasetColumn>
 
+    /**
+     * Gets all columns in the specified set of dataset ids
+     *
+     * @param datasetIds The ids of the datasets to load columns in
+     *
+     * @return A map from dataset id to an iterable of all the [DatasetColumn]s in that dataset
+     */
+    @POST(BASE + DATASET_PATH + COLUMN_PATH)
+    fun getColumnsInDatasets(@Body datasetIds: Set<UUID>): Map<UUID, Iterable<DatasetColumn>>
+
 
     /**
      * Updates metadata for the dataset with id [id]

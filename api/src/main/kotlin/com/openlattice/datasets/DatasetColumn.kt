@@ -1,5 +1,6 @@
 package com.openlattice.datasets
 
+import com.openlattice.authorization.AclKey
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.organization.ExternalColumn
@@ -14,6 +15,10 @@ data class DatasetColumn(
         val datatype: String,
         val metadata: SecurableObjectMetadata
 ) {
+
+    fun getAclKey(): AclKey {
+        return AclKey(datasetId, id)
+    }
 
     companion object {
         @JvmStatic

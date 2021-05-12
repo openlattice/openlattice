@@ -4,11 +4,7 @@ import com.codahale.metrics.annotation.Timed
 import com.openlattice.auditing.AuditRecordEntitySetsManager
 import com.openlattice.auditing.AuditingComponent
 import com.openlattice.auditing.AuditingManager
-import com.openlattice.authorization.AclKey
-import com.openlattice.authorization.AuthorizationManager
-import com.openlattice.authorization.AuthorizingComponent
-import com.openlattice.authorization.EdmAuthorizationHelper
-import com.openlattice.authorization.Permission
+import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.data.DataDeletionManager
 import com.openlattice.data.DataGraphManager
@@ -31,6 +27,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestMethod
 import org.springframework.web.bind.annotation.RestController
 import java.util.*
+import java.util.stream.Collectors
 import javax.inject.Inject
 
 @SuppressFBWarnings(
@@ -102,6 +99,28 @@ constructor(
     override fun getDatasetColumns(@RequestBody datasetColumnAclKeys: Set<AclKey>): Map<AclKey, DatasetColumn> {
         accessCheck(datasetColumnAclKeys.associateWith { EnumSet.of(Permission.READ) })
         return datasetService.getDatasetColumns(datasetColumnAclKeys)
+    }
+
+
+    @Timed
+    @RequestMapping(
+            path = [DATASET_PATH + COLUMN_PATH],
+            method = [RequestMethod.POST],
+            consumes = [MediaType.APPLICATION_JSON_VALUE],
+            produces = [MediaType.APPLICATION_JSON_VALUE]
+    )
+    override fun getColumnsInDatasets(@RequestBody datasetIds: Set<UUID>): Map<UUID, Iterable<DatasetColumn>> {
+        accessCheck(datasetIds.associate { AclKey(it) to EnumSet.of(Permission.READ) })
+        val datasetToColumns = datasetService.getColumnsInDatasets(datasetIds)
+
+        val accessChecks = datasetToColumns.flatMapTo(mutableSetOf()) { it.value }
+                .mapTo(mutableSetOf()) { AccessCheck(it.getAclKey(), EnumSet.of(Permission.READ)) }
+        val authorizedColumns = authorizations.accessChecksForPrincipals(accessChecks, Principals.getCurrentPrincipals())
+                .filter { it.permissions.getValue(Permission.READ) }
+                .map { it.aclKey }
+                .collect(Collectors.toSet())
+
+        return datasetToColumns.mapValues { it.value.filter { col -> authorizedColumns.contains(col.getAclKey()) } }
     }
 
     @Timed

@@ -125,11 +125,17 @@ class DatasetService(
     }
 
     fun getColumnsInDataset(datasetId: UUID): List<DatasetColumn> {
+        return getColumnsInDatasets(setOf(datasetId)).getValue(datasetId).toList()
+    }
+
+    fun getColumnsInDatasets(datasetIds: Set<UUID>): Map<UUID, Collection<DatasetColumn>> {
         val columnKeys = objectMetadata.keySet(
-                Predicates.equal(ObjectMetadataMapstore.ROOT_OBJECT_INDEX, datasetId)
+                Predicates.`in`(ObjectMetadataMapstore.ROOT_OBJECT_INDEX, *datasetIds.toTypedArray())
         ).filter { it.size > 1 }.toSet()
 
-        return getDatasetColumns(columnKeys).values.toList()
+        val columns = getDatasetColumns(columnKeys)
+
+        return columnKeys.groupBy { it.root }.mapValues { it.value.map { aclKey -> columns.getValue(aclKey) } }
     }
 
     fun getObjectType(aclKey: AclKey): SecurableObjectType {
