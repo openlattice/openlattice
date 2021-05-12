@@ -336,47 +336,47 @@ public final class PostgresColumn {
     public static final String                   LINKED_FIELD                      = "linked";
     public static final PostgresColumnDefinition LINKED                            =
             new PostgresColumnDefinition( LINKED_FIELD, BOOLEAN ).notNull();
-    public static final String                   LINKING_FIELD        = "linking";
-    public static final PostgresColumnDefinition LINKING              =
+    public static final String                   LINKING_FIELD                     = "linking";
+    public static final PostgresColumnDefinition LINKING                           =
             new PostgresColumnDefinition( LINKING_FIELD, BOOLEAN );
-    public static final String                   LINKING_ID_FIELD     = "linking_id";
-    public static final PostgresColumnDefinition LINKING_ID           = new PostgresColumnDefinition(
+    public static final String                   LINKING_ID_FIELD                  = "linking_id";
+    public static final PostgresColumnDefinition LINKING_ID                        = new PostgresColumnDefinition(
             LINKING_ID_FIELD,
             UUID );
-    public static final String                   LSB_FIELD            = "lsb";
-    public static final PostgresColumnDefinition LSB                  =
+    public static final String                   LSB_FIELD                         = "lsb";
+    public static final PostgresColumnDefinition LSB                               =
             new PostgresColumnDefinition( LSB_FIELD, BIGINT ).notNull();
-    public static final String                   MATCH_ALL_IDS_FIELD  = "match_all_ids";
-    public static final PostgresColumnDefinition MATCH_ALL_IDS        =
+    public static final String                   MATCH_ALL_IDS_FIELD               = "match_all_ids";
+    public static final PostgresColumnDefinition MATCH_ALL_IDS                     =
             new PostgresColumnDefinition( MATCH_ALL_IDS_FIELD, BOOLEAN )
                     .withDefault( false );
-    public static final String                   MEMBERS_FIELD        = "members";
-    public static final PostgresColumnDefinition MEMBERS              =
+    public static final String                   MEMBERS_FIELD                     = "members";
+    public static final PostgresColumnDefinition MEMBERS                           =
             new PostgresColumnDefinition( MEMBERS_FIELD, TEXT_ARRAY );
-    public static final String                   MSB_FIELD            = "msb";
-    public static final PostgresColumnDefinition MSB                  =
+    public static final String                   MSB_FIELD                         = "msb";
+    public static final PostgresColumnDefinition MSB                               =
             new PostgresColumnDefinition( MSB_FIELD, BIGINT ).notNull();
-    public static final String                   METADATA_FIELD       = "metadata";
-    public static final PostgresColumnDefinition METADATA             =
+    public static final String                   METADATA_FIELD                    = "metadata";
+    public static final PostgresColumnDefinition METADATA                          =
             new PostgresColumnDefinition( METADATA_FIELD, JSONB ).notNull();
-    public static final PostgresColumnDefinition MULTI_VALUED         =
+    public static final PostgresColumnDefinition MULTI_VALUED                      =
             new PostgresColumnDefinition( "multi_valued", BOOLEAN )
                     .withDefault( false )
                     .notNull();
-    public static final String                   NAMESPACE_FIELD      = "namespace";
-    public static final PostgresColumnDefinition NAMESPACE            =
+    public static final String                   NAMESPACE_FIELD                   = "namespace";
+    public static final PostgresColumnDefinition NAMESPACE                         =
             new PostgresColumnDefinition( NAMESPACE_FIELD, TEXT ).notNull();
-    public static final String                   NAME_FIELD           = "name";
-    public static final PostgresColumnDefinition NAME                 =
+    public static final String                   NAME_FIELD                        = "name";
+    public static final PostgresColumnDefinition NAME                              =
             new PostgresColumnDefinition( NAME_FIELD, TEXT ).notNull();
-    public static final String                   NAME_SET_FIELD       = "name_set";
-    public static final PostgresColumnDefinition NAME_SET             =
+    public static final String                   NAME_SET_FIELD                    = "name_set";
+    public static final PostgresColumnDefinition NAME_SET                          =
             new PostgresColumnDefinition( NAME_SET_FIELD, TEXT_ARRAY ).notNull();
-    public static final String                   NULLABLE_TITLE_FIELD = "title";
-    public static final PostgresColumnDefinition NULLABLE_TITLE       =
+    public static final String                   NULLABLE_TITLE_FIELD              = "title";
+    public static final PostgresColumnDefinition NULLABLE_TITLE                    =
             new PostgresColumnDefinition( NULLABLE_TITLE_FIELD, TEXT );
-    public static final String                   OID_FIELD            = "oid";
-    public static final PostgresColumnDefinition OID                  = new PostgresColumnDefinition(
+    public static final String                   OID_FIELD                         = "oid";
+    public static final PostgresColumnDefinition OID                               = new PostgresColumnDefinition(
             OID_FIELD,
             INTEGER );
     public static final String                   ORDINAL_POSITION_FIELD            = "ordinal_position";
