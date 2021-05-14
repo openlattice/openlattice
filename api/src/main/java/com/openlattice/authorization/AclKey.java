@@ -21,6 +21,7 @@
 package com.openlattice.authorization;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.common.collect.ImmutableList;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDList;
 
@@ -97,6 +98,11 @@ public class AclKey extends DelegatedUUIDList implements Comparable<AclKey> {
     @JsonCreator
     public static AclKey wrap( ImmutableList<UUID> uuids ) {
         return new AclKey( uuids );
+    }
+
+    @JsonIgnore
+    public UUID getRoot() {
+        return this.get( 0 );
     }
 
 }

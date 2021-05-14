@@ -53,10 +53,9 @@ import com.openlattice.collections.EntityTypeCollection;
 import com.openlattice.collections.mapstores.EntitySetCollectionConfigMapstore;
 import com.openlattice.collections.mapstores.EntitySetCollectionMapstore;
 import com.openlattice.collections.mapstores.EntityTypeCollectionMapstore;
+import com.openlattice.datasets.ObjectMetadataMapstore;
 import com.openlattice.directory.MaterializedViewAccount;
 import com.openlattice.edm.EntitySet;
-import com.openlattice.edm.set.EntitySetPropertyKey;
-import com.openlattice.edm.set.EntitySetPropertyMetadata;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
@@ -215,11 +214,6 @@ public class MapstoresPod {
     }
 
     @Bean
-    public SelfRegisteringMapStore<EntitySetPropertyKey, EntitySetPropertyMetadata> entitySetPropertyMetadataMapstore() {
-        return new EntitySetPropertyMetadataMapstore( hikariDataSource );
-    }
-
-    @Bean
     public SelfRegisteringMapStore<UUID, App> appMapstore() {
         return new AppMapstore( hikariDataSource );
     }
@@ -322,5 +316,10 @@ public class MapstoresPod {
     @Bean
     public DeletedEntitySetMapstore deletedEntitySetMapstore() {
         return new DeletedEntitySetMapstore( hikariDataSource );
+    }
+
+    @Bean
+    public ObjectMetadataMapstore objectMetadataMapstore() {
+        return new ObjectMetadataMapstore( hikariDataSource );
     }
 }

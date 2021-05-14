@@ -45,6 +45,9 @@ import com.openlattice.authorization.securable.SecurableObjectType.PropertyTypeI
 import com.openlattice.controllers.exceptions.ResourceNotFoundException
 import com.openlattice.data.storage.PostgresEntitySetSizesInitializationTask
 import com.openlattice.data.storage.partitions.PartitionManager
+import com.openlattice.datasets.DatasetService
+import com.openlattice.datasets.SecurableObjectMetadata
+import com.openlattice.datasets.SecurableObjectMetadataUpdate
 import com.openlattice.datastore.util.Util
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.events.*
@@ -54,13 +57,11 @@ import com.openlattice.edm.processors.GetNormalEntitySetIdsEntryProcessor
 import com.openlattice.edm.processors.GetPropertiesFromEntityTypeEntryProcessor
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.edm.set.EntitySetFlag
-import com.openlattice.edm.set.EntitySetPropertyKey
 import com.openlattice.edm.set.EntitySetPropertyMetadata
 import com.openlattice.edm.type.AssociationType
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.edm.types.processors.UpdateEntitySetMetadataProcessor
-import com.openlattice.edm.types.processors.UpdateEntitySetPropertyMetadataProcessor
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.processors.AddEntitySetsToLinkingEntitySetProcessor
 import com.openlattice.hazelcast.processors.RemoveDataExpirationPolicyProcessor
@@ -96,6 +97,7 @@ class EntitySetService(
         private val edm: EdmManager,
         private val hds: HikariDataSource,
         private val organizationMetadataEntitySetsService: OrganizationMetadataEntitySetsService,
+        private val datasetService: DatasetService,
         auditingConfiguration: AuditingConfiguration
 ) : EntitySetManager {
     init {
@@ -118,8 +120,8 @@ class EntitySetService(
     private val entityTypes = HazelcastMap.ENTITY_TYPES.getMap(hazelcastInstance)
     private val associationTypes = HazelcastMap.ASSOCIATION_TYPES.getMap(hazelcastInstance)
     private val propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap(hazelcastInstance)
-    private val entitySetPropertyMetadata = HazelcastMap.ENTITY_SET_PROPERTY_METADATA.getMap(hazelcastInstance)
     private val deletedEntitySets = HazelcastMap.DELETED_ENTITY_SETS.getMap(hazelcastInstance)
+    private val objectMetadata = HazelcastMap.OBJECT_METADATA.getMap(hazelcastInstance)
 
     private val aclKeys = HazelcastMap.ACL_KEYS.getMap(hazelcastInstance)
 
@@ -180,6 +182,7 @@ class EntitySetService(
 
             val ownablePropertyTypes = propertyTypes.getAll(entityType.properties).values.toList()
             eventBus.post(EntitySetCreatedEvent(entitySet, ownablePropertyTypes))
+            datasetService.signalDatasetCreated(entitySet.id)
 
         } catch (e: Exception) {
             logger.error("Unable to create entity set ${entitySet.name} (${entitySet.id}) for principal $principal", e)
@@ -308,23 +311,18 @@ class EntitySetService(
         aclKeyReservations.reserveIdAndValidateType(entitySet)
 
         checkState(entitySets.putIfAbsent(entitySet.id, entitySet) == null, "Entity set already exists.")
+        datasetService.initializeMetadata(AclKey(entitySet.id), SecurableObjectMetadata.fromEntitySet(entitySet))
         return entitySet.id
     }
 
     private fun setupDefaultEntitySetPropertyMetadata(entitySetId: UUID, entityTypeId: UUID) {
-        val et = edm.getEntityType(entityTypeId)
-        val propertyTags = et.propertyTags
+        val entityType = edm.getEntityType(entityTypeId)
+        val propertyTags = entityType.propertyTags
+        val propertyTypes = edm.getPropertyTypes(entityType.properties)
 
-        entitySetPropertyMetadata.putAll(edm.getPropertyTypes(et.properties).associate { property ->
-            val key = EntitySetPropertyKey(entitySetId, property.id)
-            val metadata = EntitySetPropertyMetadata(
-                    property.title,
-                    property.description,
-                    propertyTags.getOrDefault(property.id, LinkedHashSet()),
-                    true
-            )
-
-            key to metadata
+        datasetService.initializeMetadata(propertyTypes.associate {
+            val flags = propertyTags.getOrDefault(it.id, LinkedHashSet())
+            AclKey(entitySetId, it.id) to SecurableObjectMetadata.fromPropertyType(it, flags)
         })
     }
 
@@ -359,6 +357,7 @@ class EntitySetService(
         deleteEntitySet(entitySet, entityType)
 
         eventBus.post(EntitySetDeletedEvent(entitySet.id, entityType.id))
+        datasetService.deleteObjectMetadata(AclKey(entitySet.id))
         logger.info("Entity set ${entitySet.name} (${entitySet.id}) deleted successfully.")
     }
 
@@ -371,10 +370,10 @@ class EntitySetService(
                 .map { propertyTypeId -> AclKey(entitySet.id, propertyTypeId) }
                 .forEach { aclKey ->
                     authorizations.deletePermissions(aclKey)
-                    entitySetPropertyMetadata.delete(EntitySetPropertyKey(aclKey[0], aclKey[1]))
                 }
 
         aclKeyReservations.release(entitySet.id)
+        datasetService.deleteObjectMetadataForRootObject(entitySet.id)
         entitySets.delete(entitySet.id)
         deletedEntitySets[entitySet.id] = DelegatedIntSet(entitySet.partitions)
     }
@@ -583,12 +582,22 @@ class EntitySetService(
     }
 
     override fun getEntitySetPropertyMetadata(entitySetId: UUID, propertyTypeId: UUID): EntitySetPropertyMetadata {
-        val key = EntitySetPropertyKey(entitySetId, propertyTypeId)
-        if (!entitySetPropertyMetadata.containsKey(key)) {
-            val entityTypeId = getEntitySet(entitySetId)!!.entityTypeId
-            setupDefaultEntitySetPropertyMetadata(entitySetId, entityTypeId)
+        val aclKey = AclKey(entitySetId, propertyTypeId)
+
+        var metadata = objectMetadata[aclKey]
+        if (metadata == null) {
+            val entityTypeId = entitySets.executeOnKey(entitySetId, GetEntityTypeFromEntitySetEntryProcessor())
+            val tags = entityTypes.getValue(entityTypeId).propertyTags[propertyTypeId] ?: mutableSetOf<String>()
+            metadata = SecurableObjectMetadata.fromPropertyType(propertyTypes.getValue(propertyTypeId), tags)
+            objectMetadata[aclKey] = metadata
         }
-        return entitySetPropertyMetadata.getValue(key)
+
+        return EntitySetPropertyMetadata(
+                metadata.title,
+                metadata.description,
+                metadata.flags.mapTo(linkedSetOf()) { it },
+                true
+        )
     }
 
     override fun getAllEntitySetPropertyMetadata(entitySetId: UUID): Map<UUID, EntitySetPropertyMetadata> {
@@ -611,44 +620,47 @@ class EntitySetService(
                 .flatMap { entitySetId ->
                     entityTypesById.getValue(entityTypesByEntitySetId.getValue(entitySetId)).properties
                             .map { propertyTypeId ->
-                                EntitySetPropertyKey(entitySetId, propertyTypeId)
+                                AclKey(entitySetId, propertyTypeId)
                             }
                 }
                 .toSet()
 
-        val metadataMap = entitySetPropertyMetadata.getAll(keys)
+        val metadataMap = objectMetadata.getAll(keys)
 
         val missingKeys = Sets.difference(keys, metadataMap.keys).toSet()
-        val missingPropertyTypesById = propertyTypes.getAll(
-                missingKeys.map(EntitySetPropertyKey::getPropertyTypeId).toSet()
-        )
+        val missingPropertyTypesById = propertyTypes.getAll(missingKeys.mapTo(mutableSetOf()) { it[1] })
 
         missingKeys.forEach { newKey ->
-            val propertyType = missingPropertyTypesById.getValue(newKey.propertyTypeId)
-            val propertyTags = entityTypesById.getValue(entityTypesByEntitySetId.getValue(newKey.entitySetId))
-                    .propertyTags.getOrDefault(newKey.propertyTypeId, LinkedHashSet())
+            val propertyType = missingPropertyTypesById.getValue(newKey[1])
+            val propertyTags = entityTypesById.getValue(entityTypesByEntitySetId.getValue(newKey[0]))
+                    .propertyTags.getOrDefault(newKey[1], LinkedHashSet())
 
-            val defaultMetadata = EntitySetPropertyMetadata(
-                    propertyType.title,
-                    propertyType.description,
-                    LinkedHashSet(propertyTags),
-                    true
-            )
+            val defaultMetadata = SecurableObjectMetadata.fromPropertyType(propertyType, propertyTags)
+
             metadataMap[newKey] = defaultMetadata
-            entitySetPropertyMetadata[newKey] = defaultMetadata
+            objectMetadata[newKey] = defaultMetadata
         }
 
         return metadataMap.entries
-                .groupBy { it.key.entitySetId }
-                .mapValues { it.value.associateBy({ e -> e.key.propertyTypeId }, { e -> e.value }) }
+                .groupBy { it.key[0] }
+                .mapValues {
+                    it.value.associateBy({ e -> e.key[1] }, { e ->
+                        EntitySetPropertyMetadata(
+                                e.value.title,
+                                e.value.description,
+                                e.value.flags.mapTo(linkedSetOf()) { f -> f },
+                                true
+                        )
+                    })
+                }
     }
 
     override fun updateEntitySetPropertyMetadata(entitySetId: UUID, propertyTypeId: UUID, update: MetadataUpdate) {
-        val key = EntitySetPropertyKey(entitySetId, propertyTypeId)
-        entitySetPropertyMetadata.executeOnKey(key, UpdateEntitySetPropertyMetadataProcessor(update))
+        val key = AclKey(entitySetId, propertyTypeId)
+        datasetService.updateObjectMetadata(key, SecurableObjectMetadataUpdate.fromMetadataUpdate(update))
     }
 
-    override fun updateEntitySetMetadata(entitySetId: UUID, update: MetadataUpdate) {
+    override fun updateEntitySet(entitySetId: UUID, update: MetadataUpdate) {
         if (update.name.isPresent || update.organizationId.isPresent) {
             val oldEntitySet = getEntitySet(entitySetId)!!
 
@@ -694,8 +706,13 @@ class EntitySetService(
             }
         }
 
-        val newEntitySet = entitySets.executeOnKey(entitySetId, UpdateEntitySetMetadataProcessor(update)) as EntitySet
+        val newEntitySet = updateEntitySetMetadata(entitySetId, update)
+        datasetService.updateObjectMetadata(AclKey(entitySetId), SecurableObjectMetadataUpdate.fromMetadataUpdate(update))
         eventBus.post(EntitySetMetadataUpdatedEvent(newEntitySet))
+    }
+
+    override fun updateEntitySetMetadata(entitySetId: UUID, update: MetadataUpdate): EntitySet {
+        return entitySets.executeOnKey(entitySetId, UpdateEntitySetMetadataProcessor(update))
     }
 
     override fun addLinkedEntitySets(entitySetId: UUID, linkedEntitySets: Set<UUID>): Int {

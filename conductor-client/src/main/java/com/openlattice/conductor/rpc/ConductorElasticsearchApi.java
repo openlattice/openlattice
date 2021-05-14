@@ -25,6 +25,8 @@ package com.openlattice.conductor.rpc;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.data.EntityDataKey;
+import com.openlattice.datasets.Dataset;
+import com.openlattice.datasets.DatasetColumn;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
@@ -127,6 +129,14 @@ public interface ConductorElasticsearchApi {
     String ENTITY_SET_COLLECTION_INDEX = "entity_set_collection_index";
     String ENTITY_SET_COLLECTION       = "entity_set_collection";
 
+    // dataset_index setup consts
+    String DATASET_INDEX = "dataset_index";
+    String DATASET       = "dataset";
+
+    // dataset field consts
+    String COLUMNS  = "columns";
+    String METADATA = "metadata";
+
     Set<UUID> getEntityTypesWithIndices();
 
     /**
@@ -220,6 +230,13 @@ public interface ConductorElasticsearchApi {
 
     boolean deleteSecurableObjectFromElasticsearch( SecurableObjectType securableObjectType, UUID objectId );
 
+    /* Dataset create and delete */
+    boolean saveDatasetToElasticsearch( Dataset dataset, List<DatasetColumn> columns );
+
+    boolean updateColumnsInDataset( UUID datasetId, List<DatasetColumn> updatedColumns );
+
+    boolean deleteDatasetFromElasticsearch( UUID id );
+
     /**
      * EDM / SecurableObject Metadata Searches
      **/
@@ -257,6 +274,14 @@ public interface ConductorElasticsearchApi {
             Set<AclKey> authorizedOrganizationIds,
             int start,
             int maxHits );
+
+    SearchResult executeDatasetSearch(
+            String searchTerm,
+            int start,
+            int maxHits,
+            Set<UUID> authorizedIds,
+            boolean excludeColumns
+    );
 
     /**
      * Re-indexing

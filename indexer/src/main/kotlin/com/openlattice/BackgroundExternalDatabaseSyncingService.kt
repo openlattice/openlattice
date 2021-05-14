@@ -9,6 +9,7 @@ import com.openlattice.auditing.AuditRecordEntitySetsManager
 import com.openlattice.auditing.AuditableEvent
 import com.openlattice.auditing.AuditingManager
 import com.openlattice.authorization.*
+import com.openlattice.datasets.DatasetService
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastMap.Companion.EXTERNAL_COLUMNS
 import com.openlattice.hazelcast.HazelcastMap.Companion.EXTERNAL_TABLES
@@ -43,7 +44,8 @@ class BackgroundExternalDatabaseSyncingService(
         private val indexerConfiguration: IndexerConfiguration,
         private val organizationMetadataEntitySetsService: OrganizationMetadataEntitySetsService,
         private val reservationService: HazelcastAclKeyReservationService,
-        private val principalsMapManager: PrincipalsMapManager
+        private val principalsMapManager: PrincipalsMapManager,
+        private val datasetService: DatasetService
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(BackgroundExternalDatabaseSyncingService::class.java)
@@ -114,6 +116,7 @@ class BackgroundExternalDatabaseSyncingService(
         edms.getTableInfoForOrganization(orgId).forEach { (oid, tableName, schemaName, _) ->
             val table = getOrCreateTable(orgId, oid, tableName, schemaName)
             val columns = syncTableColumns(table)
+            datasetService.signalDatasetCreated(table.id)
 
             initializeTablePermissions(orgId, table, columns, adminRolePrincipal)
 
@@ -303,6 +306,7 @@ class BackgroundExternalDatabaseSyncingService(
             edms.createOrganizationExternalDatabaseColumn(table.organizationId, column)
             totalSynced++
         }
+
         return totalSynced
     }
 

@@ -51,11 +51,10 @@ import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.EntityKey;
 import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.data.storage.MetadataOption;
+import com.openlattice.datasets.SecurableObjectMetadata;
 import com.openlattice.directory.MaterializedViewAccount;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.EntitySetFlag;
-import com.openlattice.edm.set.EntitySetPropertyKey;
-import com.openlattice.edm.set.EntitySetPropertyMetadata;
 import com.openlattice.edm.set.ExpirationBase;
 import com.openlattice.edm.type.Analyzer;
 import com.openlattice.edm.type.AssociationType;
@@ -176,6 +175,7 @@ import static com.openlattice.postgres.PostgresColumn.LINKING;
 import static com.openlattice.postgres.PostgresColumn.LINKING_ID;
 import static com.openlattice.postgres.PostgresColumn.LSB_FIELD;
 import static com.openlattice.postgres.PostgresColumn.MEMBERS;
+import static com.openlattice.postgres.PostgresColumn.METADATA;
 import static com.openlattice.postgres.PostgresColumn.MSB_FIELD;
 import static com.openlattice.postgres.PostgresColumn.MULTI_VALUED;
 import static com.openlattice.postgres.PostgresColumn.NAME;
@@ -808,22 +808,6 @@ public final class ResultSetAdapters {
         return new EntityTypePropertyKey( entitySetId, propertyTypeId );
     }
 
-    public static EntitySetPropertyMetadata entitySetPropertyMetadata( ResultSet rs ) throws SQLException {
-        String title = title( rs );
-        String description = description( rs );
-        boolean show = show( rs );
-        LinkedHashSet<String> tags = new LinkedHashSet<>( Arrays
-                .asList( PostgresArrays.getTextArray( rs, PostgresColumn.TAGS_FIELD ) ) );
-
-        return new EntitySetPropertyMetadata( title, description, tags, show );
-    }
-
-    public static EntitySetPropertyKey entitySetPropertyKey( ResultSet rs ) throws SQLException {
-        UUID entitySetId = entitySetId( rs );
-        UUID propertyTypeId = propertyTypeId( rs );
-        return new EntitySetPropertyKey( entitySetId, propertyTypeId );
-    }
-
     public static Boolean multiValued( ResultSet rs ) throws SQLException {
         return rs.getBoolean( MULTI_VALUED.getName() );
     }
@@ -1257,6 +1241,11 @@ public final class ResultSetAdapters {
 
     @NotNull public static ProjectedTableMetadata projectedTableMetadata( @NotNull ResultSet rs ) throws SQLException {
         return new ProjectedTableMetadata( organizationId( rs ), name( rs ) );
+    }
+
+    @NotNull public static SecurableObjectMetadata securableObjectMetadata( @NotNull ResultSet rs )
+            throws SQLException, IOException {
+        return mapper.readValue( rs.getString( METADATA.getName() ), SecurableObjectMetadata.class );
     }
 
 }

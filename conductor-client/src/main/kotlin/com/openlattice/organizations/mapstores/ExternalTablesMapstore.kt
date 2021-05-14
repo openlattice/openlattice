@@ -15,12 +15,16 @@ import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.util.*
 
-const val NAME_INDEX = "name"
-const val SCHEMA_INDEX = "schema"
-
 open class ExternalTablesMapstore(hds: HikariDataSource) : AbstractBasePostgresMapstore<UUID, ExternalTable>(
         HazelcastMap.EXTERNAL_TABLES, PostgresTable.ORGANIZATION_EXTERNAL_DATABASE_TABLE, hds
 ) {
+
+    companion object {
+        const val ID_INDEX = "id"
+        const val ORGANIZATION_ID_INDEX = "organizationId"
+        const val NAME_INDEX = "name"
+        const val SCHEMA_INDEX = "schema"
+    }
 
     override fun bind(ps: PreparedStatement, key: UUID, value: ExternalTable) {
         var index = bind(ps, key, 1)
@@ -60,6 +64,7 @@ open class ExternalTablesMapstore(hds: HikariDataSource) : AbstractBasePostgresM
     override fun getMapConfig(): MapConfig {
         return super.getMapConfig()
                 .addIndexConfig(IndexConfig(IndexType.HASH, ORGANIZATION_ID_INDEX))
+                .addIndexConfig(IndexConfig(IndexType.HASH, ID_INDEX))
                 .addIndexConfig(IndexConfig(IndexType.HASH, NAME_INDEX))
                 .addIndexConfig(IndexConfig(IndexType.HASH, SCHEMA_INDEX))
                 .setInMemoryFormat(InMemoryFormat.OBJECT)

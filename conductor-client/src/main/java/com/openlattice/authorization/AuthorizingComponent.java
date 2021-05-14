@@ -41,8 +41,8 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.openlattice.authorization.EdmAuthorizationHelper.TRANSPORT_PERMISSION;
 import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
+import static com.openlattice.authorization.EdmAuthorizationHelper.TRANSPORT_PERMISSION;
 import static com.openlattice.authorization.EdmAuthorizationHelper.WRITE_PERMISSION;
 
 public interface AuthorizingComponent {
@@ -81,6 +81,11 @@ public interface AuthorizingComponent {
 
     default void ensureReadAccess( AclKey aclKey ) {
         accessCheck( aclKey, READ_PERMISSION );
+    }
+
+    default void ensureReadAccess( Set<AclKey> keys ) {
+        EnumSet<Permission> read = EnumSet.of( Permission.READ );
+        accessCheck( keys.stream().collect( Collectors.toMap( Function.identity(), aclKey -> read ) ) );
     }
 
     default void ensureWriteAccess( AclKey aclKey ) {

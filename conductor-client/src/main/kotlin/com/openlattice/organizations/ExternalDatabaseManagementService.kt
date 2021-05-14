@@ -8,6 +8,9 @@ import com.hazelcast.query.QueryConstants
 import com.openlattice.authorization.*
 import com.openlattice.authorization.mapstores.PermissionMapstore
 import com.openlattice.authorization.securable.SecurableObjectType
+import com.openlattice.datasets.DatasetService
+import com.openlattice.datasets.SecurableObjectMetadata
+import com.openlattice.datasets.SecurableObjectMetadataUpdate
 import com.openlattice.edm.PropertyTypeIdFqn
 import com.openlattice.edm.processors.AddFlagsOnEntitySetEntryProcessor
 import com.openlattice.edm.processors.GetEntityTypeFromEntitySetEntryProcessor
@@ -21,9 +24,9 @@ import com.openlattice.hazelcast.processors.organizations.UpdateExternalTableEnt
 import com.openlattice.organization.ExternalColumn
 import com.openlattice.organization.ExternalTable
 import com.openlattice.organization.ExternalTableColumnsPair
-import com.openlattice.organizations.mapstores.NAME_INDEX
+import com.openlattice.organizations.mapstores.ExternalTablesMapstore.Companion.NAME_INDEX
+import com.openlattice.organizations.mapstores.ExternalTablesMapstore.Companion.SCHEMA_INDEX
 import com.openlattice.organizations.mapstores.ORGANIZATION_ID_INDEX
-import com.openlattice.organizations.mapstores.SCHEMA_INDEX
 import com.openlattice.organizations.mapstores.TABLE_ID_INDEX
 import com.openlattice.postgres.*
 import com.openlattice.postgres.DataTables.quote
@@ -80,7 +83,8 @@ class ExternalDatabaseManagementService(
         private val extDbPermsManager: ExternalDatabasePermissioningService,
         private val transporterService: TransporterService,
         private val dbCredentialService: DbCredentialService,
-        private val hds: HikariDataSource
+        private val hds: HikariDataSource,
+        private val datasetService: DatasetService
 ) {
 
     private val logger = LoggerFactory.getLogger(ExternalDatabaseManagementService::class.java)
@@ -111,6 +115,9 @@ class ExternalDatabaseManagementService(
         val tableAclKey = AclKey(table.id)
         authorizationManager.setSecurableObjectType(tableAclKey, SecurableObjectType.OrganizationExternalDatabaseTable)
 
+        datasetService.initializeMetadata(tableAclKey, SecurableObjectMetadata.fromExternalTable(table))
+        datasetService.signalDatasetCreated(table.id)
+
         return table.id
     }
 
@@ -124,6 +131,8 @@ class ExternalDatabaseManagementService(
         aclKeyReservations.reserveIdAndValidateType(column) { columnUniqueName }
 
         authorizationManager.setSecurableObjectType(column.getAclKey(), SecurableObjectType.OrganizationExternalDatabaseColumn)
+
+        datasetService.initializeMetadata(column.getAclKey(), SecurableObjectMetadata.fromExternalColumn(column))
 
         return column.id
     }
@@ -312,7 +321,12 @@ class ExternalDatabaseManagementService(
             aclKeyReservations.renameReservation(tableFqnToId.second, newTableFqn.fullQualifiedNameAsString)
         }
 
-        externalTables.submitToKey(tableFqnToId.second, UpdateExternalTableEntryProcessor(update))
+        updateExternalTableMetadata(tableFqnToId.second, update)
+        datasetService.updateObjectMetadata(AclKey(tableFqnToId.second), SecurableObjectMetadataUpdate.fromMetadataUpdate(update))
+    }
+
+    fun updateExternalTableMetadata(tableId: UUID, update: MetadataUpdate) {
+        externalTables.submitToKey(tableId, UpdateExternalTableEntryProcessor(update))
     }
 
     fun updateExternalColumn(orgId: UUID, tableFqnToId: Pair<String, UUID>, columnFqnToId: Pair<String, UUID>, update: MetadataUpdate) {
@@ -327,7 +341,15 @@ class ExternalDatabaseManagementService(
             }
             aclKeyReservations.renameReservation(columnFqnToId.second, newColumnFqn.fullQualifiedNameAsString)
         }
-        externalColumns.submitToKey(columnFqnToId.second, UpdateExternalColumnEntryProcessor(update))
+        updateExternalColumnMetadata(tableFqnToId.second, columnFqnToId.second, update)
+        datasetService.updateObjectMetadata(
+                AclKey(tableFqnToId.second, columnFqnToId.second),
+                SecurableObjectMetadataUpdate.fromMetadataUpdate(update)
+        )
+    }
+
+    fun updateExternalColumnMetadata(tableId: UUID, columnId: UUID, update: MetadataUpdate) {
+        externalColumns.submitToKey(columnId, UpdateExternalColumnEntryProcessor(update))
     }
 
     /*DELETE*/
@@ -360,6 +382,7 @@ class ExternalDatabaseManagementService(
     fun deleteExternalTableObjects(tableIds: Set<UUID>) {
         tableIds.forEach {
             val aclKey = AclKey(it)
+            datasetService.deleteObjectMetadataForRootObject(it)
             authorizationManager.deletePermissions(aclKey)
             securableObjectTypes.remove(aclKey)
             aclKeyReservations.release(it)
@@ -392,6 +415,7 @@ class ExternalDatabaseManagementService(
         columnIdsByTableId.forEach { (tableId, columnIds) ->
             columnIds.forEach { columnId ->
                 val aclKey = AclKey(tableId, columnId)
+                datasetService.deleteObjectMetadata(aclKey)
                 authorizationManager.deletePermissions(aclKey)
                 securableObjectTypes.remove(aclKey)
                 aclKeyReservations.release(columnId)

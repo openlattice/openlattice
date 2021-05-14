@@ -356,6 +356,9 @@ public final class PostgresColumn {
     public static final String                   MSB_FIELD                         = "msb";
     public static final PostgresColumnDefinition MSB                               =
             new PostgresColumnDefinition( MSB_FIELD, BIGINT ).notNull();
+    public static final String                   METADATA_FIELD                    = "metadata";
+    public static final PostgresColumnDefinition METADATA                          =
+            new PostgresColumnDefinition( METADATA_FIELD, JSONB ).notNull();
     public static final PostgresColumnDefinition MULTI_VALUED                      =
             new PostgresColumnDefinition( "multi_valued", BOOLEAN )
                     .withDefault( false )

@@ -17,6 +17,8 @@ import com.openlattice.client.serialization.SerializationConstants;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.conductor.rpc.SearchConfiguration;
 import com.openlattice.data.EntityDataKey;
+import com.openlattice.datasets.Dataset;
+import com.openlattice.datasets.DatasetColumn;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.Analyzer;
 import com.openlattice.edm.type.AssociationType;
@@ -102,7 +104,8 @@ public class DatastoreElasticsearchImpl implements ConductorElasticsearchApi {
             PROPERTY_TYPE_INDEX,
             APP_INDEX,
             ENTITY_TYPE_COLLECTION_INDEX,
-            ENTITY_SET_COLLECTION_INDEX
+            ENTITY_SET_COLLECTION_INDEX,
+            DATASET_INDEX
     };
 
     private static final Map<SecurableObjectType, String> indexNamesByObjectType = Map.of(
@@ -175,6 +178,9 @@ public class DatastoreElasticsearchImpl implements ConductorElasticsearchApi {
                 break;
             case ORGANIZATIONS:
                 initializeOrganizationIndex();
+                break;
+            case DATASET_INDEX:
+                initializeDatasetIndex();
                 break;
             default: {
                 initializeDefaultIndex( indexName, typeNamesByIndexName.get( indexName ) );
@@ -279,6 +285,39 @@ public class DatastoreElasticsearchImpl implements ConductorElasticsearchApi {
                 .addMapping( ORGANIZATION_TYPE, ImmutableMap.of( ORGANIZATION_TYPE, organizationData ) )
                 .execute().actionGet();
         return true;
+    }
+
+    private boolean initializeDatasetIndex() {
+        if ( !verifyElasticsearchConnection() ) { return false; }
+
+        if ( indexExists( DATASET_INDEX ) ) {
+            return true;
+        }
+
+        // entity_set type mapping
+        ImmutableMap.Builder<String, Object> properties = ImmutableMap.builder();
+        properties.put( COLUMNS, ImmutableMap.of( TYPE, NESTED ) );
+        properties.put( DATASET, ImmutableMap.of( TYPE, OBJECT ) );
+
+        Map<String, String> typeTextAnalyzerMetaphoneAnalyzer = ImmutableMap
+                .of( TYPE, TEXT, ANALYZER, METAPHONE_ANALYZER );
+
+        properties.put( DATASET + "." + SerializationConstants.TITLE_FIELD, typeTextAnalyzerMetaphoneAnalyzer );
+        properties.put( DATASET + "." + SerializationConstants.DESCRIPTION_FIELD, typeTextAnalyzerMetaphoneAnalyzer );
+
+        Map<String, Object> mapping = ImmutableMap
+                .of( DATASET, ImmutableMap.of( MAPPING_PROPERTIES, properties.build() ) );
+
+        try {
+            client.admin().indices().prepareCreate( DATASET_INDEX )
+                    .setSettings( getMetaphoneSettings( defaultNumShards ) )
+                    .addMapping( DATASET, mapping )
+                    .execute().actionGet();
+            return true;
+        } catch ( IOException e ) {
+            logger.error( "Unable to initialize entity set data model index", e );
+            return false;
+        }
     }
 
     private boolean initializeDefaultIndex( String indexName, String typeName ) {
@@ -1046,6 +1085,92 @@ public class DatastoreElasticsearchImpl implements ConductorElasticsearchApi {
         String typeName = typeNamesByIndexName.get( indexName );
 
         return deleteObjectById( indexName, typeName, objectId.toString() );
+    }
+
+    @Override
+    public boolean saveDatasetToElasticsearch( Dataset dataset, List<DatasetColumn> columns ) {
+        if ( !verifyElasticsearchConnection() ) {
+            return false;
+        }
+
+        Map<String, Object> datasetMapping = ImmutableMap.of(
+                DATASET, dataset,
+                COLUMNS, columns );
+
+        try {
+            String s = ObjectMappers.getJsonMapper().writeValueAsString( datasetMapping );
+            client.prepareIndex( DATASET_INDEX, DATASET, dataset.getId().toString() )
+                    .setSource( s, XContentType.JSON )
+                    .execute().actionGet();
+
+            return true;
+        } catch ( JsonProcessingException e ) {
+            logger.debug( "error saving dataset to elasticsearch" );
+        }
+        return false;
+    }
+
+    @Override
+    public boolean updateColumnsInDataset( UUID datasetId, List<DatasetColumn> updatedColumns ) {
+        if ( !verifyElasticsearchConnection() ) { return false; }
+
+        Map<String, Object> columns = ImmutableMap.of( COLUMNS, updatedColumns );
+        try {
+            String s = ObjectMappers.getJsonMapper().writeValueAsString( columns );
+            UpdateRequest updateRequest = new UpdateRequest(
+                    DATASET_INDEX,
+                    datasetId.toString() ).doc( s, XContentType.JSON );
+            client.update( updateRequest ).actionGet();
+            return true;
+        } catch ( IOException e ) {
+            logger.debug( "error updating columns of dataset in elasticsearch" );
+        }
+        return false;
+    }
+
+    @Override
+    public boolean deleteDatasetFromElasticsearch( UUID id ) {
+        if ( !verifyElasticsearchConnection() ) {
+            return false;
+        }
+
+        client.prepareDelete( DATASET_INDEX, DATASET, id.toString() ).execute().actionGet();
+        return true;
+    }
+
+    @Override
+    public SearchResult executeDatasetSearch(
+            String searchTerm,
+            int start,
+            int maxHits,
+            Set<UUID> authorizedIds,
+            boolean excludeColumns ) {
+        if ( !verifyElasticsearchConnection() ) { return new SearchResult( 0, Lists.newArrayList() ); }
+
+        BoolQueryBuilder query = new BoolQueryBuilder();
+
+        query.must( QueryBuilders.queryStringQuery( getFormattedFuzzyString( searchTerm ) ).lenient( true ) );
+
+        query.filter( QueryBuilders.idsQuery()
+                .addIds( authorizedIds.stream().map( UUID::toString ).toArray( String[]::new ) ) );
+        SearchResponse response = client.prepareSearch( DATASET_INDEX )
+                .setQuery( query )
+                .setFetchSource( new String[] { DATASET, COLUMNS }, null )
+                .setFrom( start )
+                .setSize( maxHits )
+                .execute()
+                .actionGet();
+
+        List<Map<String, Object>> hits = Lists.newArrayList();
+        response.getHits().forEach( hit -> {
+            Map<String, Object> datasetResult = hit.getSourceAsMap();
+            if ( excludeColumns ) {
+                datasetResult.remove( COLUMNS );
+            }
+            hits.add( datasetResult );
+        } );
+
+        return new SearchResult( response.getHits().getTotalHits().value, hits );
     }
 
     @Override

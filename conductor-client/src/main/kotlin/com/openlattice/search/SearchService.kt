@@ -26,6 +26,10 @@ import com.openlattice.data.requests.NeighborEntityIds
 import com.openlattice.data.storage.EntityDatastore
 import com.openlattice.data.storage.IndexingMetadataManager
 import com.openlattice.data.storage.MetadataOption
+import com.openlattice.datasets.DatasetService
+import com.openlattice.datasets.events.DatasetColumnsUpdatedEvent
+import com.openlattice.datasets.events.DatasetCreatedEvent
+import com.openlattice.datasets.events.DatasetDeletedEvent
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EdmConstants
@@ -70,7 +74,8 @@ class SearchService(
         val entitySetService: EntitySetManager,
         val graphService: GraphService,
         val dataManager: EntityDatastore,
-        val indexingMetadataManager: IndexingMetadataManager
+        val indexingMetadataManager: IndexingMetadataManager,
+        val datasetService: DatasetService
 ) {
 
     companion object {
@@ -167,7 +172,38 @@ class SearchService(
                     maxHits
             )
         }
+    }
 
+
+    @Timed
+    fun executeDatasetQuery(
+            searchTerm: String,
+            start: Int,
+            maxHits: Int,
+            excludeColumns: Boolean,
+            organizationIds: Set<UUID>?
+    ): SearchResult {
+        var authorizedDatasetIds = authorizations.getAuthorizedObjectsOfTypes(
+                Principals.getCurrentPrincipals(),
+                listOf(SecurableObjectType.EntitySet, SecurableObjectType.OrganizationExternalDatabaseTable),
+                READ_PERMISSION
+        ).map { it.first() }.collect(Collectors.toSet())
+
+        if (organizationIds != null) {
+            authorizedDatasetIds = datasetService.filterDatasetIdsByOrganizations(authorizedDatasetIds, organizationIds)
+        }
+
+        return if (authorizedDatasetIds.size == 0) {
+            SearchResult(0, Lists.newArrayList())
+        } else {
+            elasticsearchApi.executeDatasetSearch(
+                    searchTerm,
+                    start,
+                    maxHits,
+                    authorizedDatasetIds,
+                    excludeColumns
+            )
+        }
     }
 
     @Timed
@@ -439,6 +475,24 @@ class SearchService(
                         SecurableObjectType.EntitySetCollection,
                         entitySetCollectionId
                 )
+    }
+
+    @Subscribe
+    fun createDataset(event: DatasetCreatedEvent) {
+        val dataset = datasetService.getDataset(event.id)
+        val columns = datasetService.getColumnsInDataset(event.id)
+        elasticsearchApi.saveDatasetToElasticsearch(dataset, columns)
+    }
+
+    @Subscribe
+    fun deleteDataset(event: DatasetDeletedEvent) {
+        elasticsearchApi.deleteDatasetFromElasticsearch(event.id)
+    }
+
+    @Subscribe
+    fun updateDatasetColumns(event: DatasetColumnsUpdatedEvent) {
+        val columns = datasetService.getColumnsInDataset(event.datasetId)
+        elasticsearchApi.updateColumnsInDataset(event.datasetId, columns)
     }
 
     /**
@@ -924,6 +978,16 @@ class SearchService(
 
     fun triggerOrganizationIndex(organization: Organization) {
         elasticsearchApi.triggerOrganizationIndex(Lists.newArrayList(organization))
+    }
+
+    fun triggerAllDatasetIndex() {
+        entitySetService.getEntitySets().forEach {
+            createDataset(DatasetCreatedEvent(it.id))
+        }
+
+        datasetService.getExternalTables().forEach {
+            createDataset(DatasetCreatedEvent(it.id))
+        }
     }
 
 }

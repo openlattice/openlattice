@@ -10,6 +10,8 @@ import com.openlattice.assembler.events.MaterializedEntitySetEdmChangeEvent
 import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.controllers.exceptions.TypeExistsException
+import com.openlattice.datasets.DatasetService
+import com.openlattice.datasets.SecurableObjectMetadata
 import com.openlattice.edm.EntityDataModel
 import com.openlattice.edm.EntityDataModelDiff
 import com.openlattice.edm.EntitySet
@@ -18,8 +20,6 @@ import com.openlattice.edm.events.*
 import com.openlattice.edm.properties.PostgresTypeManager
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager
-import com.openlattice.edm.set.EntitySetPropertyKey
-import com.openlattice.edm.set.EntitySetPropertyMetadata
 import com.openlattice.edm.type.*
 import com.openlattice.edm.types.processors.*
 import com.openlattice.hazelcast.HazelcastMap
@@ -46,7 +46,8 @@ class EdmService(
         private val aclKeyReservations: HazelcastAclKeyReservationService,
         private val authorizations: AuthorizationManager,
         private val entityTypeManager: PostgresTypeManager,
-        private val schemaManager: HazelcastSchemaManager
+        private val schemaManager: HazelcastSchemaManager,
+        private val datasetService: DatasetService
 ) : EdmManager {
 
     private val propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap(hazelcastInstance)
@@ -55,7 +56,7 @@ class EdmService(
     private val aclKeys = HazelcastMap.ACL_KEYS.getMap(hazelcastInstance)
     private val names = HazelcastMap.NAMES.getMap(hazelcastInstance)
     private val associationTypes = HazelcastMap.ASSOCIATION_TYPES.getMap(hazelcastInstance)
-    private val entitySetPropertyMetadata = HazelcastMap.ENTITY_SET_PROPERTY_METADATA.getMap(hazelcastInstance)
+    private val objectMetadata = HazelcastMap.OBJECT_METADATA.getMap(hazelcastInstance)
     private val entityTypePropertyMetadata = HazelcastMap.ENTITY_TYPE_PROPERTY_METADATA.getMap(hazelcastInstance)
 
     init {
@@ -351,7 +352,7 @@ class EdmService(
 
         val aclKeysForSecurableObjectTypes = mutableSetOf<AclKey>()
         val acls = mutableListOf<Acl>()
-        val espm = mutableMapOf<EntitySetPropertyKey, EntitySetPropertyMetadata>()
+        val newMetadata = mutableMapOf<AclKey, SecurableObjectMetadata>()
 
         getEntitySetsOfType(entityTypeId).forEach { entitySet ->
             val esId = entitySet.id
@@ -368,12 +369,8 @@ class EdmService(
                 aclKeysForSecurableObjectTypes.add(aclKey)
                 acls.add(Acl(aclKey, owners.map { owner -> Ace(owner, EnumSet.allOf(Permission::class.java)) }))
 
-                val defaultMetadata = EntitySetPropertyMetadata(
-                        it.title,
-                        it.description,
-                        propertyTags.getOrDefault(it.id, linkedSetOf()),
-                        true)
-                espm[EntitySetPropertyKey(esId, it.id)] = defaultMetadata
+                val defaultMetadata = SecurableObjectMetadata.fromPropertyType(it, propertyTags.getOrDefault(it.id, linkedSetOf()))
+                newMetadata[AclKey(esId, it.id)] = defaultMetadata
             }
 
             markMaterializedEntitySetDirtyWithEdmChanges(esId) // add edm_unsync flag for materialized views
@@ -388,7 +385,7 @@ class EdmService(
 
         authorizations.setSecurableObjectTypes(aclKeysForSecurableObjectTypes, SecurableObjectType.PropertyTypeInEntitySet)
         authorizations.addPermissions(acls)
-        entitySetPropertyMetadata.putAll(espm)
+        objectMetadata.putAll(newMetadata)
 
         val entityType = getEntityType(entityTypeId)
 
@@ -426,7 +423,10 @@ class EdmService(
         }
         val entitySetIdsOfEntityType = getEntitySetIdsOfType(id)
 
-        entitySetIdsOfEntityType.forEach { markMaterializedEntitySetDirtyWithEdmChanges(it) }
+        entitySetIdsOfEntityType.forEach {
+            markMaterializedEntitySetDirtyWithEdmChanges(it)
+            propertyTypeIds.forEach { ptId -> datasetService.deleteObjectMetadata(AclKey(it, ptId)) }
+        }
 
     }
 
