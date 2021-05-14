@@ -1,5 +1,41 @@
 //Easy semantic version based off describe + tags
 
+
+// If git tag --contains has tags, then you're on-tag
+//   for each tag in ^, release -dev to SNAPSHOT and non-dev to MAIN
+// else (if git tag --contains has no tags), then off-tag
+//   assumed that the resolved tag will be a -dev tag (error msg if not)
+//   release -dev to SNAPSHOT
+
+def class Tag {
+    String version
+    Boolean snapshot
+
+    String toString() {
+        def snp
+        if (snapshot) {
+            snp = "-SNAPSHOT"
+        } else {
+            snp = ""
+        }
+        return "${version}${snp}"
+    }
+}
+
+static def convertToTag(tagString) {
+    def semVer = (tagString =~ /v?([\d\.]+)/)[0][1]
+    return new Tag(version: semVer, snapshot: tagString.contains('dev'))
+}
+
+def runCommand(String... command) {
+    def stdout = new ByteArrayOutputStream()
+    exec {
+        commandLine command
+        standardOutput = stdout
+    }
+    return stdout.toString()
+}
+
 def branch ="$System.env.bamboo_planRepository_branchName"
 
 if( branch == null || branch == "" ) {
@@ -9,7 +45,7 @@ if( branch == null || branch == "" ) {
         commandLine 'git', 'rev-parse', '--abbrev-ref', 'HEAD'
         standardOutput = stdout
     }
-    branch=stdout.toString().trim();
+    branch=stdout.toString().trim()
 }
 
 def setDevMode = { ->
@@ -19,40 +55,25 @@ def setDevMode = { ->
 
 ext.developmentMode = setDevMode()
 
-def getVersionName = { ->
-  def stdout = new ByteArrayOutputStream()
-  exec {
-    commandLine 'git', 'describe', '--tags', '--long'
-    standardOutput = stdout
-  }
-  def tagVer = stdout.toString().trim()
-  def semVer = (tagVer =~ /v?([\d\.]+)/)[0][1]
+def describeOutput = runCommand('git', 'describe', '--tags', '--long').trim()
 
-  if (tagVer.contains('dev')) {
-    semVer += "-SNAPSHOT"
-  }
-  return semVer
+def getVersionName = { ->
+    return convertToTag(describeOutput).toString()
 }
 version = getVersionName()
 
 //This gets the version plus build number, no -SNAPSHOTs
 def getFullVersion = { ->
-  def stdout = new ByteArrayOutputStream()
-  exec {
-    commandLine 'git', 'describe', '--tags', '--long'
-    standardOutput = stdout
-  }
-  def tagVer = stdout.toString().trim()
-  def semVer = (tagVer =~ /v?([\d\.]+)/)[0][1]
+    def semVer = convertToTag(describeOutput).version
 
-  if (tagVer.contains('dev')) {
-    ext.bambooBuild =".${System.getenv("bamboo_buildNumber")}"
-    if ( ext.bambooBuild == ".null" ) {
-      ext.bambooBuild = "-SNAPSHOT"
+    if (describeOutput.contains('dev')) {
+        ext.bambooBuild =".${System.getenv("bamboo_buildNumber")}"
+        if ( ext.bambooBuild == ".null" ) {
+            ext.bambooBuild = "-SNAPSHOT"
+        }
+        semVer += ext.bambooBuild
     }
-    semVer += ext.bambooBuild
-  }
-  return semVer
+    return semVer
 }
 ext.fullVersion = getFullVersion()
 
@@ -107,12 +128,7 @@ configurations.all {
 
 }
 
-ext.versionSuffix = ""
-if( ext.fullVersion.contains("-SNAPSHOT") ) {
-  ext.versionSuffix = "-SNAPSHOT"
-}
-
-println "Using dependencies for " + branch
+println "Resolving dependencies in devMode: ${developmentMode}"
 /**
  * Monorepo Versions
  **/
@@ -240,57 +256,40 @@ ext.junit_version='4.12'
 ext.mockito_version='1.10.19'
 ext.s3mock_version='0.2.5'
 
-if( branch.equals("master") ) { //Master overrides
+/**
+ * With the new 'main' and no 'develop' branch pattern, we no longer need any kind of overrides.
+ * Just update the snapshot versions number above to the latest snapshot after release as
+ *    the first snapshot for a version number should be equivalent to the latest release version
+ *    ie. tag v1.0.0 and v1.0.1-dev should both point to the 1.0.0 release commit on 'main'
+ *    and lib-1.0.0 and the first lib-1.0.1-SNAPSHOT jars should have the same code
+ */
+//if( branch.equals("master") ) { //Master overrides
   /**
    * Monorepo Versions
    **/
-  ext.monorepo_version='2.5.0'
-  ext.api_version="${monorepo_version}"
-  ext.conductor_version="${monorepo_version}"
-  ext.conductor_client_version="${monorepo_version}"
-  ext.courier_version="${monorepo_version}"
-  ext.datastore_version="${monorepo_version}"
-  ext.indexer_version="${monorepo_version}"
-  ext.linker_version="${monorepo_version}"
-  ext.rehearsal_version="${monorepo_version}"
-  ext.scribe_version="${monorepo_version}"
-  ext.scrunchie_version="${monorepo_version}"
+//  ext.monorepo_version='2.5.0'
+//  ext.api_version="${monorepo_version}"
+//  ext.conductor_version="${monorepo_version}"
+//  ext.conductor_client_version="${monorepo_version}"
+//  ext.courier_version="${monorepo_version}"
+//  ext.datastore_version="${monorepo_version}"
+//  ext.indexer_version="${monorepo_version}"
+//  ext.linker_version="${monorepo_version}"
+//  ext.rehearsal_version="${monorepo_version}"
+//  ext.scribe_version="${monorepo_version}"
+//  ext.scrunchie_version="${monorepo_version}"
 
   /**
    * Internal Versions
    **/
-  ext.chronicle_api_version='0.0.15'
-  ext.chronicle_server_version='0.0.1'
-  ext.kindling_version='0.0.1'
-  ext.launchpad_version='1.3.0'
-  ext.mechanic_version='0.0.1'
-  ext.neuron_version='0.0.1'
-  ext.rhizome_version='3.0.2'
-  ext.rhizome_client_version='0.0.13'
-  ext.shuttle_version='0.0.4'
-  ext.socrates_version='0.0.1'
-
-  /**
-   * Old Versions, just in case the above breaks badly
-   **/
-  // ext.api_version='0.0.11'
-  // ext.conductor_client_version='0.0.7'
-  // ext.conductor_version='0.0.2'
-  // ext.courier_version='0.0.2'
-  // ext.datastore_version='0.0.1'
-  // ext.kindling_version='0.0.1'
-  // ext.launchpad_version='1.2.1'
-  // ext.mail_service_client_version='0.0.1'
-  // ext.mail_service_version='0.0.3'
-  // ext.rhizome_client_version='0.0.12'
-  // ext.rhizome_version='3.0.1'
-  // ext.scribe_version='0.0.2'
-  // ext.scrunchie_version='0.0.3'
-  // ext.shuttle_version='0.0.3'
-
-  /**
-   * External versions
-   **/
-  ext.aws_java_sdk_version='1.11.319'
-  ext.postgresql_version='42.2.14'
-}
+//  ext.chronicle_api_version='0.0.15'
+//  ext.chronicle_server_version='0.0.1'
+//  ext.kindling_version='0.0.1'
+//  ext.launchpad_version='1.3.0'
+//  ext.mechanic_version='0.0.1'
+//  ext.neuron_version='0.0.1'
+//  ext.rhizome_version='3.0.2'
+//  ext.rhizome_client_version='0.0.13'
+//  ext.shuttle_version='0.0.4'
+//  ext.socrates_version='0.0.1'
+//}
