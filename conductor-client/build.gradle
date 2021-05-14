@@ -48,7 +48,9 @@ apply from: "../gradles/openlattice.gradle"
 sourceCompatibility=JavaVersion.VERSION_11
 targetCompatibility=JavaVersion.VERSION_11
 
-import com.github.jk1.license.render.*
+
+import com.github.jk1.license.render.InventoryHtmlReportRenderer
+
 licenseReport {
     renderers = [new InventoryHtmlReportRenderer()]
 }
@@ -56,7 +58,7 @@ licenseReport {
 checkstyle {
   toolVersion = "7.4"
   showViolations = false
-    config project.resources.text.fromUri('https://raw.githubusercontent.com/openlattice/openlattice/develop/gradles/checkstyle.xml')
+    config project.resources.text.fromUri(rootProject.file('gradles/checkstyle.xml').toURI())
 }
 
 tasks.withType(Checkstyle) {
