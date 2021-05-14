@@ -1,5 +1,7 @@
 plugins {
     kotlin("jvm") version "1.4.31"
+    `maven-publish`
+    signing
 }
 
 java {
