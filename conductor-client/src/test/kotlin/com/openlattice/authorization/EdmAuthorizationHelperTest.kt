@@ -24,6 +24,7 @@ import com.google.common.eventbus.EventBus
 import com.openlattice.auditing.AuditingConfiguration
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.data.storage.partitions.PartitionManager
+import com.openlattice.datasets.DatasetService
 import com.openlattice.datastore.services.EdmService
 import com.openlattice.datastore.services.EntitySetService
 import com.openlattice.edm.properties.PostgresTypeManager
@@ -42,22 +43,26 @@ class EdmAuthorizationHelperTest : HzAuthzTest() {
     init {
         val auditingConfig = testServer.context.getBean(AuditingConfiguration::class.java)
         val pgTypeMan = PostgresTypeManager(hds, hazelcastInstance)
+        val eventBus = Mockito.mock(EventBus::class.java)
+        val datasetService = DatasetService(hazelcastInstance, eventBus)
         val edmManager = EdmService(
                 hazelcastInstance,
                 HazelcastAclKeyReservationService(hazelcastInstance),
                 hzAuthz,
                 pgTypeMan,
-                HazelcastSchemaManager(hazelcastInstance, pgTypeMan)
+                HazelcastSchemaManager(hazelcastInstance, pgTypeMan),
+                datasetService
         )
         val entitySetManager = EntitySetService(
                 hazelcastInstance,
-                Mockito.mock(EventBus::class.java),
+                eventBus,
                 HazelcastAclKeyReservationService(hazelcastInstance),
                 hzAuthz,
                 PartitionManager(hazelcastInstance, hds),
                 edmManager,
                 hds,
                 Mockito.mock(OrganizationMetadataEntitySetsService::class.java),
+                datasetService,
                 auditingConfig
         )
 

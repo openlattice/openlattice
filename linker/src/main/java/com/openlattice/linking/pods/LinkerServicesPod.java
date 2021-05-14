@@ -37,6 +37,7 @@ import com.openlattice.collaborations.CollaborationService;
 import com.openlattice.collaborations.PostgresCollaborationDatabaseService;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.storage.partitions.PartitionManager;
+import com.openlattice.datasets.DatasetService;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.EntitySetManager;
@@ -265,13 +266,19 @@ public class LinkerServicesPod {
     }
 
     @Bean
+    DatasetService datasetService() {
+        return new DatasetService( hazelcastInstance, eventBus );
+    }
+
+    @Bean
     public EdmManager dataModelService() {
         return new EdmService(
                 hazelcastInstance,
                 aclKeyReservationService(),
                 authorizationManager(),
                 entityTypeManager(),
-                schemaManager()
+                schemaManager(),
+                datasetService()
         );
     }
 
@@ -286,6 +293,7 @@ public class LinkerServicesPod {
                 dataModelService(),
                 hikariDataSource,
                 organizationMetadataEntitySetsService(),
+                datasetService(),
                 auditingConfiguration
         );
     }

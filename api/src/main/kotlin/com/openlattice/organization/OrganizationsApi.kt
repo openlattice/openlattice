@@ -80,6 +80,11 @@ interface OrganizationsApi {
             @Path(ID) organizationId: UUID
     ): OrganizationIntegrationAccount
 
+    @GET(BASE + ID_PATH + INTEGRATION + ROLES)
+    fun getOrganizationAdminRoleDatabaseAccount(
+            @Path(ID) organizationId: UUID
+    ): OrganizationIntegrationAccount
+
     /**
      * Marks an entity set for transporter
      */

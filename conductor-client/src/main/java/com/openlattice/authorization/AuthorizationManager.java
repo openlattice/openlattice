@@ -28,7 +28,12 @@ import com.hazelcast.query.Predicate;
 import com.openlattice.authorization.securable.SecurableObjectType;
 
 import java.time.OffsetDateTime;
-import java.util.*;
+import java.util.Collection;
+import java.util.EnumMap;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Stream;
 
 /**
@@ -213,6 +218,12 @@ public interface AuthorizationManager {
             SecurableObjectType objectType,
             EnumSet<Permission> permissions,
             Predicate additionalFilter );
+
+    Stream<AclKey> getAuthorizedObjectsOfTypes(
+            Set<Principal> principal,
+            Collection<SecurableObjectType> objectTypes,
+            EnumSet<Permission> permissions
+    );
 
     Set<Principal> getSecurableObjectOwners( AclKey key );
 

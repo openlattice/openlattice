@@ -45,10 +45,9 @@ import com.openlattice.collections.CollectionTemplateKey
 import com.openlattice.collections.EntitySetCollection
 import com.openlattice.collections.EntityTypeCollection
 import com.openlattice.data.EntityDataKey
+import com.openlattice.datasets.SecurableObjectMetadata
 import com.openlattice.directory.MaterializedViewAccount
 import com.openlattice.edm.EntitySet
-import com.openlattice.edm.set.EntitySetPropertyKey
-import com.openlattice.edm.set.EntitySetPropertyMetadata
 import com.openlattice.edm.type.AssociationType
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.EntityTypePropertyKey
@@ -121,7 +120,6 @@ class HazelcastMap<K, V> internal constructor(val name: String) : TypedMapIdenti
         @JvmField val DELETED_ENTITY_SETS = HazelcastMap<UUID, DelegatedIntSet>("DELETED_ENTITY_SETS")
         @JvmField val ENTITY_SET_COLLECTION_CONFIG = HazelcastMap<CollectionTemplateKey, UUID>("ENTITY_SET_COLLECTION_CONFIG")
         @JvmField val ENTITY_SET_COLLECTIONS = HazelcastMap<UUID, EntitySetCollection>("ENTITY_SET_COLLECTIONS")
-        @JvmField val ENTITY_SET_PROPERTY_METADATA = HazelcastMap<EntitySetPropertyKey, EntitySetPropertyMetadata>("ENTITY_SET_PROPERTY_METADATA")
         @JvmField val ENTITY_SETS = HazelcastMap<UUID, EntitySet>("ENTITY_SETS")
         @JvmField val ENTITY_TYPE_COLLECTIONS = HazelcastMap<UUID, EntityTypeCollection>("ENTITY_TYPE_COLLECTIONS")
         @JvmField val ENTITY_TYPE_PROPERTY_METADATA = HazelcastMap<EntityTypePropertyKey, EntityTypePropertyMetadata>("ENTITY_TYPE_PROPERTY_METADATA")
@@ -144,6 +142,7 @@ class HazelcastMap<K, V> internal constructor(val name: String) : TypedMapIdenti
         @JvmField val LONG_IDS = HazelcastMap<String, Long>("LONG_IDS")
         @JvmField val MATERIALIZED_ENTITY_SETS = HazelcastMap<EntitySetAssemblyKey, MaterializedEntitySet>("MATERIALIZED_ENTITY_SETS")
         @JvmField val NAMES = HazelcastMap<UUID, String>("NAMES")
+        @JvmField val OBJECT_METADATA = HazelcastMap<AclKey, SecurableObjectMetadata>("OBJECT_METADATA")
         @JvmField val ORGANIZATION_DATABASES = HazelcastMap<UUID, OrganizationDatabase>("ORGANIZATION_DATABASES")
         @JvmField val ORGANIZATIONS = HazelcastMap<UUID, Organization>("ORGANIZATIONS")
         @JvmField val PERMISSIONS = HazelcastMap<AceKey, AceValue>("PERMISSIONS")

@@ -367,7 +367,7 @@ constructor(
             @RequestBody update: MetadataUpdate
     ): Int {
         ensureOwnerAccess(AclKey(entitySetId))
-        entitySetManager.updateEntitySetMetadata(entitySetId, update)
+        entitySetManager.updateEntitySet(entitySetId, update)
 
         recordEvent(
                 AuditableEvent(
