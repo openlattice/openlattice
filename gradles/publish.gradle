@@ -154,7 +154,7 @@ if ( ( bambooUsername != null)  && ( System.getenv("bamboo_ARTIFACTORY_PASSWORD"
             sign publishing.publications.mavenJava
         }
     } 
-    else if ( branch.startsWith("release/") && !ext.fullVersion.contains('-SNAPSHOT') ) {
+    else if ( branch.startsWith("release/") && !version.contains('-SNAPSHOT') ) {
         publishing {
             repositories {
                 // maven {
