@@ -20,21 +20,21 @@ interface DatabaseQueryManager {
 
     fun createAndInitializeCollaborationDatabase(collaborationId: UUID): OrganizationDatabase
 
-    fun addMembersToCollaboration(collaborationId: UUID, memberRoles: Iterable<String>)
+    fun addMembersToCollaboration(collaborationId: UUID, memberRoles: Collection<String>)
 
     fun collaborationMemberGrantSql(dbName: String, memberRoles: Iterable<String>): String
 
-    fun removeMembersFromCollaboration(collaborationId: UUID, memberRoles: Iterable<String>)
+    fun removeMembersFromCollaboration(collaborationId: UUID, memberRoles: Collection<String>)
 
     fun collaborationMemberRevokeSql(dbName: String, memberRoles: Iterable<String>): String
 
-    fun createAndInitializeSchemas(collaborationId: UUID, schemaNameToAuthorizedPgRoles: Map<String, Iterable<String>>)
+    fun createAndInitializeSchemas(collaborationId: UUID, schemaNameToAuthorizedPgRoles: Map<String, Collection<String>>)
 
-    fun addMembersToCollabInSchema(collaborationId: UUID, schemaName: String, members: Iterable<String>)
+    fun addMembersToCollabInSchema(collaborationId: UUID, schemaName: String, members: Collection<String>)
 
-    fun removeMembersFromSchemaInCollab(collaborationId: UUID, schemaName: String, members: Iterable<String>)
+    fun removeMembersFromSchemaInCollab(collaborationId: UUID, schemaName: String, members: Collection<String>)
 
-    fun removeMembersFromDatabaseInCollab(collaborationId: UUID, members: Iterable<String>)
+    fun removeMembersFromDatabaseInCollab(collaborationId: UUID, members: Collection<String>)
 
     fun renameSchema(collaborationId: UUID, oldName: String, newName: String)
 
