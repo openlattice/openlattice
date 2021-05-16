@@ -128,7 +128,11 @@ class PostgresDatabaseQueryService(
         return OrganizationDatabase(getDatabaseOid(dbName), dbName)
     }
 
-    override fun addMembersToCollaboration(collaborationId: UUID, memberRoles: Iterable<String>) {
+    override fun addMembersToCollaboration(collaborationId: UUID, memberRoles: Collection<String>) {
+        if (memberRoles.isEmpty()) {
+            return
+        }
+
         executeStatementInDatabase(collaborationId) { dbName ->
             collaborationMemberGrantSql(dbName, memberRoles)
         }
@@ -142,7 +146,11 @@ class PostgresDatabaseQueryService(
         """.trimIndent()
     }
 
-    override fun removeMembersFromCollaboration(collaborationId: UUID, memberRoles: Iterable<String>) {
+    override fun removeMembersFromCollaboration(collaborationId: UUID, memberRoles: Collection<String>) {
+        if (memberRoles.isEmpty()) {
+            return
+        }
+
         executeStatementInDatabase(collaborationId) { dbName ->
             collaborationMemberRevokeSql(dbName, memberRoles)
         }
@@ -156,20 +164,26 @@ class PostgresDatabaseQueryService(
         """.trimIndent()
     }
 
-    override fun createAndInitializeSchemas(collaborationId: UUID, schemaNameToAuthorizedPgRoles: Map<String, Iterable<String>>) {
+    override fun createAndInitializeSchemas(collaborationId: UUID, schemaNameToAuthorizedPgRoles: Map<String, Collection<String>>) {
         executeStatementsInDatabase(collaborationId) {
             val sqlStatements = mutableSetOf<String>()
 
             schemaNameToAuthorizedPgRoles.forEach { (schemaName, authorizedRoles) ->
                 sqlStatements.add(createSchemaSql(schemaName))
-                sqlStatements.add(grantUsageOnSchemaToRolesSql(schemaName, authorizedRoles))
+                if (authorizedRoles.isNotEmpty()) {
+                    sqlStatements.add(grantUsageOnSchemaToRolesSql(schemaName, authorizedRoles))
+                }
             }
 
             sqlStatements
         }
     }
 
-    override fun addMembersToCollabInSchema(collaborationId: UUID, schemaName: String, members: Iterable<String>) {
+    override fun addMembersToCollabInSchema(collaborationId: UUID, schemaName: String, members: Collection<String>) {
+        if (members.isEmpty()) {
+            return
+        }
+
         executeStatementsInDatabase(collaborationId) { dbName ->
             setOf(
                     collaborationMemberGrantSql(dbName, members),
@@ -178,13 +192,21 @@ class PostgresDatabaseQueryService(
         }
     }
 
-    override fun removeMembersFromSchemaInCollab(collaborationId: UUID, schemaName: String, members: Iterable<String>) {
+    override fun removeMembersFromSchemaInCollab(collaborationId: UUID, schemaName: String, members: Collection<String>) {
+        if (members.isEmpty()) {
+            return
+        }
+
         executeStatementInDatabase(collaborationId) {
             revokeUsageOnSchemaToRolesSql(schemaName, members)
         }
     }
 
-    override fun removeMembersFromDatabaseInCollab(collaborationId: UUID, members: Iterable<String>) {
+    override fun removeMembersFromDatabaseInCollab(collaborationId: UUID, members: Collection<String>) {
+        if (members.isEmpty()) {
+            return
+        }
+
         executeStatementInDatabase(collaborationId) { dbName ->
             collaborationMemberRevokeSql(dbName, members)
         }
@@ -276,15 +298,18 @@ class PostgresDatabaseQueryService(
             dataSource: HikariDataSource,
             authorizedPropertyTypesOfEntitySetsByPrincipal: Map<SecurablePrincipal, Map<EntitySet, Collection<PropertyType>>>
     ) {
-        if (authorizedPropertyTypesOfEntitySetsByPrincipal.isNotEmpty()) {
-            val authorizedPropertyTypesOfEntitySetsByPostgresUser = authorizedPropertyTypesOfEntitySetsByPrincipal
-                    .mapKeys { dbCredentialService.getDbUsername(it.key) }
-            val userNames = authorizedPropertyTypesOfEntitySetsByPostgresUser.keys
-            configureUsersInDatabase(dataSource, organizationId, userNames)
-            dataSource.connection.use { connection ->
-                grantSelectForNewMembers(connection, authorizedPropertyTypesOfEntitySetsByPostgresUser)
-            }
+        if (authorizedPropertyTypesOfEntitySetsByPrincipal.isEmpty()) {
+            return
         }
+
+        val authorizedPropertyTypesOfEntitySetsByPostgresUser = authorizedPropertyTypesOfEntitySetsByPrincipal
+                .mapKeys { dbCredentialService.getDbUsername(it.key) }
+        val userNames = authorizedPropertyTypesOfEntitySetsByPostgresUser.keys
+        configureUsersInDatabase(dataSource, organizationId, userNames)
+        dataSource.connection.use { connection ->
+            grantSelectForNewMembers(connection, authorizedPropertyTypesOfEntitySetsByPostgresUser)
+        }
+
     }
 
     override fun removeMembersFromOrganization(
@@ -489,6 +514,10 @@ class PostgresDatabaseQueryService(
     }
 
     private fun configureUsersInDatabase(dataSource: HikariDataSource, organizationId: UUID, userIds: Collection<String>) {
+        if (userIds.isEmpty()) {
+            return
+        }
+
         val userIdsSql = userIds.joinToString()
 
         val dbName = extDbManager.getDatabaseName(organizationId)
@@ -524,6 +553,10 @@ class PostgresDatabaseQueryService(
     }
 
     private fun revokeConnectAndSchemaUsage(dataSource: HikariDataSource, organizationId: UUID, userIds: List<String>) {
+        if (userIds.isEmpty()) {
+            return
+        }
+
         val userIdsSql = userIds.joinToString(", ")
 
         val dbName = extDbManager.getDatabaseName(organizationId)
