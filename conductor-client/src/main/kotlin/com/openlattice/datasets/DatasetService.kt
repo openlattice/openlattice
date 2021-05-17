@@ -135,7 +135,8 @@ class DatasetService(
 
         val columns = getDatasetColumns(columnKeys)
 
-        return columnKeys.groupBy { it.root }.mapValues { it.value.map { aclKey -> columns.getValue(aclKey) } }
+        val existingDatasetToColumns = columnKeys.groupBy { it.root }.mapValues { it.value.map { aclKey -> columns.getValue(aclKey) } }
+        return datasetIds.associateWith { existingDatasetToColumns[it] ?: listOf() }
     }
 
     fun getObjectType(aclKey: AclKey): SecurableObjectType {
