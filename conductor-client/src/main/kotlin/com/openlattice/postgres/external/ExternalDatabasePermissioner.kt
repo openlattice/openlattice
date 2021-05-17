@@ -208,6 +208,10 @@ class ExternalDatabasePermissioner(
     }
 
     override fun removePrincipalsFromPrincipals(principalsToRemove: Set<AclKey>, fromPrincipals: Set<AclKey>) {
+        if (principalsToRemove.isEmpty() || fromPrincipals.isEmpty()) {
+            return
+        }
+        
         val removeFrom = dbCredentialService.getDbUsernames(fromPrincipals)
         val removeSqls = dbCredentialService.getDbUsernames(principalsToRemove).map { roleName ->
             revokeRoleSql(roleName, removeFrom)
