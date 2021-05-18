@@ -44,6 +44,11 @@ class RealtimeLinkingController(
     private val priorityEntitySets = lc.whitelist.orElseGet { setOf() }
     private val linkableTypes = edm.getEntityTypeUuids(lc.entityTypes)
 
+    private val propertyFqnCache = CacheBuilder
+            .newBuilder()
+            .maximumSize(8192)
+            .build(CacheLoader.from { propertyTypeId: UUID? -> edmService.getPropertyTypeFqn(propertyTypeId!!) })
+
     override fun getAuthorizationManager(): AuthorizationManager {
         return authz
     }
@@ -98,10 +103,6 @@ class RealtimeLinkingController(
             @RequestBody blockingRequest: BlockingRequest
     ): Map<UUID, Map<UUID, List<BlockedEntity>>> {
         ensureAdminAccess()
-        val propertyFqnCache = CacheBuilder
-                .newBuilder()
-                .maximumSize(8192)
-                .build(CacheLoader.from { propertyTypeId: UUID? -> edmService.getPropertyTypeFqn(propertyTypeId!!) })
 
         return blockingRequest.entities.mapValues { (entitySetId, entityKeyIds) ->
             entityKeyIds.associateWith { entityKeyId ->
