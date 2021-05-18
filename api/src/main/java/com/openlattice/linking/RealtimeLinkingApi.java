@@ -50,10 +50,9 @@ public interface RealtimeLinkingApi {
     String LINKING_ID_PATH            = "/{" + LINKING_ID + "}";
     String LINKS                      = "/links";
     String MATCHED                    = "/matched";
-    String SET                        = "/set";
-
     String SERVICE = "/linker";
     String BASE    = SERVICE + CONTROLLER;
+    String SET                        = "/set";
 
     @GET( BASE + FINISHED + SET )
     Set<UUID> getLinkingFinishedEntitySets();
@@ -66,7 +65,7 @@ public interface RealtimeLinkingApi {
 
     UUID createNewLinkedEntity( Set<EntityDataKey> entityDataKeys );
 
-    @GET( BASE + LINKS + LINKING_ENTITY_SET_ID_PATH)
+    @GET( BASE + LINKS + LINKING_ENTITY_SET_ID_PATH )
     Map<UUID, Set<EntityDataKey>> getLinkedEntityKeyIds(
             @Path( LINKING_ENTITY_SET_ID ) UUID linkingEntitySetId );
 
@@ -83,7 +82,8 @@ public interface RealtimeLinkingApi {
             @Body Set<EntityDataKey> entityDataKeys );
 
     @HTTP( method = "DELETE",
-            path = BASE + LINKS + LINKING_ENTITY_SET_ID_PATH + LINKING_ID_PATH )
+            path = BASE + LINKS + LINKING_ENTITY_SET_ID_PATH + LINKING_ID_PATH,
+            hasBody = true )
     Set<EntityDataKey> removeLinkedEntities(
             @Path( LINKING_ENTITY_SET_ID ) UUID linkingEntitySetId,
             @Path( LINKING_ID ) UUID linkedEntityKeyId,
