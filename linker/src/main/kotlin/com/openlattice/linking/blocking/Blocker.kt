@@ -22,6 +22,7 @@
 package com.openlattice.linking.blocking
 
 import com.openlattice.data.EntityDataKey
+import com.openlattice.linking.Block
 
 /**
  *
