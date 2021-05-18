@@ -42,7 +42,7 @@ import java.util.UUID;
 public interface RealtimeLinkingApi {
 
     String BLOCKING                   = "/blocking";
-    String CONTROLLER = "/linking";
+    String CONTROLLER                 = "/linking";
     String FINISHED                   = "/finished";
     String LINKING_ENTITY_SET_ID      = "linkingEntitySetId";
     String LINKING_ENTITY_SET_ID_PATH = "/{" + LINKING_ENTITY_SET_ID + "}";
@@ -50,9 +50,10 @@ public interface RealtimeLinkingApi {
     String LINKING_ID_PATH            = "/{" + LINKING_ID + "}";
     String LINKS                      = "/links";
     String MATCHED                    = "/matched";
-    String SERVICE    = "/linker";
-    String BASE       = SERVICE + CONTROLLER;
     String SET                        = "/set";
+
+    String SERVICE = "/linker";
+    String BASE    = SERVICE + CONTROLLER;
 
     @GET( BASE + FINISHED + SET )
     Set<UUID> getLinkingFinishedEntitySets();

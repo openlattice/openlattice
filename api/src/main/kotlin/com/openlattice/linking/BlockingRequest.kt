@@ -8,5 +8,5 @@ import java.util.*
  */
 data class BlockingRequest(
         val entities: Map<UUID, Set<UUID>>,
-        val blockSize: Int =
+        val blockSize: Int = 50
 )
