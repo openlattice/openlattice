@@ -26,7 +26,7 @@ import com.google.common.base.Stopwatch
 import com.openlattice.data.EntityDataKey
 import com.openlattice.linking.EntityKeyPair
 import com.openlattice.linking.PostgresLinkingFeedbackService
-import com.openlattice.linking.blocking.Block
+import com.openlattice.linking.Block
 import com.openlattice.linking.util.PersonMetric
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -62,7 +62,7 @@ class SocratesMatcher(
      * @return block The resulting block around the entity data key in block.first
      */
     @Timed
-    override fun initialize( block: Block ): PairwiseMatch {
+    override fun initialize( block: Block): PairwiseMatch {
         val model = localModel.get()
 
         val entityDataKey = block.entityDataKey

@@ -20,7 +20,16 @@
 
 package com.openlattice.linking;
 
+import com.openlattice.data.EntityDataKey;
+import java.util.List;
+import java.util.Map;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import retrofit2.http.Body;
+import retrofit2.http.DELETE;
 import retrofit2.http.GET;
+import retrofit2.http.HTTP;
+import retrofit2.http.POST;
+import retrofit2.http.PUT;
 import retrofit2.http.Path;
 
 import java.util.Set;
@@ -32,21 +41,52 @@ import java.util.UUID;
  */
 public interface RealtimeLinkingApi {
 
-    String SERVICE               = "/linker";
-    String CONTROLLER            = "/linking";
-    String BASE                  = SERVICE + CONTROLLER;
-
-    String FINISHED              = "/finished";
-    String MATCHED               = "/matched";
-
-    String SET                   = "/set";
-    String LINKING_ID            = "linkingId";
-    String LINKING_ID_PATH       = "/{" + LINKING_ID + "}";
-
+    String BLOCKING                   = "/blocking";
+    String CONTROLLER                 = "/linking";
+    String FINISHED                   = "/finished";
+    String LINKING_ENTITY_SET_ID      = "linkingEntitySetId";
+    String LINKING_ENTITY_SET_ID_PATH = "/{" + LINKING_ENTITY_SET_ID + "}";
+    String LINKING_ID                 = "linkingId";
+    String LINKING_ID_PATH            = "/{" + LINKING_ID + "}";
+    String LINKS                      = "/links";
+    String MATCHED                    = "/matched";
+    String SERVICE = "/linker";
+    String BASE    = SERVICE + CONTROLLER;
+    String SET                        = "/set";
 
     @GET( BASE + FINISHED + SET )
     Set<UUID> getLinkingFinishedEntitySets();
 
     @GET( BASE + MATCHED + LINKING_ID_PATH )
     Set<MatchedEntityPair> getMatchedEntitiesForLinkingId( @Path( LINKING_ID ) UUID linkingId );
+
+    @POST( BASE + BLOCKING )
+    Map<UUID, Map<UUID, List<BlockedEntity>>> block( @Body BlockingRequest blockingRequest );
+
+    UUID createNewLinkedEntity( Set<EntityDataKey> entityDataKeys );
+
+    @GET( BASE + LINKS + LINKING_ENTITY_SET_ID_PATH )
+    Map<UUID, Set<EntityDataKey>> getLinkedEntityKeyIds(
+            @Path( LINKING_ENTITY_SET_ID ) UUID linkingEntitySetId );
+
+    @PUT( BASE + LINKS + LINKING_ENTITY_SET_ID_PATH + LINKING_ID_PATH )
+    Integer setLinkedEntities(
+            @Path( LINKING_ENTITY_SET_ID ) UUID linkingEntitySetId,
+            @Path( LINKING_ID ) UUID linkedEntityKeyId,
+            @Body Set<EntityDataKey> entityDataKeys );
+
+    @POST( BASE + LINKS + LINKING_ENTITY_SET_ID_PATH + LINKING_ID_PATH )
+    Set<EntityDataKey> addLinkedEntities(
+            @Path( LINKING_ENTITY_SET_ID ) UUID linkingEntitySetId,
+            @Path( LINKING_ID ) UUID linkedEntityKeyId,
+            @Body Set<EntityDataKey> entityDataKeys );
+
+    @HTTP( method = "DELETE",
+            path = BASE + LINKS + LINKING_ENTITY_SET_ID_PATH + LINKING_ID_PATH,
+            hasBody = true )
+    Set<EntityDataKey> removeLinkedEntities(
+            @Path( LINKING_ENTITY_SET_ID ) UUID linkingEntitySetId,
+            @Path( LINKING_ID ) UUID linkedEntityKeyId,
+            @Body Set<EntityDataKey> entityDataKeys );
+
 }
