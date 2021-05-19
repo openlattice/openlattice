@@ -97,6 +97,7 @@ class RealtimeLinkingController(
     @RequestMapping(
             path = [RealtimeLinkingApi.BLOCKING],
             method = [RequestMethod.POST],
+            consumes = [MediaType.APPLICATION_JSON_VALUE],
             produces = [MediaType.APPLICATION_JSON_VALUE]
     )
     override fun block(
