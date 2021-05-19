@@ -1,0 +1,26 @@
+# FROM openlattice/ol-base:latest
+# FROM openjdk:16-jre-slim
+FROM openjdk:11-jre-slim
+
+RUN useradd -m openlattice && \
+    mkdir -p /opt/openlattice/logging/ && \
+    chown -R openlattice:openlattice /opt/openlattice
+
+VOLUME /opt/openlattice/logging/
+
+EXPOSE 8082
+EXPOSE 8445
+
+WORKDIR /opt/openlattice/
+
+COPY ./linker/build/distributions/linker.tgz /opt/openlattice/
+
+RUN tar xzvf linker.tgz
+
+# ARG JAVA_OPTS
+# ENV JAVA_OPTS="-xmx"
+
+ARG SERVICE_ARGS
+ENV SERVICE_ARGS="kubernetes postgres keras medialocal auditlocal"
+
+CMD "/opt/openlattice/linker/bin/linker", "kubernetes", "postgres", "keras", "medialocal" , "auditlocal"
