@@ -24,11 +24,14 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.health.HealthCheckRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.geekbeast.hazelcast.HazelcastClientProvider;
+import com.geekbeast.rhizome.jobs.HazelcastJobService;
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
+import com.openlattice.data.DataGraphManager;
+import com.openlattice.data.DataGraphService;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
 import com.openlattice.data.storage.ByteBlobDataManager;
@@ -40,6 +43,8 @@ import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EntitySetManager;
+import com.openlattice.graph.Graph;
+import com.openlattice.graph.core.GraphService;
 import com.openlattice.ids.HazelcastIdGenerationService;
 import com.openlattice.linking.BackgroundLinkingService;
 import com.openlattice.linking.DataLoader;
@@ -171,6 +176,27 @@ public class LinkerPostConfigurationServicesPod {
                 postgresLinkingFeedbackQueryService,
                 lqs()
         );
+    }
+
+    @Bean
+    public GraphService graphService() {
+        return new Graph( hikariDataSource,
+                hikariDataSource,
+                entitySetManager,
+                partitionManager,
+                dataQueryService(),
+                idService(),
+                metricRegistry );
+    }
+
+    @Bean
+    public HazelcastJobService jobService() {
+        return new HazelcastJobService( hazelcastInstance );
+    }
+
+    @Bean
+    public DataGraphManager dgm() {
+        return new DataGraphService(graphService(), idService(), entityDatastore(), jobService() );
     }
 
     @Bean
