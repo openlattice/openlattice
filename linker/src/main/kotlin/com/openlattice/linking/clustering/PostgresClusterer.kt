@@ -3,7 +3,7 @@ package com.openlattice.linking.clustering
 import com.openlattice.data.EntityDataKey
 import com.openlattice.linking.BackgroundLinkingService
 import com.openlattice.linking.DataLoader
-import com.openlattice.linking.blocking.Block
+import com.openlattice.linking.Block
 import com.openlattice.linking.matching.Matcher
 
 /**

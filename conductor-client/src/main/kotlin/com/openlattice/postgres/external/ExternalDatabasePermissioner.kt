@@ -131,7 +131,7 @@ class ExternalDatabasePermissioner(
     }
 
     private fun externalColumnToTableColumn(
-            column: ExternalColumn
+            column: ExternalColumn,
             tablesById: Map<UUID, ExternalTable>
     ): TableColumn {
         val table = tablesById.getValue(column.tableId)
@@ -282,6 +282,10 @@ class ExternalDatabasePermissioner(
     }
 
     override fun removePrincipalsFromPrincipals(principalsToRemove: Set<AclKey>, fromPrincipals: Set<AclKey>) {
+        if (principalsToRemove.isEmpty() || fromPrincipals.isEmpty()) {
+            return
+        }
+
         principalsToRemove.forEach {
             handlePrincipalsChange(it, fromPrincipals, Action.REMOVE)
         }

@@ -88,6 +88,10 @@ class HazelcastAuthorizationService(
             return Predicates.equal(SECURABLE_OBJECT_TYPE_INDEX, objectType)
         }
 
+        private fun hasAnyType(objectTypes: Collection<SecurableObjectType>): Predicate<AceKey, AceValue> {
+            return Predicates.`in`(SECURABLE_OBJECT_TYPE_INDEX, *objectTypes.toTypedArray())
+        }
+
         private fun hasPrincipal(principal: Principal): Predicate<AceKey, AceValue> {
             return Predicates.equal(PRINCIPAL_INDEX, principal)
         }

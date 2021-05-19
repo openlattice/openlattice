@@ -43,6 +43,8 @@ import com.openlattice.collections.EntitySetCollection;
 import com.openlattice.collections.EntityTypeCollection;
 import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.EntityKey;
+import com.openlattice.datasets.SecurableObjectMetadata;
+import com.openlattice.datasets.SecurableObjectMetadataUpdate;
 import com.openlattice.edm.EdmDetails;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.requests.MetadataUpdate;
@@ -876,6 +878,36 @@ public final class TestDataFactory {
 
     public static ProjectedTableMetadata projectedTableMetadata() {
         return new ProjectedTableMetadata( UUID.randomUUID(), randomAlphanumeric( 10 ) );
+    }
+
+    private static Map<String, Object> randomMetadataMap() {
+        Map<String, Object> metadata = Maps.newHashMap();
+        for ( int i = 0; i < 5; i++ ) {
+            metadata.put( randomAlphanumeric( 5 ), randomAlphanumeric( 10 ) );
+        }
+
+        return metadata;
+    }
+
+    public static SecurableObjectMetadata securableObjectMetadata() {
+        return new SecurableObjectMetadata(
+                randomAlphanumeric( 10 ),
+                randomAlphanumeric( 20 ),
+                Sets.newHashSet( randomAlphanumeric( 10 ) ),
+                Sets.newHashSet( randomAlphanumeric( 10 ) ),
+                randomMetadataMap()
+        );
+    }
+
+    public static SecurableObjectMetadataUpdate securableObjectMetadataUpdate() {
+        String title = r.nextBoolean() ? randomAlphanumeric( 10 ) : null;
+        String description = r.nextBoolean() ? randomAlphanumeric( 20 ) : null;
+        Set<String> contacts = r.nextBoolean() ? Sets.newHashSet( randomAlphanumeric( 10 ) ) : null;
+        Set<String> flags = r.nextBoolean() ? Sets.newHashSet( randomAlphanumeric( 10 ) ) : null;
+        Map<String, Object> metadata = r.nextBoolean() ? randomMetadataMap() : null;
+
+        return new SecurableObjectMetadataUpdate( title, description, contacts, flags, metadata );
+
     }
 
 }

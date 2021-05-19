@@ -35,7 +35,6 @@ import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastQueue
-import com.openlattice.linking.blocking.Block
 import com.openlattice.linking.blocking.Blocker
 import com.openlattice.linking.clustering.Cluster
 import com.openlattice.linking.clustering.Clusterer

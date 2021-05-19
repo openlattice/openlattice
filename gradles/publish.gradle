@@ -33,12 +33,12 @@ if( branch == null || branch == "" ) {
         commandLine 'git', 'rev-parse', '--abbrev-ref', 'HEAD'
         standardOutput = stdout
     }
-    branch=stdout.toString().trim();
+    branch=stdout.toString().trim()
 }
 
-println "Branch detected as: " + branch;
-println "Version detected as: " + version;
-println "Full version detected as: " + ext.fullVersion;
+println "Branch detected as: " + branch
+println "Version detected as: " + version
+println "Full version detected as: " + ext.fullVersion
 
 task sourcesJar(type : Jar) {
     classifier = 'sources'
@@ -90,7 +90,7 @@ if ( ( bambooUsername != null)  && ( System.getenv("bamboo_ARTIFACTORY_PASSWORD"
         sign configurations.pom
     }
     
-    if ( branch == "develop" || branch.startsWith("release/") ) {
+    if ( branch == "main" ) {
         publishing {
             repositories {
                 maven {
@@ -154,7 +154,7 @@ if ( ( bambooUsername != null)  && ( System.getenv("bamboo_ARTIFACTORY_PASSWORD"
             sign publishing.publications.mavenJava
         }
     } 
-    else if ( branch == "master" ) {
+    else if ( branch.startsWith("release/") && !version.contains('-SNAPSHOT') ) {
         publishing {
             repositories {
                 // maven {

@@ -1,3 +1,4 @@
+
 /*
  * Copyright (C) 2018. OpenLattice, Inc.
  *
@@ -66,6 +67,7 @@ import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.data.storage.*;
 import com.openlattice.data.storage.aws.AwsDataSinkService;
 import com.openlattice.data.storage.partitions.PartitionManager;
+import com.openlattice.datasets.DatasetService;
 import com.openlattice.datastore.configuration.DatastoreConfiguration;
 import com.openlattice.datastore.configuration.ReadonlyDatasourceSupplier;
 import com.openlattice.datastore.services.AnalysisService;
@@ -296,13 +298,19 @@ public class DatastoreServicesPod {
     }
 
     @Bean
+    DatasetService datasetService() {
+        return new DatasetService( hazelcastInstance, eventBus );
+    }
+
+    @Bean
     public EdmManager dataModelService() {
         return new EdmService(
                 hazelcastInstance,
                 aclKeyReservationService(),
                 authorizationManager(),
                 entityTypeManager(),
-                schemaManager()
+                schemaManager(),
+                datasetService()
         );
     }
 
@@ -317,6 +325,7 @@ public class DatastoreServicesPod {
                 dataModelService(),
                 hikariDataSource,
                 organizationMetadataEntitySetsService(),
+                datasetService(),
                 auditingConfiguration
         );
     }
@@ -549,7 +558,8 @@ public class DatastoreServicesPod {
                 entitySetManager(),
                 graphApi(),
                 entityDatastore(),
-                indexingMetadataManager()
+                indexingMetadataManager(),
+                datasetService()
         );
     }
 
@@ -675,7 +685,8 @@ public class DatastoreServicesPod {
                 externalDatabasePermissionsManager(),
                 transporterService,
                 dcs(),
-                hikariDataSource );
+                hikariDataSource,
+                datasetService() );
     }
 
     @Bean

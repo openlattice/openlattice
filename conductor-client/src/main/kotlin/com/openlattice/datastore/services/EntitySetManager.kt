@@ -85,7 +85,9 @@ interface EntitySetManager {
 
     fun updateEntitySetPropertyMetadata(entitySetId: UUID, propertyTypeId: UUID, update: MetadataUpdate)
 
-    fun updateEntitySetMetadata(entitySetId: UUID, update: MetadataUpdate)
+    fun updateEntitySet(entitySetId: UUID, update: MetadataUpdate)
+
+    fun updateEntitySetMetadata(entitySetId: UUID, update: MetadataUpdate): EntitySet
 
     fun addLinkedEntitySets(entitySetId: UUID, linkedEntitySets: Set<UUID>): Int
 

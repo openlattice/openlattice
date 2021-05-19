@@ -1,4 +1,4 @@
-package com.openlattice.linking.blocking
+package com.openlattice.linking
 
 import com.openlattice.data.EntityDataKey
 import java.util.*
