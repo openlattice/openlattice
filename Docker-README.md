@@ -46,6 +46,11 @@ The configuration files used to run the stack live in a top level directory layo
 
 Work still to do:
 
+- Add an auth0syncTask that creates test users instead of syncing down real users
+- Add a reverse proxy service to more accurately represent the API surface as it exists in production
+	- mapping /datastore to the appropriate service and port dynamically in docker
+	- mapping /indexer 
+	- mapping /linker
 - Openlattice services release process for publishing final versions of each service's latest distributable
 	- updating docker-compose to pull from a public repository of microservice dists instead of relying only on locally building our software
 - deploy process that publishes all of the docker images to dockerhub 

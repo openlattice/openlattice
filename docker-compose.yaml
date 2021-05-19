@@ -13,9 +13,9 @@ services:
     image: openlattice/conductor
     container_name: conductor
     ports:
-      - "5701"
-      - "5702"
-      - "5703"
+      - "5701:5701"
+      - "5702:5701"
+      - "5703:5701"
     volumes:
       - "./logs/:/opt/openlattice/logging/"
       - "./secrets/conductor/:/etc/openlattice/"
@@ -30,7 +30,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 960s
+      start_period: 540s
     # deploy:
     #   mode: replicated
     #   replicas: 3
