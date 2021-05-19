@@ -1,4 +1,9 @@
-version: '3'
+version: '3.7'
+
+networks:
+  olnet:
+    driver: bridge
+    name: olnet
 
 services:
   conductor:
@@ -18,21 +23,21 @@ services:
       - "./secrets/shared/auditing.yaml:/etc/openlattice/auditing.yaml"
       - "./secrets/shared/datastore.yaml:/etc/openlattice/datastore.yaml"
       - "./secrets/shared/auth0.yaml:/etc/openlattice/auth0.yaml"
-    # deploy:
-    #   mode: replicated
-    #   replicas: 3
+    networks:
+      - olnet
     healthcheck:
       test: ["CMD-SHELL", "curl localhost:5701/hazelcast/health"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 120s
-    depends_on:
-      postgres:
-        condition: service_healthy
-      elasticsearch:
-        condition: service_healthy
-
+      start_period: 960s
+    # deploy:
+    #   mode: replicated
+    #   replicas: 3
+    # extra_hosts:
+      # - "192.168.1.124:host.docker.internal"
+      # - "192.168.1.124:host.docker.internal"
+   
   datastore:
     build: 
       context: ./
@@ -49,6 +54,8 @@ services:
       - "./secrets/shared/auditing.yaml:/etc/openlattice/auditing.yaml"
       - "./secrets/shared/datastore.yaml:/etc/openlattice/datastore.yaml"
       - "./secrets/shared/auth0.yaml:/etc/openlattice/auth0.yaml"
+    networks:
+      - olnet
     # deploy:
     #   mode: replicated
     #   replicas: 2
@@ -59,10 +66,6 @@ services:
       retries: 5
     depends_on:
       conductor:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
-      elasticsearch:
         condition: service_healthy
 
   indexer:
@@ -81,9 +84,8 @@ services:
       - "./secrets/shared/auditing.yaml:/etc/openlattice/auditing.yaml"
       - "./secrets/shared/datastore.yaml:/etc/openlattice/datastore.yaml"
       - "./secrets/shared/auth0.yaml:/etc/openlattice/auth0.yaml"
-    # deploy:
-    #   mode: replicated
-    #   replicas: 1
+    networks:
+      - olnet
     healthcheck:
       test: ["CMD-SHELL", "curl localhost:8081/admin/ping"]
       interval: 10s
@@ -93,10 +95,6 @@ services:
       conductor:
         condition: service_healthy
       datastore:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
-      elasticsearch:
         condition: service_healthy
 
   # linker:
@@ -115,9 +113,8 @@ services:
   #     - "./secrets/shared/auditing.yaml:/etc/openlattice/auditing.yaml"
   #     - "./secrets/shared/datastore.yaml:/etc/openlattice/datastore.yaml"
   #     - "./secrets/shared/auth0.yaml:/etc/openlattice/auth0.yaml"
-  #   # deploy:
-  #   #   mode: replicated
-  #   #   replicas: 1
+  #   networks:
+  #     - olnet
   #   healthcheck:
   #     test: ["CMD-SHELL", "curl localhost:8082/admin/ping"]
   #     interval: 10s
@@ -130,44 +127,3 @@ services:
   #       condition: service_healthy
   #     datastore:
   #       condition: service_healthy
-  #     postgres:
-  #       condition: service_healthy
-  #     elasticsearch:
-  #       condition: service_healthy
-
-  postgres:
-    build: 
-      context: ./
-      dockerfile: Dockerfile-postgres
-    image: openlattice/ol-postgres
-    container_name: 192.168.1.122
-    restart: always
-    environment:
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5432"
-    volumes:
-      - "./postgres/:/var/lib/postgresql/data"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U oltest -d openlattice"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  elasticsearch:
-    build: 
-      context: ./
-      dockerfile: Dockerfile-elasticsearch
-    image: openlattice/ol-elasticsearch
-    container_name: 192.168.1.122
-    environment:
-      - cluster.name=openlattice
-      - discovery.type=single-node
-    ports:
-      - "9200:9200"
-      - "9300:9300"
-    healthcheck:
-      test: ["CMD-SHELL", "curl localhost:9200/_cluster/health?wait_for_status=yellow"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
