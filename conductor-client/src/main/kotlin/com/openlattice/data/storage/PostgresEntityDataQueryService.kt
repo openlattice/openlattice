@@ -12,6 +12,7 @@ import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.data.util.PostgresDataHasher
 import com.openlattice.edm.set.ExpirationBase
 import com.openlattice.edm.type.PropertyType
+import com.openlattice.jdbc.DataSourceManager
 import com.openlattice.postgres.*
 import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
 import com.openlattice.postgres.PostgresColumn.ID
@@ -46,7 +47,7 @@ import kotlin.streams.asStream
  */
 @Service
 class PostgresEntityDataQueryService(
-        private val hds: HikariDataSource,
+        private val dataSourceResolver: DataSourceResolver,
         private val reader: HikariDataSource,
         private val byteBlobDataManager: ByteBlobDataManager,
         protected val partitionManager: PartitionManager
@@ -372,6 +373,7 @@ class PostgresEntityDataQueryService(
                 }
             }
         }
+        val hds = dataSourceResolver.resolve(entitySetId)
 
         return hds.connection.use { connection ->
             //Update the versions of all entities.
@@ -636,6 +638,7 @@ class PostgresEntityDataQueryService(
             authorizedPropertyTypes: Map<UUID, PropertyType>,
             partition: Int
     ): Int {
+        val hds = dataSourceResolver.resolve(entitySetId)
         return hds.connection.use { connection ->
 
             val propertyTypesArr = PostgresArrays.createUuidArray(connection, authorizedPropertyTypes.keys)
@@ -662,6 +665,7 @@ class PostgresEntityDataQueryService(
             propertyTypeId: UUID
     ) {
         val count = AtomicLong()
+        val hds = dataSourceResolver.resolve(entitySetId)
         BasePostgresIterable<String>(
                 PreparedStatementHolderSupplier(hds, selectEntitiesTextProperties, FETCH_SIZE) { ps ->
                     val connection = ps.connection
@@ -685,6 +689,7 @@ class PostgresEntityDataQueryService(
      */
     fun deleteEntities(entitySetId: UUID, entityKeyIds: Set<UUID>, partitions: Set<Int>): WriteEvent {
         val entitiesByPartition = getIdsByPartition(entityKeyIds, partitions.toList())
+        val hds = dataSourceResolver.resolve(entitySetId)
 
         val numUpdates = hds.connection.use { connection ->
             try {
@@ -730,6 +735,7 @@ class PostgresEntityDataQueryService(
             version: Long,
             partitions: List<Int> = partitionManager.getEntitySetPartitions(entitySetId).toList()
     ): WriteEvent {
+        val hds = dataSourceResolver.resolve(entitySetId)
 
         return hds.connection.use { conn ->
             val propertyTypeIdsArr = PostgresArrays.createUuidArray(conn, propertyTypesToTombstone.map { it.id })
@@ -791,6 +797,8 @@ class PostgresEntityDataQueryService(
             version: Long,
             partitions: List<Int> = partitionManager.getEntitySetPartitions(entitySetId).toList()
     ): WriteEvent {
+        val hds = dataSourceResolver.resolve(entitySetId)
+
         return hds.connection.use { conn ->
             val entityKeyIds = entities.keys
             val entityKeyIdsArr = PostgresArrays.createUuidArray(conn, entityKeyIds)
@@ -853,6 +861,8 @@ class PostgresEntityDataQueryService(
             currentDateTime: OffsetDateTime
     ): BasePostgresIterable<UUID> {
         val partitions = partitionManager.getEntitySetPartitions(entitySetId)
+        val hds = dataSourceResolver.resolve(entitySetId)
+
         return BasePostgresIterable(
                 PreparedStatementHolderSupplier(hds, getExpiringEntitiesUsingIdsQuery(expirationPolicy)) { ps ->
                     ps.setObject(1, entitySetId)
@@ -869,8 +879,13 @@ class PostgresEntityDataQueryService(
             currentDateTime: OffsetDateTime
     ): BasePostgresIterable<UUID> {
         val partitions = partitionManager.getEntitySetPartitions(entitySetId)
+        val hds = dataSourceResolver.resolve(entitySetId)
         return BasePostgresIterable(
-                PreparedStatementHolderSupplier(hds, getExpiringEntitiesUsingDataQuery(expirationPropertyType, expirationPolicy.deleteType)) { ps ->
+                PreparedStatementHolderSupplier(
+                        hds, getExpiringEntitiesUsingDataQuery(
+                        expirationPropertyType, expirationPolicy.deleteType
+                )
+                ) { ps ->
                     ps.setObject(1, entitySetId)
                     ps.setArray(2, PostgresArrays.createIntArray(ps.connection, partitions))
                     bindExpirationDate(ps, 3, expirationPolicy, currentDateTime, expirationPropertyType)
@@ -910,7 +925,9 @@ class PostgresEntityDataQueryService(
      * 3) expiration date(time)
      * 4) propertyTypeId
      */
-    private fun getExpiringEntitiesUsingDataQuery(expirationPropertyType: PropertyType, deleteType: DeleteType): String {
+    private fun getExpiringEntitiesUsingDataQuery(
+            expirationPropertyType: PropertyType, deleteType: DeleteType
+    ): String {
         val clearedEntitiesClause = if (deleteType == DeleteType.Soft) "AND ${VERSION.name} >= 0 " else ""
 
         val expirationColumnName = PostgresDataTables.getColumnDefinition(
@@ -942,7 +959,9 @@ class PostgresEntityDataQueryService(
         val expirationField = when (expirationPolicy.expirationBase) {
             ExpirationBase.FIRST_WRITE -> "(SELECT MIN(v) FROM UNNEST(${VERSIONS.name}) AS v WHERE v > 0)" //gets the first  version from the versions column
             ExpirationBase.LAST_WRITE -> DataTables.LAST_WRITE.name
-            else -> throw IllegalArgumentException("Loading expired entities using ids is not supported for expiration base ${expirationPolicy.expirationBase}")
+            else -> throw IllegalArgumentException(
+                    "Loading expired entities using ids is not supported for expiration base ${expirationPolicy.expirationBase}"
+            )
         }
 
         return """
