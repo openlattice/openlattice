@@ -51,6 +51,7 @@ import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
 import com.openlattice.data.storage.ByteBlobDataManager;
 import com.openlattice.data.storage.DataDeletionService;
+import com.openlattice.data.storage.DataSourceResolver;
 import com.openlattice.data.storage.EntityDatastore;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
 import com.openlattice.data.storage.PostgresEntityDatastore;
@@ -69,6 +70,7 @@ import com.openlattice.graph.core.GraphService;
 import com.openlattice.ids.HazelcastIdGenerationService;
 import com.openlattice.ids.HazelcastLongIdService;
 import com.openlattice.indexing.configuration.IndexerConfiguration;
+import com.openlattice.jdbc.DataSourceManager;
 import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
@@ -96,8 +98,14 @@ import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 
 @Configuration
-@Import( { IndexerConfigurationPod.class, AuditingConfigurationPod.class, AssemblerConfigurationPod.class,
-        ByteBlobServicePod.class, OrganizationExternalDatabaseConfigurationPod.class, TransporterPod.class } )
+@Import( {
+        IndexerConfigurationPod.class,
+        AuditingConfigurationPod.class,
+        AssemblerConfigurationPod.class,
+        ByteBlobServicePod.class,
+        OrganizationExternalDatabaseConfigurationPod.class,
+        TransporterPod.class
+} )
 public class IndexerServicesPod {
 
     @Inject
@@ -135,6 +143,9 @@ public class IndexerServicesPod {
 
     @Inject
     private ExternalDatabaseConnectionManager externalDbConnMan;
+
+    @Inject
+    private DataSourceManager dataSourceManager;
 
     @Bean
     public ConductorElasticsearchApi elasticsearchApi() {
@@ -333,7 +344,7 @@ public class IndexerServicesPod {
     @Bean
     public PostgresEntityDataQueryService dataQueryService() {
         return new PostgresEntityDataQueryService(
-                hikariDataSource,
+                dataSourceResolver(),
                 hikariDataSource,
                 byteBlobDataManager,
                 partitionManager()
@@ -355,13 +366,15 @@ public class IndexerServicesPod {
 
     @Bean
     public GraphService graphApi() {
-        return new Graph( hikariDataSource,
+        return new Graph(
+                dataSourceResolver(),
                 hikariDataSource,
                 entitySetManager(),
                 partitionManager(),
                 dataQueryService(),
                 idService(),
-                metricRegistry );
+                metricRegistry
+        );
     }
 
     @Bean
@@ -427,6 +440,11 @@ public class IndexerServicesPod {
                 principalsMapManager(),
                 authorizationManager()
         );
+    }
+
+    @Bean
+    public DataSourceResolver dataSourceResolver() {
+        return new DataSourceResolver( hazelcastInstance, dataSourceManager );
     }
 
     @PostConstruct
