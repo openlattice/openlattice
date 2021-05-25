@@ -463,7 +463,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public GraphService graphApi() {
-        return new Graph( hikariDataSource,
+        return new Graph( dataSourceResolver(),
                 rds().getReadOnlyReplica(),
                 entitySetManager(),
                 partitionManager(),
@@ -603,7 +603,7 @@ public class DatastoreServicesPod {
         return new AwsDataSinkService(
                 partitionManager(),
                 byteBlobDataManager,
-                hikariDataSource,
+                dataSourceResolver(),
                 rds().getReadOnlyReplica()
         );
     }
