@@ -26,6 +26,7 @@ import com.codahale.metrics.annotation.Timed
 import com.geekbeast.metrics.time
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.collect.ImmutableList
+import com.google.common.collect.Iterables
 import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
 import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
@@ -34,6 +35,7 @@ import com.openlattice.data.DataEdgeKey
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.EntityKeyIdService
 import com.openlattice.data.WriteEvent
+import com.openlattice.data.storage.DataSourceResolver
 import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.data.storage.entityKeyIdColumns
 import com.openlattice.data.storage.partitions.PartitionManager
@@ -80,9 +82,13 @@ private const val BATCH_SIZE = 10_000
 
 private val logger = LoggerFactory.getLogger(Graph::class.java)
 
+/**
+ * The object graph is triplicated onto src, dst, and edge entity sets on every write.
+ */
 @Service
 class Graph(
-        private val hds: HikariDataSource,
+//        private val hds: HikariDataSource,
+        private val dataSourceResolver: DataSourceResolver,
         private val reader: HikariDataSource,
         private val entitySetManager: EntitySetManager,
         private val partitionManager: PartitionManager,
@@ -99,18 +105,49 @@ class Graph(
                         .map { it.entitySetId }.toSet()
         ).mapValues { it.value.toList() }
 
-        hds.connection.use { connection ->
-            val ps = connection.prepareStatement(EDGES_UPSERT_SQL)
-            val version = System.currentTimeMillis()
-            val versions = PostgresArrays.createLongArray(connection, ImmutableList.of(version))
+        val srcEntitySetEdgeKeys = keys.groupBy { it.src.entitySetId }
+        val dstEntitySetEdgeKeys = keys.groupBy { it.dst.entitySetId }
+        val edgeEntitySetEdgeKeys = keys.groupBy { it.edge.entitySetId }
 
-            ps.use {
-                keys.forEach { dataEdgeKey ->
-                    bindColumnsForEdge(ps, dataEdgeKey, version, versions, partitionsInfoByEntitySet)
+        val version = System.currentTimeMillis()
+
+        val numUpdated = createEdgesForDataSource(
+                partitionsInfoByEntitySet,
+                srcEntitySetEdgeKeys,
+                version
+        ) + createEdgesForDataSource(
+                partitionsInfoByEntitySet,
+                dstEntitySetEdgeKeys,
+                version
+        ) + createEdgesForDataSource(
+                partitionsInfoByEntitySet,
+                edgeEntitySetEdgeKeys,
+                version
+        ) //Return value not used at the moment, need to consider returning total number of writes.
+
+        return WriteEvent(version, keys.size)
+    }
+
+    private fun createEdgesForDataSource(
+            partitionsInfoByEntitySet: Map<UUID, List<Int>>,
+            keyMap: Map<UUID, List<DataEdgeKey>>,
+            version: Long
+    ): Int {
+        return keyMap.map { (entitySetId, keys) ->
+            val hds = dataSourceResolver.resolve(entitySetId)
+            hds.connection.use { connection ->
+                val ps = connection.prepareStatement(EDGES_UPSERT_SQL)
+
+                val versions = PostgresArrays.createLongArray(connection, ImmutableList.of(version))
+
+                ps.use {
+                    keys.forEach { key ->
+                        bindColumnsForEdge(ps, key, version, versions, partitionsInfoByEntitySet)
+                    }
+                    ps.executeBatch().sum()
                 }
-                return WriteEvent(version, ps.executeBatch().sum())
             }
-        }
+        }.sum()
     }
 
 
@@ -149,23 +186,42 @@ class Graph(
             statement: String,
             statementSupplier: (lockStmt: PreparedStatement, operationStmt: PreparedStatement, dataEdgeKey: DataEdgeKey) -> Unit
     ): Int {
-        hds.connection.use { connection ->
-            var updates = 0
-            connection.autoCommit = false
-            connection.prepareStatement(LOCK_BY_VERTEX_SQL).use { psLocks ->
-                connection.prepareStatement(statement).use { psExecute ->
-                    keys.forEach { dataEdgeKey ->
-                        statementSupplier(psLocks, psExecute, dataEdgeKey)
-                    }
-                    psLocks.executeBatch()
-                    updates = psExecute.executeBatch().sum()
-                }
-            }
-            connection.commit()
+        val srcEntitySetEdgeKeys = keys.groupBy { it.src.entitySetId }
+        val dstEntitySetEdgeKeys = keys.groupBy { it.dst.entitySetId }
+        val edgeEntitySetEdgeKeys = keys.groupBy { it.edge.entitySetId }
 
-            connection.autoCommit = true
-            return updates
-        }
+        val numUpdate = lockAndOperateOnEdges(srcEntitySetEdgeKeys, statement, statementSupplier)
+        +lockAndOperateOnEdges(dstEntitySetEdgeKeys, statement, statementSupplier)
+        +lockAndOperateOnEdges(edgeEntitySetEdgeKeys, statement, statementSupplier)
+
+        return Iterables.size(keys)
+    }
+
+    private fun lockAndOperateOnEdges(
+            keyMap: Map<UUID, List<DataEdgeKey>>,
+            statement: String,
+            statementSupplier: (lockStmt: PreparedStatement, operationStmt: PreparedStatement, dataEdgeKey: DataEdgeKey) -> Unit
+    ): Int {
+        return keyMap.map { (entitySetId, keys) ->
+            val hds = dataSourceResolver.resolve(entitySetId)
+            hds.connection.use { connection ->
+                var updates = 0
+                connection.autoCommit = false
+                connection.prepareStatement(LOCK_BY_VERTEX_SQL).use { psLocks ->
+                    connection.prepareStatement(statement).use { psExecute ->
+                        keys.forEach { dataEdgeKey ->
+                            statementSupplier(psLocks, psExecute, dataEdgeKey)
+                        }
+                        psLocks.executeBatch()
+                        updates = psExecute.executeBatch().sum()
+                    }
+                }
+                connection.commit()
+
+                connection.autoCommit = true
+                updates
+            }
+        }.sum()
     }
 
     private fun clearEdgesAddVersion(ps: PreparedStatement, version: Long) {
@@ -184,9 +240,12 @@ class Graph(
     /* Select */
 
     override fun getEdgeKeysContainingEntities(
-            entitySetId: UUID, entityKeyIds: Set<UUID>, includeClearedEdges: Boolean
+            entitySetId: UUID,
+            entityKeyIds: Set<UUID>,
+            includeClearedEdges: Boolean
     ): BasePostgresIterable<DataEdgeKey> {
         val sql = if (includeClearedEdges) BULK_NEIGHBORHOOD_SQL else BULK_NON_TOMBSTONED_NEIGHBORHOOD_SQL
+        val hds = dataSourceResolver.resolve(entitySetId)
         return BasePostgresIterable(PreparedStatementHolderSupplier(hds, sql, BATCH_SIZE, false) { ps ->
             val idArr = PostgresArrays.createUuidArray(ps.connection, entityKeyIds)
             ps.setArray(1, idArr)
@@ -211,17 +270,23 @@ class Graph(
         val entitySetPartitions = partitionManager.getPartitionsByEntitySetId(srcEntitySetIds + entitySetIds)
         val srcEntitySetPartitions = srcEntitySetIds.flatMap { entitySetPartitions.getValue(it) }.toSet()
 
-        return BasePostgresIterable(PreparedStatementHolderSupplier(reader, getFilteredNeighborhoodSql(pagedNeighborRequest, srcEntitySetPartitions)) { ps ->
-            val connection = ps.connection
-            val idsArr = PostgresArrays.createUuidArray(connection, filter.entityKeyIds.stream())
-            val entitySetIdsArr = PostgresArrays.createUuidArray(connection, entitySetIds.stream())
-            val partitionsArr = PostgresArrays.createIntArray(connection, entitySetIds.flatMap { entitySetPartitions.getValue(it) })
-            ps.setArray(1, idsArr)
-            ps.setArray(2, entitySetIdsArr)
-            ps.setArray(3, idsArr)
-            ps.setArray(4, entitySetIdsArr)
-            ps.setArray(5, partitionsArr)
-        }) {
+        return BasePostgresIterable(
+                PreparedStatementHolderSupplier(
+                        reader, getFilteredNeighborhoodSql(pagedNeighborRequest, srcEntitySetPartitions)
+                ) { ps ->
+                    val connection = ps.connection
+                    val idsArr = PostgresArrays.createUuidArray(connection, filter.entityKeyIds.stream())
+                    val entitySetIdsArr = PostgresArrays.createUuidArray(connection, entitySetIds.stream())
+                    val partitionsArr = PostgresArrays.createIntArray(
+                            connection, entitySetIds.flatMap {
+                        entitySetPartitions.getValue(it)
+                    })
+                    ps.setArray(1, idsArr)
+                    ps.setArray(2, entitySetIdsArr)
+                    ps.setArray(3, idsArr)
+                    ps.setArray(4, entitySetIdsArr)
+                    ps.setArray(5, partitionsArr)
+                }) {
             ResultSetAdapters.edge(it)
         }.stream()
     }
@@ -424,7 +489,9 @@ class Graph(
                     Optional.of(authorizedPropertyTypes.keys),
                     Optional.of(authorizedPropertyTypes.keys)
             )
-            val allNeighborEdges = getEdgesAndNeighborsForVertices(entitySetIds, PagedNeighborRequest(allNeighborsFilter))
+            val allNeighborEdges = getEdgesAndNeighborsForVertices(
+                    entitySetIds, PagedNeighborRequest(allNeighborsFilter)
+            )
             val associationEntityKeyIds = mutableMapOf<UUID, Optional<MutableSet<UUID>>>()
             val neighborEntityKeyIds = mutableMapOf<UUID, Optional<MutableSet<UUID>>>()
             val edges = mutableMapOf<UUID, MutableMap<UUID, UUID>>()
@@ -898,7 +965,7 @@ class Graph(
               $notAssocClause
             LIMIT 1
         """.trimIndent()
-
+        val hds = dataSourceResolver.resolve(entitySetId)
         hds.connection.use { conn ->
             conn.createStatement().use { stmt ->
                 stmt.executeQuery(query).use { rs ->
@@ -908,7 +975,10 @@ class Graph(
         }
     }
 
-    private fun entitySetClause(entitySetId: UUID, entityKeyIds: Set<UUID>?, entitySetColumn: PostgresColumnDefinition, entityKeyIdColumn: PostgresColumnDefinition): String {
+    private fun entitySetClause(
+            entitySetId: UUID, entityKeyIds: Set<UUID>?, entitySetColumn: PostgresColumnDefinition,
+            entityKeyIdColumn: PostgresColumnDefinition
+    ): String {
         val entityKeyIdClause = if (entityKeyIds.isNullOrEmpty()) "" else {
             " AND ${entityKeyIdColumn.name} = ANY('{${entityKeyIds.joinToString()}}')"
         }
