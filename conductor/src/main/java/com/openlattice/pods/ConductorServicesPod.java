@@ -89,6 +89,7 @@ import com.openlattice.ids.HazelcastIdGenerationService;
 import com.openlattice.ids.HazelcastLongIdService;
 import com.openlattice.ids.tasks.IdGenerationCatchUpTask;
 import com.openlattice.ids.tasks.IdGenerationCatchupDependency;
+import com.openlattice.jdbc.DataSourceManager;
 import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
@@ -132,8 +133,13 @@ import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 
 @Configuration
-@Import( { ByteBlobServicePod.class, AuditingConfigurationPod.class, AssemblerConfigurationPod.class,
-        TransporterPod.class, TransporterInitPod.class } )
+@Import( {
+        ByteBlobServicePod.class,
+        AuditingConfigurationPod.class,
+        AssemblerConfigurationPod.class,
+        TransporterPod.class,
+        TransporterInitPod.class
+} )
 public class ConductorServicesPod {
 
     @Inject
@@ -180,6 +186,9 @@ public class ConductorServicesPod {
 
     @Inject
     private TransporterService transporterService;
+
+    @Inject
+    private DataSourceManager dataSourceManager;
 
     @Bean
     public ObjectMapper defaultObjectMapper() {
@@ -498,7 +507,7 @@ public class ConductorServicesPod {
     @Bean
     public PostgresEntityDataQueryService dataQueryService() {
         return new PostgresEntityDataQueryService(
-                hikariDataSource,
+                dataSourceResolver(),
                 hikariDataSource,
                 byteBlobDataManager,
                 partitionManager()
@@ -560,13 +569,15 @@ public class ConductorServicesPod {
 
     @Bean
     public GraphService graphService() {
-        return new Graph( hikariDataSource,
+        return new Graph(
+                dataSourceResolver(),
                 hikariDataSource,
                 entitySetManager(),
                 partitionManager(),
                 dataQueryService(),
                 idService(),
-                metricRegistry );
+                metricRegistry
+        );
     }
 
     @Bean
@@ -723,6 +734,11 @@ public class ConductorServicesPod {
                 jobService(),
                 partitionManager()
         );
+    }
+
+    @Bean
+    public DataSourceResolver dataSourceResolver() {
+        return new DataSourceResolver( hazelcastInstance, dataSourceManager );
     }
 
     @PostConstruct
