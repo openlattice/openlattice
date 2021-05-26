@@ -50,6 +50,7 @@ import static com.openlattice.postgres.PostgresColumn.CONTACT_INFO;
 import static com.openlattice.postgres.PostgresColumn.CONTACT_TYPE;
 import static com.openlattice.postgres.PostgresColumn.CREDENTIAL;
 import static com.openlattice.postgres.PostgresColumn.DATABASE;
+import static com.openlattice.postgres.PostgresColumn.DATASTORE;
 import static com.openlattice.postgres.PostgresColumn.DATATYPE;
 import static com.openlattice.postgres.PostgresColumn.DESCRIPTION;
 import static com.openlattice.postgres.PostgresColumn.DST;
@@ -246,6 +247,7 @@ public final class PostgresTable {
                             ENTITY_SET_FLAGS,
                             PARTITIONS,
                             STORAGE_TYPE,
+                            DATASTORE,
                             TIME_TO_EXPIRATION,
                             EXPIRATION_BASE_FLAG,
                             EXPIRATION_DELETE_FLAG,

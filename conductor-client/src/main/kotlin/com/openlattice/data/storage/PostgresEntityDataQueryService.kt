@@ -10,6 +10,7 @@ import com.openlattice.data.storage.PostgresEntitySetSizesInitializationTask.Com
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.data.util.PostgresDataHasher
+import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.ExpirationBase
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.jdbc.DataSourceManager
@@ -48,7 +49,6 @@ import kotlin.streams.asStream
 @Service
 class PostgresEntityDataQueryService(
         private val dataSourceResolver: DataSourceResolver,
-        private val reader: HikariDataSource,
         private val byteBlobDataManager: ByteBlobDataManager,
         protected val partitionManager: PartitionManager
 ) {
@@ -60,9 +60,12 @@ class PostgresEntityDataQueryService(
     }
 
     fun getEntitySetCounts(): Map<UUID, Long> {
-        return BasePostgresIterable(StatementHolderSupplier(reader, "SELECT * FROM $ENTITY_SET_SIZES_VIEW")) {
-            ResultSetAdapters.entitySetId(it) to ResultSetAdapters.count(it)
-        }.toMap()
+        return BasePostgresIterable(
+                StatementHolderSupplier(
+                        dataSourceResolver.getDataSource(EntitySet.DEFAULT_DATASOURCE),
+                        "SELECT * FROM $ENTITY_SET_SIZES_VIEW"
+                )
+        ) { ResultSetAdapters.entitySetId(it) to ResultSetAdapters.count(it) }.toMap()
     }
 
     @JvmOverloads
@@ -72,7 +75,7 @@ class PostgresEntityDataQueryService(
             propertyTypeFilters: Map<UUID, Set<Filter>> = mapOf(),
             metadataOptions: Set<MetadataOption> = EnumSet.noneOf(MetadataOption::class.java),
             version: Optional<Long> = Optional.empty()
-    ): BasePostgresIterable<Pair<UUID, Map<UUID, Set<Any>>>> {
+    ): Iterable<Pair<UUID, MutableMap<UUID, MutableSet<Any>>>> {
         return getEntitySetIterable(
                 entityKeyIds,
                 authorizedPropertyTypes,
@@ -91,7 +94,7 @@ class PostgresEntityDataQueryService(
             propertyTypeFilters: Map<UUID, Set<Filter>> = mapOf(),
             metadataOptions: Set<MetadataOption> = EnumSet.noneOf(MetadataOption::class.java),
             version: Optional<Long> = Optional.empty()
-    ): BasePostgresIterable<Pair<UUID, Map<UUID, Set<Any>>>> {
+    ): Iterable<Pair<UUID, MutableMap<UUID, MutableSet<Any>>>> {
         return getEntitySetIterable(
                 entityKeyIds,
                 authorizedPropertyTypes,
@@ -108,7 +111,7 @@ class PostgresEntityDataQueryService(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             metadataOptions: Set<MetadataOption> = EnumSet.noneOf(MetadataOption::class.java)
-    ): BasePostgresIterable<Pair<UUID, Map<UUID, Set<Any>>>> {
+    ): Iterable<Pair<UUID, MutableMap<UUID, MutableSet<Any>>>> {
         return getEntitiesWithPropertyTypeIds(entityKeyIds, authorizedPropertyTypes, mapOf(), metadataOptions)
     }
 
@@ -123,7 +126,7 @@ class PostgresEntityDataQueryService(
             metadataOptions: EnumSet<MetadataOption> = EnumSet.noneOf(MetadataOption::class.java),
             propertyTypeFilters: Map<UUID, Set<Filter>> = mapOf(),
             version: Optional<Long> = Optional.empty()
-    ): BasePostgresIterable<Pair<UUID, Pair<UUID, Map<UUID, MutableMap<UUID, MutableSet<Any>>>>>> {
+    ): Iterable<Pair<UUID, Pair<UUID, Map<UUID, MutableMap<UUID, MutableSet<Any>>>>>> {
         return getEntitySetIterable(
                 entityKeyIds,
                 authorizedPropertyTypes,
@@ -149,7 +152,7 @@ class PostgresEntityDataQueryService(
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             propertyTypeFilters: Map<UUID, Set<Filter>> = mapOf(),
             version: Optional<Long> = Optional.empty()
-    ): BasePostgresIterable<Pair<UUID, Pair<UUID, Map<UUID, MutableMap<FullQualifiedName, MutableSet<Any>>>>>> {
+    ): Iterable<Pair<UUID, Pair<UUID, Map<UUID, MutableMap<FullQualifiedName, MutableSet<Any>>>>>> {
         return getEntitySetIterable(
                 entityKeyIds,
                 authorizedPropertyTypes,
@@ -217,7 +220,7 @@ class PostgresEntityDataQueryService(
             detailed: Boolean = false,
             filteredDataPageDefinition: FilteredDataPageDefinition? = null,
             adapter: (ResultSet) -> T
-    ): BasePostgresIterable<T> {
+    ): Iterable<T> {
         val propertyTypes = authorizedPropertyTypes.values.flatMap { it.values }.associateBy { it.id }
         val entitySetIds = entityKeyIds.keys
         val ids = entityKeyIds.values.flatMap { it.orElse(emptySet()) }.toSet()
@@ -235,21 +238,30 @@ class PostgresEntityDataQueryService(
             }
         }.toSet()
 
-        val (sql, binders) = buildPreparableFiltersSql(
-                propertyTypes,
-                propertyTypeFilters,
-                metadataOptions,
-                linking,
-                entitySetIds,
-                partitions,
-                ids,
-                detailed,
-                filteredDataPageDefinition
-        )
 
-        return BasePostgresIterable(PreparedStatementHolderSupplier(reader, sql, FETCH_SIZE) { ps ->
-            binders.forEach { it.bind(ps) }
-        }, adapter)
+        return entityKeyIds.keys
+                .groupBy { dataSourceResolver.getDataSourceName(it) }
+                .flatMap { (dataSourceName, entitySetIdsForDataSource) ->
+                    val (sql, binders) = buildPreparableFiltersSql(
+                            propertyTypes,
+                            propertyTypeFilters,
+                            metadataOptions,
+                            linking,
+                            entitySetIdsForDataSource.toSet(),
+                            partitions,
+                            ids,
+                            detailed,
+                            filteredDataPageDefinition
+                    )
+                    BasePostgresIterable(
+                            PreparedStatementHolderSupplier(
+                                    dataSourceResolver.getDataSource(dataSourceName),
+                                    sql,
+                                    FETCH_SIZE
+                            ) { ps -> binders.forEach { it.bind(ps) } },
+                            adapter
+                    ).toList()
+                }
     }
 
     /**

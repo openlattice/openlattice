@@ -24,5 +24,7 @@ class DataSourceResolver(hazelcastInstance: HazelcastInstance, val dataSourceMan
                 entitySets.getValue(entitySetId).datastore //TODO: Replace with an entry processor read
             })
 
-    fun resolve(entitySetId: UUID): HikariDataSource = dataSourceManager.getDataSource(resolverCache.get(entitySetId))
+    fun resolve(entitySetId: UUID): HikariDataSource = dataSourceManager.getDataSource(getDataSourceName(entitySetId))
+    fun getDataSourceName(entitySetId: UUID): String = resolverCache.get(entitySetId)
+    fun getDataSource(dataSourceName: String): HikariDataSource = dataSourceManager.getDataSource(dataSourceName)
 }

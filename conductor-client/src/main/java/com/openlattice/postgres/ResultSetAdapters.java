@@ -131,6 +131,7 @@ import static com.openlattice.postgres.PostgresColumn.CONTACTS;
 import static com.openlattice.postgres.PostgresColumn.CONTACT_INFO;
 import static com.openlattice.postgres.PostgresColumn.COUNT;
 import static com.openlattice.postgres.PostgresColumn.DATABASE;
+import static com.openlattice.postgres.PostgresColumn.DATASTORE_FIELD;
 import static com.openlattice.postgres.PostgresColumn.DATATYPE;
 import static com.openlattice.postgres.PostgresColumn.DESCRIPTION;
 import static com.openlattice.postgres.PostgresColumn.DST;
@@ -724,6 +725,7 @@ public final class ResultSetAdapters {
         final var partitions = partitions( rs );
         final var expirationData = dataExpiration( rs );
         final var storageType = storageType( rs );
+        final var datastore = datastore( rs );
         return new EntitySet( id,
                 entityTypeId,
                 name,
@@ -735,7 +737,12 @@ public final class ResultSetAdapters {
                 flags,
                 new LinkedHashSet<>( Arrays.asList( partitions ) ),
                 expirationData,
-                storageType );
+                storageType,
+                datastore );
+    }
+
+    public static String datastore( ResultSet rs ) throws SQLException {
+        return rs.getString( DATASTORE_FIELD );
     }
 
     public static StorageType storageType( ResultSet rs ) throws SQLException {

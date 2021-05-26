@@ -42,6 +42,7 @@ import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.data.storage.selectEntitySetWithCurrentVersionOfPropertyTypes
 import com.openlattice.datastore.services.EntitySetManager
+import com.openlattice.edm.EntitySet.Companion.DEFAULT_DATASOURCE
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.core.GraphService
 import com.openlattice.graph.core.NeighborSets
@@ -58,7 +59,6 @@ import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.openlattice.postgres.streams.StatementHolderSupplier
 import com.openlattice.search.requests.EntityNeighborsFilter
-import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -89,7 +89,6 @@ private val logger = LoggerFactory.getLogger(Graph::class.java)
 class Graph(
 //        private val hds: HikariDataSource,
         private val dataSourceResolver: DataSourceResolver,
-        private val reader: HikariDataSource,
         private val entitySetManager: EntitySetManager,
         private val partitionManager: PartitionManager,
         private val pgDataQueryService: PostgresEntityDataQueryService,
@@ -267,28 +266,44 @@ class Graph(
         val filter = pagedNeighborRequest.filter
 
         val srcEntitySetIds = filter.srcEntitySetIds.orElse(setOf())
-        val entitySetPartitions = partitionManager.getPartitionsByEntitySetId(srcEntitySetIds + entitySetIds)
+        val allEntitySetIds = srcEntitySetIds + entitySetIds
+        val entitySetPartitions = partitionManager.getPartitionsByEntitySetId(allEntitySetIds)
         val srcEntitySetPartitions = srcEntitySetIds.flatMap { entitySetPartitions.getValue(it) }.toSet()
 
-        return BasePostgresIterable(
-                PreparedStatementHolderSupplier(
-                        reader, getFilteredNeighborhoodSql(pagedNeighborRequest, srcEntitySetPartitions)
-                ) { ps ->
-                    val connection = ps.connection
-                    val idsArr = PostgresArrays.createUuidArray(connection, filter.entityKeyIds.stream())
-                    val entitySetIdsArr = PostgresArrays.createUuidArray(connection, entitySetIds.stream())
-                    val partitionsArr = PostgresArrays.createIntArray(
-                            connection, entitySetIds.flatMap {
-                        entitySetPartitions.getValue(it)
-                    })
-                    ps.setArray(1, idsArr)
-                    ps.setArray(2, entitySetIdsArr)
-                    ps.setArray(3, idsArr)
-                    ps.setArray(4, entitySetIdsArr)
-                    ps.setArray(5, partitionsArr)
-                }) {
-            ResultSetAdapters.edge(it)
-        }.stream()
+        /**
+         * There seems to be a weird thing here where entitySetIds for which to find neighbors for are specified
+         * in entitySetIds and in the pagedNeighborRequest.srcEntitySetIds. In theory srcEntitySetIds are a subset of
+         * of entitySetIds based on the authorization called in the calling paths, but not all calling paths perform
+         * that authorization. So the filtered neighborhood sql will have manually constructed srcEntitySetIds clauses,
+         * but the bind parameters will use the separately provided entity set ids.
+         *
+         * Another note here is that we could filter down each query to make it smaller, but it's a simpler code
+         * change for now to repeat the full query on all nodes.
+         */
+        return entitySetIds //Consider using allEntitySetIds for reasons mentioned above.
+                .groupBy { dataSourceResolver.getDataSourceName(it) }
+                .flatMap { (dataSourceName, entitySetIdsForDataSource) ->
+                    BasePostgresIterable(
+                            PreparedStatementHolderSupplier(
+                                    dataSourceResolver.getDataSource(dataSourceName),
+                                    getFilteredNeighborhoodSql(pagedNeighborRequest, srcEntitySetPartitions)
+                            ) { ps ->
+                                val connection = ps.connection
+                                val idsArr = PostgresArrays.createUuidArray(connection, filter.entityKeyIds)
+                                val entitySetIdsArr = PostgresArrays.createUuidArray(connection, entitySetIds)
+                                val partitionsArr = PostgresArrays.createIntArray(
+                                        connection, entitySetIds.flatMap {
+                                    entitySetPartitions.getValue(it)
+                                })
+                                ps.setArray(1, idsArr)
+                                ps.setArray(2, entitySetIdsArr)
+                                ps.setArray(3, idsArr)
+                                ps.setArray(4, entitySetIdsArr)
+                                ps.setArray(5, partitionsArr)
+                            }) {
+                        ResultSetAdapters.edge(it)
+                    }.toList()
+                }.stream()
     }
 
 
@@ -885,12 +900,14 @@ class Graph(
 
     @Deprecated("Edges table queries need update")
     private fun topEntitiesWorker(
-            limit: Int, entitySetId: UUID, srcFilters: SetMultimap<UUID, UUID>,
+            limit: Int,
+            entitySetId: UUID,
+            srcFilters: SetMultimap<UUID, UUID>,
             dstFilters: SetMultimap<UUID, UUID>
     ): Stream<Pair<EntityDataKey, Long>> {
         val countColumn = "total_count"
         val query = getTopUtilizersSql(entitySetId, srcFilters, dstFilters, limit)
-
+        val reader = dataSourceResolver.getDataSource(DEFAULT_DATASOURCE) // This function isn't wokring anyway, so not fixing.
         return BasePostgresIterable(StatementHolderSupplier(reader, query)) {
             ResultSetAdapters.entityDataKey(it) to it.getLong(countColumn)
         }.stream()
@@ -905,23 +922,29 @@ class Graph(
                 "FROM ${E.name} " +
                 "WHERE ( ${SRC_ENTITY_SET_ID.name} = ANY(?) OR ${DST_ENTITY_SET_ID.name} = ANY(?) ) " +
                 "AND ${VERSION.name} > 0"
-        val connection = reader.connection
-        connection.use {
-            val ps = connection.prepareStatement(query)
-            ps.use {
-                val entitySetIdsArr = PostgresArrays.createUuidArray(
-                        connection, entitySetIds
-                )
-                ps.setArray(1, entitySetIdsArr)
-                ps.setArray(2, entitySetIdsArr)
-                val rs = ps.executeQuery()
-                while (rs.next()) {
-                    val srcEntitySetId = rs.getObject(SRC_ENTITY_SET_ID.name) as UUID
-                    val edgeEntitySetId = rs.getObject(EDGE_ENTITY_SET_ID.name) as UUID
-                    val dstEntitySetId = rs.getObject(DST_ENTITY_SET_ID.name) as UUID
-                    neighbors.add(
-                            NeighborSets(srcEntitySetId, edgeEntitySetId, dstEntitySetId)
+
+        val groupedEntitySets = entitySetIds.groupBy { dataSourceResolver.getDataSourceName(it) }
+        groupedEntitySets.forEach { (dataSourceName, entitySetIdsForDataSource) ->
+            val reader = dataSourceResolver.getDataSource(dataSourceName)
+            val connection = reader.connection
+            connection.use {
+                val ps = connection.prepareStatement(query)
+                ps.use {
+                    val entitySetIdsArr = PostgresArrays.createUuidArray(
+                            connection,
+                            groupedEntitySets.getValue(dataSourceName)
                     )
+                    ps.setArray(1, entitySetIdsArr)
+                    ps.setArray(2, entitySetIdsArr)
+                    val rs = ps.executeQuery()
+                    while (rs.next()) {
+                        val srcEntitySetId = rs.getObject(SRC_ENTITY_SET_ID.name) as UUID
+                        val edgeEntitySetId = rs.getObject(EDGE_ENTITY_SET_ID.name) as UUID
+                        val dstEntitySetId = rs.getObject(DST_ENTITY_SET_ID.name) as UUID
+                        neighbors.add(
+                                NeighborSets(srcEntitySetId, edgeEntitySetId, dstEntitySetId)
+                        )
+                    }
                 }
             }
         }
@@ -929,12 +952,13 @@ class Graph(
     }
 
     override fun getEdgeEntitySetsConnectedToEntities(
-            entitySetId: UUID, entityKeyIds: Set<UUID>
+            entitySetId: UUID,
+            entityKeyIds: Set<UUID>
     ): Set<UUID> {
         val query = "SELECT DISTINCT ${EDGE_ENTITY_SET_ID.name} " +
                 "FROM ${E.name} " +
                 "WHERE ($SRC_IDS_SQL) OR ($DST_IDS_SQL) "
-
+        val reader = dataSourceResolver.resolve(entitySetId)
         return BasePostgresIterable(PreparedStatementHolderSupplier(reader, query) { ps ->
             val entityKeyIdArr = PostgresArrays.createUuidArray(ps.connection, entityKeyIds)
             ps.setArray(1, entityKeyIdArr)
