@@ -16,7 +16,7 @@ class AwsDataSinkService(
         resolver: DataSourceResolver,
         reader: HikariDataSource
 ) {
-    private val dqs = PostgresEntityDataQueryService(resolver, reader, byteBlobDataManager, partitionManager)
+    private val dqs = PostgresEntityDataQueryService(resolver, byteBlobDataManager, partitionManager)
 
     fun generatePresignedUrls(
             entities: List<S3EntityData>,
