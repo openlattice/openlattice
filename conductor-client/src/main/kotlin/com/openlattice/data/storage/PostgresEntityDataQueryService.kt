@@ -11,6 +11,7 @@ import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.data.util.PostgresDataHasher
 import com.openlattice.edm.EntitySet
+import com.openlattice.edm.EntitySet.Companion.DEFAULT_DATASOURCE
 import com.openlattice.edm.set.ExpirationBase
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.jdbc.DataSourceManager
@@ -26,6 +27,7 @@ import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.openlattice.postgres.streams.StatementHolderSupplier
+import com.openlattice.transporter.ids
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -432,19 +434,22 @@ class PostgresEntityDataQueryService(
 
             //Make data visible by marking new version in ids table.
 
-            val ps = connection.prepareStatement(updateEntitySql)
+            val updatedEntities = dataSourceResolver.getDataSource(DEFAULT_DATASOURCE).connection.use { idsConnection ->
+                val ps = idsConnection.prepareStatement(updateEntitySql)
 
-            entities.keys.sorted().forEach { entityKeyId ->
-                ps.setArray(1, versionsArrays)
-                ps.setObject(2, version)
-                ps.setObject(3, version)
-                ps.setObject(4, entitySetId)
-                ps.setObject(5, entityKeyId)
-                ps.setInt(6, partition)
-                ps.addBatch()
+                entities.keys.sorted().forEach { entityKeyId ->
+                    ps.setArray(1, versionsArrays)
+                    ps.setObject(2, version)
+                    ps.setObject(3, version)
+                    ps.setObject(4, entitySetId)
+                    ps.setObject(5, entityKeyId)
+                    ps.setInt(6, partition)
+                    ps.addBatch()
+                }
+
+                ps.executeBatch().sum()
             }
 
-            val updatedEntities = ps.executeBatch().sum()
             logger.debug("Updated $updatedEntities entities as part of insert.")
             return@use updatedPropertyCounts
         }
@@ -873,7 +878,7 @@ class PostgresEntityDataQueryService(
             currentDateTime: OffsetDateTime
     ): BasePostgresIterable<UUID> {
         val partitions = partitionManager.getEntitySetPartitions(entitySetId)
-        val hds = dataSourceResolver.resolve(entitySetId)
+        val hds = dataSourceResolver.getDataSource(DEFAULT_DATASOURCE) //This query hits the ids table which is still centralized.
 
         return BasePostgresIterable(
                 PreparedStatementHolderSupplier(hds, getExpiringEntitiesUsingIdsQuery(expirationPolicy)) { ps ->

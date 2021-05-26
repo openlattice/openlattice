@@ -66,6 +66,7 @@ open class TestServer {
                     DatastoreProfiles.MEDIA_LOCAL_PROFILE)
 
             hazelcastInstance = testServer.context.getBean(HazelcastInstance::class.java)
+            //This should work as tests aren't sharded all will all share the default datasource
             hds = testServer.context.getBean(HikariDataSource::class.java)
             val edm = PostgresEdmManager(hds)
 
