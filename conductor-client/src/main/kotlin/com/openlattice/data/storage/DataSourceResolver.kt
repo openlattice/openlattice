@@ -10,10 +10,10 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 
 /**
- *
+ * This class has to be open for mocking.
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class DataSourceResolver(hazelcastInstance: HazelcastInstance, val dataSourceManager: DataSourceManager) {
+open class DataSourceResolver(hazelcastInstance: HazelcastInstance, val dataSourceManager: DataSourceManager) {
     private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
     private val resolverCache = CacheBuilder
             .newBuilder()
