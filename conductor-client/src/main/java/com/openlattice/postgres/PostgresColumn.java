@@ -21,6 +21,7 @@
 package com.openlattice.postgres;
 
 import com.openlattice.IdConstants;
+import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.Analyzer;
 
 import static com.openlattice.postgres.PostgresDatatype.BIGINT;
@@ -147,9 +148,13 @@ public final class PostgresColumn {
     public static final PostgresColumnDefinition DATABASE                          =
             new PostgresColumnDefinition( DATABASE_FIELD, TEXT );
     public static final String                   DATASTORE_FIELD                   = "datastore";
-    public static final PostgresColumnDefinition DATASTORE                         = new PostgresColumnDefinition(
-            DATASTORE_FIELD,
-            TEXT );
+    public static final PostgresColumnDefinition DATASTORE                         =
+            new PostgresColumnDefinition(
+                    DATASTORE_FIELD,
+                    TEXT
+            )
+            .notNull()
+            .withDefault( "'" + EntitySet.DEFAULT_DATASOURCE + "'" );
     public static final String                   DATATYPE_FIELD                    = "datatype";
     public static final PostgresColumnDefinition DATATYPE                          =
             new PostgresColumnDefinition( DATATYPE_FIELD, TEXT ).notNull();
