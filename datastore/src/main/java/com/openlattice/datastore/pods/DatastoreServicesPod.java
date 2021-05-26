@@ -101,6 +101,7 @@ import com.openlattice.organizations.OrganizationMetadataEntitySetsService;
 import com.openlattice.organizations.pods.OrganizationExternalDatabaseConfigurationPod;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
+import com.openlattice.postgres.PostgresTable;
 import com.openlattice.postgres.PostgresTableManager;
 import com.openlattice.postgres.external.DatabaseQueryManager;
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
@@ -464,7 +465,6 @@ public class DatastoreServicesPod {
     @Bean
     public GraphService graphApi() {
         return new Graph( dataSourceResolver(),
-                rds().getReadOnlyReplica(),
                 entitySetManager(),
                 partitionManager(),
                 dataQueryService(),
@@ -479,6 +479,8 @@ public class DatastoreServicesPod {
 
     @Bean
     public DataSourceResolver dataSourceResolver() {
+        dataSourceManager.registerTablesWithAllDatasources( PostgresTable.E );
+        dataSourceManager.registerTablesWithAllDatasources( PostgresTable.DATA );
         return new DataSourceResolver( hazelcastInstance, dataSourceManager );
     }
 
@@ -588,7 +590,6 @@ public class DatastoreServicesPod {
     public PostgresEntityDataQueryService dataQueryService() {
         return new PostgresEntityDataQueryService(
                 dataSourceResolver(),
-                rds().getReadOnlyReplica(),
                 byteBlobDataManager,
                 partitionManager()
         );

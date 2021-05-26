@@ -345,7 +345,6 @@ public class IndexerServicesPod {
     public PostgresEntityDataQueryService dataQueryService() {
         return new PostgresEntityDataQueryService(
                 dataSourceResolver(),
-                hikariDataSource,
                 byteBlobDataManager,
                 partitionManager()
         );
@@ -368,7 +367,6 @@ public class IndexerServicesPod {
     public GraphService graphApi() {
         return new Graph(
                 dataSourceResolver(),
-                hikariDataSource,
                 entitySetManager(),
                 partitionManager(),
                 dataQueryService(),

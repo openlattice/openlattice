@@ -102,6 +102,7 @@ import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.organizations.tasks.OrganizationsInitializationDependencies;
 import com.openlattice.organizations.tasks.OrganizationsInitializationTask;
+import com.openlattice.postgres.PostgresTable;
 import com.openlattice.postgres.external.DatabaseQueryManager;
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
 import com.openlattice.postgres.external.ExternalDatabasePermissioner;
@@ -508,7 +509,6 @@ public class ConductorServicesPod {
     public PostgresEntityDataQueryService dataQueryService() {
         return new PostgresEntityDataQueryService(
                 dataSourceResolver(),
-                hikariDataSource,
                 byteBlobDataManager,
                 partitionManager()
         );
@@ -571,7 +571,6 @@ public class ConductorServicesPod {
     public GraphService graphService() {
         return new Graph(
                 dataSourceResolver(),
-                hikariDataSource,
                 entitySetManager(),
                 partitionManager(),
                 dataQueryService(),
@@ -738,6 +737,8 @@ public class ConductorServicesPod {
 
     @Bean
     public DataSourceResolver dataSourceResolver() {
+        dataSourceManager.registerTablesWithAllDatasources( PostgresTable.E );
+        dataSourceManager.registerTablesWithAllDatasources( PostgresTable.DATA );
         return new DataSourceResolver( hazelcastInstance, dataSourceManager );
     }
 
