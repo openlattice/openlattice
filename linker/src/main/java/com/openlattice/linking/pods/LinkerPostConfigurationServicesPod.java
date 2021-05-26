@@ -35,6 +35,7 @@ import com.openlattice.data.DataGraphService;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
 import com.openlattice.data.storage.ByteBlobDataManager;
+import com.openlattice.data.storage.DataSourceResolver;
 import com.openlattice.data.storage.EntityDatastore;
 import com.openlattice.data.storage.IndexingMetadataManager;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
@@ -46,6 +47,7 @@ import com.openlattice.datastore.services.EntitySetManager;
 import com.openlattice.graph.Graph;
 import com.openlattice.graph.core.GraphService;
 import com.openlattice.ids.HazelcastIdGenerationService;
+import com.openlattice.jdbc.DataSourceManager;
 import com.openlattice.linking.BackgroundLinkingService;
 import com.openlattice.linking.DataLoader;
 import com.openlattice.linking.EdmCachingDataLoader;
@@ -59,6 +61,7 @@ import com.openlattice.linking.clustering.PostgresClusterer;
 import com.openlattice.linking.controllers.RealtimeLinkingController;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
 import com.openlattice.linking.matching.Matcher;
+import com.openlattice.postgres.PostgresTable;
 import com.zaxxer.hikari.HikariDataSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -122,6 +125,9 @@ public class LinkerPostConfigurationServicesPod {
     @Inject
     private PostgresLinkingFeedbackService postgresLinkingFeedbackQueryService;
 
+    @Inject
+    private DataSourceManager dataSourceManager;
+
     @Bean
     public HazelcastIdGenerationService idGeneration() {
         return new HazelcastIdGenerationService( hazelcastClientProvider );
@@ -136,11 +142,18 @@ public class LinkerPostConfigurationServicesPod {
     }
 
     @Bean
+    public DataSourceResolver dataSourceResolver() {
+        dataSourceManager.registerTablesWithAllDatasources( PostgresTable.E );
+        dataSourceManager.registerTablesWithAllDatasources( PostgresTable.DATA );
+        return new DataSourceResolver( hazelcastInstance, dataSourceManager );
+    }
+
+    @Bean
     public PostgresEntityDataQueryService dataQueryService() {
+
         //TODO: fix it to use read replica
         return new PostgresEntityDataQueryService(
-                hikariDataSource,
-                hikariDataSource,
+                dataSourceResolver(),
                 byteBlobDataManager,
                 partitionManager
         );
@@ -180,8 +193,7 @@ public class LinkerPostConfigurationServicesPod {
 
     @Bean
     public GraphService graphService() {
-        return new Graph( hikariDataSource,
-                hikariDataSource,
+        return new Graph( dataSourceResolver(),
                 entitySetManager,
                 partitionManager,
                 dataQueryService(),
