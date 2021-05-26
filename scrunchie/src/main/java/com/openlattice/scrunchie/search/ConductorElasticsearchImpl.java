@@ -1003,7 +1003,8 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                         .setFrom( searchConstraints.getStart() )
                         .setSize( searchConstraints.getMaxHits() )
                         .addSort( sort )
-                        .setFetchSource( false );
+                        .setFetchSource( false )
+                        .setAllowPartialSearchResults( true );
                 requests.add( request );
             }
         }
