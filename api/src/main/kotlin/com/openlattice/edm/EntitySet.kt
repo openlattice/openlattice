@@ -46,7 +46,7 @@ data class EntitySet
         @JsonProperty(SerializationConstants.PARTITIONS) val partitions: LinkedHashSet<Int> = linkedSetOf(),
         @JsonProperty(SerializationConstants.EXPIRATION) var expiration: DataExpiration? = null,
         @JsonProperty(SerializationConstants.STORAGE_TYPE) val storageType: StorageType = StorageType.STANDARD,
-        @JsonProperty(SerializationConstants.DATASTORE) val datastore: String = DEFAULT_DATASOURCE
+        @JsonProperty(SerializationConstants.DATASTORE) var datastore: String = DEFAULT_DATASOURCE
 ) : AbstractSecurableObject(_id, _title, _description) {
     companion object {
         const val DEFAULT_DATASOURCE = "default"
