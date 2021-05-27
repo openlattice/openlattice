@@ -35,7 +35,7 @@ class EntitySetsTest : MultipleAuthenticatedUsersBase() {
             return MetadataUpdate(Optional.empty(), Optional.empty(), Optional.empty(),
                     Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
                     Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
-                    Optional.empty(), expiration)
+                    Optional.empty(), expiration, Optional.empty())
         }
     }
 
