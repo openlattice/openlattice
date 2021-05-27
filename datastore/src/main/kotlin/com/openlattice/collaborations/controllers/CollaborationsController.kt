@@ -181,11 +181,17 @@ class CollaborationsController : AuthorizingComponent, CollaborationsApi {
     override fun getOrganizationCollaborationDataSets(
         @PathVariable(ORGANIZATION_ID_PARAM) organizationId: UUID
     ): Map<UUID, List<UUID>> {
-        // auth checks on org and collabs done inside here
-        val collaborationIds = getCollaborationsWithOrganization(organizationId).map { it.id }
-        return collaborationService.getProjectedTableIdsInCollaborationsAndOrganizations(collaborationIds, setOf(organizationId)) {
-            it.key.collaborationId
-        }
+        val authorizedCollaborationIds = getCollaborationsWithOrganization(organizationId).map { it.id }
+        return collaborationService
+            .getProjectedTableIdsInCollaborationsAndOrganizations(
+                authorizedCollaborationIds,
+                setOf(organizationId)
+            ) {
+                it.key.collaborationId
+            }
+            .mapValues {
+                filterToAuthorizedIds(it.value).toList()
+            }
     }
 
     @Timed
@@ -197,12 +203,18 @@ class CollaborationsController : AuthorizingComponent, CollaborationsApi {
         @PathVariable(COLLABORATION_ID_PARAM) collaborationId: UUID
     ): Map<UUID, List<UUID>> {
         ensureReadAccess(AclKey(collaborationId))
-
-        val authorizedOrgIds = filterToAuthorizedIds(collaborationService.getCollaboration(collaborationId).organizationIds)
-
-        return collaborationService.getProjectedTableIdsInCollaborationsAndOrganizations(setOf(collaborationId), authorizedOrgIds) {
-            it.value.organizationId
-        }
+        val collaboration = collaborationService.getCollaboration(collaborationId)
+        val authorizedOrgIds = filterToAuthorizedIds(collaboration.organizationIds)
+        return collaborationService
+            .getProjectedTableIdsInCollaborationsAndOrganizations(
+                setOf(collaborationId),
+                authorizedOrgIds
+            ) {
+                it.value.organizationId
+            }
+            .mapValues {
+                filterToAuthorizedIds(it.value).toList()
+            }
     }
 
     @Timed
