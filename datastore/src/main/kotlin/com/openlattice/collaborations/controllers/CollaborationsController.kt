@@ -98,7 +98,7 @@ class CollaborationsController : AuthorizingComponent, CollaborationsApi {
     }
 
     @Timed
-    @PatchMapping(value = [ID_PATH_PARAM, DATABASE_PATH], consumes = [MediaType.APPLICATION_JSON_VALUE])
+    @PatchMapping(value = [ID_PATH_PARAM + DATABASE_PATH], consumes = [MediaType.APPLICATION_JSON_VALUE])
     override fun renameDatabase(@PathVariable(ID) id: UUID, @RequestBody newDatabaseName: String) {
         ensureOwnerAccess(AclKey(id))
         collaborationService.renameDatabase(id, newDatabaseName)
