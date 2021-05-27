@@ -30,7 +30,7 @@ import javax.inject.Inject
 @SuppressFBWarnings(
         value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"],
         justification = "Allowing redundant kotlin null check on lateinit variables")
-class CollaborationController : AuthorizingComponent, CollaborationsApi {
+class CollaborationsController : AuthorizingComponent, CollaborationsApi {
 
     @Inject
     private lateinit var authorizations: AuthorizationManager
