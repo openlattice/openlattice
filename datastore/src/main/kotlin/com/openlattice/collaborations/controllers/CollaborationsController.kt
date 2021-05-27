@@ -133,7 +133,7 @@ class CollaborationsController : AuthorizingComponent, CollaborationsApi {
     @Timed
     @PatchMapping(
         value = [COLLABORATION_ID_PATH + DATABASE_PATH],
-        consumes = [MediaType.APPLICATION_JSON_VALUE]
+        consumes = [MediaType.TEXT_PLAIN_VALUE]
     )
     override fun renameCollaborationDatabase(
         @PathVariable(COLLABORATION_ID_PARAM) collaborationId: UUID,
