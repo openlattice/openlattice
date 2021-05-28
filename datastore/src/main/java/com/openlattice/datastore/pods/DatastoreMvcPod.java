@@ -23,7 +23,7 @@ package com.openlattice.datastore.pods;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openlattice.admin.AdminController;
 import com.openlattice.codex.controllers.CodexController;
-import com.openlattice.collaborations.controllers.CollaborationController;
+import com.openlattice.collaborations.controllers.CollaborationsController;
 import com.openlattice.collection.CollectionsController;
 import com.openlattice.data.DataApi;
 import com.openlattice.datasets.DatasetMetadataController;
@@ -75,7 +75,7 @@ import java.util.List;
                 RequestsController.class, AppController.class, GraphController.class,
                 PersistentSearchController.class, AdminController.class,
                 SubscriptionController.class, FeedsController.class, CodexController.class, CollectionsController.class,
-                DatasetController.class, AnalysisController.class, CollaborationController.class,
+                DatasetController.class, AnalysisController.class, CollaborationsController.class,
                 DatasetMetadataController.class
         },
         includeFilters = @ComponentScan.Filter(

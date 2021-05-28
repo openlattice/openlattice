@@ -52,6 +52,11 @@ class PostgresCollaborationDatabaseService(
     override fun renameCollaborationDatabase(collaborationId: UUID, newName: String) {
         val currentName = externalDbConnMan.getDatabaseName(collaborationId)
         dbQueryManager.renameDatabase(currentName, newName)
+        organizationDatabases.executeOnKey(collaborationId) {
+            val orgDatabase = it.value
+            orgDatabase.name = newName
+            it.setValue(orgDatabase)
+        }
     }
 
     override fun addOrganizationsToCollaboration(collaborationId: UUID, organizationIds: Set<UUID>) {
