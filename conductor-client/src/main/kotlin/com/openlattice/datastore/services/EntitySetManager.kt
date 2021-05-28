@@ -105,18 +105,20 @@ interface EntitySetManager {
 
     fun entitySetsContainFlag(entitySetIds: Set<UUID>, flag: EntitySetFlag): Boolean
 
-    fun filterToAuthorizedNormalEntitySets(entitySetIds: Set<UUID>, permissions: EnumSet<Permission>, principals: Set<Principal>): Set<UUID>
-
     fun getPropertyTypesOfEntitySets(entitySetIds: Set<UUID>): Map<UUID, Map<UUID, PropertyType>>
 
     fun exists(entitySetId: UUID): Boolean
 
     fun setupOrganizationMetadataAndAuditEntitySets(entitySet: EntitySet)
 
+    //TODO: Move these authorization functions to the right layer.
     fun getAuthorizedNeighborEntitySets(
             principals: Set<Principal>,
             entitySetIds: Set<UUID>,
             filter: EntityNeighborsFilter
     ): EntityNeighborsFilter
+
+    fun filterToAuthorizedNormalEntitySets(entitySetIds: Set<UUID>, permissions: EnumSet<Permission>, principals: Set<Principal>): Set<UUID>
+
 
 }

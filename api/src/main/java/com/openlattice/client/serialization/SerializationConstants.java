@@ -85,6 +85,7 @@ public final class SerializationConstants {
     public static final String DATA                             = "data";
     public static final String DATABASE                         = "database";
     public static final String DATASOURCE_IDS                   = "datasourceIds";
+    public static final String DATASTORE                        = "datastore";
     public static final String DATATYPE_FIELD                   = "datatype";
     public static final String DATA_ID                          = "dataId";
     public static final String DEFAULT_SHOW                     = "defaultShow";

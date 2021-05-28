@@ -81,7 +81,7 @@ class EdmCachingDataLoader(
 
     override fun getEntityStream(
             entitySetId: UUID, entityKeyIds: Set<UUID>
-    ): BasePostgresIterable<Pair<UUID, Map<UUID, Set<Any>>>> {
+    ): Iterable<Pair<UUID, MutableMap<UUID, MutableSet<Any>>>> {
         return dataQueryService.getEntitySetWithPropertyTypeIdsIterable(
                 mapOf(entitySetId to Optional.of(entityKeyIds)),
                 mapOf(entitySetId to authorizedPropertyTypesCache.get())
@@ -113,7 +113,7 @@ class EdmCachingDataLoader(
     override fun getLinkingEntityStream(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>
-    ): BasePostgresIterable<Pair<UUID, Map<UUID, Set<Any>>>> {
+    ): Iterable<Pair<UUID, MutableMap<UUID, MutableSet<Any>>>> {
         return dataQueryService.getEntitySetWithPropertyTypeIdsIterable(
                 mapOf(entitySetId to Optional.of(entityKeyIds)),
                 mapOf(entitySetId to linkingPropertyTypes)

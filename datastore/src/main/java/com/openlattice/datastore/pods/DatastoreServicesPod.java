@@ -89,6 +89,7 @@ import com.openlattice.graph.PostgresGraphQueryService;
 import com.openlattice.graph.core.GraphService;
 import com.openlattice.ids.HazelcastIdGenerationService;
 import com.openlattice.ids.HazelcastLongIdService;
+import com.openlattice.jdbc.DataSourceManager;
 import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
@@ -100,6 +101,7 @@ import com.openlattice.organizations.OrganizationMetadataEntitySetsService;
 import com.openlattice.organizations.pods.OrganizationExternalDatabaseConfigurationPod;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
+import com.openlattice.postgres.PostgresTable;
 import com.openlattice.postgres.PostgresTableManager;
 import com.openlattice.postgres.external.DatabaseQueryManager;
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
@@ -196,6 +198,9 @@ public class DatastoreServicesPod {
 
     @Inject
     private TransporterService transporterService;
+
+    @Inject
+    private DataSourceManager dataSourceManager;
 
     @Bean
     public PrincipalsMapManager principalsMapManager() {
@@ -459,8 +464,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public GraphService graphApi() {
-        return new Graph( hikariDataSource,
-                rds().getReadOnlyReplica(),
+        return new Graph( dataSourceResolver(),
                 entitySetManager(),
                 partitionManager(),
                 dataQueryService(),
@@ -471,6 +475,13 @@ public class DatastoreServicesPod {
     @Bean
     public HazelcastIdGenerationService idGenerationService() {
         return new HazelcastIdGenerationService( hazelcastClientProvider );
+    }
+
+    @Bean
+    public DataSourceResolver dataSourceResolver() {
+        dataSourceManager.registerTablesWithAllDatasources( PostgresTable.E );
+        dataSourceManager.registerTablesWithAllDatasources( PostgresTable.DATA );
+        return new DataSourceResolver( hazelcastInstance, dataSourceManager );
     }
 
     @Bean
@@ -578,8 +589,7 @@ public class DatastoreServicesPod {
     @Bean
     public PostgresEntityDataQueryService dataQueryService() {
         return new PostgresEntityDataQueryService(
-                hikariDataSource,
-                rds().getReadOnlyReplica(),
+                dataSourceResolver(),
                 byteBlobDataManager,
                 partitionManager()
         );
@@ -594,7 +604,7 @@ public class DatastoreServicesPod {
         return new AwsDataSinkService(
                 partitionManager(),
                 byteBlobDataManager,
-                hikariDataSource,
+                dataSourceResolver(),
                 rds().getReadOnlyReplica()
         );
     }
