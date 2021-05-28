@@ -13,6 +13,7 @@ import com.openlattice.linking.*
 import com.openlattice.linking.blocking.Blocker
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.olingo.commons.api.edm.FullQualifiedName
+import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
 import java.util.*
@@ -25,6 +26,9 @@ class RealtimeLinkingController(
         lc: LinkingConfiguration,
         edm: EdmManager
 ) : RealtimeLinkingApi, AuthorizingComponent {
+    companion object {
+        private val logger = LoggerFactory.getLogger(RealtimeLinkingController::class.java)
+    }
     @Inject
     private lateinit var blocker: Blocker
 
@@ -107,9 +111,11 @@ class RealtimeLinkingController(
 
         return blockingRequest.entities.mapValues { (entitySetId, entityKeyIds) ->
             entityKeyIds.associateWith { entityKeyId ->
-                blocker
+                val blockedEntities = blocker
                         .block(EntityDataKey(entitySetId, entityKeyId),top = blockingRequest.blockSize)
                         .entities
+                        logger.info( "Blocked entities raw: {} ", blockedEntities )
+                        blockedEntities
                         .map { (edk, entity) ->
                             BlockedEntity(
                                     edk,
