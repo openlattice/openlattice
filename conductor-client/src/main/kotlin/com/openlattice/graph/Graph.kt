@@ -280,7 +280,7 @@ class Graph(
          * Another note here is that we could filter down each query to make it smaller, but it's a simpler code
          * change for now to repeat the full query on all nodes.
          */
-        return entitySetIds //Consider using allEntitySetIds for reasons mentioned above.
+        return allEntitySetIds //Consider using allEntitySetIds for reasons mentioned above.
                 .groupBy { dataSourceResolver.getDataSourceName(it) }
                 .flatMap { (dataSourceName, entitySetIdsForDataSource) ->
                     BasePostgresIterable(
