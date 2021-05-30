@@ -240,8 +240,7 @@ class PostgresEntityDataQueryService(
             }
         }.toSet()
 
-
-        return entityKeyIds.keys
+        return entitySetIds
                 .groupBy { dataSourceResolver.getDataSourceName(it) }
                 .flatMap { (dataSourceName, entitySetIdsForDataSource) ->
                     val (sql, binders) = buildPreparableFiltersSql(
