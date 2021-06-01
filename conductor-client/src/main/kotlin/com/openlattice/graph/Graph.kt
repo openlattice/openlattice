@@ -258,6 +258,10 @@ class Graph(
         }
     }
 
+    /**
+     * @param entitySetIds The base entity set ids for the neighbor query
+     * @param pagedNeighborRequest
+     */
     override fun getEdgesAndNeighborsForVertices(
             entitySetIds: Set<UUID>,
             pagedNeighborRequest: PagedNeighborRequest
@@ -280,7 +284,7 @@ class Graph(
          * Another note here is that we could filter down each query to make it smaller, but it's a simpler code
          * change for now to repeat the full query on all nodes.
          */
-        return allEntitySetIds //Consider using allEntitySetIds for reasons mentioned above.
+        return entitySetIds //Consider using allEntitySetIds for reasons mentioned above.
                 .groupBy { dataSourceResolver.getDataSourceName(it) }
                 .flatMap { (dataSourceName, entitySetIdsForDataSource) ->
                     BasePostgresIterable(
@@ -290,10 +294,10 @@ class Graph(
                             ) { ps ->
                                 val connection = ps.connection
                                 val idsArr = PostgresArrays.createUuidArray(connection, filter.entityKeyIds)
-                                val entitySetIdsArr = PostgresArrays.createUuidArray(connection, entitySetIds)
+                                val entitySetIdsArr = PostgresArrays.createUuidArray(connection, entitySetIdsForDataSource)
                                 val partitionsArr = PostgresArrays.createIntArray(
-                                        connection, entitySetIds.flatMap {
-                                    entitySetPartitions.getValue(it)
+                                        connection,
+                                        entitySetIdsForDataSource.flatMap { entitySetPartitions.getValue(it)
                                 })
                                 ps.setArray(1, idsArr)
                                 ps.setArray(2, entitySetIdsArr)
