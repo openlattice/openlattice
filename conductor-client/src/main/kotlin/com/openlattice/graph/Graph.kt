@@ -284,7 +284,7 @@ class Graph(
          * Another note here is that we could filter down each query to make it smaller, but it's a simpler code
          * change for now to repeat the full query on all nodes.
          */
-        return entitySetIds //Consider using allEntitySetIds for reasons mentioned above.
+        val edges = entitySetIds //Consider using allEntitySetIds for reasons mentioned above.
                 .groupBy { dataSourceResolver.getDataSourceName(it) }
                 .flatMap { (dataSourceName, entitySetIdsForDataSource) ->
                     BasePostgresIterable(
@@ -307,7 +307,9 @@ class Graph(
                             }) {
                         ResultSetAdapters.edge(it)
                     }.toList()
-                }.stream()
+                }
+
+        return edges.stream()
     }
 
 
