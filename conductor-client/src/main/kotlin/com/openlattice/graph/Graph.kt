@@ -204,19 +204,17 @@ class Graph(
         return keyMap.map { (entitySetId, keys) ->
             val hds = dataSourceResolver.resolve(entitySetId)
             hds.connection.use { connection ->
-                var updates = 0
                 connection.autoCommit = false
-                connection.prepareStatement(LOCK_BY_VERTEX_SQL).use { psLocks ->
+                val updates = connection.prepareStatement(LOCK_BY_VERTEX_SQL).use { psLocks ->
                     connection.prepareStatement(statement).use { psExecute ->
                         keys.forEach { dataEdgeKey ->
                             statementSupplier(psLocks, psExecute, dataEdgeKey)
                         }
                         psLocks.executeBatch()
-                        updates = psExecute.executeBatch().sum()
+                        psExecute.executeBatch().sum()
                     }
                 }
                 connection.commit()
-
                 connection.autoCommit = true
                 updates
             }

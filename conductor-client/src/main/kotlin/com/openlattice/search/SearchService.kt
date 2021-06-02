@@ -743,7 +743,12 @@ class SearchService(
                 )
 
                 if (entityKeyIds.contains(directedEdge.src.entityKeyId) && neighborDetails != null) {
-                    entityNeighbors.getOrPut(vertexEntityKeyId) { mutableListOf() }.add(neighborDetails)
+
+                    if (!entityNeighbors.containsKey(vertexEntityKeyId)) {
+                        entityNeighbors[vertexEntityKeyId] = mutableListOf()
+                    }
+
+                    entityNeighbors.getValue(vertexEntityKeyId).add(neighborDetails)
                 }
 
             }
