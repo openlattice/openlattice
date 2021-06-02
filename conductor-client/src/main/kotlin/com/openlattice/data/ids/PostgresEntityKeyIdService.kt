@@ -90,7 +90,7 @@ class PostgresEntityKeyIdService(
             partitions: IntArray
     ) {
         val dataHds = dataSourceResolver.resolve(entitySetId)
-        
+
         hds.connection.use { connection ->
             dataHds.connection.use { dataConnection ->
                 val insertIds = connection.prepareStatement(INSERT_SQL)
