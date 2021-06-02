@@ -225,7 +225,6 @@ class PostgresEntityDataQueryService(
     ): Iterable<T> {
         val propertyTypes = authorizedPropertyTypes.values.flatMap { it.values }.associateBy { it.id }
         val entitySetIds = entityKeyIds.keys
-        val ids = entityKeyIds.values.flatMap { it.orElse(emptySet()) }.toSet()
         // For linking queries we use all the partitions of participating entity sets, since cannot narrow down the
         // partitions due to the lack of origin ids
         val partitions = entityKeyIds.flatMap { (entitySetId, maybeEntityKeyIds) ->
