@@ -27,4 +27,5 @@ open class DataSourceResolver(hazelcastInstance: HazelcastInstance, val dataSour
     fun resolve(entitySetId: UUID): HikariDataSource = dataSourceManager.getDataSource(getDataSourceName(entitySetId))
     fun getDataSourceName(entitySetId: UUID): String = resolverCache.get(entitySetId)
     fun getDataSource(dataSourceName: String): HikariDataSource = dataSourceManager.getDataSource(dataSourceName)
+    fun getDefaultDataSource() : HikariDataSource = dataSourceManager.getDefaultDataSource()
 }

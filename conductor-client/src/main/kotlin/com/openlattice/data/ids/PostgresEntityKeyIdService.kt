@@ -24,6 +24,7 @@ package com.openlattice.data.ids
 import com.openlattice.IdConstants
 import com.openlattice.data.EntityKey
 import com.openlattice.data.EntityKeyIdService
+import com.openlattice.data.storage.DataSourceResolver
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.data.util.PostgresDataHasher
@@ -72,10 +73,11 @@ private val logger = LoggerFactory.getLogger(PostgresEntityKeyIdService::class.j
  */
 @Service
 class PostgresEntityKeyIdService(
-        private val hds: HikariDataSource,
+        private val dataSourceResolver: DataSourceResolver,
         private val idGenerationService: HazelcastIdGenerationService,
         protected val partitionManager: PartitionManager
 ) : EntityKeyIdService {
+    private val hds = dataSourceResolver.getDefaultDataSource()
     private fun genEntityKeyIds(entityIds: Set<EntityKey>): Map<EntityKey, UUID> {
         val ids = idGenerationService.getNextIds(entityIds.size)
         require(ids.size == entityIds.size) { "Insufficient ids generated." }
@@ -87,18 +89,22 @@ class PostgresEntityKeyIdService(
             entityKeyIds: Set<UUID>,
             partitions: IntArray
     ) {
+        val dataHds = dataSourceResolver.resolve(entitySetId)
+        
         hds.connection.use { connection ->
-            val insertIds = connection.prepareStatement(INSERT_SQL)
-            val insertToData = connection.prepareStatement(INSERT_ID_TO_DATA_SQL)
+            dataHds.connection.use { dataConnection ->
+                val insertIds = connection.prepareStatement(INSERT_SQL)
+                val insertToData = dataConnection.prepareStatement(INSERT_ID_TO_DATA_SQL)
 
-            entityKeyIds.forEach { entityKeyId ->
-                storeEntityKeyIdAddBatch(entitySetId, entityKeyId, insertIds, insertToData, partitions)
+                entityKeyIds.forEach { entityKeyId ->
+                    storeEntityKeyIdAddBatch(entitySetId, entityKeyId, insertIds, insertToData, partitions)
+                }
+
+                val totalWritten = insertIds.executeBatch().sum()
+                val totalDataRowsWritten = insertToData.executeBatch().sum()
+                logger.debug("Inserted $totalWritten ids.")
+                logger.debug("Inserted $totalDataRowsWritten data ids.")
             }
-
-            val totalWritten = insertIds.executeBatch().sum()
-            val totalDataRowsWritten = insertToData.executeBatch().sum()
-            logger.debug("Inserted $totalWritten ids.")
-            logger.debug("Inserted $totalDataRowsWritten data ids.")
         }
     }
 
