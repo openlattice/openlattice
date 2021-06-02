@@ -90,7 +90,7 @@ class PostgresEntityKeyIdServiceTest : TestServer() {
 
             idGenService = HazelcastIdGenerationService(hzClientProvider, true)
             postgresEntityKeyIdService = PostgresEntityKeyIdService(
-                    hds,
+                    dsr,
                     idGenService,
                     partMgr
             )

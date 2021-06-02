@@ -282,7 +282,7 @@ class Graph(
          * Another note here is that we could filter down each query to make it smaller, but it's a simpler code
          * change for now to repeat the full query on all nodes.
          */
-        val edges = entitySetIds 
+        val edges = entitySetIds
                 .groupBy { dataSourceResolver.getDataSourceName(it) }
                 .flatMap { (dataSourceName, entitySetIdsForDataSource) ->
                     BasePostgresIterable(
