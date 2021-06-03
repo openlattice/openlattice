@@ -77,7 +77,7 @@ open class TestServer {
             val dataSourceManager = testServer.context.getBean(DataSourceManager::class.java)
             dataSourceManager.registerTablesWithAllDatasources(PostgresTable.E)
             dataSourceManager.registerTablesWithAllDatasources(PostgresTable.DATA)
-            dsr = DataSourceResolver(hazelcastInstance, dataSourceManager)
+            dsr = DataSourceResolver(hazelcastInstance, dataSourceManager,true)
 
             val edm = PostgresEdmManager(hds)
 
