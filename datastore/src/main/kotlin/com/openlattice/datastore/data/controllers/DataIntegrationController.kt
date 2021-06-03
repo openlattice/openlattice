@@ -17,6 +17,8 @@ import com.openlattice.data.storage.aws.AwsDataSinkService
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RestController
 import java.util.*
 import javax.inject.Inject
 
@@ -24,6 +26,8 @@ import javax.inject.Inject
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
+@RestController
+@RequestMapping(DataIntegrationApi.CONTROLLER)
 class DataIntegrationController : DataIntegrationApi, AuthorizingComponent {
     private val encoder = Base64.getEncoder()
 
