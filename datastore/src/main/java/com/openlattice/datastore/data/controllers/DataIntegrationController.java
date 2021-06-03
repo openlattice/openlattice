@@ -23,6 +23,7 @@ package com.openlattice.datastore.data.controllers;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.SetMultimap;
+import com.openlattice.EntityKeyGenerationBundle;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.AuthorizingComponent;
@@ -111,6 +112,12 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
     @Timed
     public Set<UUID> getEntityKeyIds( @RequestBody LinkedHashSet<EntityKey> entityKeys ) {
         return dgm.getEntityKeyIds( entityKeys );
+    }
+
+    @Timed
+    @PostMapping("/" + ENTITY_KEYS )
+    @Override public List<EntityKey> generateEntityKeys( @RequestBody EntityKeyGenerationBundle bundle ) {
+        return null;
     }
 
 }
