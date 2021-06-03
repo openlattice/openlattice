@@ -136,7 +136,7 @@ public class LinkerPostConfigurationServicesPod {
     @Bean
     public EntityKeyIdService idService() {
         return new PostgresEntityKeyIdService(
-                hikariDataSource,
+                dataSourceResolver(),
                 idGeneration(),
                 partitionManager );
     }
