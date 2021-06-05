@@ -142,7 +142,6 @@ spotbugsMain {
 
 configurations {
     provided
-    //compile { }
 }
 
 configurations.all {
@@ -231,10 +230,10 @@ tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
 }
 
 jar {
-    doLast {
+    doFirst {
         manifest {
             attributes (
-                    "Class-Path": configurations.compile.files.collect { it.getName() }.join(" "),
+                    "Class-Path": configurations.runtime.files.collect { it.getName() }.join(" "),
                     "Main-Class": mainClassName
             )
         }
