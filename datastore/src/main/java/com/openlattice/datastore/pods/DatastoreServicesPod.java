@@ -487,7 +487,7 @@ public class DatastoreServicesPod {
     @Bean
     public EntityKeyIdService idService() {
         return new PostgresEntityKeyIdService(
-                hikariDataSource,
+                dataSourceResolver(),
                 idGenerationService(),
                 partitionManager() );
     }

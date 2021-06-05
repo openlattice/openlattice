@@ -27,13 +27,16 @@ import com.kryptnostic.rhizome.core.RhizomeApplicationServer
 import com.openlattice.assembler.pods.AssemblerConfigurationPod
 import com.openlattice.auditing.pods.AuditingConfigurationPod
 import com.openlattice.auth0.Auth0Pod
+import com.openlattice.data.storage.DataSourceResolver
 import com.openlattice.datastore.constants.DatastoreProfiles
 import com.openlattice.edm.PostgresEdmManager
 import com.openlattice.hazelcast.pods.MapstoresPod
 import com.openlattice.hazelcast.pods.SharedStreamSerializersPod
 import com.openlattice.hazelcast.pods.TestPod
+import com.openlattice.jdbc.DataSourceManager
 import com.openlattice.jdbc.JdbcPod
 import com.openlattice.postgres.PostgresPod
+import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.PostgresTablesPod
 import com.openlattice.postgres.pods.ExternalDatabaseConnectionManagerPod
 import com.zaxxer.hikari.HikariDataSource
@@ -61,6 +64,9 @@ open class TestServer {
         @JvmField
         val hds: HikariDataSource
 
+        @JvmField
+        val dsr: DataSourceResolver
+
         init {
             testServer.sprout(ConfigurationConstants.Profiles.LOCAL_CONFIGURATION_PROFILE, PostgresPod.PROFILE,
                     DatastoreProfiles.MEDIA_LOCAL_PROFILE)
@@ -68,6 +74,11 @@ open class TestServer {
             hazelcastInstance = testServer.context.getBean(HazelcastInstance::class.java)
             //This should work as tests aren't sharded all will all share the default datasource
             hds = testServer.context.getBean(HikariDataSource::class.java)
+            val dataSourceManager = testServer.context.getBean(DataSourceManager::class.java)
+            dataSourceManager.registerTablesWithAllDatasources(PostgresTable.E)
+            dataSourceManager.registerTablesWithAllDatasources(PostgresTable.DATA)
+            dsr = DataSourceResolver(hazelcastInstance, dataSourceManager,true)
+
             val edm = PostgresEdmManager(hds)
 
             testServer.context.getBean(EventBus::class.java)

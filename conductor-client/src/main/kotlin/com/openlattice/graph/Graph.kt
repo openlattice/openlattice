@@ -204,19 +204,17 @@ class Graph(
         return keyMap.map { (entitySetId, keys) ->
             val hds = dataSourceResolver.resolve(entitySetId)
             hds.connection.use { connection ->
-                var updates = 0
                 connection.autoCommit = false
-                connection.prepareStatement(LOCK_BY_VERTEX_SQL).use { psLocks ->
+                val updates = connection.prepareStatement(LOCK_BY_VERTEX_SQL).use { psLocks ->
                     connection.prepareStatement(statement).use { psExecute ->
                         keys.forEach { dataEdgeKey ->
                             statementSupplier(psLocks, psExecute, dataEdgeKey)
                         }
                         psLocks.executeBatch()
-                        updates = psExecute.executeBatch().sum()
+                        psExecute.executeBatch().sum()
                     }
                 }
                 connection.commit()
-
                 connection.autoCommit = true
                 updates
             }
@@ -258,6 +256,10 @@ class Graph(
         }
     }
 
+    /**
+     * @param entitySetIds The base entity set ids for the neighbor query
+     * @param pagedNeighborRequest
+     */
     override fun getEdgesAndNeighborsForVertices(
             entitySetIds: Set<UUID>,
             pagedNeighborRequest: PagedNeighborRequest
@@ -280,7 +282,7 @@ class Graph(
          * Another note here is that we could filter down each query to make it smaller, but it's a simpler code
          * change for now to repeat the full query on all nodes.
          */
-        return allEntitySetIds //Consider using allEntitySetIds for reasons mentioned above.
+        val edges = entitySetIds
                 .groupBy { dataSourceResolver.getDataSourceName(it) }
                 .flatMap { (dataSourceName, entitySetIdsForDataSource) ->
                     BasePostgresIterable(
@@ -290,10 +292,10 @@ class Graph(
                             ) { ps ->
                                 val connection = ps.connection
                                 val idsArr = PostgresArrays.createUuidArray(connection, filter.entityKeyIds)
-                                val entitySetIdsArr = PostgresArrays.createUuidArray(connection, entitySetIds)
+                                val entitySetIdsArr = PostgresArrays.createUuidArray(connection, entitySetIdsForDataSource)
                                 val partitionsArr = PostgresArrays.createIntArray(
-                                        connection, entitySetIds.flatMap {
-                                    entitySetPartitions.getValue(it)
+                                        connection,
+                                        entitySetIdsForDataSource.flatMap { entitySetPartitions.getValue(it)
                                 })
                                 ps.setArray(1, idsArr)
                                 ps.setArray(2, entitySetIdsArr)
@@ -303,7 +305,9 @@ class Graph(
                             }) {
                         ResultSetAdapters.edge(it)
                     }.toList()
-                }.stream()
+                }
+
+        return edges.stream()
     }
 
 

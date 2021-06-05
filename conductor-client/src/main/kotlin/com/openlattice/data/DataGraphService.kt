@@ -156,7 +156,7 @@ class DataGraphService(
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Pair<List<UUID>, WriteEvent> {
         val ids = idService.reserveIds(entitySetId, entities.size)
-        val entityMap = ids.mapIndexed { i, id -> id to entities[i] }.toMap()
+        val entityMap = ids.zip(entities).toMap()
         val writeEvent = eds.createOrUpdateEntities(entitySetId, entityMap, authorizedPropertyTypes)
 
         return Pair.of(ids, writeEvent)
@@ -212,7 +212,9 @@ class DataGraphService(
 
                     val entities = it.value.map(DataEdge::getData)
                     val (ids, entityWrite) = createEntities(
-                            entitySetId, entities, authorizedPropertiesByEntitySetId.getValue(entitySetId)
+                            entitySetId,
+                            entities,
+                            authorizedPropertiesByEntitySetId.getValue(entitySetId)
                     )
 
                     val edgeKeys = it.value.asSequence().mapIndexed { index, dataEdge ->

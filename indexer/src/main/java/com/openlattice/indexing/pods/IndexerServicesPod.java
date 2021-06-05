@@ -336,7 +336,7 @@ public class IndexerServicesPod {
     @Bean
     public EntityKeyIdService idService() {
         return new PostgresEntityKeyIdService(
-                hikariDataSource,
+                dataSourceResolver(),
                 idGeneration(),
                 partitionManager() );
     }
