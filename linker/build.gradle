@@ -85,9 +85,6 @@ if (GC == 'null' || GC == null || GC == "") {
     GC = "-XX:+UseG1GC"
 }
 
-sourceCompatibility = JavaVersion.VERSION_11
-targetCompatibility = JavaVersion.VERSION_11
-
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(11)
@@ -184,10 +181,10 @@ dependencies {
     compile "org.ow2.asm:asm:${asm_version}"
     compile "org.nd4j:nd4j-cuda-9.2-platform:${deeplearning4j}"
 
-    implementation "com.openlattice:conductor-client:${conductor_client_version}"
-    implementation "com.openlattice:scrunchie:${scrunchie_version}"
-    implementation "com.openlattice:courier:${courier_version}"
-    implementation "com.openlattice:rhizome:${rhizome_version}"
+    compile "com.openlattice:conductor-client:${conductor_client_version}"
+    compile "com.openlattice:scrunchie:${scrunchie_version}"
+    compile "com.openlattice:courier:${courier_version}"
+    compile "com.openlattice:rhizome:${rhizome_version}"
 
     if( project.hasProperty('developmentMode') && project.developmentMode ) {
         testImplementation(project(path: ":rhizome-client", configuration: "tests"))
@@ -213,7 +210,8 @@ eclipse {
 eclipse.classpath.plusConfigurations += [configurations.provided]
 
 tasks.withType(JavaCompile) {
-    options.compilerArgs += ["--add-modules", "java.se"]
+    options.compilerArgs+= [ "--add-modules", "java.se",
+                             "--add-exports","java.base/jdk.internal.ref=ALL-UNNAMED"]
 }
 
 tasks.withType(Test) {
@@ -245,5 +243,5 @@ jar {
 }
 
 startScripts {
-    classpath = files(jar.archivePath)
+    classpath = files(jar.archiveFile.get().asFile)
 }
