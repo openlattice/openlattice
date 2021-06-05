@@ -235,7 +235,7 @@ jar {
     doFirst {
         manifest {
             attributes (
-                    "Class-Path": configurations.runtime.files.collect { it.getName() }.join(" "),
+                    "Class-Path": configurations.compile.files.collect { it.getName() }.join(" "),
                     "Main-Class": mainClassName
             )
         }
