@@ -1,0 +1,6 @@
+hikariConfigs:
+  demodata:
+    jdbcUrl: jdbc:postgresql://atlas.openlattice.com:30001/example_integration?ssl=true&sslmode=require
+    username: example_user
+    password: examplepassword
+    maximumPoolSize: 10

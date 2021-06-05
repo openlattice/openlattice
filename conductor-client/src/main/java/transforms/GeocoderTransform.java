@@ -19,7 +19,7 @@ import java.util.Map;
 import java.util.Optional;
 
 public class GeocoderTransform extends Transformation<Object> {
-    protected static final String       NOMINATIM_SERVICE_URL = "https://osm.openlattice.com/nominatim/";
+    protected static final String       NOMINATIM_SERVICE_URL = "https://osm.openlattice.com/";
     private final          String       addressObject;
     private final          GeocodingApi geocodingApi;
 

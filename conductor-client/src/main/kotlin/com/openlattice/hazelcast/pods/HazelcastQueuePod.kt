@@ -30,8 +30,7 @@ import org.springframework.context.annotation.Configuration
 class HazelcastQueuePod {
 
     companion object {
-        @JvmField
-        val maxQueueSize = 10_000
+        const val maxQueueSize = 10_000
     }
 
     @Bean
@@ -65,7 +64,7 @@ class HazelcastQueuePod {
     @Bean
     fun linkingQueueConfigurer(): QueueConfigurer {
         return QueueConfigurer(HazelcastQueue.LINKING_CANDIDATES.name) { config ->
-            config.setMaxSize(1_000).backupCount = 1
+            config.setMaxSize(10_000).backupCount = 1
         }
     }
 

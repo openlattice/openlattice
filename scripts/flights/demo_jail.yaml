@@ -1,0 +1,270 @@
+
+entityDefinitions:
+  
+  person:
+    fqn: "general.person"
+    entitySetName: "DemoInmates"
+    propertyDefinitions:
+      nc.SubjectIdentification:
+        type: "nc.SubjectIdentification"
+        column: "name_id"
+      nc.PersonGivenName:
+        type: "nc.PersonGivenName"
+        column: "firstName"
+      nc.PersonSurName:
+        type: "nc.PersonSurName"
+        column: "lastName"
+      nc.PersonMiddleName:
+        type: "nc.PersonMiddleName"
+        column: "middleName"
+      nc.PersonSex:
+        type: "nc.PersonSex"
+        column: "sex"
+      nc.PersonRace:
+        type: "nc.PersonRace"
+        column: "race"
+      nc.PersonEthnicity:
+        type: "nc.PersonEthnicity"
+        column: "ethnicity"
+      nc.PersonBirthDate:
+        type: "nc.PersonBirthDate"
+        column: "dob"
+        transforms:
+        - !<transforms.DateTransform>
+          pattern: ["yyyy-MM-dd"]
+          timezone: "America/Los_Angeles"
+      nc.SSN:
+        type: "nc.SSN"
+        column: "ssn"
+    name: "person"
+
+  jailstay:
+    fqn: "ol.jailstay"
+    entitySetName: "DemoJailStays"
+    propertyDefinitions:
+      ol.id:
+        type: "ol.id"
+        column: "book_id"
+      general.status:
+        type: "general.status"
+        column: "bkstatus" #I or A = inmate or arrest ?
+      incident.startdatetime:
+        type: "incident.startdatetime"
+        column: "bookDateTime"
+        transforms:
+        - !<transforms.DateTimeTransform>
+          pattern: ["MM/dd/yyyy HH:mm"]
+          timezone: "America/Los_Angeles"
+      ol.projectedreleasedatetime:
+        type: "ol.projectedreleasedatetime"
+        column: projectedreleasedatetime
+        transforms:
+        - !<transforms.DateTimeTransform>
+          pattern: ["MM/dd/yyyy HH:mm"]
+          timezone: "America/Los_Angeles"
+      ol.releasedatetime:
+        type: ol.releasedatetime
+        column: releasedatetime
+        transforms:
+        - !<transforms.DateTimeTransform>
+          pattern: ["MM/dd/yyyy HH:mm"]
+          timezone: "America/Los_Angeles"
+      ol.reasoncode:
+        type: "ol.reasoncode"
+        column: "confreason"
+    name: "jailstay"
+  
+  jailstaylength:
+    fqn: "ol.jailstaylength"
+    entitySetName: "DemoTimeServed"
+    name: jailstaylength
+    propertyDefinitions:
+      ol.id:
+        type: "ol.id"
+        column: "daysserved"
+      criminaljustice.timeserveddays:
+        type: "criminaljustice.timeserveddays"
+        column: "daysserved"
+        transforms:
+        - !<transforms.ParseIntTransform> {}
+  
+  incarceration_facility:
+    fqn: "o.facility"
+    entitySetName: "DemoIncarcerationFacilities"
+    name: incarceration_facility
+    propertyDefinitions:
+      general.id:
+        type: "general.id"
+        column: facility
+      ol.name:
+        type: "ol.name"
+        column: facility
+      ol.servicesetting:
+        type: ol.servicesetting
+        transforms:
+        - !<transforms.ValueTransform>
+          value: "Jail"
+  
+  courtcase:
+    fqn: "justice.case"
+    entitySetName: "DemoCourtCases"
+    name: courtcase
+    propertyDefinitions:
+      j.CaseNumberText:
+        type: "j.CaseNumberText"
+        column: "docketno"
+      justice.courtcasenumber:
+        type: "justice.courtcasenumber"
+        column: "docketno"
+  
+  inmatedetails:
+    fqn: "ol.persondetails"
+    entitySetName: "DemoInmateDetails"
+    propertyDefinitions:
+      general.id:
+        type: "general.id"
+        column: "name_id"
+      person.juvenile: #bool
+        type: "person.juvenile" #bool
+        column: "juvenile"
+        transforms:
+        - !<transforms.ParseBoolTransform> {}
+      person.maritalstatus: 
+        type: "person.maritalstatus" 
+        column: "maritalstatus"
+      person.gender:
+        type: person.gender
+        column: gender
+    name: "inmatedetails"
+  
+  inmatedetailscriminaljustice:
+    fqn: "ol.persondetailscriminaljustice"
+    entitySetName: "DemoInmateDetailsCriminalJustice"
+    propertyDefinitions:
+      ol.id:
+        type: "ol.id"
+        column: "name_id"
+      ol.sexoffender: #bool
+        type: "ol.sexoffender" #bool
+        column: "sexoffender"
+        transforms:
+        - !<transforms.ParseBoolTransform> {}
+    name: "inmatedetailscriminaljustice"
+  
+  education:
+    fqn: ol.education
+    entitySetName: "DemoInmateEducation"
+    name: education
+    propertyDefinitions:
+      ol.id:
+        type: ol.id
+        column:
+      ol.highesteducation_enum:
+        type: ol.highesteducation_enum
+        column: education
+
+associationDefinitions:
+  
+  subjectof:
+    fqn: ol.subjectof
+    entitySetName: DemoJailSubjectOf
+    src: person
+    dst: jailstay
+    propertyDefinitions:
+      ol.id:
+        type: ol.id
+        column: name_id
+    
+  locatedat:
+    fqn: ol.locatedat
+    entitySetName: DemoJailLocatedAt
+    src: jailstay
+    dst: incarceration_facility
+    propertyDefinitions:
+      general.id:
+        type: general.id
+        column: name_id
+    
+  appearsin:
+    fqn: ol.appearsin
+    entitySetName: DemoJailAppearsIn
+    src: person
+    dst: courtcase
+    propertyDefinitions:
+      ol.id:
+        type: ol.id
+        column: name_id
+
+  has:
+    fqn: ol.has
+    entitySetName: DemoJailHas
+    name: has1
+    src: person
+    dst: inmatedetails
+    propertyDefinitions:
+      ol.id:
+        type: ol.id
+        transforms:
+        - !<transforms.ConcatCombineTransform>
+          transforms:
+          - !<transforms.ColumnTransform>
+            column: name_id
+          - !<transforms.ValueTransform>
+            value: person_inmatedetails
+    
+  has2:
+    fqn: ol.has
+    entitySetName: DemoJailHas
+    name: has2
+    src: person
+    dst: inmatedetailscriminaljustice
+    propertyDefinitions:
+      ol.id:
+        type: ol.id
+        transforms:
+        - !<transforms.ConcatCombineTransform>
+          transforms:
+          - !<transforms.ColumnTransform>
+            column: name_id
+          - !<transforms.ValueTransform>
+            value: person_inmatedetailscj
+    
+  has3:
+    fqn: ol.has
+    entitySetName: DemoJailHas
+    name: has3
+    src: person
+    dst: education
+    propertyDefinitions:
+      ol.id:
+        type: ol.id
+        transforms:
+        - !<transforms.ConcatCombineTransform>
+          transforms:
+          - !<transforms.ColumnTransform>
+            column: name_id
+          - !<transforms.ValueTransform>
+            value: person_education
+    
+  oflength:
+    fqn: ol.oflength
+    entitySetName: DemoJailOfLength
+    name: oflength
+    src: jailstay
+    dst: jailstaylength
+    propertyDefinitions:
+      ol.id:
+        type: ol.id
+        column: name_id
+      
+
+
+
+
+
+
+
+
+
+
+

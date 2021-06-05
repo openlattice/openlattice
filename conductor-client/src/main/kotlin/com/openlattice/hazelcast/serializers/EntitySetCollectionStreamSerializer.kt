@@ -20,9 +20,7 @@ class EntitySetCollectionStreamSerializer : SelfRegisteringStreamSerializer<Enti
         return EntitySetCollection::class.java
     }
 
-    override fun write(out: ObjectDataOutput?, `object`: EntitySetCollection) {
-        val collection = `object`
-
+    override fun write(out: ObjectDataOutput?, collection: EntitySetCollection) {
         UUIDStreamSerializerUtils.serialize(out, collection.id)
         out?.writeUTF(collection.name)
         out?.writeUTF(collection.title)
@@ -32,7 +30,7 @@ class EntitySetCollectionStreamSerializer : SelfRegisteringStreamSerializer<Enti
         UUIDStreamSerializerUtils.serialize(out, collection.organizationId)
 
         out?.writeInt(collection.template.size)
-        collection.template.forEach { typeId, entitySetId ->
+        collection.template.forEach { (typeId, entitySetId) ->
             run {
                 UUIDStreamSerializerUtils.serialize(out, typeId)
                 UUIDStreamSerializerUtils.serialize(out, entitySetId)

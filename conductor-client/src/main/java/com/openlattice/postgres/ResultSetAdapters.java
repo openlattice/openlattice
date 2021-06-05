@@ -35,13 +35,11 @@ import com.openlattice.apps.AppTypeSetting;
 import com.openlattice.assembler.EntitySetAssemblyKey;
 import com.openlattice.assembler.MaterializedEntitySet;
 import com.openlattice.auditing.AuditRecordEntitySetConfiguration;
-import com.openlattice.authorization.AceKey;
-import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.Permission;
-import com.openlattice.authorization.Principal;
-import com.openlattice.authorization.PrincipalType;
-import com.openlattice.authorization.SecurablePrincipal;
+import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.collaborations.Collaboration;
+import com.openlattice.collaborations.ProjectedTableKey;
+import com.openlattice.collaborations.ProjectedTableMetadata;
 import com.openlattice.collections.CollectionTemplateKey;
 import com.openlattice.collections.CollectionTemplateType;
 import com.openlattice.collections.EntitySetCollection;
@@ -53,11 +51,10 @@ import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.EntityKey;
 import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.data.storage.MetadataOption;
+import com.openlattice.datasets.SecurableObjectMetadata;
 import com.openlattice.directory.MaterializedViewAccount;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.EntitySetFlag;
-import com.openlattice.edm.set.EntitySetPropertyKey;
-import com.openlattice.edm.set.EntitySetPropertyMetadata;
 import com.openlattice.edm.set.ExpirationBase;
 import com.openlattice.edm.type.Analyzer;
 import com.openlattice.edm.type.AssociationType;
@@ -74,9 +71,9 @@ import com.openlattice.linking.EntityKeyPair;
 import com.openlattice.linking.EntityLinkingFeedback;
 import com.openlattice.notifications.sms.SmsEntitySetInformation;
 import com.openlattice.notifications.sms.SmsInformationKey;
+import com.openlattice.organization.ExternalColumn;
+import com.openlattice.organization.ExternalTable;
 import com.openlattice.organization.OrganizationEntitySetFlag;
-import com.openlattice.organization.OrganizationExternalDatabaseColumn;
-import com.openlattice.organization.OrganizationExternalDatabaseTable;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.OrganizationDatabase;
 import com.openlattice.requests.Request;
@@ -94,7 +91,6 @@ import com.openlattice.subscriptions.SubscriptionContactType;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.jetbrains.annotations.NotNull;
-import org.postgresql.core.Oid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -125,7 +121,9 @@ import static com.openlattice.postgres.PostgresColumn.BIDIRECTIONAL;
 import static com.openlattice.postgres.PostgresColumn.CATEGORY;
 import static com.openlattice.postgres.PostgresColumn.CLASS_NAME;
 import static com.openlattice.postgres.PostgresColumn.CLASS_PROPERTIES;
+import static com.openlattice.postgres.PostgresColumn.COLLABORATION_ID;
 import static com.openlattice.postgres.PostgresColumn.COLUMN_NAME;
+import static com.openlattice.postgres.PostgresColumn.COLUMN_NAMES_FIELD;
 import static com.openlattice.postgres.PostgresColumn.CONFIG_ID;
 import static com.openlattice.postgres.PostgresColumn.CONNECTION_TYPE;
 import static com.openlattice.postgres.PostgresColumn.CONSTRAINT_TYPE;
@@ -133,6 +131,7 @@ import static com.openlattice.postgres.PostgresColumn.CONTACTS;
 import static com.openlattice.postgres.PostgresColumn.CONTACT_INFO;
 import static com.openlattice.postgres.PostgresColumn.COUNT;
 import static com.openlattice.postgres.PostgresColumn.DATABASE;
+import static com.openlattice.postgres.PostgresColumn.DATASTORE_FIELD;
 import static com.openlattice.postgres.PostgresColumn.DATATYPE;
 import static com.openlattice.postgres.PostgresColumn.DESCRIPTION;
 import static com.openlattice.postgres.PostgresColumn.DST;
@@ -177,6 +176,7 @@ import static com.openlattice.postgres.PostgresColumn.LINKING;
 import static com.openlattice.postgres.PostgresColumn.LINKING_ID;
 import static com.openlattice.postgres.PostgresColumn.LSB_FIELD;
 import static com.openlattice.postgres.PostgresColumn.MEMBERS;
+import static com.openlattice.postgres.PostgresColumn.METADATA;
 import static com.openlattice.postgres.PostgresColumn.MSB_FIELD;
 import static com.openlattice.postgres.PostgresColumn.MULTI_VALUED;
 import static com.openlattice.postgres.PostgresColumn.NAME;
@@ -185,11 +185,13 @@ import static com.openlattice.postgres.PostgresColumn.NULLABLE_TITLE;
 import static com.openlattice.postgres.PostgresColumn.OID;
 import static com.openlattice.postgres.PostgresColumn.ORDINAL_POSITION;
 import static com.openlattice.postgres.PostgresColumn.ORGANIZATION_ID;
+import static com.openlattice.postgres.PostgresColumn.ORGANIZATION_IDS;
 import static com.openlattice.postgres.PostgresColumn.ORGANIZATION_ID_FIELD;
 import static com.openlattice.postgres.PostgresColumn.ORIGIN_ID;
 import static com.openlattice.postgres.PostgresColumn.PARTITION;
 import static com.openlattice.postgres.PostgresColumn.PARTITIONS_FIELD;
 import static com.openlattice.postgres.PostgresColumn.PARTITION_INDEX_FIELD;
+import static com.openlattice.postgres.PostgresColumn.PERMISSION;
 import static com.openlattice.postgres.PostgresColumn.PERMISSIONS_FIELD;
 import static com.openlattice.postgres.PostgresColumn.PHONE_NUMBER_FIELD;
 import static com.openlattice.postgres.PostgresColumn.PII;
@@ -202,8 +204,11 @@ import static com.openlattice.postgres.PostgresColumn.PROPERTY_TAGS_FIELD;
 import static com.openlattice.postgres.PostgresColumn.PROPERTY_TYPE_ID;
 import static com.openlattice.postgres.PostgresColumn.REASON;
 import static com.openlattice.postgres.PostgresColumn.REFRESH_RATE;
+import static com.openlattice.postgres.PostgresColumn.ROLE_ID;
 import static com.openlattice.postgres.PostgresColumn.SCHEDULED_DATE;
+import static com.openlattice.postgres.PostgresColumn.SCHEMA;
 import static com.openlattice.postgres.PostgresColumn.SCHEMAS;
+import static com.openlattice.postgres.PostgresColumn.SCHEMA_NAME_FIELD;
 import static com.openlattice.postgres.PostgresColumn.SCORE_FIELD;
 import static com.openlattice.postgres.PostgresColumn.SEARCH_CONSTRAINTS_FIELD;
 import static com.openlattice.postgres.PostgresColumn.SECURABLE_OBJECTID;
@@ -299,7 +304,7 @@ public final class ResultSetAdapters {
     }
 
     public static EntityDataKey srcEntityDataKey( ResultSet rs ) throws SQLException {
-    final UUID srcEntitySetId = (UUID) rs.getObject( SRC_ENTITY_SET_ID_FIELD );
+        final UUID srcEntitySetId = (UUID) rs.getObject( SRC_ENTITY_SET_ID_FIELD );
         final UUID srcEntityKeyId = (UUID) rs.getObject( SRC_ENTITY_KEY_ID_FIELD );
         return new EntityDataKey( srcEntitySetId, srcEntityKeyId );
     }
@@ -357,6 +362,10 @@ public final class ResultSetAdapters {
 
     public static UUID edgeEntitySetId( ResultSet rs ) throws SQLException {
         return rs.getObject( EDGE_ENTITY_SET_ID.getName(), UUID.class );
+    }
+
+    public static UUID edgeEntityKeyId( ResultSet rs ) throws SQLException {
+        return rs.getObject( EDGE_ENTITY_KEY_ID.getName(), UUID.class );
     }
 
     public static DataEdgeKey edgeKey( ResultSet rs ) throws SQLException {
@@ -468,7 +477,7 @@ public final class ResultSetAdapters {
     }
 
     public static int oid( ResultSet rs ) throws SQLException {
-        return rs.getInt("oid");
+        return rs.getInt( "oid" );
     }
 
     public static String name( ResultSet rs ) throws SQLException {
@@ -487,6 +496,10 @@ public final class ResultSetAdapters {
 
     public static String description( ResultSet rs ) throws SQLException {
         return rs.getString( DESCRIPTION.getName() );
+    }
+
+    public static String schemaName( ResultSet rs ) throws SQLException {
+        return rs.getString( SCHEMA_NAME_FIELD );
     }
 
     public static Set<FullQualifiedName> schemas( ResultSet rs ) throws SQLException {
@@ -712,6 +725,7 @@ public final class ResultSetAdapters {
         final var partitions = partitions( rs );
         final var expirationData = dataExpiration( rs );
         final var storageType = storageType( rs );
+        final var datastore = datastore( rs );
         return new EntitySet( id,
                 entityTypeId,
                 name,
@@ -723,7 +737,12 @@ public final class ResultSetAdapters {
                 flags,
                 new LinkedHashSet<>( Arrays.asList( partitions ) ),
                 expirationData,
-                storageType );
+                storageType,
+                datastore );
+    }
+
+    public static String datastore( ResultSet rs ) throws SQLException {
+        return rs.getString( DATASTORE_FIELD );
     }
 
     public static StorageType storageType( ResultSet rs ) throws SQLException {
@@ -794,22 +813,6 @@ public final class ResultSetAdapters {
         UUID entitySetId = entitySetId( rs );
         UUID propertyTypeId = propertyTypeId( rs );
         return new EntityTypePropertyKey( entitySetId, propertyTypeId );
-    }
-
-    public static EntitySetPropertyMetadata entitySetPropertyMetadata( ResultSet rs ) throws SQLException {
-        String title = title( rs );
-        String description = description( rs );
-        boolean show = show( rs );
-        LinkedHashSet<String> tags = new LinkedHashSet<>( Arrays
-                .asList( PostgresArrays.getTextArray( rs, PostgresColumn.TAGS_FIELD ) ) );
-
-        return new EntitySetPropertyMetadata( title, description, tags, show );
-    }
-
-    public static EntitySetPropertyKey entitySetPropertyKey( ResultSet rs ) throws SQLException {
-        UUID entitySetId = entitySetId( rs );
-        UUID propertyTypeId = propertyTypeId( rs );
-        return new EntitySetPropertyKey( entitySetId, propertyTypeId );
     }
 
     public static Boolean multiValued( ResultSet rs ) throws SQLException {
@@ -1038,6 +1041,10 @@ public final class ResultSetAdapters {
         return rs.getObject( TEMPLATE_TYPE_ID.getName(), UUID.class );
     }
 
+    public static String schema( ResultSet rs ) throws SQLException {
+        return rs.getString( SCHEMA.getName() );
+    }
+
     public static EntityTypeCollection entityTypeCollection( ResultSet rs ) throws SQLException, IOException {
         UUID id = id( rs );
         FullQualifiedName type = fqn( rs );
@@ -1075,19 +1082,20 @@ public final class ResultSetAdapters {
         return new CollectionTemplateKey( entitySetCollectionId, templateTypeId );
     }
 
-    public static OrganizationExternalDatabaseTable organizationExternalDatabaseTable( ResultSet rs )
+    public static ExternalTable externalTable( ResultSet rs )
             throws SQLException {
         UUID id = id( rs );
         String name = name( rs );
         String title = title( rs );
         Optional<String> description = Optional.ofNullable( description( ( rs ) ) );
         UUID organizationId = organizationId( rs );
-        int oid = oid(rs);
+        int oid = oid( rs );
+        String schema = schema( rs );
 
-        return new OrganizationExternalDatabaseTable( id, name, title, description, organizationId,oid );
+        return new ExternalTable( id, name, title, description, organizationId, oid, schema );
     }
 
-    public static OrganizationExternalDatabaseColumn organizationExternalDatabaseColumn( ResultSet rs )
+    public static ExternalColumn externalColumn( ResultSet rs )
             throws SQLException {
         UUID id = id( rs );
         String name = name( rs );
@@ -1099,7 +1107,7 @@ public final class ResultSetAdapters {
         boolean isPrimaryKey = rs.getBoolean( IS_PRIMARY_KEY.getName() );
         Integer ordinalPosition = ordinalPosition( rs );
 
-        return new OrganizationExternalDatabaseColumn( id,
+        return new ExternalColumn( id,
                 name,
                 title,
                 description,
@@ -1112,6 +1120,10 @@ public final class ResultSetAdapters {
 
     public static String columnName( ResultSet rs ) throws SQLException {
         return rs.getString( COLUMN_NAME.getName() );
+    }
+
+    public static List<String> columnNames( ResultSet rs ) throws SQLException {
+        return Lists.newArrayList( getTextArray( rs, COLUMN_NAMES_FIELD ) );
     }
 
     public static PostgresDatatype sqlDataType( ResultSet rs ) throws SQLException {
@@ -1191,6 +1203,56 @@ public final class ResultSetAdapters {
         int oid = rs.getInt( OID.getName() );
         String name = name( rs );
 
-        return new OrganizationDatabase(oid, name);
+        return new OrganizationDatabase( oid, name );
     }
+
+    public static Set<UUID> organizationIds( ResultSet rs ) throws SQLException {
+        final UUID[] organizationIds = PostgresArrays.getUuidArray( rs, ORGANIZATION_IDS.getName() );
+
+        if ( organizationIds == null ) {
+            return new LinkedHashSet<>();
+        }
+
+        return new LinkedHashSet<>( Arrays.asList( organizationIds ) );
+    }
+
+    public static Collaboration collaboration( ResultSet rs ) throws SQLException {
+        UUID id = id( rs );
+        String name = name( rs );
+        String title = title( rs );
+        String description = description( rs );
+        Set<UUID> organizationIds = organizationIds( rs );
+
+        return new Collaboration( id, name, title, description, organizationIds );
+    }
+
+    @NotNull public static UUID collaborationId( @NotNull ResultSet rs ) throws SQLException {
+        return rs.getObject( COLLABORATION_ID.getName(), UUID.class );
+    }
+
+    @NotNull public static UUID roleId( @NotNull ResultSet rs ) throws SQLException {
+        return rs.getObject( ROLE_ID.getName(), UUID.class );
+    }
+
+    @NotNull public static Permission permission( @NotNull ResultSet rs ) throws SQLException {
+        return Permission.valueOf( rs.getString( PERMISSION.getName() ) );
+    }
+
+    @NotNull public static AccessTarget accessTarget( @NotNull ResultSet rs ) throws SQLException {
+        return new AccessTarget( aclKey( rs ), permission( rs ) );
+    }
+
+    @NotNull public static ProjectedTableKey projectedTableKey( @NotNull ResultSet rs ) throws SQLException {
+        return new ProjectedTableKey( tableId( rs ), collaborationId( rs ) );
+    }
+
+    @NotNull public static ProjectedTableMetadata projectedTableMetadata( @NotNull ResultSet rs ) throws SQLException {
+        return new ProjectedTableMetadata( organizationId( rs ), name( rs ) );
+    }
+
+    @NotNull public static SecurableObjectMetadata securableObjectMetadata( @NotNull ResultSet rs )
+            throws SQLException, IOException {
+        return mapper.readValue( rs.getString( METADATA.getName() ), SecurableObjectMetadata.class );
+    }
+
 }

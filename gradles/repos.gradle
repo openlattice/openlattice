@@ -1,0 +1,44 @@
+apply plugin: "maven"
+
+repositories {
+
+  // Hit the local maven repo
+  mavenLocal()
+
+  //Hit our releases
+  maven {
+    url 'https://artifactory.openlattice.com/artifactory/libs-release/'
+  }
+
+  //Hit our snapshots
+  maven {
+    url 'https://artifactory.openlattice.com/artifactory/libs-snapshot/'
+  }
+
+  // Hit sonatype snapshots
+  maven {
+    url 'https://oss.sonatype.org/content/repositories/snapshots'
+  }
+
+  // Rhizome things
+  maven {
+    url "https://maven.springframework.org/snapshot"
+  }
+  
+  maven {
+    url "https://maven.springframework.org/milestone"
+  }
+  maven {
+    url "https://repo.maven.apache.org/maven2"
+  }
+  maven {
+    url "https://repository.apache.org/snapshots/"
+  }
+
+  // Hit mavencentral
+  mavenCentral()
+  // For cascading hadoop jar
+  maven {
+    url "http://conjars.org/repo/"
+  }
+}

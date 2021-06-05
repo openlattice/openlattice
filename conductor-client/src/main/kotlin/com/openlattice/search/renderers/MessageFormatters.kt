@@ -7,8 +7,8 @@ import java.util.*
 
 /* TIME ZONE SETUP */
 
-private val DATE_FORMAT = "MM/dd/yyyy"
-private val TIME_FORMAT = "hh:mm a, z"
+private const val DATE_FORMAT = "MM/dd/yyyy"
+private const val TIME_FORMAT = "hh:mm a, z"
 
 private val DATE = mapOf<MessageFormatters.TimeZones, DateTimeFormatter>(
         MessageFormatters.TimeZones.PST to DateTimeFormatter.ofPattern(DATE_FORMAT).withZone(TimeZone.getTimeZone("America/Los_Angeles").toZoneId()),

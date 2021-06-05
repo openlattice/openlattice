@@ -8,7 +8,6 @@ import com.openlattice.data.requests.NeighborEntityDetails
 import com.openlattice.edm.EdmConstants
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
-import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.PagedNeighborRequest
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.PERSISTENT_SEARCHES
@@ -28,7 +27,6 @@ import org.slf4j.LoggerFactory
 import java.time.OffsetDateTime
 import java.util.*
 import java.util.concurrent.TimeUnit
-import java.util.stream.Collectors
 import kotlin.streams.asSequence
 
 private val logger = LoggerFactory.getLogger(PersistentSearchMessengerTask::class.java)
@@ -57,24 +55,6 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
 
     override fun getDependenciesClass(): Class<out PersistentSearchMessengerTaskDependencies> {
         return PersistentSearchMessengerTaskDependencies::class.java
-    }
-
-    private fun getPropertyTypeIdsForEntitySet(entitySetId: UUID): Set<UUID> {
-        val dependencies = getDependency()
-        return dependencies.entityTypes[dependencies.entitySets[entitySetId]?.entityTypeId]?.properties.orEmpty()
-    }
-
-    private fun getAuthorizedPropertyMap(principals: Set<Principal>, entitySetId: UUID): Map<UUID, PropertyType> {
-        val accessChecks = getPropertyTypeIdsForEntitySet(entitySetId).map {
-            AccessCheck(
-                    AclKey(entitySetId, it), EnumSet.of(Permission.READ)
-            )
-        }.toMutableSet()
-        return getDependency().propertyTypes.getAll(
-                getDependency().authorizationManager.accessChecksForPrincipals(accessChecks, principals)
-                        .filter { it.permissions[Permission.READ]!! }
-                        .map { it.aclKey[1] }
-                        .collect(Collectors.toSet()))
     }
 
     private fun getUpdatedConstraints(persistentSearch: PersistentSearch): SearchConstraints {
@@ -178,13 +158,19 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
                     ),
                     allUserPrincipals
             ).neighbors
-            sendAlertsForNewWrites(userSecurablePrincipal, persistentSearch, results, neighborsById)
-            val lastReadDateTime = getLatestRead(results.hits)
-            logger.info(
-                    "Last read date time {} for alert {} with {} hits", lastReadDateTime, persistentSearch.id,
-                    results.numHits
-            )
-            lastReadDateTime?.let { updatedReadDateTimes[persistentSearch.id] = it }
+
+            try {
+                sendAlertsForNewWrites(userSecurablePrincipal, persistentSearch, results, neighborsById)
+                val lastReadDateTime = getLatestRead(results.hits)
+                logger.info(
+                        "Last read date time {} for alert {} with {} hits", lastReadDateTime, persistentSearch.id,
+                        results.numHits
+                )
+                lastReadDateTime?.let { updatedReadDateTimes[persistentSearch.id] = it }
+
+            } catch (e: Exception) {
+                logger.error("An error occurred while trying to send alerts for user {} for search {}", userSecurablePrincipal.aclKey, persistentSearch.id)
+            }
         }
 
         return updatedReadDateTimes
@@ -248,7 +234,4 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
         return "UPDATE ${PERSISTENT_SEARCHES.name} SET ${LAST_READ.name} = ? WHERE ${ID.name} = ?"
     }
 
-    private fun updateLastReadSql(readDateTime: OffsetDateTime, id: UUID): String {
-        return "UPDATE ${PERSISTENT_SEARCHES.name} SET ${LAST_READ.name} = '$readDateTime' WHERE ${ID.name} = '$id'"
-    }
 }

@@ -6,14 +6,20 @@ import com.amazonaws.HttpMethod
 import com.amazonaws.SdkClientException
 import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
-import com.amazonaws.retry.RetryPolicy
 import com.amazonaws.retry.PredefinedBackoffStrategies
 import com.amazonaws.retry.PredefinedRetryPolicies
+import com.amazonaws.retry.RetryPolicy
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
-import com.amazonaws.services.s3.model.*
+import com.amazonaws.services.s3.model.DeleteObjectRequest
+import com.amazonaws.services.s3.model.DeleteObjectsRequest
+import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest
+import com.amazonaws.services.s3.model.ObjectMetadata
+import com.amazonaws.services.s3.model.PutObjectRequest
+import com.amazonaws.services.s3.model.ResponseHeaderOverrides
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder
 import com.google.common.util.concurrent.ListeningExecutorService
+import com.openlattice.data.storage.BinaryObjectWithMetadata
 import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.datastore.configuration.DatastoreConfiguration
 import org.slf4j.LoggerFactory
@@ -25,7 +31,6 @@ import java.util.concurrent.Callable
 
 private val logger = LoggerFactory.getLogger(AwsBlobDataService::class.java)
 const val MAX_ERROR_RETRIES = 5
-const val MAX_DELAY = 8L * 60L * 1000L
 
 @Service
 class AwsBlobDataService(
@@ -48,12 +53,14 @@ class AwsBlobDataService(
         builder.clientConfiguration = ClientConfiguration().withRetryPolicy(retryPolicy)
         return builder.build()
     }
-    
-    override fun putObject(s3Key: String, data: ByteArray, contentType: String) {
+
+    override fun putObject(s3Key: String, binaryObjectWithMetadata: BinaryObjectWithMetadata) {
         val metadata = ObjectMetadata()
-        val dataInputStream = data.inputStream()
+        val dataInputStream = binaryObjectWithMetadata.data.inputStream()
         metadata.contentLength = dataInputStream.available().toLong()
-        metadata.contentType = contentType
+        metadata.contentType = binaryObjectWithMetadata.contentType
+        binaryObjectWithMetadata.contentDisposition?.let { metadata.contentDisposition = it }
+
         val putRequest = PutObjectRequest(datastoreConfiguration.bucketName, s3Key, dataInputStream, metadata)
         val transferManager = TransferManagerBuilder.standard().withS3Client(s3).build()
         val upload = transferManager.upload(putRequest)
@@ -77,20 +84,37 @@ class AwsBlobDataService(
     }
 
     override fun getPresignedUrls(keys: Collection<Any>): List<URL> {
-        val expirationTime = Date()
-        val timeToLive = expirationTime.time + datastoreConfiguration.timeToLive
-        expirationTime.time = timeToLive
-
-        return keys
-                .map { executorService.submit(Callable<URL> { getPresignedUrl(it as String, expirationTime, HttpMethod.GET, Optional.empty()) }) }
-                .map { it.get() }
+        return getPresignedUrlsWithDispositions(keys.associate { it as String to null }).values.toList()
     }
 
-    override fun getPresignedUrl(key: Any, expiration: Date, httpMethod: HttpMethod, contentType: Optional<String>): URL {
+    override fun getPresignedUrlsWithDispositions(keysToDispositions: Map<String, String?>): Map<String, URL> {
+        val expirationTime = getDefaultExpirationDateTime()
+
+        return keysToDispositions
+                .map { (key, disposition) ->
+                    executorService.submit(Callable<Pair<String, URL>> {
+                        key to getPresignedUrl(
+                                key = key,
+                                expiration = expirationTime,
+                                httpMethod = HttpMethod.GET,
+                                contentDisposition = disposition
+                        )
+                    })
+                }.map { it.get() }.toMap()
+    }
+
+    override fun getPresignedUrl(
+            key: Any,
+            expiration: Date,
+            httpMethod: HttpMethod,
+            contentType: String?,
+            contentDisposition: String?
+    ): URL {
         val urlRequest = GeneratePresignedUrlRequest(datastoreConfiguration.bucketName, key.toString()).withMethod(
                 httpMethod
         ).withExpiration(expiration)
-        contentType.ifPresent { urlRequest.contentType = contentType.get() }
+        contentType?.let { urlRequest.contentType = it }
+        contentDisposition?.let { urlRequest.responseHeaders = ResponseHeaderOverrides().withContentDisposition(it) }
         lateinit var url: URL
         try {
             url = s3.generatePresignedUrl(urlRequest)
@@ -100,6 +124,13 @@ class AwsBlobDataService(
             logger.warn("Amazon S3 couldn't be contacted or the client couldn't parse the response from S3")
         }
         return url
+    }
+
+    override fun getDefaultExpirationDateTime(): Date {
+        val expirationTime = Date()
+        val timeToLive = expirationTime.time + datastoreConfiguration.timeToLive
+        expirationTime.time = timeToLive
+        return expirationTime
     }
 
 

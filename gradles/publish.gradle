@@ -1,0 +1,222 @@
+tasks.withType(PublishToMavenRepository) { it.dependsOn test }
+
+ext.snapshotUrl = "https://artifactory.openlattice.com/artifactory/libs-snapshot-local"
+ext.releaseUrl = "https://artifactory.openlattice.com/artifactory/libs-release-local"
+ext.sonatypeMasterUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2"
+ext.sonatypeSnapshotUrl = "https://oss.sonatype.org/content/repositories/snapshots"
+
+def branch ="$System.env.bamboo_planRepository_branchName"
+
+def jarname = ""
+def scmUrl = ""
+def connectionUrl = ""
+def developerConnectionUrl = ""
+
+if( project.hasProperty('projectName') && project.hasProperty('scmUrl')  ) {
+    scmUrl = ext.scmUrl
+    connectionUrl = ext.connectionUrl
+    developerConnectionUrl = ext.developerConnectionUrl
+    jarname = ext.projectName
+} else {
+    jarname = project.name
+    scmUrl = "scm:git:https://github.com/openlattice/${project.name}.git"
+    connectionUrl = "scm:git:https://github.com/openlattice/${project.name}.git"
+    developerConnectionUrl = "scm:git:https://github.com/openlattice/${project.name}.git"
+}
+
+println "Basename for jars will be: " + jarname 
+
+if( branch == null || branch == "" ) {
+    println "Unable to detect bamboo branch for project ${jarname}"
+    def stdout = new ByteArrayOutputStream()
+    exec {
+        commandLine 'git', 'rev-parse', '--abbrev-ref', 'HEAD'
+        standardOutput = stdout
+    }
+    branch=stdout.toString().trim()
+}
+
+println "Branch detected as: " + branch
+println "Version detected as: " + version
+println "Full version detected as: " + ext.fullVersion
+
+task sourcesJar(type : Jar) {
+    classifier = 'sources'
+    archiveClassifier.set('sources')
+    from sourceSets.main.allSource
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    archiveClassifier.set('javadoc')
+    from javadoc.destinationDir
+}
+
+task testJar(type: Jar, dependsOn: testClasses) {
+    classifier = 'tests'
+    archiveClassifier.set('tests')
+    from sourceSets.test.output
+}
+
+configurations {
+    tests
+    published.extendsFrom tests, archives
+}
+
+artifacts {
+    archives sourcesJar
+    // archives jar
+    archives javadocJar
+    tests testJar
+}
+
+def bambooUsername = System.getenv("bamboo_ARTIFACTORY_USERNAME")
+
+println "Bamboo Username detected as " + bambooUsername
+
+if ( ( bambooUsername != null)  && ( System.getenv("bamboo_ARTIFACTORY_PASSWORD")!=null ) ) {
+    archivesBaseName = jarname
+
+    ext."signing.keyId" = 'B7944F9C'
+    ext."signing.secretKeyRingFile" = "$System.env.bamboo_JAR_SIGNING_KEYRING"
+    ext."signing.password" = "$System.env.bamboo_JAR_SIGNING_PASSWORD"
+    
+    configurations {
+        pom
+    }
+
+    signing {
+        sign configurations.archives
+        sign configurations.pom
+    }
+    
+    if ( branch == "main" ) {
+        publishing {
+            repositories {
+                maven {
+                    url sonatypeSnapshotUrl
+                    credentials {
+                        username = "$System.env.bamboo_SONATYPE_USERNAME"
+                        password = "$System.env.bamboo_SONATYPE_PASSWORD"
+                    }
+                }
+                maven { 
+                    url snapshotUrl
+                    credentials {
+                        username = "$System.env.bamboo_ARTIFACTORY_USERNAME"
+                        password = "$System.env.bamboo_ARTIFACTORY_PASSWORD"
+                    }
+                }
+            }
+            publications {
+               mavenJava(MavenPublication) {
+                pom.withXml {
+                    asNode().children().last() + {
+                        resolveStrategy = Closure.DELEGATE_FIRST
+                        name jarname
+
+                        scm {
+                            url scmUrl
+                            connection connectionUrl
+                            developerConnection developerConnectionUrl
+                        }
+
+                        licenses {
+                            license {
+                                name 'The Apache License, Version 2.0'
+                                url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                                distribution 'repo'
+                            }
+                        }
+
+                        developers {
+                            developer {
+                                id 'openlattice'
+                                name 'OpenLattice Team'
+                                email 'support@openlattice.com'
+                            }
+                        }
+                    }
+                }
+                from components.java
+	                // artifact ('README.md') {
+	                //    classifier = 'README'
+	                //    extension  = 'md'
+	                // }
+
+	                artifact javadocJar
+	                artifact sourcesJar
+	                artifact testJar
+                }              
+            }
+        }
+        signing {
+            sign publishing.publications.mavenJava
+        }
+    } 
+    else if ( branch.startsWith("release/") && !version.contains('-SNAPSHOT') ) {
+        publishing {
+            repositories {
+                // maven {
+                //     url sonatypeMasterUrl
+                //     credentials {
+                //         username = "$System.env.bamboo_SONATYPE_USERNAME"
+                //         password = "$System.env.bamboo_SONATYPE_PASSWORD"
+                //     }
+                // }
+                maven { 
+                    url releaseUrl
+                    credentials {
+                        username = "$System.env.bamboo_ARTIFACTORY_USERNAME"
+                        password = "$System.env.bamboo_ARTIFACTORY_PASSWORD"
+                    }
+                }
+            }
+            publications {
+               mavenJava(MavenPublication) {
+                   pom.withXml {
+                    asNode().children().last() + {
+                        resolveStrategy = Closure.DELEGATE_FIRST
+                        name jarname
+
+                        scm {
+                            url scmUrl
+                            connection connectionUrl
+                            developerConnection developerConnectionUrl
+                        }
+
+                        licenses {
+                            license {
+                                name 'The Apache License, Version 2.0'
+                                url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                                distribution 'repo'
+                            }
+                        }
+
+                        developers {
+                            developer {
+                                id 'openlattice'
+                                name 'OpenLattice Team'
+                                email 'support@openlattice.com'
+                            }
+                        }
+                    }
+                }
+                from components.java
+	                //artifact ('README.md') {
+	                    //classifier = 'README'
+	                    //extension  = 'md'
+	                //}
+
+	                artifact javadocJar
+	                artifact sourcesJar
+	                artifact testJar
+                 
+                }
+            }
+        }
+        signing {
+            sign publishing.publications.mavenJava
+        }
+    }
+}

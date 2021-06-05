@@ -1,0 +1,14 @@
+##
+# Indexer Server Configuration
+##
+error-reporting-email: outage@openlattice.com
+background-indexing-enabled: true
+background-linking-indexing-enabled: true
+background-expired-data-deletion-enabled: true
+background-deletion-enabled: true
+background-external-database-syncing-enabled: true
+
+search:
+  elasticsearchUrl: localhost
+  elasticsearchCluster: openlattice
+  elasticsearchPort: 9300

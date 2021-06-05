@@ -25,7 +25,11 @@ import com.google.common.collect.ImmutableSet
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
-import com.openlattice.authorization.*
+import com.openlattice.authorization.AclKey
+import com.openlattice.authorization.AuthorizationManager
+import com.openlattice.authorization.Permission
+import com.openlattice.authorization.Principal
+import com.openlattice.authorization.PrincipalType
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EntitySet
@@ -33,7 +37,7 @@ import com.openlattice.edm.processors.CreateOrUpdateAuditRecordEntitySetsProcess
 import com.openlattice.edm.processors.UpdateAuditEdgeEntitySetIdProcessor
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.organization.OrganizationExternalDatabaseTable
+import com.openlattice.organization.ExternalTable
 import com.openlattice.postgres.mapstores.AuditRecordEntitySetConfigurationMapstore.ANY_AUDITING_ENTITY_SETS
 import com.openlattice.postgres.mapstores.AuditRecordEntitySetConfigurationMapstore.ANY_EDGE_AUDITING_ENTITY_SETS
 import org.slf4j.LoggerFactory
@@ -107,7 +111,7 @@ class AuditRecordEntitySetsManager(
         }
     }
 
-    fun createAuditEntitySetForExternalDBTable(table: OrganizationExternalDatabaseTable) {
+    fun createAuditEntitySetForExternalDBTable(table: ExternalTable) {
         if (auditingTypes.isAuditingInitialized()) {
             val name = table.name
             createAuditEntitySets(name, AclKey(table.id), setOf(), table.organizationId)
@@ -138,7 +142,7 @@ class AuditRecordEntitySetsManager(
 
         try {
             firstUserPrincipal = ownerPrincipals.firstOrNull { it.type == PrincipalType.USER }
-                    ?: ownerPrincipals.first { it.type == PrincipalType.ORGANIZATION }
+                    ?: ownerPrincipals.first { it.type == PrincipalType.ROLE }
         } catch (e: NoSuchElementException) {
             logger.error("Unable to create audit entity set for securable object {} because it has no owner", aclKey)
             return

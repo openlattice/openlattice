@@ -49,11 +49,15 @@ class PermissionMapListener(private val eventBus: EventBus) : EntryAddedListener
     }
 
     private fun isMaterializationEvent(event: EntryEvent<AceKey, AceValue>): Boolean {
-        return event.value.contains(Permission.MATERIALIZE) &&
-                event.key.principal.type == PrincipalType.ORGANIZATION &&
-                (event.value.securableObjectType == SecurableObjectType.EntitySet || event.value.securableObjectType == SecurableObjectType.PropertyTypeInEntitySet)
+        return event.key != null
+                && event.key.principal.type == PrincipalType.ORGANIZATION
+                && event.value != null
+                && event.value.contains(Permission.MATERIALIZE)
+                && (
+                    event.value.securableObjectType == SecurableObjectType.EntitySet
+                    || event.value.securableObjectType == SecurableObjectType.PropertyTypeInEntitySet
+                )
     }
-
 
     override fun equals(other: Any?): Boolean {
         return other != null && other is PermissionMapListener
@@ -62,6 +66,4 @@ class PermissionMapListener(private val eventBus: EventBus) : EntryAddedListener
     override fun hashCode(): Int {
         return eventBus.hashCode()
     }
-
-
 }

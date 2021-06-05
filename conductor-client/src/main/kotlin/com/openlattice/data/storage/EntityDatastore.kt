@@ -1,13 +1,15 @@
 package com.openlattice.data.storage
 
 import com.google.common.collect.SetMultimap
-import com.openlattice.data.DeleteType
+import com.openlattice.data.DataExpiration
 import com.openlattice.data.EntitySetData
+import com.openlattice.data.FilteredDataPageDefinition
 import com.openlattice.data.WriteEvent
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.streams.BasePostgresIterable
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.nio.ByteBuffer
+import java.time.OffsetDateTime
 import java.util.*
 import java.util.stream.Stream
 
@@ -33,13 +35,13 @@ interface EntityDatastore {
     fun getLinkingEntities(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
-    ): Stream<MutableMap<FullQualifiedName, MutableSet<Any>>>
+    ): Collection<MutableMap<FullQualifiedName, MutableSet<Any>>>
 
     fun getLinkingEntitiesWithMetadata(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             metadataOptions: EnumSet<MetadataOption>
-    ): Stream<MutableMap<FullQualifiedName, MutableSet<Any>>>
+    ): Collection<MutableMap<FullQualifiedName, MutableSet<Any>>>
 
     fun getLinkedEntityDataByLinkingIdWithMetadata(
             linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>>>,
@@ -58,6 +60,12 @@ interface EntityDatastore {
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             linking: Boolean
     ): EntitySetData<FullQualifiedName>
+
+    fun getFilteredEntitySetData(
+            entitySetId: UUID,
+            filteredDataPageDefinition: FilteredDataPageDefinition,
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
+    ): List<Map<FullQualifiedName, Set<Any>>>
 
     fun getEntitiesAcrossEntitySets(
             entitySetIdsToEntityKeyIds: SetMultimap<UUID, UUID>,
@@ -107,28 +115,6 @@ interface EntityDatastore {
     ): WriteEvent
 
     /**
-     * Clears (soft-deletes) the contents of an entity set by setting version to `-now()`
-     *
-     * @param entitySetId The id of the entity set to clear.
-     * @return The number of rows cleared from the entity set.
-     */
-    fun clearEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent
-
-    /**
-     * Clears (soft-deletes) the contents of an entity by setting versions of all properties to `-now()`
-     *
-     * @param entitySetId             The id of the entity set to clear.
-     * @param entityKeyIds            The entity key ids for the entity set to clear.
-     * @param authorizedPropertyTypes The property types the user is allowed to clear.
-     * @return The number of entities cleared.
-     */
-    fun clearEntities(
-            entitySetId: UUID,
-            entityKeyIds: Set<UUID>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): WriteEvent
-
-    /**
      * Clears (soft-deletes) the contents of an entity by setting versions of all properties to `-now()`
      *
      * @param entitySetId             The id of the entity set to clear.
@@ -137,31 +123,6 @@ interface EntityDatastore {
      * @return The number of properties cleared.
      */
     fun clearEntityProperties(
-            entitySetId: UUID,
-            entityKeyIds: Set<UUID>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): WriteEvent
-
-    /**
-     * Hard deletes an entity set and removes the historical contents. This causes loss of historical data
-     * and should only be used for scrubbing customer data.
-     *
-     * @param entitySetId             The id of the entity set to delete.
-     * @param authorizedPropertyTypes The authorized property types on this entity set. In this case all the property
-     * types for its entity type
-     */
-    fun deleteEntitySetData(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent
-
-    /**
-     * Hard deletes entities and removes the historical contents.
-     *
-     * @param entitySetId             The id of the entity set from which to delete.
-     * @param entityKeyIds            The ids of entities to hard delete.
-     * @param authorizedPropertyTypes The authorized property types on this entity set. In this case all the property
-     * types for its entity type
-     * @return count of deletes
-     */
-    fun deleteEntities(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
@@ -180,10 +141,8 @@ interface EntityDatastore {
 
     fun getExpiringEntitiesFromEntitySet(
             entitySetId: UUID,
-            expirationBaseColumn: String,
-            formattedDateMinusTTE: Any,
-            sqlFormat: Int,
-            deleteType: DeleteType
-    ) : BasePostgresIterable<UUID>
+            expirationPolicy: DataExpiration,
+            currentDateTime: OffsetDateTime
+    ): BasePostgresIterable<UUID>
 
 }

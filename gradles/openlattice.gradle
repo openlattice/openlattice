@@ -1,0 +1,247 @@
+//Easy semantic version based off describe + tags
+
+
+// If git tag --contains has tags, then you're on-tag
+//   for each tag in ^, release -dev to SNAPSHOT and non-dev to MAIN
+// else (if git tag --contains has no tags), then off-tag
+//   assumed that the resolved tag will be a -dev tag (error msg if not)
+//   release -dev to SNAPSHOT
+
+def class Tag {
+    String version
+    Boolean snapshot
+
+    String toString() {
+        def snp
+        if (snapshot) {
+            snp = "-SNAPSHOT"
+        } else {
+            snp = ""
+        }
+        return "${version}${snp}"
+    }
+}
+
+static def convertToTag(tagString) {
+    def semVer = (tagString =~ /v?([\d\.]+)/)[0][1]
+    return new Tag(version: semVer, snapshot: tagString.contains('dev'))
+}
+
+def runCommand(String... command) {
+    def stdout = new ByteArrayOutputStream()
+    exec {
+        commandLine command
+        standardOutput = stdout
+    }
+    return stdout.toString()
+}
+
+def setDevMode = { ->
+  def mono = findProject(":conductor-client")
+  return mono != null
+}
+
+ext.developmentMode = setDevMode()
+
+def describeOutputTag = convertToTag(
+        runCommand('git', 'describe', '--tags', '--long').trim()
+)
+
+def getVersionName = { ->
+    return describeOutputTag.toString()
+}
+version = getVersionName()
+
+//This gets the version plus build number, no -SNAPSHOTs
+def getFullVersion = { ->
+    if (!describeOutputTag.snapshot) {
+        return describeOutputTag.toString()
+    }
+
+    ext.bambooBuild =".${System.getenv("bamboo_buildNumber")}"
+    if ( ext.bambooBuild == ".null" ) {
+        ext.bambooBuild = "-SNAPSHOT"
+        return describeOutputTag.toString()
+    }
+    return "${describeOutputTag.version}${ext.bambooBuild}"
+}
+ext.fullVersion = getFullVersion()
+
+tasks.withType(Tar){
+  compression = Compression.GZIP
+}
+
+apply from: "https://raw.githubusercontent.com/openlattice/openlattice/main/gradles/repos.gradle"
+apply from: "https://raw.githubusercontent.com/openlattice/openlattice/main/gradles/publish.gradle"
+
+//Run jacoco after tests.
+if( project.hasProperty('projectName') && project.hasProperty('scmUrl')  ) {
+test { finalizedBy jacocoTestReport }
+}
+/*
+ * Allow maintaing shared client git hooks in the repository. At some point should consider making task
+ * or making it depend on eclipse  so it doesn't run everytime you run gradle
+afterEvaluate {
+  copy {
+    if ( project.hasProperty('projectName') ) {
+      logger.info "Copying hooks for ${getProjectDir()} from ${projectName}/hooks to ${projectName}/.git/hooks"
+    }
+    from ("${getProjectDir()}/hooks")
+    into "${getProjectDir()}/.git/hooks"
+  }
+}
+*/
+
+/**
+ * To make use of this, mark a dependency as `changing: true` if it is a snapshot dependency
+ *  This way it won't be cached and you'll always get the newest code.
+ *  This should automagically work for '-SNAPSHOT' dependencies
+ *
+ * Ex:
+ *  dependencies {
+ *    compile group: "group", name: "projectA", version: "1.1-SNAPSHOT", changing: true
+ *  }
+ */
+configurations.all {
+  // check for updates every build
+  resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
+
+  resolutionStrategy.dependencySubstitution.all { DependencySubstitution dependency ->
+    if (dependency.requested instanceof ModuleComponentSelector && dependency.requested.group == "com.openlattice") {
+      logger.debug("replacing ${dependency.requested} with local project :${dependency.requested.module} while resolving ${this.project}")
+      def targetProject = findProject(":${dependency.requested.module}")
+      if (targetProject != null) {
+        dependency.useTarget(targetProject)
+      }
+    }
+  }
+
+}
+
+println "Resolving dependencies in devMode: ${developmentMode}"
+/**
+ * Monorepo Versions
+ **/
+ext.monorepo_version='2.6.0-SNAPSHOT'
+ext.api_version="${monorepo_version}"
+ext.conductor_version="${monorepo_version}"
+ext.conductor_client_version="${monorepo_version}"
+ext.courier_version="${monorepo_version}"
+ext.datastore_version="${monorepo_version}"
+ext.indexer_version="${monorepo_version}"
+ext.linker_version="${monorepo_version}"
+ext.rehearsal_version="${monorepo_version}"
+ext.scribe_version="${monorepo_version}"
+ext.scrunchie_version="${monorepo_version}"
+
+/**
+ * Internal Versions
+ **/
+ext.chronicle_api_version='0.0.15-SNAPSHOT'
+ext.chronicle_server_version='0.0.1-SNAPSHOT'
+ext.kindling_version='0.0.1-SNAPSHOT'
+ext.launchpad_version='1.3.0-SNAPSHOT'
+ext.mechanic_version='0.0.1-SNAPSHOT'
+ext.neuron_version='0.0.1-SNAPSHOT'
+ext.rhizome_version='3.0.3'
+ext.rhizome_client_version='0.0.13-SNAPSHOT'
+ext.shuttle_version='0.0.4-SNAPSHOT'
+ext.socrates_version='0.0.1-SNAPSHOT'
+
+/**
+ * External versions
+ **/
+ext.apache_httpcomponents_version='4.4'
+ext.asm_version='6.2'
+ext.auth0_java_jwt_version='3.10.3'
+ext.auth0_jwks_rsa_version='0.12.0'
+ext.auth0_mvc_auth_commons_version='1.3.0'
+ext.auth0_spring_version='1.4.0'
+ext.auth0_version='1.20.0'
+ext.aws_java_sdk_version='1.11.754'
+ext.checkstyle_version='8.23'
+ext.commons_cli_version='1.4'
+ext.commons_codec_version='1.10'
+ext.commons_collections4_version='4.1'
+ext.commonsio_version='2.5'
+ext.commonsLang_version='3.4'
+ext.commonsvalidator_version='1.6'
+ext.commonsText_version = '1.6'
+ext.deeplearning4j='1.0.0-beta3'
+ext.dokka_version='0.9.17'
+ext.dropwizard_metrics_version='3.1.2'
+ext.el_api_version='3.0.0'
+ext.elastic_version='7.2.0'
+ext.findbugs_jsr305_version='3.0.2'
+ext.findbugs_version='3.0.1'
+ext.findsecbugs_version='1.11.0'
+ext.google_maps_services='0.11.0'
+ext.guava_version='27.0-jre'
+ext.hadoop_version='2.10.0'
+ext.hazelcast_version='4.0.2'
+ext.hazelcast_wm_version='4.0'
+ext.hibernate_version='6.0.9.Final'
+ext.hikariCP_version='3.4.5'
+ext.immutables_version='2.7.5'
+ext.jackson_version='2.10.4'
+ext.jacoco_tool_version = '0.8.2'
+ext.javax_activation_version='1.1.1'
+ext.javax_annotation_api_version='1.3.2'
+ext.javax_inject_version='1'
+ext.javax_mail_api='1.5.6' // goes with sun_mail and sun_javax
+ext.javax_servlet_version='2.3.1'
+ext.javax_servlet_api_version='3.1.0'
+ext.javax_validation_api_version='2.0.1.Final'
+ext.jaxb_api_version='2.2.11'
+ext.jaxb_core_version='2.2.11'
+ext.jaxb_impl_version='2.2.11'
+ext.jcip_version='1.0'
+ext.jdbi3_version='3.1.0'
+ext.jetty_version='9.4.29.v20200521'
+ext.jmustache_version ='1.11'
+ext.jodatime_version='2.9.1'
+ext.jodd_mail_version='5.0.7'
+ext.jstl_version='1.2'
+ext.kotlin_version='1.3.72'
+ext.kryo_serializers_version='0.42'
+ext.kryo_shaded_version='4.0.0'
+ext.log4j_version='2.9.1'
+ext.lz4_version='1.3'
+ext.minlog_version='1.3.0'
+ext.mssql_jdbc_version='7.2.0.jre11'
+ext.netty_epoll_version='4.1.12.Final'
+ext.netty_os_arch='linux-x86_64'
+ext.objenesis_version='2.4'
+ext.odata_version='4.2.0'
+ext.okhttp_version='2.3.0'
+ext.okhttp3_version='3.12.0'
+ext.postgresql_version='42.2.16'
+ext.prometheus_jvm_client_version='0.4.0'
+ext.reflectasm_version='1.11.3'
+ext.retrofit2_version='2.9.0'
+ext.ryantenney_metrics_version='3.1.3'
+ext.slf4j_version='1.7.22'
+ext.snappy_version='1.1.2.1'
+ext.snakeyaml_version='1.23'
+ext.snowflake_version='3.12.16'
+ext.spark_version='2.4.3'
+ext.spongy_castle_version='1.51.0.0'
+ext.spotbugs_annotations_version='4.2.0'
+ext.spotbugs_version='4.2.0'
+ext.spring_framework_version='5.1.5.RELEASE'
+ext.spring_security_version='5.1.4.RELEASE'
+ext.spring_websocket_version='5.1.3.RELEASE'
+ext.sun_mail_all_version='1.5.6'
+ext.sun_javax_mail_version='1.5.6'
+ext.swagger_codegen_cli_version='3.0.8'
+ext.swagger_ui_version='3.22.2'
+ext.twilio_version='7.34.1'
+ext.uuid_version='3.4'
+
+/**
+ * Testing versions
+ **/
+ext.greenmail_version='1.5.9'
+ext.junit_version='4.12'
+ext.mockito_version='1.10.19'
+ext.s3mock_version='0.2.5'
