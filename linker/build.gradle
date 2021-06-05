@@ -56,7 +56,6 @@ ext.connectionUrl = 'scm:git:https://github.com/openlattice/linker.git'
 ext.developerConnectionUrl = 'scm:git:https://github.com/openlattice/linker.git'
 
 apply from: "../gradles/openlattice.gradle"
-apply plugin: 'kotlin'
 apply plugin: 'license-report'
 
 def LINKER_XMS = "$System.env.LINKER_XMS"
@@ -143,6 +142,7 @@ spotbugsMain {
 
 configurations {
     provided
+    compile { }
 }
 
 configurations.all {
@@ -232,10 +232,10 @@ tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
 }
 
 jar {
-    doFirst {
+    doLast {
         manifest {
             attributes (
-                    "Class-Path": configurations.compile.files.collect { it.getName() }.join(" "),
+                    "Class-Path": configurations.runtime.files.collect { it.getName() }.join(" "),
                     "Main-Class": mainClassName
             )
         }
