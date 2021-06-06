@@ -136,12 +136,8 @@ class ElasticsearchBlocker(
     }
 
     private fun isEntityEmpty(candidateData: Map<UUID, Set<Any>>): Boolean {
-        return personLinkingPropertyTypeIds.any {
-            val data = candidateData[it]
-            data != null && data.isNotEmpty()
-        }
+        return personLinkingPropertyTypeIds.all { candidateData[it]?.isEmpty() ?: true }
     }
-
     /**
      * Handles rendering an object into field searches for blocking.
      */
