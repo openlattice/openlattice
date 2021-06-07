@@ -53,7 +53,7 @@ constructor(
         method = [RequestMethod.GET],
         produces = [MediaType.APPLICATION_JSON_VALUE]
     )
-    override fun getDataset(@PathVariable(DATA_SET_ID_PARAM) dataSetId: UUID): DataSet {
+    override fun getDataSet(@PathVariable(DATA_SET_ID_PARAM) dataSetId: UUID): DataSet {
         ensureReadAccess(AclKey(dataSetId))
         return datasetService.getDataset(dataSetId)
     }
@@ -65,7 +65,7 @@ constructor(
         consumes = [MediaType.APPLICATION_JSON_VALUE],
         produces = [MediaType.APPLICATION_JSON_VALUE]
     )
-    override fun getDatasets(@RequestBody dataSetIds: Set<UUID>): Map<UUID, DataSet> {
+    override fun getDataSets(@RequestBody dataSetIds: Set<UUID>): Map<UUID, DataSet> {
         accessCheck(dataSetIds.associate { AclKey(it) to EnumSet.of(Permission.READ) })
         return datasetService.getDatasets(dataSetIds)
     }
@@ -76,7 +76,7 @@ constructor(
         method = [RequestMethod.GET],
         produces = [MediaType.APPLICATION_JSON_VALUE]
     )
-    override fun getDatasetColumn(
+    override fun getDataSetColumn(
         @PathVariable(DATA_SET_ID_PARAM) dataSetId: UUID,
         @PathVariable(COLUMN_ID_PARAM) dataSetColumnId: UUID
     ): DataSetColumn {
@@ -92,7 +92,7 @@ constructor(
         consumes = [MediaType.APPLICATION_JSON_VALUE],
         produces = [MediaType.APPLICATION_JSON_VALUE]
     )
-    override fun getDatasetColumns(@RequestBody dataSetColumnAclKeys: Set<AclKey>): Map<AclKey, DataSetColumn> {
+    override fun getDataSetColumns(@RequestBody dataSetColumnAclKeys: Set<AclKey>): Map<AclKey, DataSetColumn> {
         accessCheck(dataSetColumnAclKeys.associateWith { EnumSet.of(Permission.READ) })
         return datasetService.getDatasetColumns(dataSetColumnAclKeys)
     }
@@ -125,7 +125,7 @@ constructor(
         method = [RequestMethod.PATCH],
         consumes = [MediaType.APPLICATION_JSON_VALUE]
     )
-    override fun updateDatasetMetadata(
+    override fun updateDataSetMetadata(
         @PathVariable(DATA_SET_ID_PARAM) dataSetId: UUID,
         @RequestBody update: SecurableObjectMetadataUpdate
     ) {
@@ -141,7 +141,7 @@ constructor(
             method = [RequestMethod.PATCH],
             consumes = [MediaType.APPLICATION_JSON_VALUE]
     )
-    override fun updateDatasetColumnMetadata(
+    override fun updateDataSetColumnMetadata(
         @PathVariable(DATA_SET_ID_PARAM) dataSetId: UUID,
         @PathVariable(COLUMN_ID_PARAM) columnId: UUID,
         @RequestBody update: SecurableObjectMetadataUpdate

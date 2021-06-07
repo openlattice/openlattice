@@ -34,7 +34,7 @@ interface DataSetMetadataApi {
      * @return The [DataSet] with the specified id
      */
     @GET(BASE + DATA_SET_PATH + DATA_SET_ID_PATH)
-    fun getDataset(@Path(DATA_SET_ID_PARAM) dataSetId: UUID): DataSet
+    fun getDataSet(@Path(DATA_SET_ID_PARAM) dataSetId: UUID): DataSet
 
     /**
      * Gets datasets as a map using their ids
@@ -44,7 +44,7 @@ interface DataSetMetadataApi {
      * @return A map from dataset id to [DataSet]
      */
     @POST(BASE + DATA_SET_PATH)
-    fun getDatasets(@Body dataSetIds: Set<UUID>): Map<UUID, DataSet>
+    fun getDataSets(@Body dataSetIds: Set<UUID>): Map<UUID, DataSet>
 
     /**
      * Gets a dataset column using its id
@@ -55,7 +55,7 @@ interface DataSetMetadataApi {
      * @return The [DataSetColumn] with the aclKey of [datasetId, datasetColumnId]
      */
     @GET(BASE + COLUMN_PATH + DATA_SET_ID_PATH + COLUMN_ID_PATH)
-    fun getDatasetColumn(
+    fun getDataSetColumn(
         @Path(DATA_SET_ID_PARAM) dataSetId: UUID,
         @Path(COLUMN_ID_PARAM) dataSetColumnId: UUID
     ): DataSetColumn
@@ -68,7 +68,7 @@ interface DataSetMetadataApi {
      * @return A map from dataset column [AclKey] to [DataSetColumn]
      */
     @POST(BASE + COLUMN_PATH)
-    fun getDatasetColumns(@Body dataSetColumnAclKeys: Set<AclKey>): Map<AclKey, DataSetColumn>
+    fun getDataSetColumns(@Body dataSetColumnAclKeys: Set<AclKey>): Map<AclKey, DataSetColumn>
 
     /**
      * Gets all columns in the specified set of dataset ids
@@ -88,7 +88,7 @@ interface DataSetMetadataApi {
      *
      */
     @PATCH(BASE + UPDATE_PATH + DATA_SET_ID_PATH)
-    fun updateDatasetMetadata(@Path(DATA_SET_ID_PARAM) dataSetId: UUID, @Body update: SecurableObjectMetadataUpdate)
+    fun updateDataSetMetadata(@Path(DATA_SET_ID_PARAM) dataSetId: UUID, @Body update: SecurableObjectMetadataUpdate)
 
     /**
      * Updates metadata for the dataset column with aclKey [datasetId, id]
@@ -98,7 +98,7 @@ interface DataSetMetadataApi {
      *
      */
     @PATCH(BASE + UPDATE_PATH + DATA_SET_ID_PATH + COLUMN_ID_PATH)
-    fun updateDatasetColumnMetadata(
+    fun updateDataSetColumnMetadata(
         @Path(DATA_SET_ID_PARAM) dataSetId: UUID,
         @Path(COLUMN_ID_PARAM) columnId: UUID,
         @Body update: SecurableObjectMetadataUpdate
