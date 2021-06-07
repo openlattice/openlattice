@@ -57,7 +57,7 @@ constructor(
             method = [RequestMethod.GET],
             produces = [MediaType.APPLICATION_JSON_VALUE]
     )
-    override fun getDataset(@PathVariable(ID) datasetId: UUID): Dataset {
+    override fun getDataset(@PathVariable(ID) datasetId: UUID): DataSet {
         ensureReadAccess(AclKey(datasetId))
         return datasetService.getDataset(datasetId)
     }
@@ -69,7 +69,7 @@ constructor(
             consumes = [MediaType.APPLICATION_JSON_VALUE],
             produces = [MediaType.APPLICATION_JSON_VALUE]
     )
-    override fun getDatasets(@RequestBody datasetIds: Set<UUID>): Map<UUID, Dataset> {
+    override fun getDatasets(@RequestBody datasetIds: Set<UUID>): Map<UUID, DataSet> {
         accessCheck(datasetIds.associate { AclKey(it) to EnumSet.of(Permission.READ) })
         return datasetService.getDatasets(datasetIds)
     }

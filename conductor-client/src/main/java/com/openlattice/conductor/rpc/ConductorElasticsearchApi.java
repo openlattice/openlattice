@@ -25,7 +25,7 @@ package com.openlattice.conductor.rpc;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.data.EntityDataKey;
-import com.openlattice.datasets.Dataset;
+import com.openlattice.datasets.DataSet;
 import com.openlattice.datasets.DatasetColumn;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.AssociationType;
@@ -231,7 +231,7 @@ public interface ConductorElasticsearchApi {
     boolean deleteSecurableObjectFromElasticsearch( SecurableObjectType securableObjectType, UUID objectId );
 
     /* Dataset create and delete */
-    boolean saveDatasetToElasticsearch( Dataset dataset, List<DatasetColumn> columns );
+    boolean saveDatasetToElasticsearch( DataSet dataset, List<DatasetColumn> columns );
 
     boolean updateColumnsInDataset( UUID datasetId, List<DatasetColumn> updatedColumns );
 

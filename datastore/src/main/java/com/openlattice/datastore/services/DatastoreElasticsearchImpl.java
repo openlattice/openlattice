@@ -17,7 +17,7 @@ import com.openlattice.client.serialization.SerializationConstants;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.conductor.rpc.SearchConfiguration;
 import com.openlattice.data.EntityDataKey;
-import com.openlattice.datasets.Dataset;
+import com.openlattice.datasets.DataSet;
 import com.openlattice.datasets.DatasetColumn;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.Analyzer;
@@ -1088,7 +1088,7 @@ public class DatastoreElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     @Override
-    public boolean saveDatasetToElasticsearch( Dataset dataset, List<DatasetColumn> columns ) {
+    public boolean saveDatasetToElasticsearch( DataSet dataset, List<DatasetColumn> columns ) {
         if ( !verifyElasticsearchConnection() ) {
             return false;
         }

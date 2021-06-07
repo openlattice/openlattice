@@ -30,20 +30,20 @@ interface DataSetMetadataApi {
      *
      * @param datasetId The id of the dataset
      *
-     * @return The [Dataset] with the specified id
+     * @return The [DataSet] with the specified id
      */
     @GET(BASE + DATASET_PATH + ID_PATH)
-    fun getDataset(@Path(ID) datasetId: UUID): Dataset
+    fun getDataset(@Path(ID) datasetId: UUID): DataSet
 
     /**
      * Gets datasets as a map using their ids
      *
      * @param datasetIds The ids of the datasets to load
      *
-     * @return A map from dataset id to [Dataset]
+     * @return A map from dataset id to [DataSet]
      */
     @POST(BASE + DATASET_PATH)
-    fun getDatasets(@Body datasetIds: Set<UUID>): Map<UUID, Dataset>
+    fun getDatasets(@Body datasetIds: Set<UUID>): Map<UUID, DataSet>
 
     /**
      * Gets a dataset column using its id

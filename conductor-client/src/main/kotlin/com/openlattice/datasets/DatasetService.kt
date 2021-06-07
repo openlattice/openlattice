@@ -58,12 +58,12 @@ class DatasetService(
         objectMetadata.removeAll(Predicates.equal(ObjectMetadataMapstore.ROOT_OBJECT_INDEX, id))
     }
 
-    fun getDataset(id: UUID): Dataset {
+    fun getDataset(id: UUID): DataSet {
         return getDatasets(setOf(id)).getValue(id)
     }
 
-    fun getDatasets(ids: Set<UUID>): Map<UUID, Dataset> {
-        val datasetsAsMap = mutableMapOf<UUID, Dataset>()
+    fun getDatasets(ids: Set<UUID>): Map<UUID, DataSet> {
+        val datasetsAsMap = mutableMapOf<UUID, DataSet>()
         val aclKeys = ids.mapTo(mutableSetOf()) { AclKey(it) }
 
         val metadata = objectMetadata.getAll(aclKeys)
@@ -73,13 +73,13 @@ class DatasetService(
 
         typeToId[SecurableObjectType.EntitySet]?.let {
             entitySets.getAll(it).forEach { (id, entitySet) ->
-                datasetsAsMap[id] = Dataset.fromEntitySet(entitySet, metadata.getValue(AclKey(id)))
+                datasetsAsMap[id] = DataSet.fromEntitySet(entitySet, metadata.getValue(AclKey(id)))
             }
         }
 
         typeToId[SecurableObjectType.OrganizationExternalDatabaseTable]?.let {
             externalTables.getAll(it).forEach { (id, table) ->
-                datasetsAsMap[id] = Dataset.fromExternalTable(table, metadata.getValue(AclKey(id)))
+                datasetsAsMap[id] = DataSet.fromExternalTable(table, metadata.getValue(AclKey(id)))
             }
         }
 

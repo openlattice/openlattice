@@ -16,7 +16,7 @@ import com.openlattice.client.serialization.SerializationConstants
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
 import com.openlattice.conductor.rpc.SearchConfiguration
 import com.openlattice.data.EntityDataKey
-import com.openlattice.datasets.Dataset
+import com.openlattice.datasets.DataSet
 import com.openlattice.datasets.DatasetColumn
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.Analyzer
@@ -1093,7 +1093,7 @@ class DatastoreKotlinElasticsearchImpl(
         return deleteObjectById(indexName, typeName, objectId.toString())
     }
 
-    override fun saveDatasetToElasticsearch(dataset: Dataset, columns: List<DatasetColumn?>): Boolean {
+    override fun saveDatasetToElasticsearch(dataset: DataSet, columns: List<DatasetColumn?>): Boolean {
         if (!verifyElasticsearchConnection()) {
             return false
         }
