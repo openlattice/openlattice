@@ -2,6 +2,7 @@ package com.openlattice.datasets
 
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.Permission
+import com.openlattice.collaborations.Collaboration
 import retrofit2.http.*
 import java.util.*
 
@@ -57,25 +58,14 @@ interface DataSetMetadataApi {
     ): DataSetColumn
 
     /**
-     * Gets dataset columns as a map using their aclKeys
+     * Gets all [DataSetColumn] metadata objects that the caller has [Permission.READ] on that belong to data sets
+     * with the given data set ids.
      *
-     * @param datasetColumnAclKeys The aclKeys of the dataset columns to load
-     *
-     * @return A map from dataset column [AclKey] to [DataSetColumn]
+     * @param dataSetIds a set of data set ids
+     * @return Map<K, V> where K is a data set id and V is a list of [DataSetColumn] metadata objects
      */
     @POST(BASE + COLUMNS_PATH)
-    fun getDataSetColumns(@Body dataSetColumnAclKeys: Set<AclKey>): Map<AclKey, DataSetColumn>
-
-    /**
-     * Gets all columns in the specified set of dataset ids
-     *
-     * @param datasetIds The ids of the datasets to load columns in
-     *
-     * @return A map from dataset id to an iterable of all the [DataSetColumn]s in that dataset
-     */
-    @POST(BASE + DATA_SETS_PATH + COLUMNS_PATH)
-    fun getColumnsInDatasets(@Body dataSetIds: Set<UUID>): Map<UUID, Iterable<DataSetColumn>>
-
+    fun getDataSetColumns(@Body dataSetIds: Set<UUID>): Map<UUID, List<DataSetColumn>>
 
     /**
      * Updates metadata for the dataset with id [id]

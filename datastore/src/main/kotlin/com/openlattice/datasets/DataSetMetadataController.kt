@@ -83,36 +83,22 @@ constructor(
     }
 
     @Timed
-    @RequestMapping(
+    @PostMapping(
         path = [COLUMNS_PATH],
-        method = [RequestMethod.POST],
         consumes = [MediaType.APPLICATION_JSON_VALUE],
         produces = [MediaType.APPLICATION_JSON_VALUE]
     )
-    override fun getDataSetColumns(@RequestBody dataSetColumnAclKeys: Set<AclKey>): Map<AclKey, DataSetColumn> {
-        accessCheck(dataSetColumnAclKeys.associateWith { EnumSet.of(Permission.READ) })
-        return datasetService.getDatasetColumns(dataSetColumnAclKeys)
-    }
-
-
-    @Timed
-    @RequestMapping(
-        path = [DATA_SETS_PATH + COLUMNS_PATH],
-        method = [RequestMethod.POST],
-        consumes = [MediaType.APPLICATION_JSON_VALUE],
-        produces = [MediaType.APPLICATION_JSON_VALUE]
-    )
-    override fun getColumnsInDatasets(@RequestBody dataSetIds: Set<UUID>): Map<UUID, Iterable<DataSetColumn>> {
+    override fun getDataSetColumns(@RequestBody dataSetIds: Set<UUID>): Map<UUID, List<DataSetColumn>> {
         accessCheck(dataSetIds.associate { AclKey(it) to EnumSet.of(Permission.READ) })
         val datasetToColumns = datasetService.getColumnsInDatasets(dataSetIds)
-
-        val accessChecks = datasetToColumns.flatMapTo(mutableSetOf()) { it.value }
-                .mapTo(mutableSetOf()) { AccessCheck(it.getAclKey(), EnumSet.of(Permission.READ)) }
-        val authorizedColumns = authorizations.accessChecksForPrincipals(accessChecks, Principals.getCurrentPrincipals())
-                .filter { it.permissions.getValue(Permission.READ) }
-                .map { it.aclKey }
-                .collect(Collectors.toSet())
-
+        val accessChecks = datasetToColumns
+            .flatMapTo(mutableSetOf()) { it.value }
+            .mapTo(mutableSetOf()) { AccessCheck(it.getAclKey(), EnumSet.of(Permission.READ)) }
+        val authorizedColumns = authorizations
+            .accessChecksForPrincipals(accessChecks, Principals.getCurrentPrincipals())
+            .filter { it.permissions.getValue(Permission.READ) }
+            .map { it.aclKey }
+            .collect(Collectors.toSet())
         return datasetToColumns.mapValues { it.value.filter { col -> authorizedColumns.contains(col.getAclKey()) } }
     }
 
