@@ -59,9 +59,8 @@ constructor(
     }
 
     @Timed
-    @RequestMapping(
+    @GetMapping(
         path = [DATA_SETS_PATH + DATA_SET_ID_PATH],
-        method = [RequestMethod.GET],
         produces = [MediaType.APPLICATION_JSON_VALUE]
     )
     override fun getDataSet(@PathVariable(DATA_SET_ID_PARAM) dataSetId: UUID): DataSet {

@@ -33,11 +33,11 @@ interface DataSetMetadataApi {
     fun getDataSets(@Body dataSetIds: Set<UUID>): Map<UUID, DataSet>
 
     /**
-     * Gets a dataset using its id
+     * Gets the [DataSet] metadata object with the given data set id. The caller must have [Permission.READ] on the
+     * target [DataSet] metadata object.
      *
-     * @param datasetId The id of the dataset
-     *
-     * @return The [DataSet] with the specified id
+     * @param dataSetId a data set id
+     * @return the target [DataSet] metadata object
      */
     @GET(BASE + DATA_SETS_PATH + DATA_SET_ID_PATH)
     fun getDataSet(@Path(DATA_SET_ID_PARAM) dataSetId: UUID): DataSet
