@@ -8,12 +8,12 @@ import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.data.DataDeletionManager
 import com.openlattice.data.DataGraphManager
+import com.openlattice.datasets.DataSetMetadataApi.Companion.COLUMN_ID_PARAM
+import com.openlattice.datasets.DataSetMetadataApi.Companion.COLUMN_ID_PATH
 import com.openlattice.datasets.DataSetMetadataApi.Companion.COLUMN_PATH
-import com.openlattice.datasets.DataSetMetadataApi.Companion.DATASET_ID
-import com.openlattice.datasets.DataSetMetadataApi.Companion.DATASET_ID_PATH
-import com.openlattice.datasets.DataSetMetadataApi.Companion.DATASET_PATH
-import com.openlattice.datasets.DataSetMetadataApi.Companion.ID
-import com.openlattice.datasets.DataSetMetadataApi.Companion.ID_PATH
+import com.openlattice.datasets.DataSetMetadataApi.Companion.DATA_SET_ID_PARAM
+import com.openlattice.datasets.DataSetMetadataApi.Companion.DATA_SET_ID_PATH
+import com.openlattice.datasets.DataSetMetadataApi.Companion.DATA_SET_PATH
 import com.openlattice.datasets.DataSetMetadataApi.Companion.UPDATE_PATH
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
@@ -21,11 +21,7 @@ import com.openlattice.organizations.ExternalDatabaseManagementService
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.springframework.http.MediaType
-import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RequestMethod
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.*
 import java.util.*
 import java.util.stream.Collectors
 import javax.inject.Inject
@@ -53,65 +49,65 @@ constructor(
 
     @Timed
     @RequestMapping(
-            path = [DATASET_PATH + ID_PATH],
-            method = [RequestMethod.GET],
-            produces = [MediaType.APPLICATION_JSON_VALUE]
+        path = [DATA_SET_PATH + DATA_SET_ID_PATH],
+        method = [RequestMethod.GET],
+        produces = [MediaType.APPLICATION_JSON_VALUE]
     )
-    override fun getDataset(@PathVariable(ID) datasetId: UUID): DataSet {
-        ensureReadAccess(AclKey(datasetId))
-        return datasetService.getDataset(datasetId)
+    override fun getDataset(@PathVariable(DATA_SET_ID_PARAM) dataSetId: UUID): DataSet {
+        ensureReadAccess(AclKey(dataSetId))
+        return datasetService.getDataset(dataSetId)
     }
 
     @Timed
     @RequestMapping(
-            path = [DATASET_PATH],
-            method = [RequestMethod.POST],
-            consumes = [MediaType.APPLICATION_JSON_VALUE],
-            produces = [MediaType.APPLICATION_JSON_VALUE]
+        path = [DATA_SET_PATH],
+        method = [RequestMethod.POST],
+        consumes = [MediaType.APPLICATION_JSON_VALUE],
+        produces = [MediaType.APPLICATION_JSON_VALUE]
     )
-    override fun getDatasets(@RequestBody datasetIds: Set<UUID>): Map<UUID, DataSet> {
-        accessCheck(datasetIds.associate { AclKey(it) to EnumSet.of(Permission.READ) })
-        return datasetService.getDatasets(datasetIds)
+    override fun getDatasets(@RequestBody dataSetIds: Set<UUID>): Map<UUID, DataSet> {
+        accessCheck(dataSetIds.associate { AclKey(it) to EnumSet.of(Permission.READ) })
+        return datasetService.getDatasets(dataSetIds)
     }
 
     @Timed
     @RequestMapping(
-            path = [COLUMN_PATH + DATASET_ID_PATH + ID_PATH],
-            method = [RequestMethod.GET],
-            produces = [MediaType.APPLICATION_JSON_VALUE]
+        path = [COLUMN_PATH + DATA_SET_ID_PATH + COLUMN_ID_PATH],
+        method = [RequestMethod.GET],
+        produces = [MediaType.APPLICATION_JSON_VALUE]
     )
     override fun getDatasetColumn(
-            @PathVariable(DATASET_ID) datasetId: UUID,
-            @PathVariable(ID) datasetColumnId: UUID
+        @PathVariable(DATA_SET_ID_PARAM) dataSetId: UUID,
+        @PathVariable(COLUMN_ID_PARAM) dataSetColumnId: UUID
     ): DataSetColumn {
-        val aclKey = AclKey(datasetId, datasetColumnId)
+        val aclKey = AclKey(dataSetId, dataSetColumnId)
         ensureReadAccess(aclKey)
         return datasetService.getDatasetColumn(aclKey)
     }
 
     @Timed
     @RequestMapping(
-            path = [COLUMN_PATH],
-            method = [RequestMethod.POST],
-            consumes = [MediaType.APPLICATION_JSON_VALUE],
-            produces = [MediaType.APPLICATION_JSON_VALUE]
+        path = [COLUMN_PATH],
+        method = [RequestMethod.POST],
+        consumes = [MediaType.APPLICATION_JSON_VALUE],
+        produces = [MediaType.APPLICATION_JSON_VALUE]
     )
-    override fun getDatasetColumns(@RequestBody datasetColumnAclKeys: Set<AclKey>): Map<AclKey, DataSetColumn> {
-        accessCheck(datasetColumnAclKeys.associateWith { EnumSet.of(Permission.READ) })
-        return datasetService.getDatasetColumns(datasetColumnAclKeys)
+    override fun getDatasetColumns(@RequestBody dataSetColumnAclKeys: Set<AclKey>): Map<AclKey, DataSetColumn> {
+        accessCheck(dataSetColumnAclKeys.associateWith { EnumSet.of(Permission.READ) })
+        return datasetService.getDatasetColumns(dataSetColumnAclKeys)
     }
 
 
     @Timed
     @RequestMapping(
-            path = [DATASET_PATH + COLUMN_PATH],
-            method = [RequestMethod.POST],
-            consumes = [MediaType.APPLICATION_JSON_VALUE],
-            produces = [MediaType.APPLICATION_JSON_VALUE]
+        path = [DATA_SET_PATH + COLUMN_PATH],
+        method = [RequestMethod.POST],
+        consumes = [MediaType.APPLICATION_JSON_VALUE],
+        produces = [MediaType.APPLICATION_JSON_VALUE]
     )
-    override fun getColumnsInDatasets(@RequestBody datasetIds: Set<UUID>): Map<UUID, Iterable<DataSetColumn>> {
-        accessCheck(datasetIds.associate { AclKey(it) to EnumSet.of(Permission.READ) })
-        val datasetToColumns = datasetService.getColumnsInDatasets(datasetIds)
+    override fun getColumnsInDatasets(@RequestBody dataSetIds: Set<UUID>): Map<UUID, Iterable<DataSetColumn>> {
+        accessCheck(dataSetIds.associate { AclKey(it) to EnumSet.of(Permission.READ) })
+        val datasetToColumns = datasetService.getColumnsInDatasets(dataSetIds)
 
         val accessChecks = datasetToColumns.flatMapTo(mutableSetOf()) { it.value }
                 .mapTo(mutableSetOf()) { AccessCheck(it.getAclKey(), EnumSet.of(Permission.READ)) }
@@ -125,31 +121,32 @@ constructor(
 
     @Timed
     @RequestMapping(
-            path = [UPDATE_PATH + ID_PATH],
-            method = [RequestMethod.PATCH],
-            consumes = [MediaType.APPLICATION_JSON_VALUE]
+        path = [UPDATE_PATH + DATA_SET_ID_PATH],
+        method = [RequestMethod.PATCH],
+        consumes = [MediaType.APPLICATION_JSON_VALUE]
     )
-    override fun updateDatasetMetadata(@PathVariable(ID) id: UUID, @RequestBody update: SecurableObjectMetadataUpdate) {
-        val aclKey = AclKey(id)
+    override fun updateDatasetMetadata(
+        @PathVariable(DATA_SET_ID_PARAM) dataSetId: UUID,
+        @RequestBody update: SecurableObjectMetadataUpdate
+    ) {
+        val aclKey = AclKey(dataSetId)
         ensureOwnerAccess(aclKey)
-
         updateSecurableObjectMetadata(aclKey, update)
         datasetService.updateObjectMetadata(aclKey, update)
-
     }
 
     @Timed
     @RequestMapping(
-            path = [UPDATE_PATH + DATASET_ID_PATH + ID_PATH],
+            path = [UPDATE_PATH + DATA_SET_ID_PATH + COLUMN_ID_PATH],
             method = [RequestMethod.PATCH],
             consumes = [MediaType.APPLICATION_JSON_VALUE]
     )
     override fun updateDatasetColumnMetadata(
-            @PathVariable(DATASET_ID) datasetId: UUID,
-            @PathVariable(ID) id: UUID,
-            @RequestBody update: SecurableObjectMetadataUpdate
+        @PathVariable(DATA_SET_ID_PARAM) dataSetId: UUID,
+        @PathVariable(COLUMN_ID_PARAM) columnId: UUID,
+        @RequestBody update: SecurableObjectMetadataUpdate
     ) {
-        val aclKey = AclKey(datasetId, id)
+        val aclKey = AclKey(dataSetId, columnId)
         ensureOwnerAccess(aclKey)
 
         updateSecurableObjectMetadata(aclKey, update)
