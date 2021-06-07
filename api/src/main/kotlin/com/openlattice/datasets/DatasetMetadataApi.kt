@@ -8,7 +8,7 @@ import retrofit2.http.POST
 import retrofit2.http.Path
 import java.util.*
 
-interface DatasetMetadataApi {
+interface DataSetMetadataApi {
 
     companion object {
         const val SERVICE = "/datastore"
