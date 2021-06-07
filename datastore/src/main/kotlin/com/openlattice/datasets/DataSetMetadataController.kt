@@ -13,7 +13,7 @@ import com.openlattice.datasets.DataSetMetadataApi.Companion.COLUMN_ID_PATH
 import com.openlattice.datasets.DataSetMetadataApi.Companion.COLUMNS_PATH
 import com.openlattice.datasets.DataSetMetadataApi.Companion.DATA_SET_ID_PARAM
 import com.openlattice.datasets.DataSetMetadataApi.Companion.DATA_SET_ID_PATH
-import com.openlattice.datasets.DataSetMetadataApi.Companion.DATA_SET_PATH
+import com.openlattice.datasets.DataSetMetadataApi.Companion.DATA_SETS_PATH
 import com.openlattice.datasets.DataSetMetadataApi.Companion.UPDATE_PATH
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
@@ -49,7 +49,7 @@ constructor(
 
     @Timed
     @RequestMapping(
-        path = [DATA_SET_PATH + DATA_SET_ID_PATH],
+        path = [DATA_SETS_PATH + DATA_SET_ID_PATH],
         method = [RequestMethod.GET],
         produces = [MediaType.APPLICATION_JSON_VALUE]
     )
@@ -60,7 +60,7 @@ constructor(
 
     @Timed
     @RequestMapping(
-        path = [DATA_SET_PATH],
+        path = [DATA_SETS_PATH],
         method = [RequestMethod.POST],
         consumes = [MediaType.APPLICATION_JSON_VALUE],
         produces = [MediaType.APPLICATION_JSON_VALUE]
@@ -100,7 +100,7 @@ constructor(
 
     @Timed
     @RequestMapping(
-        path = [DATA_SET_PATH + COLUMNS_PATH],
+        path = [DATA_SETS_PATH + COLUMNS_PATH],
         method = [RequestMethod.POST],
         consumes = [MediaType.APPLICATION_JSON_VALUE],
         produces = [MediaType.APPLICATION_JSON_VALUE]

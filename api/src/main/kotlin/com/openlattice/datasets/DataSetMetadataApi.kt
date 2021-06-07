@@ -17,7 +17,7 @@ interface DataSetMetadataApi {
         const val BASE = SERVICE + CONTROLLER
 
         const val COLUMNS_PATH = "/columns"
-        const val DATA_SET_PATH = "/dataset"
+        const val DATA_SETS_PATH = "/datasets"
         const val UPDATE_PATH = "/update"
 
         const val COLUMN_ID_PARAM = "columnId"
@@ -33,7 +33,7 @@ interface DataSetMetadataApi {
      *
      * @return The [DataSet] with the specified id
      */
-    @GET(BASE + DATA_SET_PATH + DATA_SET_ID_PATH)
+    @GET(BASE + DATA_SETS_PATH + DATA_SET_ID_PATH)
     fun getDataSet(@Path(DATA_SET_ID_PARAM) dataSetId: UUID): DataSet
 
     /**
@@ -43,7 +43,7 @@ interface DataSetMetadataApi {
      *
      * @return A map from dataset id to [DataSet]
      */
-    @POST(BASE + DATA_SET_PATH)
+    @POST(BASE + DATA_SETS_PATH)
     fun getDataSets(@Body dataSetIds: Set<UUID>): Map<UUID, DataSet>
 
     /**
@@ -77,7 +77,7 @@ interface DataSetMetadataApi {
      *
      * @return A map from dataset id to an iterable of all the [DataSetColumn]s in that dataset
      */
-    @POST(BASE + DATA_SET_PATH + COLUMNS_PATH)
+    @POST(BASE + DATA_SETS_PATH + COLUMNS_PATH)
     fun getColumnsInDatasets(@Body dataSetIds: Set<UUID>): Map<UUID, Iterable<DataSetColumn>>
 
 
