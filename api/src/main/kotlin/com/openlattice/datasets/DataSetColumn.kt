@@ -9,15 +9,15 @@ import java.util.*
 
 data class DataSetColumn(
     val id: UUID,
-    val datasetId: UUID,
+    val dataSetId: UUID,
     val name: String,
     val organizationId: UUID,
-    val datatype: String,
+    val dataType: String,
     val metadata: SecurableObjectMetadata
 ) {
 
     fun getAclKey(): AclKey {
-        return AclKey(datasetId, id)
+        return AclKey(dataSetId, id)
     }
 
     companion object {
