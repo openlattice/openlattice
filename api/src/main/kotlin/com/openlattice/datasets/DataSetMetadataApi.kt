@@ -11,18 +11,19 @@ import java.util.*
 interface DataSetMetadataApi {
 
     companion object {
+
         const val SERVICE = "/datastore"
         const val CONTROLLER = "/metadata"
         const val BASE = SERVICE + CONTROLLER
 
         const val COLUMN_PATH = "/column"
-        const val DATASET_PATH = "/dataset"
+        const val DATA_SET_PATH = "/dataset"
         const val UPDATE_PATH = "/update"
 
-        const val ID = "id"
-        const val ID_PATH = "/{$ID}"
-        const val DATASET_ID = "datasetId"
-        const val DATASET_ID_PATH = "/{$DATASET_ID}"
+        const val COLUMN_ID_PARAM = "columnId"
+        const val COLUMN_ID_PATH = "/{$COLUMN_ID_PARAM}"
+        const val DATA_SET_ID_PARAM = "dataSetId"
+        const val DATA_SET_ID_PATH = "/{$DATA_SET_ID_PARAM}"
     }
 
     /**
