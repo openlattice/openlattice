@@ -68,13 +68,17 @@ interface DataSetMetadataApi {
     fun getDataSetColumns(@Body dataSetIds: Set<UUID>): Map<UUID, List<DataSetColumn>>
 
     /**
-     * Updates metadata for the dataset with id [id]
+     * Applies the given metadata updates to the data set with the given data set id. The caller must have
+     * [Permission.OWNER] on the target data set.
      *
-     * @param id The id of the dataset to update metadata for
-     *
+     * @param dataSetId a data set id
+     * @param metadata the metadata updates to apply
      */
     @PATCH(BASE + UPDATE_PATH + DATA_SET_ID_PATH)
-    fun updateDataSetMetadata(@Path(DATA_SET_ID_PARAM) dataSetId: UUID, @Body update: SecurableObjectMetadataUpdate)
+    fun updateDataSetMetadata(
+        @Path(DATA_SET_ID_PARAM) dataSetId: UUID,
+        @Body metadata: SecurableObjectMetadataUpdate
+    )
 
     /**
      * Updates metadata for the dataset column with aclKey [datasetId, id]
