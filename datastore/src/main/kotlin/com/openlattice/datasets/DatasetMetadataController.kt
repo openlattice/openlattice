@@ -8,13 +8,13 @@ import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.data.DataDeletionManager
 import com.openlattice.data.DataGraphManager
-import com.openlattice.datasets.DatasetMetadataApi.Companion.COLUMN_PATH
-import com.openlattice.datasets.DatasetMetadataApi.Companion.DATASET_ID
-import com.openlattice.datasets.DatasetMetadataApi.Companion.DATASET_ID_PATH
-import com.openlattice.datasets.DatasetMetadataApi.Companion.DATASET_PATH
-import com.openlattice.datasets.DatasetMetadataApi.Companion.ID
-import com.openlattice.datasets.DatasetMetadataApi.Companion.ID_PATH
-import com.openlattice.datasets.DatasetMetadataApi.Companion.UPDATE_PATH
+import com.openlattice.datasets.DataSetMetadataApi.Companion.COLUMN_PATH
+import com.openlattice.datasets.DataSetMetadataApi.Companion.DATASET_ID
+import com.openlattice.datasets.DataSetMetadataApi.Companion.DATASET_ID_PATH
+import com.openlattice.datasets.DataSetMetadataApi.Companion.DATASET_PATH
+import com.openlattice.datasets.DataSetMetadataApi.Companion.ID
+import com.openlattice.datasets.DataSetMetadataApi.Companion.ID_PATH
+import com.openlattice.datasets.DataSetMetadataApi.Companion.UPDATE_PATH
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.organizations.ExternalDatabaseManagementService
@@ -35,8 +35,8 @@ import javax.inject.Inject
         justification = "Allowing kotlin collection mapping cast to List"
 )
 @RestController
-@RequestMapping(DatasetMetadataApi.CONTROLLER)
-class DatasetMetadataController @Inject
+@RequestMapping(DataSetMetadataApi.CONTROLLER)
+class DataSetMetadataController @Inject
 constructor(
         private val authorizations: AuthorizationManager,
         private val edmManager: EdmManager,
@@ -49,7 +49,7 @@ constructor(
         private val entitySetManager: EntitySetManager,
         private val datasetService: DatasetService,
         private val edms: ExternalDatabaseManagementService
-) : DatasetMetadataApi, AuthorizingComponent, AuditingComponent {
+) : DataSetMetadataApi, AuthorizingComponent, AuditingComponent {
 
     @Timed
     @RequestMapping(
