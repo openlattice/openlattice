@@ -1,11 +1,8 @@
 package com.openlattice.datasets
 
 import com.openlattice.authorization.AclKey
-import retrofit2.http.Body
-import retrofit2.http.GET
-import retrofit2.http.PATCH
-import retrofit2.http.POST
-import retrofit2.http.Path
+import com.openlattice.authorization.Permission
+import retrofit2.http.*
 import java.util.*
 
 interface DataSetMetadataApi {
@@ -27,6 +24,15 @@ interface DataSetMetadataApi {
     }
 
     /**
+     * Gets the [DataSet] metadata objects with the given data set ids that the caller has [Permission.READ] on.
+     *
+     * @param dataSetIds a set of data set ids
+     * @return Map<K, V> where K is a data set id and V is a [DataSet] object
+     */
+    @POST(BASE + DATA_SETS_PATH)
+    fun getDataSets(@Body dataSetIds: Set<UUID>): Map<UUID, DataSet>
+
+    /**
      * Gets a dataset using its id
      *
      * @param datasetId The id of the dataset
@@ -35,16 +41,6 @@ interface DataSetMetadataApi {
      */
     @GET(BASE + DATA_SETS_PATH + DATA_SET_ID_PATH)
     fun getDataSet(@Path(DATA_SET_ID_PARAM) dataSetId: UUID): DataSet
-
-    /**
-     * Gets datasets as a map using their ids
-     *
-     * @param datasetIds The ids of the datasets to load
-     *
-     * @return A map from dataset id to [DataSet]
-     */
-    @POST(BASE + DATA_SETS_PATH)
-    fun getDataSets(@Body dataSetIds: Set<UUID>): Map<UUID, DataSet>
 
     /**
      * Gets a dataset column using its id

@@ -48,6 +48,17 @@ constructor(
 ) : DataSetMetadataApi, AuthorizingComponent, AuditingComponent {
 
     @Timed
+    @PostMapping(
+        path = [DATA_SETS_PATH],
+        consumes = [MediaType.APPLICATION_JSON_VALUE],
+        produces = [MediaType.APPLICATION_JSON_VALUE]
+    )
+    override fun getDataSets(@RequestBody dataSetIds: Set<UUID>): Map<UUID, DataSet> {
+        accessCheck(dataSetIds.associate { AclKey(it) to EnumSet.of(Permission.READ) })
+        return datasetService.getDatasets(dataSetIds)
+    }
+
+    @Timed
     @RequestMapping(
         path = [DATA_SETS_PATH + DATA_SET_ID_PATH],
         method = [RequestMethod.GET],
@@ -56,18 +67,6 @@ constructor(
     override fun getDataSet(@PathVariable(DATA_SET_ID_PARAM) dataSetId: UUID): DataSet {
         ensureReadAccess(AclKey(dataSetId))
         return datasetService.getDataset(dataSetId)
-    }
-
-    @Timed
-    @RequestMapping(
-        path = [DATA_SETS_PATH],
-        method = [RequestMethod.POST],
-        consumes = [MediaType.APPLICATION_JSON_VALUE],
-        produces = [MediaType.APPLICATION_JSON_VALUE]
-    )
-    override fun getDataSets(@RequestBody dataSetIds: Set<UUID>): Map<UUID, DataSet> {
-        accessCheck(dataSetIds.associate { AclKey(it) to EnumSet.of(Permission.READ) })
-        return datasetService.getDatasets(dataSetIds)
     }
 
     @Timed
