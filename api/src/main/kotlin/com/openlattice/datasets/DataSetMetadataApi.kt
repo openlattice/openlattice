@@ -43,17 +43,17 @@ interface DataSetMetadataApi {
     fun getDataSet(@Path(DATA_SET_ID_PARAM) dataSetId: UUID): DataSet
 
     /**
-     * Gets a dataset column using its id
+     * Gets the [DataSetColumn] metadata object with the given data set id and column id. The caller must have
+     * [Permission.READ] on the target [DataSetColumn] metadata object.
      *
-     * @param datasetId The id of the dataset the column belongs to
-     * @param datasetColumnId The id of the column
-     *
-     * @return The [DataSetColumn] with the aclKey of [datasetId, datasetColumnId]
+     * @param dataSetId a data set id
+     * @param columnId a data set column id
+     * @return the target [DataSetColumn] metadata object
      */
     @GET(BASE + COLUMNS_PATH + DATA_SET_ID_PATH + COLUMN_ID_PATH)
     fun getDataSetColumn(
         @Path(DATA_SET_ID_PARAM) dataSetId: UUID,
-        @Path(COLUMN_ID_PARAM) dataSetColumnId: UUID
+        @Path(COLUMN_ID_PARAM) columnId: UUID
     ): DataSetColumn
 
     /**

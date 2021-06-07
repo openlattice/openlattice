@@ -69,16 +69,15 @@ constructor(
     }
 
     @Timed
-    @RequestMapping(
+    @GetMapping(
         path = [COLUMNS_PATH + DATA_SET_ID_PATH + COLUMN_ID_PATH],
-        method = [RequestMethod.GET],
         produces = [MediaType.APPLICATION_JSON_VALUE]
     )
     override fun getDataSetColumn(
         @PathVariable(DATA_SET_ID_PARAM) dataSetId: UUID,
-        @PathVariable(COLUMN_ID_PARAM) dataSetColumnId: UUID
+        @PathVariable(COLUMN_ID_PARAM) columnId: UUID
     ): DataSetColumn {
-        val aclKey = AclKey(dataSetId, dataSetColumnId)
+        val aclKey = AclKey(dataSetId, columnId)
         ensureReadAccess(aclKey)
         return datasetService.getDatasetColumn(aclKey)
     }
