@@ -8,12 +8,12 @@ import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.data.DataDeletionManager
 import com.openlattice.data.DataGraphManager
+import com.openlattice.datasets.DataSetMetadataApi.Companion.COLUMNS_PATH
 import com.openlattice.datasets.DataSetMetadataApi.Companion.COLUMN_ID_PARAM
 import com.openlattice.datasets.DataSetMetadataApi.Companion.COLUMN_ID_PATH
-import com.openlattice.datasets.DataSetMetadataApi.Companion.COLUMNS_PATH
+import com.openlattice.datasets.DataSetMetadataApi.Companion.DATA_SETS_PATH
 import com.openlattice.datasets.DataSetMetadataApi.Companion.DATA_SET_ID_PARAM
 import com.openlattice.datasets.DataSetMetadataApi.Companion.DATA_SET_ID_PATH
-import com.openlattice.datasets.DataSetMetadataApi.Companion.DATA_SETS_PATH
 import com.openlattice.datasets.DataSetMetadataApi.Companion.UPDATE_PATH
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
@@ -27,24 +27,24 @@ import java.util.stream.Collectors
 import javax.inject.Inject
 
 @SuppressFBWarnings(
-        value = ["BC_BAD_CAST_TO_ABSTRACT_COLLECTION"],
-        justification = "Allowing kotlin collection mapping cast to List"
+    value = ["BC_BAD_CAST_TO_ABSTRACT_COLLECTION"],
+    justification = "Allowing kotlin collection mapping cast to List"
 )
 @RestController
 @RequestMapping(DataSetMetadataApi.CONTROLLER)
 class DataSetMetadataController @Inject
 constructor(
-        private val authorizations: AuthorizationManager,
-        private val edmManager: EdmManager,
-        private val aresManager: AuditRecordEntitySetsManager,
-        private val auditingManager: AuditingManager,
-        private val dgm: DataGraphManager,
-        private val spm: SecurePrincipalsManager,
-        private val authzHelper: EdmAuthorizationHelper,
-        private val deletionManager: DataDeletionManager,
-        private val entitySetManager: EntitySetManager,
-        private val datasetService: DatasetService,
-        private val edms: ExternalDatabaseManagementService
+    private val authorizations: AuthorizationManager,
+    private val edmManager: EdmManager,
+    private val aresManager: AuditRecordEntitySetsManager,
+    private val auditingManager: AuditingManager,
+    private val dgm: DataGraphManager,
+    private val spm: SecurePrincipalsManager,
+    private val authzHelper: EdmAuthorizationHelper,
+    private val deletionManager: DataDeletionManager,
+    private val entitySetManager: EntitySetManager,
+    private val datasetService: DatasetService,
+    private val edms: ExternalDatabaseManagementService
 ) : DataSetMetadataApi, AuthorizingComponent, AuditingComponent {
 
     @Timed
