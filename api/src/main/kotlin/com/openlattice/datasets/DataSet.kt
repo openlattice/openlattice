@@ -9,7 +9,7 @@ data class DataSet(
     val name: String,
     val organizationId: UUID,
     val externalId: String,
-    val datasetType: DataSetType,
+    val dataSetType: DataSetType,
     val metadata: SecurableObjectMetadata
 ) {
 
