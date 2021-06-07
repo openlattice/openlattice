@@ -38,7 +38,7 @@ import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.conductor.rpc.SearchConfiguration;
 import com.openlattice.data.EntityDataKey;
 import com.openlattice.datasets.DataSet;
-import com.openlattice.datasets.DatasetColumn;
+import com.openlattice.datasets.DataSetColumn;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.Analyzer;
 import com.openlattice.edm.type.AssociationType;
@@ -1134,7 +1134,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     @Override
-    public boolean saveDatasetToElasticsearch( DataSet dataset, List<DatasetColumn> columns ) {
+    public boolean saveDatasetToElasticsearch( DataSet dataset, List<DataSetColumn> columns ) {
         if ( !verifyElasticsearchConnection() ) {
             return false;
         }
@@ -1157,7 +1157,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     @Override
-    public boolean updateColumnsInDataset( UUID datasetId, List<DatasetColumn> updatedColumns ) {
+    public boolean updateColumnsInDataset( UUID datasetId, List<DataSetColumn> updatedColumns ) {
         if ( !verifyElasticsearchConnection() ) { return false; }
 
         Map<String, Object> columns = ImmutableMap.of( COLUMNS, updatedColumns );

@@ -17,7 +17,7 @@ import com.openlattice.conductor.rpc.ConductorElasticsearchApi
 import com.openlattice.conductor.rpc.SearchConfiguration
 import com.openlattice.data.EntityDataKey
 import com.openlattice.datasets.DataSet
-import com.openlattice.datasets.DatasetColumn
+import com.openlattice.datasets.DataSetColumn
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.Analyzer
 import com.openlattice.edm.type.AssociationType
@@ -1093,7 +1093,7 @@ class DatastoreKotlinElasticsearchImpl(
         return deleteObjectById(indexName, typeName, objectId.toString())
     }
 
-    override fun saveDatasetToElasticsearch(dataset: DataSet, columns: List<DatasetColumn?>): Boolean {
+    override fun saveDatasetToElasticsearch(dataset: DataSet, columns: List<DataSetColumn?>): Boolean {
         if (!verifyElasticsearchConnection()) {
             return false
         }
@@ -1112,7 +1112,7 @@ class DatastoreKotlinElasticsearchImpl(
         return false
     }
 
-    override fun updateColumnsInDataset(datasetId: UUID, updatedColumns: List<DatasetColumn?>): Boolean {
+    override fun updateColumnsInDataset(datasetId: UUID, updatedColumns: List<DataSetColumn?>): Boolean {
         if (!verifyElasticsearchConnection()) {
             return false
         }

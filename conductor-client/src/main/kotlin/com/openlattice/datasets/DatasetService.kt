@@ -86,12 +86,12 @@ class DatasetService(
         return datasetsAsMap
     }
 
-    fun getDatasetColumn(aclKey: AclKey): DatasetColumn {
+    fun getDatasetColumn(aclKey: AclKey): DataSetColumn {
         return getDatasetColumns(setOf(aclKey)).getValue(aclKey)
     }
 
-    fun getDatasetColumns(aclKeys: Set<AclKey>): Map<AclKey, DatasetColumn> {
-        val columnsAsMap = mutableMapOf<AclKey, DatasetColumn>()
+    fun getDatasetColumns(aclKeys: Set<AclKey>): Map<AclKey, DataSetColumn> {
+        val columnsAsMap = mutableMapOf<AclKey, DataSetColumn>()
 
         val metadataMap = objectMetadata.getAll(aclKeys)
         val types = securableObjectTypes.getAll(aclKeys)
@@ -105,7 +105,7 @@ class DatasetService(
                 val entitySet = relevantEntitySets.getValue(aclKey[0])
                 val propertyType = relevantPropertyTypes.getValue(aclKey[1])
                 val metadata = metadataMap.getValue(aclKey)
-                columnsAsMap[aclKey] = DatasetColumn.fromPropertyType(entitySet, propertyType, metadata)
+                columnsAsMap[aclKey] = DataSetColumn.fromPropertyType(entitySet, propertyType, metadata)
             }
         }
 
@@ -117,18 +117,18 @@ class DatasetService(
                 val table = tables.getValue(aclKey[0])
                 val column = columns.getValue(aclKey[1])
                 val metadata = metadataMap.getValue(aclKey)
-                columnsAsMap[aclKey] = DatasetColumn.fromExternalColumn(table, column, metadata)
+                columnsAsMap[aclKey] = DataSetColumn.fromExternalColumn(table, column, metadata)
             }
         }
 
         return columnsAsMap
     }
 
-    fun getColumnsInDataset(datasetId: UUID): List<DatasetColumn> {
+    fun getColumnsInDataset(datasetId: UUID): List<DataSetColumn> {
         return getColumnsInDatasets(setOf(datasetId)).getValue(datasetId).toList()
     }
 
-    fun getColumnsInDatasets(datasetIds: Set<UUID>): Map<UUID, Collection<DatasetColumn>> {
+    fun getColumnsInDatasets(datasetIds: Set<UUID>): Map<UUID, Collection<DataSetColumn>> {
         val columnKeys = objectMetadata.keySet(
                 Predicates.`in`(ObjectMetadataMapstore.ROOT_OBJECT_INDEX, *datasetIds.toTypedArray())
         ).filter { it.size > 1 }.toSet()

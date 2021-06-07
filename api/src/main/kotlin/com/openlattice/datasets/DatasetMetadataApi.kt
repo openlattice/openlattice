@@ -51,30 +51,30 @@ interface DataSetMetadataApi {
      * @param datasetId The id of the dataset the column belongs to
      * @param datasetColumnId The id of the column
      *
-     * @return The [DatasetColumn] with the aclKey of [datasetId, datasetColumnId]
+     * @return The [DataSetColumn] with the aclKey of [datasetId, datasetColumnId]
      */
     @GET(BASE + COLUMN_PATH + DATASET_ID_PATH + ID_PATH)
-    fun getDatasetColumn(@Path(DATASET_ID) datasetId: UUID, @Path(ID) datasetColumnId: UUID): DatasetColumn
+    fun getDatasetColumn(@Path(DATASET_ID) datasetId: UUID, @Path(ID) datasetColumnId: UUID): DataSetColumn
 
     /**
      * Gets dataset columns as a map using their aclKeys
      *
      * @param datasetColumnAclKeys The aclKeys of the dataset columns to load
      *
-     * @return A map from dataset column [AclKey] to [DatasetColumn]
+     * @return A map from dataset column [AclKey] to [DataSetColumn]
      */
     @POST(BASE + COLUMN_PATH)
-    fun getDatasetColumns(@Body datasetColumnAclKeys: Set<AclKey>): Map<AclKey, DatasetColumn>
+    fun getDatasetColumns(@Body datasetColumnAclKeys: Set<AclKey>): Map<AclKey, DataSetColumn>
 
     /**
      * Gets all columns in the specified set of dataset ids
      *
      * @param datasetIds The ids of the datasets to load columns in
      *
-     * @return A map from dataset id to an iterable of all the [DatasetColumn]s in that dataset
+     * @return A map from dataset id to an iterable of all the [DataSetColumn]s in that dataset
      */
     @POST(BASE + DATASET_PATH + COLUMN_PATH)
-    fun getColumnsInDatasets(@Body datasetIds: Set<UUID>): Map<UUID, Iterable<DatasetColumn>>
+    fun getColumnsInDatasets(@Body datasetIds: Set<UUID>): Map<UUID, Iterable<DataSetColumn>>
 
 
     /**

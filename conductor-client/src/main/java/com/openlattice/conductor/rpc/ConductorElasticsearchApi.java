@@ -26,7 +26,7 @@ import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.data.EntityDataKey;
 import com.openlattice.datasets.DataSet;
-import com.openlattice.datasets.DatasetColumn;
+import com.openlattice.datasets.DataSetColumn;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
@@ -231,9 +231,9 @@ public interface ConductorElasticsearchApi {
     boolean deleteSecurableObjectFromElasticsearch( SecurableObjectType securableObjectType, UUID objectId );
 
     /* Dataset create and delete */
-    boolean saveDatasetToElasticsearch( DataSet dataset, List<DatasetColumn> columns );
+    boolean saveDatasetToElasticsearch( DataSet dataset, List<DataSetColumn> columns );
 
-    boolean updateColumnsInDataset( UUID datasetId, List<DatasetColumn> updatedColumns );
+    boolean updateColumnsInDataset( UUID datasetId, List<DataSetColumn> updatedColumns );
 
     boolean deleteDatasetFromElasticsearch( UUID id );
 

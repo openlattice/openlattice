@@ -83,7 +83,7 @@ constructor(
     override fun getDatasetColumn(
             @PathVariable(DATASET_ID) datasetId: UUID,
             @PathVariable(ID) datasetColumnId: UUID
-    ): DatasetColumn {
+    ): DataSetColumn {
         val aclKey = AclKey(datasetId, datasetColumnId)
         ensureReadAccess(aclKey)
         return datasetService.getDatasetColumn(aclKey)
@@ -96,7 +96,7 @@ constructor(
             consumes = [MediaType.APPLICATION_JSON_VALUE],
             produces = [MediaType.APPLICATION_JSON_VALUE]
     )
-    override fun getDatasetColumns(@RequestBody datasetColumnAclKeys: Set<AclKey>): Map<AclKey, DatasetColumn> {
+    override fun getDatasetColumns(@RequestBody datasetColumnAclKeys: Set<AclKey>): Map<AclKey, DataSetColumn> {
         accessCheck(datasetColumnAclKeys.associateWith { EnumSet.of(Permission.READ) })
         return datasetService.getDatasetColumns(datasetColumnAclKeys)
     }
@@ -109,7 +109,7 @@ constructor(
             consumes = [MediaType.APPLICATION_JSON_VALUE],
             produces = [MediaType.APPLICATION_JSON_VALUE]
     )
-    override fun getColumnsInDatasets(@RequestBody datasetIds: Set<UUID>): Map<UUID, Iterable<DatasetColumn>> {
+    override fun getColumnsInDatasets(@RequestBody datasetIds: Set<UUID>): Map<UUID, Iterable<DataSetColumn>> {
         accessCheck(datasetIds.associate { AclKey(it) to EnumSet.of(Permission.READ) })
         val datasetToColumns = datasetService.getColumnsInDatasets(datasetIds)
 
