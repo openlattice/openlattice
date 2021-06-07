@@ -1,0 +1,21 @@
+# Using the scripts to manage your OpenLattice local stack
+
+## Pre-requisites 
+Please make sure you have docker ce, elasticsearch 7.4+, java 11 installed. 
+
+The scripts is currently configured to use citus 9.2. If you want to update the version update the citus.yaml file by using the citus instructions at http://docs.citusdata.com/en/v9.2/installation/single_machine_docker.html[http://docs.citusdata.com/en/v9.2/installation/single_machine_docker.html]
+
+## Seeding your database for the first time
+Seeding your database will automatically setup your citus cluster to have a distributed database called openlattice as well as configure elasticsearch to support a sufficient number of shards for indexing.
+
+```
+./ol_init.sh
+```
+
+## Re-seeding your database 
+
+**Warning this will wipe all your existing data and indices**
+
+```
+./ol_init.sh wipe
+```

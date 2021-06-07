@@ -1,0 +1,3 @@
+bucket: "lattice-prod-config"
+folder: "datastore"
+region: "us-west-1"

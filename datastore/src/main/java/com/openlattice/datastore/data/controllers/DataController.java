@@ -22,6 +22,8 @@ package com.openlattice.datastore.data.controllers;
 
 import com.auth0.spring.security.api.authentication.PreAuthenticatedAuthenticationJsonWebToken;
 import com.codahale.metrics.annotation.Timed;
+import com.geekbeast.rhizome.jobs.HazelcastJobService;
+import com.geekbeast.rhizome.jobs.JobStatus;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.*;
 import com.openlattice.auditing.AuditEventType;
@@ -38,8 +40,11 @@ import com.openlattice.controllers.exceptions.BadRequestException;
 import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.data.*;
 import com.openlattice.data.graph.DataGraphServiceHelper;
+import com.openlattice.data.jobs.DataDeletionJobState;
 import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
+import com.openlattice.data.storage.ByteBlobDataManager;
+import com.openlattice.data.storage.DataDeletionService;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.EntitySetManager;
 import com.openlattice.edm.EntitySet;
@@ -62,6 +67,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletResponse;
+import java.net.URL;
 import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -114,6 +120,15 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
 
     @Inject
     private DataDeletionManager deletionManager;
+
+    @Inject
+    private HazelcastJobService jobService;
+
+    @Inject
+    private ByteBlobDataManager byteBlobDataManager;
+
+    private static final int DELETION_BLOCKING_INTERVAL   = 1000; // 1 second
+    private static final int MAX_DELETION_BLOCKING_CHECKS = 60 * 5; // 5 minutes
 
     @RequestMapping(
             path = { "/" + ENTITY_SET + "/" + SET_ID_PATH },
@@ -170,6 +185,28 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             EntitySetSelection selection,
             FileType fileType ) {
         return loadEntitySetData( entitySetId, selection );
+    }
+
+    @Override
+    @RequestMapping(
+            path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + FILTERED },
+            method = RequestMethod.POST,
+            consumes = { MediaType.APPLICATION_JSON_VALUE },
+            produces = { MediaType.APPLICATION_JSON_VALUE }
+    )
+    public Iterable<Map<FullQualifiedName, Set<Object>>> loadFilteredEntitySetData(
+            @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
+            @RequestBody FilteredDataPageDefinition filteredDataPageDefinition
+    ) {
+        ensureReadAccess( new AclKey( entitySetId ) );
+        if ( filteredDataPageDefinition.getPropertyTypeId() != null ) {
+            ensureReadAccess( new AclKey( entitySetId, filteredDataPageDefinition.getPropertyTypeId() ) );
+        }
+
+        Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes = authzHelper
+                .getAuthorizedPropertiesOnEntitySets( ImmutableSet.of( entitySetId ), EnumSet.of( Permission.READ ) );
+
+        return dgm.getFilteredEntitySetData( entitySetId, filteredDataPageDefinition, authorizedPropertyTypes );
     }
 
     private EntitySetData<FullQualifiedName> loadEntitySetData(
@@ -623,13 +660,17 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     @RequestMapping(
             path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ALL },
             method = RequestMethod.DELETE )
-    public Integer deleteAllEntitiesFromEntitySet(
+    public UUID deleteAllEntitiesFromEntitySet(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @RequestParam( value = TYPE ) DeleteType deleteType ) {
         ensureEntitySetCanBeWritten( entitySetId );
 
-        WriteEvent writeEvent = deletionManager
-                .clearOrDeleteEntitySetIfAuthorized( entitySetId, deleteType, Principals.getCurrentPrincipals() );
+        deletionManager.authCheckForEntitySetAndItsNeighbors( entitySetId,
+                deleteType,
+                Principals.getCurrentPrincipals(),
+                null );
+
+        UUID deletionJobId = deletionManager.clearOrDeleteEntitySet( entitySetId, deleteType );
 
         recordEvent( new AuditableEvent(
                 spm.getCurrentUserId(),
@@ -639,11 +680,11 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                         + " through DataApi.deleteAllEntitiesFromEntitySet",
                 Optional.empty(),
                 ImmutableMap.of(),
-                getDateTimeFromLong( writeEvent.getVersion() ),
+                OffsetDateTime.now(),
                 Optional.empty()
         ) );
 
-        return writeEvent.getNumUpdates();
+        return deletionJobId;
     }
 
     @Timed
@@ -652,8 +693,9 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     public Integer deleteEntity(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId,
-            @RequestParam( value = TYPE ) DeleteType deleteType ) {
-        return deleteEntities( entitySetId, ImmutableSet.of( entityKeyId ), deleteType );
+            @RequestParam( value = TYPE ) DeleteType deleteType,
+            @RequestParam( value = BLOCK, defaultValue = "true" ) boolean blockUntilCompletion ) {
+        return deleteEntities( entitySetId, ImmutableSet.of( entityKeyId ), deleteType, blockUntilCompletion );
     }
 
     @Timed
@@ -662,15 +704,16 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     public Integer deleteEntities(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @RequestBody Set<UUID> entityKeyIds,
-            @RequestParam( value = TYPE ) DeleteType deleteType ) {
+            @RequestParam( value = TYPE ) DeleteType deleteType,
+            @RequestParam( value = BLOCK, defaultValue = "true" ) boolean blockUntilCompletion ) {
 
         ensureEntitySetCanBeWritten( entitySetId );
+        deletionManager.authCheckForEntitySetAndItsNeighbors( entitySetId,
+                deleteType,
+                Principals.getCurrentPrincipals(),
+                entityKeyIds );
 
-        WriteEvent writeEvent = deletionManager
-                .clearOrDeleteEntitiesIfAuthorized( entitySetId,
-                        entityKeyIds,
-                        deleteType,
-                        Principals.getCurrentPrincipals() );
+        UUID deletionJobId = deletionManager.clearOrDeleteEntities( entitySetId, entityKeyIds, deleteType );
 
         recordEvent( new AuditableEvent(
                 spm.getCurrentUserId(),
@@ -679,11 +722,11 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                 "Entities deleted using delete type " + deleteType.toString() + " through DataApi.deleteEntities",
                 Optional.of( entityKeyIds ),
                 ImmutableMap.of(),
-                getDateTimeFromLong( writeEvent.getVersion() ),
+                OffsetDateTime.now(),
                 Optional.empty()
         ) );
 
-        return writeEvent.getNumUpdates();
+        return blockOnDeletionJobGettingNumUpdates( deletionJobId, blockUntilCompletion );
     }
 
     @Timed
@@ -695,14 +738,31 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId,
             @RequestBody Set<UUID> propertyTypeIds,
             @RequestParam( value = TYPE ) DeleteType deleteType ) {
-
+        AclKey entitySetAclKey = new AclKey( entitySetId );
+        if ( deleteType.equals( DeleteType.Soft ) ) {
+            ensureWriteAccess( entitySetAclKey );
+        } else {
+            ensureOwnerAccess( entitySetAclKey );
+        }
         ensureEntitySetCanBeWritten( entitySetId );
 
-        WriteEvent writeEvent = deletionManager.clearOrDeleteEntityProperties( entitySetId,
+        Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper.getAuthorizedPropertiesOnEntitySets(
+                ImmutableSet.of( entitySetId ),
+                DataDeletionService.getPERMISSIONS_FOR_DELETE_TYPE().get( deleteType )
+        ).get( entitySetId );
+        Set<UUID> unauthorizedPropertyTypeIds = Sets.difference( propertyTypeIds, authorizedPropertyTypes.keySet() );
+        if ( !unauthorizedPropertyTypeIds.isEmpty() ) {
+            throw new ForbiddenException( "Cannot delete properties of entity set " + entitySetId.toString() +
+                    " because properties " + unauthorizedPropertyTypeIds.toString() + " are not authorized." );
+        }
+
+        WriteEvent writeEvent = deletionManager.clearOrDeleteEntityProperties(
+                entitySetId,
                 ImmutableSet.of( entityKeyId ),
                 deleteType,
                 propertyTypeIds,
-                Principals.getCurrentPrincipals() );
+                authorizedPropertyTypes
+        );
 
         recordEvent( new AuditableEvent(
                 spm.getCurrentUserId(),
@@ -733,14 +793,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
 
         ensureEntitySetCanBeWritten( entitySetId );
 
-        WriteEvent writeEvent = deletionManager.clearOrDeleteEntitiesAndNeighborsIfAuthorized(
-                entitySetId,
-                filter.getEntityKeyIds(),
-                filter.getSrcEntitySetIds().orElse( ImmutableSet.of() ),
-                filter.getDstEntitySetIds().orElse( ImmutableSet.of() ),
-                deleteType,
-                Principals.getCurrentPrincipals()
-        );
+        WriteEvent writeEvent = new WriteEvent( 0, 0 );
 
         recordEvent( new AuditableEvent(
                 spm.getCurrentUserId(),
@@ -933,6 +986,23 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         return dgm.getLinkedEntitySetBreakDown( entityKeyIdsOfEntitySets, authorizedPropertyTypesOfEntitySets );
     }
 
+    @Timed
+    @Override
+    @PostMapping(
+            path = BINARY,
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public BinaryObjectResponse loadBinaryProperties( @RequestBody BinaryObjectRequest binaryObjectRequest ) {
+        binaryObjectRequest.getAclKeys().forEach( this::ensureReadAccess );
+
+        Map<String, URL> result = byteBlobDataManager.getPresignedUrlsWithDispositions(
+                binaryObjectRequest.mapToS3KeysToDispositions()
+        );
+
+        return BinaryObjectResponse.fromS3Response( result );
+    }
+
     @NotNull
     @Override
     public AuditingManager getAuditingManager() {
@@ -1034,6 +1104,34 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             throw new ForbiddenException( "You cannot modify data of entity sets " + auditEntitySetIds.toString()
                     + " because they are audit entity sets." );
         }
+    }
+
+    private int blockOnDeletionJobGettingNumUpdates( UUID deletionJobId, boolean blockUntilCompletion ) {
+        if ( !blockUntilCompletion ) {
+            return 0;
+        }
+
+        for ( int i = 0; i < MAX_DELETION_BLOCKING_CHECKS; i++ ) {
+            try {
+                Thread.sleep( DELETION_BLOCKING_INTERVAL );
+                JobStatus status = jobService.getStatus( deletionJobId );
+
+                if ( status.equals( JobStatus.FINISHED ) ) {
+                    return Long.valueOf(
+                            ( (DataDeletionJobState) jobService.getJob( deletionJobId ).getState() ).getNumDeletes()
+                    ).intValue();
+                }
+
+                if ( status.equals( JobStatus.CANCELED ) ) {
+                    throw new IllegalStateException(
+                            "Deletion failed -- job " + deletionJobId.toString() + " was canceled." );
+                }
+            } catch ( InterruptedException e ) {
+                logger.error( "Unable to block until deletion finished." );
+            }
+        }
+
+        return 0;
     }
 
 }

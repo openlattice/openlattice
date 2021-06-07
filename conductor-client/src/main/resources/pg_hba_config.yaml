@@ -1,0 +1,3 @@
+path: "/usr/local/var/postgres"
+fileName: "/pg_hba_test.conf"
+authMethod: "md5"
