@@ -226,5 +226,5 @@ jar {
 }
 
 startScripts {
-    classpath = files(jar.archivePath)
+    classpath = files(jar.archiveFile.get().asFile)
 }
