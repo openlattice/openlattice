@@ -24,15 +24,6 @@ interface DataSetMetadataApi {
     }
 
     /**
-     * Gets the [DataSet] metadata objects with the given data set ids that the caller has [Permission.READ] on.
-     *
-     * @param dataSetIds a set of data set ids
-     * @return Map<K, V> where K is a data set id and V is a [DataSet] object
-     */
-    @POST(BASE + DATA_SETS_PATH)
-    fun getDataSets(@Body dataSetIds: Set<UUID>): Map<UUID, DataSet>
-
-    /**
      * Gets the [DataSet] metadata object with the given data set id. The caller must have [Permission.READ] on the
      * target [DataSet] metadata object.
      *
@@ -41,6 +32,15 @@ interface DataSetMetadataApi {
      */
     @GET(BASE + DATA_SETS_PATH + DATA_SET_ID_PATH)
     fun getDataSet(@Path(DATA_SET_ID_PARAM) dataSetId: UUID): DataSet
+
+    /**
+     * Gets the [DataSet] metadata objects with the given data set ids that the caller has [Permission.READ] on.
+     *
+     * @param dataSetIds a set of data set ids
+     * @return Map<K, V> where K is a data set id and V is a [DataSet] object
+     */
+    @POST(BASE + DATA_SETS_PATH)
+    fun getDataSets(@Body dataSetIds: Set<UUID>): Map<UUID, DataSet>
 
     /**
      * Gets the [DataSetColumn] metadata object with the given data set id and column id. The caller must have
