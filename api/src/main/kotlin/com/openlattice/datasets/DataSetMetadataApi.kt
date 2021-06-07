@@ -1,8 +1,6 @@
 package com.openlattice.datasets
 
-import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.Permission
-import com.openlattice.collaborations.Collaboration
 import retrofit2.http.*
 import java.util.*
 
@@ -81,16 +79,17 @@ interface DataSetMetadataApi {
     )
 
     /**
-     * Updates metadata for the dataset column with aclKey [datasetId, id]
+     * Applies the given metadata updates to the data set column with the given data set id and column id. The caller
+     * must have [Permission.OWNER] on the target data set column.
      *
-     * @param datasetId The id of the dataset to update metadata for
-     * @param id The id of the column in the dataset to update metadata for
-     *
+     * @param dataSetId a data set id
+     * @param columnId a data set column id
+     * @param metadata the metadata updates to apply
      */
     @PATCH(BASE + UPDATE_PATH + DATA_SET_ID_PATH + COLUMN_ID_PATH)
     fun updateDataSetColumnMetadata(
         @Path(DATA_SET_ID_PARAM) dataSetId: UUID,
         @Path(COLUMN_ID_PARAM) columnId: UUID,
-        @Body update: SecurableObjectMetadataUpdate
+        @Body metadata: SecurableObjectMetadataUpdate
     )
 }

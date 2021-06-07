@@ -118,21 +118,19 @@ constructor(
     }
 
     @Timed
-    @RequestMapping(
-            path = [UPDATE_PATH + DATA_SET_ID_PATH + COLUMN_ID_PATH],
-            method = [RequestMethod.PATCH],
-            consumes = [MediaType.APPLICATION_JSON_VALUE]
+    @PatchMapping(
+        path = [UPDATE_PATH + DATA_SET_ID_PATH + COLUMN_ID_PATH],
+        consumes = [MediaType.APPLICATION_JSON_VALUE]
     )
     override fun updateDataSetColumnMetadata(
         @PathVariable(DATA_SET_ID_PARAM) dataSetId: UUID,
         @PathVariable(COLUMN_ID_PARAM) columnId: UUID,
-        @RequestBody update: SecurableObjectMetadataUpdate
+        @RequestBody metadata: SecurableObjectMetadataUpdate
     ) {
         val aclKey = AclKey(dataSetId, columnId)
         ensureOwnerAccess(aclKey)
-
-        updateSecurableObjectMetadata(aclKey, update)
-        datasetService.updateObjectMetadata(aclKey, update)
+        updateSecurableObjectMetadata(aclKey, metadata)
+        datasetService.updateObjectMetadata(aclKey, metadata)
     }
 
     private fun updateSecurableObjectMetadata(aclKey: AclKey, update: SecurableObjectMetadataUpdate) {
