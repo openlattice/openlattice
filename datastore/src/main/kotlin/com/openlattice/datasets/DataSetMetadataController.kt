@@ -10,7 +10,7 @@ import com.openlattice.data.DataDeletionManager
 import com.openlattice.data.DataGraphManager
 import com.openlattice.datasets.DataSetMetadataApi.Companion.COLUMN_ID_PARAM
 import com.openlattice.datasets.DataSetMetadataApi.Companion.COLUMN_ID_PATH
-import com.openlattice.datasets.DataSetMetadataApi.Companion.COLUMN_PATH
+import com.openlattice.datasets.DataSetMetadataApi.Companion.COLUMNS_PATH
 import com.openlattice.datasets.DataSetMetadataApi.Companion.DATA_SET_ID_PARAM
 import com.openlattice.datasets.DataSetMetadataApi.Companion.DATA_SET_ID_PATH
 import com.openlattice.datasets.DataSetMetadataApi.Companion.DATA_SET_PATH
@@ -72,7 +72,7 @@ constructor(
 
     @Timed
     @RequestMapping(
-        path = [COLUMN_PATH + DATA_SET_ID_PATH + COLUMN_ID_PATH],
+        path = [COLUMNS_PATH + DATA_SET_ID_PATH + COLUMN_ID_PATH],
         method = [RequestMethod.GET],
         produces = [MediaType.APPLICATION_JSON_VALUE]
     )
@@ -87,7 +87,7 @@ constructor(
 
     @Timed
     @RequestMapping(
-        path = [COLUMN_PATH],
+        path = [COLUMNS_PATH],
         method = [RequestMethod.POST],
         consumes = [MediaType.APPLICATION_JSON_VALUE],
         produces = [MediaType.APPLICATION_JSON_VALUE]
@@ -100,7 +100,7 @@ constructor(
 
     @Timed
     @RequestMapping(
-        path = [DATA_SET_PATH + COLUMN_PATH],
+        path = [DATA_SET_PATH + COLUMNS_PATH],
         method = [RequestMethod.POST],
         consumes = [MediaType.APPLICATION_JSON_VALUE],
         produces = [MediaType.APPLICATION_JSON_VALUE]

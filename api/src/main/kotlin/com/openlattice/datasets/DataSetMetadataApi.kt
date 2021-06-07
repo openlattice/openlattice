@@ -16,7 +16,7 @@ interface DataSetMetadataApi {
         const val CONTROLLER = "/metadata"
         const val BASE = SERVICE + CONTROLLER
 
-        const val COLUMN_PATH = "/column"
+        const val COLUMNS_PATH = "/columns"
         const val DATA_SET_PATH = "/dataset"
         const val UPDATE_PATH = "/update"
 
@@ -54,7 +54,7 @@ interface DataSetMetadataApi {
      *
      * @return The [DataSetColumn] with the aclKey of [datasetId, datasetColumnId]
      */
-    @GET(BASE + COLUMN_PATH + DATA_SET_ID_PATH + COLUMN_ID_PATH)
+    @GET(BASE + COLUMNS_PATH + DATA_SET_ID_PATH + COLUMN_ID_PATH)
     fun getDataSetColumn(
         @Path(DATA_SET_ID_PARAM) dataSetId: UUID,
         @Path(COLUMN_ID_PARAM) dataSetColumnId: UUID
@@ -67,7 +67,7 @@ interface DataSetMetadataApi {
      *
      * @return A map from dataset column [AclKey] to [DataSetColumn]
      */
-    @POST(BASE + COLUMN_PATH)
+    @POST(BASE + COLUMNS_PATH)
     fun getDataSetColumns(@Body dataSetColumnAclKeys: Set<AclKey>): Map<AclKey, DataSetColumn>
 
     /**
@@ -77,7 +77,7 @@ interface DataSetMetadataApi {
      *
      * @return A map from dataset id to an iterable of all the [DataSetColumn]s in that dataset
      */
-    @POST(BASE + DATA_SET_PATH + COLUMN_PATH)
+    @POST(BASE + DATA_SET_PATH + COLUMNS_PATH)
     fun getColumnsInDatasets(@Body dataSetIds: Set<UUID>): Map<UUID, Iterable<DataSetColumn>>
 
 
