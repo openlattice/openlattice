@@ -30,7 +30,7 @@ interface DataSetMetadataApi {
      * @return the target [DataSet] metadata object
      */
     @GET(BASE + DATA_SETS_PATH + DATA_SET_ID_PATH)
-    fun getDataSet(@Path(DATA_SET_ID_PARAM) dataSetId: UUID): DataSet
+    fun getDataSetMetadata(@Path(DATA_SET_ID_PARAM) dataSetId: UUID): DataSet
 
     /**
      * Gets the [DataSet] metadata objects with the given data set ids that the caller has [Permission.READ] on.
@@ -39,7 +39,7 @@ interface DataSetMetadataApi {
      * @return Map<K, V> where K is a data set id and V is a [DataSet] object
      */
     @POST(BASE + DATA_SETS_PATH)
-    fun getDataSets(@Body dataSetIds: Set<UUID>): Map<UUID, DataSet>
+    fun getDataSetsMetadata(@Body dataSetIds: Set<UUID>): Map<UUID, DataSet>
 
     /**
      * Gets the [DataSetColumn] metadata object with the given data set id and column id. The caller must have
@@ -50,7 +50,7 @@ interface DataSetMetadataApi {
      * @return the target [DataSetColumn] metadata object
      */
     @GET(BASE + COLUMNS_PATH + DATA_SET_ID_PATH + COLUMN_ID_PATH)
-    fun getDataSetColumn(
+    fun getDataSetColumnMetadata(
         @Path(DATA_SET_ID_PARAM) dataSetId: UUID,
         @Path(COLUMN_ID_PARAM) columnId: UUID
     ): DataSetColumn
@@ -63,7 +63,7 @@ interface DataSetMetadataApi {
      * @return Map<K, V> where K is a data set id and V is a list of [DataSetColumn] metadata objects
      */
     @POST(BASE + COLUMNS_PATH)
-    fun getDataSetColumns(@Body dataSetIds: Set<UUID>): Map<UUID, List<DataSetColumn>>
+    fun getDataSetColumnsMetadata(@Body dataSetIds: Set<UUID>): Map<UUID, List<DataSetColumn>>
 
     /**
      * Applies the given metadata updates to the data set with the given data set id. The caller must have

@@ -52,7 +52,7 @@ constructor(
         path = [DATA_SETS_PATH + DATA_SET_ID_PATH],
         produces = [MediaType.APPLICATION_JSON_VALUE]
     )
-    override fun getDataSet(@PathVariable(DATA_SET_ID_PARAM) dataSetId: UUID): DataSet {
+    override fun getDataSetMetadata(@PathVariable(DATA_SET_ID_PARAM) dataSetId: UUID): DataSet {
         ensureReadAccess(AclKey(dataSetId))
         return datasetService.getDataset(dataSetId)
     }
@@ -63,7 +63,7 @@ constructor(
         consumes = [MediaType.APPLICATION_JSON_VALUE],
         produces = [MediaType.APPLICATION_JSON_VALUE]
     )
-    override fun getDataSets(@RequestBody dataSetIds: Set<UUID>): Map<UUID, DataSet> {
+    override fun getDataSetsMetadata(@RequestBody dataSetIds: Set<UUID>): Map<UUID, DataSet> {
         accessCheck(dataSetIds.associate { AclKey(it) to EnumSet.of(Permission.READ) })
         return datasetService.getDatasets(dataSetIds)
     }
@@ -73,7 +73,7 @@ constructor(
         path = [COLUMNS_PATH + DATA_SET_ID_PATH + COLUMN_ID_PATH],
         produces = [MediaType.APPLICATION_JSON_VALUE]
     )
-    override fun getDataSetColumn(
+    override fun getDataSetColumnMetadata(
         @PathVariable(DATA_SET_ID_PARAM) dataSetId: UUID,
         @PathVariable(COLUMN_ID_PARAM) columnId: UUID
     ): DataSetColumn {
@@ -88,7 +88,7 @@ constructor(
         consumes = [MediaType.APPLICATION_JSON_VALUE],
         produces = [MediaType.APPLICATION_JSON_VALUE]
     )
-    override fun getDataSetColumns(@RequestBody dataSetIds: Set<UUID>): Map<UUID, List<DataSetColumn>> {
+    override fun getDataSetColumnsMetadata(@RequestBody dataSetIds: Set<UUID>): Map<UUID, List<DataSetColumn>> {
         accessCheck(dataSetIds.associate { AclKey(it) to EnumSet.of(Permission.READ) })
         val datasetToColumns = datasetService.getColumnsInDatasets(dataSetIds)
         val accessChecks = datasetToColumns
