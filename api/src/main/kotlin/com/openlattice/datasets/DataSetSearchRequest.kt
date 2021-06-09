@@ -2,7 +2,7 @@ package com.openlattice.datasets
 
 import java.util.*
 
-data class DatasetSearchRequest(
+data class DataSetSearchRequest(
         val searchTerm: String,
         val start: Int = 0,
         val maxHits: Int = 10_000,

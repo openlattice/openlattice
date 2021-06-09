@@ -21,7 +21,7 @@ package com.openlattice.search;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.data.requests.NeighborEntityDetails;
 import com.openlattice.data.requests.NeighborEntityIds;
-import com.openlattice.datasets.DatasetSearchRequest;
+import com.openlattice.datasets.DataSetSearchRequest;
 import com.openlattice.search.requests.*;
 import retrofit2.http.Body;
 import retrofit2.http.GET;
@@ -239,7 +239,7 @@ public interface SearchApi {
      * @return A search result object, containing the total number of hits for the given query, and the hits themselves
      */
     @POST( BASE + DATASETS )
-    SearchResult executeDatasetSearch( @Body DatasetSearchRequest searchTerm );
+    SearchResult executeDatasetSearch( @Body DataSetSearchRequest searchTerm );
 
     /**
      * Executes a search over all entity types to find ones that match the given name and namespace, including partial
