@@ -26,7 +26,7 @@ import com.openlattice.codex.controllers.CodexController;
 import com.openlattice.collaborations.controllers.CollaborationsController;
 import com.openlattice.collection.CollectionsController;
 import com.openlattice.data.DataApi;
-import com.openlattice.datasets.DatasetMetadataController;
+import com.openlattice.datasets.DataSetMetadataController;
 import com.openlattice.datastore.analysis.controllers.AnalysisController;
 import com.openlattice.datastore.apps.controllers.AppController;
 import com.openlattice.datastore.authorization.controllers.AuthorizationsController;
@@ -76,7 +76,7 @@ import java.util.List;
                 PersistentSearchController.class, AdminController.class,
                 SubscriptionController.class, FeedsController.class, CodexController.class, CollectionsController.class,
                 DatasetController.class, AnalysisController.class, CollaborationsController.class,
-                DatasetMetadataController.class
+                DataSetMetadataController.class
         },
         includeFilters = @ComponentScan.Filter(
                 value = { org.springframework.stereotype.Controller.class,
