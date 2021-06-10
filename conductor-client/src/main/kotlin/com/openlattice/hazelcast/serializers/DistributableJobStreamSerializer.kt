@@ -68,7 +68,7 @@ class DistributableJobStreamSerializer :
     }
 
     @VisibleForTesting
-    internal fun setHikariDataSource(resolver: DataSourceResolver) {
+    internal fun setDataSourceResolver(resolver: DataSourceResolver) {
         this.resolver = resolver
     }
 
