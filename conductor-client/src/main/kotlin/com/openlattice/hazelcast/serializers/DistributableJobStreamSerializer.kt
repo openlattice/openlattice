@@ -45,7 +45,7 @@ import javax.inject.Inject
 class DistributableJobStreamSerializer :
         IdGenerationServiceDependent<DistributableJobStreamSerializer>,
         AbstractDistributableJobStreamSerializer(), ByteBlobDataManagerAware {
-    @Inject
+
     private lateinit var resolver: DataSourceResolver
 
     private lateinit var idService: HazelcastIdGenerationService
