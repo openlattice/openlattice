@@ -23,7 +23,7 @@ class DistributableJobStreamSerializerTest :
     AbstractStreamSerializerTest<DistributableJobStreamSerializer, DistributableJob<*>>() {
     override fun createSerializer(): DistributableJobStreamSerializer {
         val ss = DistributableJobStreamSerializer()
-        
+
         val dataSourceManager = Mockito.mock(DataSourceManager::class.java)
         val hds = Mockito.mock(HikariDataSource::class.java)
         val hz = Mockito.mock(HazelcastInstance::class.java)

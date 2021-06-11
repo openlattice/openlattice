@@ -4,6 +4,7 @@ import com.hazelcast.core.HazelcastInstance
 import com.openlattice.data.storage.DataSourceResolver
 import com.openlattice.jdbc.DataSourceManager
 import com.openlattice.postgres.PostgresTable
+import org.graalvm.compiler.core.common.SuppressFBWarnings
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import javax.inject.Inject
@@ -12,7 +13,7 @@ import javax.inject.Inject
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-@Configuration
+@SuppressFBWarnings(value= ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"], justification="Kotlin class parsing bug in spotbugs")
 class DataSourceResolverPodForTests {
     @Inject
     private lateinit var dataSourceManager: DataSourceManager
