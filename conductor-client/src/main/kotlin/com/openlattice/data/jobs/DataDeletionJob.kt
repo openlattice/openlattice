@@ -327,7 +327,7 @@ class DataDeletionJob(
         ps.addBatch()
     }
 
-    //TODO: entity key ids should be paired with their entity key ids :-/
+    //TODO: entity key ids should be paired with their entity set ids :-/
     @JsonIgnore
     private fun deletePropertyOfEntityFromS3(
         entitySetIds: Collection<UUID>,
