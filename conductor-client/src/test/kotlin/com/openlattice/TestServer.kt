@@ -30,14 +30,12 @@ import com.openlattice.auth0.Auth0Pod
 import com.openlattice.data.storage.DataSourceResolver
 import com.openlattice.datastore.constants.DatastoreProfiles
 import com.openlattice.edm.PostgresEdmManager
-import com.openlattice.hazelcast.pods.DataSourceResolverPodForTests
+import com.openlattice.test.DataSourceResolverPodForTests
 import com.openlattice.hazelcast.pods.MapstoresPod
 import com.openlattice.hazelcast.pods.SharedStreamSerializersPod
 import com.openlattice.hazelcast.pods.TestPod
-import com.openlattice.jdbc.DataSourceManager
 import com.openlattice.jdbc.JdbcPod
 import com.openlattice.postgres.PostgresPod
-import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.PostgresTablesPod
 import com.openlattice.postgres.pods.ExternalDatabaseConnectionManagerPod
 import com.zaxxer.hikari.HikariDataSource
@@ -47,17 +45,17 @@ open class TestServer {
 
         @JvmField
         val testServer = RhizomeApplicationServer(
-                Auth0Pod::class.java,
-                AssemblerConfigurationPod::class.java,
-                MapstoresPod::class.java,
-                JdbcPod::class.java,
-                PostgresPod::class.java,
-                SharedStreamSerializersPod::class.java,
-                PostgresTablesPod::class.java,
-                AuditingConfigurationPod::class.java,
-                ExternalDatabaseConnectionManagerPod::class.java,
-                DataSourceResolverPodForTests::class.java,
-                TestPod::class.java
+            Auth0Pod::class.java,
+            AssemblerConfigurationPod::class.java,
+            MapstoresPod::class.java,
+            JdbcPod::class.java,
+            PostgresPod::class.java,
+            SharedStreamSerializersPod::class.java,
+            PostgresTablesPod::class.java,
+            AuditingConfigurationPod::class.java,
+            ExternalDatabaseConnectionManagerPod::class.java,
+            DataSourceResolverPodForTests::class.java,
+            TestPod::class.java
         )
 
         @JvmField

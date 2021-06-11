@@ -1,12 +1,11 @@
-package com.openlattice.hazelcast.pods
+package com.openlattice.test
 
 import com.hazelcast.core.HazelcastInstance
 import com.openlattice.data.storage.DataSourceResolver
 import com.openlattice.jdbc.DataSourceManager
 import com.openlattice.postgres.PostgresTable
-import org.graalvm.compiler.core.common.SuppressFBWarnings
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Configuration
 import javax.inject.Inject
 
 /**
