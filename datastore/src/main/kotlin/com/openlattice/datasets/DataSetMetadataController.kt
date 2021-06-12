@@ -43,7 +43,7 @@ constructor(
     private val authzHelper: EdmAuthorizationHelper,
     private val deletionManager: DataDeletionManager,
     private val entitySetManager: EntitySetManager,
-    private val datasetService: DatasetService,
+    private val dataSetService: DatasetService,
     private val edms: ExternalDatabaseManagementService
 ) : DataSetMetadataApi, AuthorizingComponent, AuditingComponent {
 
@@ -54,7 +54,7 @@ constructor(
     )
     override fun getDataSetMetadata(@PathVariable(DATA_SET_ID_PARAM) dataSetId: UUID): DataSet {
         ensureReadAccess(AclKey(dataSetId))
-        return datasetService.getDataset(dataSetId)
+        return dataSetService.getDataset(dataSetId)
     }
 
     @Timed
@@ -65,7 +65,7 @@ constructor(
     )
     override fun getDataSetsMetadata(@RequestBody dataSetIds: Set<UUID>): Map<UUID, DataSet> {
         accessCheck(dataSetIds.associate { AclKey(it) to EnumSet.of(Permission.READ) })
-        return datasetService.getDatasets(dataSetIds)
+        return dataSetService.getDatasets(dataSetIds)
     }
 
     @Timed
@@ -79,7 +79,7 @@ constructor(
     ): DataSetColumn {
         val aclKey = AclKey(dataSetId, columnId)
         ensureReadAccess(aclKey)
-        return datasetService.getDatasetColumn(aclKey)
+        return dataSetService.getDatasetColumn(aclKey)
     }
 
     @Timed
@@ -90,13 +90,13 @@ constructor(
     )
     override fun getDataSetColumnsMetadata(@RequestBody dataSetIds: Set<UUID>): Map<UUID, List<DataSetColumn>> {
         accessCheck(dataSetIds.associate { AclKey(it) to EnumSet.of(Permission.READ) })
-        val datasetToColumns = datasetService.getColumnsInDatasets(dataSetIds)
+        val datasetToColumns = dataSetService.getColumnsInDatasets(dataSetIds)
         val accessChecks = datasetToColumns
             .flatMapTo(mutableSetOf()) { it.value }
             .mapTo(mutableSetOf()) { AccessCheck(it.getAclKey(), EnumSet.of(Permission.READ)) }
         val authorizedColumns = authorizations
             .accessChecksForPrincipals(accessChecks, Principals.getCurrentPrincipals())
-            .filter { it.permissions.getValue(Permission.READ) }
+            .filter { it.permissions.getOrDefault(Permission.READ, false) }
             .map { it.aclKey }
             .collect(Collectors.toSet())
         return datasetToColumns.mapValues { it.value.filter { col -> authorizedColumns.contains(col.getAclKey()) } }
@@ -114,7 +114,7 @@ constructor(
         val aclKey = AclKey(dataSetId)
         ensureOwnerAccess(aclKey)
         updateSecurableObjectMetadata(aclKey, metadata)
-        datasetService.updateObjectMetadata(aclKey, metadata)
+        dataSetService.updateObjectMetadata(aclKey, metadata)
     }
 
     @Timed
@@ -130,13 +130,13 @@ constructor(
         val aclKey = AclKey(dataSetId, columnId)
         ensureOwnerAccess(aclKey)
         updateSecurableObjectMetadata(aclKey, metadata)
-        datasetService.updateObjectMetadata(aclKey, metadata)
+        dataSetService.updateObjectMetadata(aclKey, metadata)
     }
 
     private fun updateSecurableObjectMetadata(aclKey: AclKey, update: SecurableObjectMetadataUpdate) {
         val metadataUpdate = SecurableObjectMetadataUpdate.toMetadataUpdate(update)
 
-        when (val objectType = datasetService.getObjectType(aclKey)) {
+        when (val objectType = dataSetService.getObjectType(aclKey)) {
             SecurableObjectType.EntitySet -> {
                 entitySetManager.updateEntitySetMetadata(aclKey.first(), metadataUpdate)
             }
