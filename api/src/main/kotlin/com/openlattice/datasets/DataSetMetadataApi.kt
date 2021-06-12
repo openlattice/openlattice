@@ -1,6 +1,7 @@
 package com.openlattice.datasets
 
 import com.openlattice.authorization.Permission
+import com.openlattice.organizations.Organization
 import retrofit2.http.*
 import java.util.*
 
@@ -14,12 +15,15 @@ interface DataSetMetadataApi {
 
         const val COLUMNS_PATH = "/columns"
         const val DATA_SETS_PATH = "/datasets"
+        const val ORGANIZATIONS_PATH = "/organizations"
         const val UPDATE_PATH = "/update"
 
         const val COLUMN_ID_PARAM = "columnId"
         const val COLUMN_ID_PATH = "/{$COLUMN_ID_PARAM}"
         const val DATA_SET_ID_PARAM = "dataSetId"
         const val DATA_SET_ID_PATH = "/{$DATA_SET_ID_PARAM}"
+        const val ORGANIZATION_ID_PARAM = "organizationId"
+        const val ORGANIZATION_ID_PATH = "/{$ORGANIZATION_ID_PARAM}"
     }
 
     /**
@@ -64,6 +68,16 @@ interface DataSetMetadataApi {
      */
     @POST(BASE + COLUMNS_PATH)
     fun getDataSetColumnsMetadata(@Body dataSetIds: Set<UUID>): Map<UUID, List<DataSetColumn>>
+
+    /**
+     * Gets all [DataSet] metadata objects the caller has [Permission.READ] on that belong to the [Organization] object
+     * with the given organization id. The caller must have [Permission.READ] on the target [Organization] object.
+     *
+     * @param organizationId [Organization] id
+     * @return Map<K, V> where K is a data set id and V is a [DataSet] object
+     */
+    @GET(BASE + DATA_SETS_PATH + ORGANIZATIONS_PATH + ORGANIZATION_ID_PATH)
+    fun getOrganizationDataSetsMetadata(@Path(ORGANIZATION_ID_PARAM) organizationId: UUID): Map<UUID, DataSet>
 
     /**
      * Applies the given metadata updates to the data set with the given data set id. The caller must have
