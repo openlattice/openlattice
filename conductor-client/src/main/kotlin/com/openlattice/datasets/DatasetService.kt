@@ -86,6 +86,16 @@ class DatasetService(
         return datasetsAsMap
     }
 
+    fun getOrganizationDataSetIds(organizationId: UUID): Set<UUID> {
+        val entitySetIds = entitySets.keySet(
+            Predicates.equal(EntitySetMapstore.ORGANIZATION_INDEX, organizationId)
+        )
+        val tableIds = externalTables.keySet(
+            Predicates.equal(ExternalTablesMapstore.ORGANIZATION_ID_INDEX, organizationId)
+        )
+        return entitySetIds + tableIds
+    }
+
     fun getDatasetColumn(aclKey: AclKey): DataSetColumn {
         return getDatasetColumns(setOf(aclKey)).getValue(aclKey)
     }
