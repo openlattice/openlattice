@@ -8,6 +8,7 @@ import com.geekbeast.rhizome.jobs.AbstractDistributedJob
 import com.geekbeast.rhizome.jobs.JobStatus
 import com.openlattice.client.serialization.SerializationConstants
 import com.openlattice.data.EntityKey
+import com.openlattice.data.storage.DataSourceResolver
 import com.openlattice.graph.partioning.REPARTITION_DATA_COLUMNS
 import com.openlattice.graph.partioning.REPARTITION_EDGES_COLUMNS
 import com.openlattice.hazelcast.serializers.decorators.IdGenerationAware
@@ -52,12 +53,13 @@ class FixDuplicateIdAssignmentJob(
     }
 
     @Transient
-    private lateinit var hds: HikariDataSource
+    private lateinit var resolver: DataSourceResolver
 
     @Transient
     private lateinit var idService: HazelcastIdGenerationService
 
     override fun processNextBatch() {
+        val hds = resolver.getDefaultDataSource()
         /**
          * Process ids in batches.
          */
@@ -106,6 +108,7 @@ class FixDuplicateIdAssignmentJob(
     }
 
     private fun markAsNeedingIndexing(ids: Collection<UUID>) {
+        val hds = resolver.getDefaultDataSource()
         hds.connection.use { connection ->
             connection.prepareStatement(MARK_FOR_INDEXING).use { ps ->
                 ps.setArray(1, PostgresArrays.createUuidArray(connection, ids))
@@ -117,28 +120,35 @@ class FixDuplicateIdAssignmentJob(
     private fun assignNewIdsAndMoveData(originalId: UUID, entityKeys: List<EntityKey>): Set<UUID> {
         val newIds = idService.getNextIds(entityKeys.size)
         val newIdsIter = newIds.iterator()
-        hds.connection.use { connection ->
-            connection.autoCommit = false
 
-            val psSyncs = connection.prepareStatement(UPDATE_ID_ASSIGNMENT)
-            val psData = connection.prepareStatement(MIGRATE_DATA)
-            val psEdges = connection.prepareStatement(MIGRATE_EDGES)
-            val psDst = connection.prepareStatement(UPDATE_E_DST)
-            val psEdge = connection.prepareStatement(UPDATE_E_EDGE)
+        entityKeys
+            .groupBy { resolver.getDataSourceName(it.entitySetId) }
+            .forEach { (dataSourceName, entityKeysForDataSource) ->
+                val hds = resolver.getDataSource(dataSourceName)
+                hds.connection.use { connection ->
+                    connection.autoCommit = false
 
-            entityKeys.forEachIndexed { index, entityKey ->
-                val newId = newIdsIter.next()
-                updateIdAssignment(psSyncs, entityKey, newId)
-                migrate(psData, entityKey.entitySetId, originalId)
-                migrate(psEdges, entityKey.entitySetId, originalId)
-                update(psDst, newId, originalId)
-                update(psEdge, newId, originalId)
+                    val psSyncs = connection.prepareStatement(UPDATE_ID_ASSIGNMENT)
+                    val psData = connection.prepareStatement(MIGRATE_DATA)
+                    val psEdges = connection.prepareStatement(MIGRATE_EDGES)
+                    val psDst = connection.prepareStatement(UPDATE_E_DST)
+                    val psEdge = connection.prepareStatement(UPDATE_E_EDGE)
+
+                    entityKeysForDataSource.forEach { entityKey ->
+                        val newId = newIdsIter.next()
+                        updateIdAssignment(psSyncs, entityKey, newId)
+                        migrate(psData, entityKey.entitySetId, originalId)
+                        migrate(psEdges, entityKey.entitySetId, originalId)
+                        update(psDst, newId, originalId)
+                        update(psEdge, newId, originalId)
+                    }
+
+                    listOf(psSyncs, psData, psEdges, psDst, psEdge).forEach { it.executeBatch() }
+
+                    connection.commit()
+                    connection.autoCommit = true
+                }
             }
-            listOf(psSyncs, psData, psEdges, psDst, psEdge).forEach { it.executeBatch() }
-
-            connection.commit()
-            connection.autoCommit = true
-        }
         return newIds
     }
 
@@ -172,6 +182,7 @@ class FixDuplicateIdAssignmentJob(
     }
 
     private fun recordCollision(id: UUID, entityKeys: List<EntityKey>) {
+        val hds = resolver.getDefaultDataSource()
         hds.connection.use { connection ->
             connection.prepareStatement(INSERT_COLLISION).use { ps ->
                 ps.setObject(1, id)
@@ -194,6 +205,7 @@ class FixDuplicateIdAssignmentJob(
     }
 
     private fun getIdCount(): Long {
+        val hds = resolver.getDefaultDataSource()
         return hds.connection.use { connection ->
             connection.createStatement().use { statement ->
                 val rs = statement.executeQuery(COUNT_SYNC_IDS)
@@ -207,8 +219,8 @@ class FixDuplicateIdAssignmentJob(
     }
 
     @JsonIgnore
-    override fun setHikariDataSource(hds: HikariDataSource) {
-        this.hds = hds
+    override fun setDataSourceResolver(resolver: DataSourceResolver) {
+        this.resolver = resolver
     }
 
     @JsonIgnore

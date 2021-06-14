@@ -84,8 +84,7 @@ public interface AuthorizingComponent {
     }
 
     default void ensureReadAccess( Set<AclKey> keys ) {
-        EnumSet<Permission> read = EnumSet.of( Permission.READ );
-        accessCheck( keys.stream().collect( Collectors.toMap( Function.identity(), aclKey -> read ) ) );
+        accessCheck( keys.stream().collect( Collectors.toMap( Function.identity(), aclKey -> READ_PERMISSION ) ) );
     }
 
     default void ensureWriteAccess( AclKey aclKey ) {

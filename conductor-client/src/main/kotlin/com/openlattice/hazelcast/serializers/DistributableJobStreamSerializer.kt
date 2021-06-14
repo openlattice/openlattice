@@ -26,6 +26,7 @@ import com.geekbeast.rhizome.jobs.DistributableJob
 import com.google.common.annotations.VisibleForTesting
 import com.hazelcast.nio.ObjectDataInput
 import com.openlattice.data.storage.ByteBlobDataManager
+import com.openlattice.data.storage.DataSourceResolver
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.hazelcast.serializers.decorators.ByteBlobDataManagerAware
 import com.openlattice.hazelcast.serializers.decorators.IdGenerationAware
@@ -44,8 +45,8 @@ import javax.inject.Inject
 class DistributableJobStreamSerializer :
         IdGenerationServiceDependent<DistributableJobStreamSerializer>,
         AbstractDistributableJobStreamSerializer(), ByteBlobDataManagerAware {
-    @Inject
-    private lateinit var hds: HikariDataSource
+
+    private lateinit var resolver: DataSourceResolver
 
     private lateinit var idService: HazelcastIdGenerationService
 
@@ -55,7 +56,7 @@ class DistributableJobStreamSerializer :
     override fun read(`in`: ObjectDataInput): DistributableJob<*> {
         val job = super.read(`in`)
         if (job is MetastoreAware) {
-            job.setHikariDataSource(hds)
+            job.setDataSourceResolver(resolver)
         }
         if (job is IdGenerationAware) {
             job.setIdGenerationService(idService)
@@ -67,8 +68,8 @@ class DistributableJobStreamSerializer :
     }
 
     @VisibleForTesting
-    internal fun setHikariDataSource(hds: HikariDataSource) {
-        this.hds = hds
+    internal fun setDataSourceResolver(resolver: DataSourceResolver) {
+        this.resolver = resolver
     }
 
     override fun init(idService: HazelcastIdGenerationService): DistributableJobStreamSerializer {
