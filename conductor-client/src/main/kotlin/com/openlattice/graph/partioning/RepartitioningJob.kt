@@ -6,6 +6,7 @@ import com.geekbeast.rhizome.jobs.AbstractDistributedJob
 import com.geekbeast.rhizome.jobs.JobStatus
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.map.IMap
+import com.openlattice.data.storage.DataSourceResolver
 import com.openlattice.data.storage.getDirectPartitioningSelector
 import com.openlattice.data.storage.getPartitioningSelector
 import com.openlattice.edm.EntitySet
@@ -44,28 +45,29 @@ import java.util.*
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
+@Deprecated(message = "Do not run this job except for entity sets in default data store. Will be deleted once we no longer use citus for splitting up data.")
 class RepartitioningJob(
-        state: RepartitioningJobState
+    state: RepartitioningJobState
 ) : AbstractDistributedJob<Long, RepartitioningJobState>(state), MetastoreAware {
     @JsonCreator
     constructor(
-            id: UUID?,
-            taskId: Long?,
-            status: JobStatus,
-            progress: Byte,
-            hasWorkRemaining: Boolean,
-            result: Long?,
-            state: RepartitioningJobState,
-            phase: RepartitioningPhase
+        id: UUID?,
+        taskId: Long?,
+        status: JobStatus,
+        progress: Byte,
+        hasWorkRemaining: Boolean,
+        result: Long?,
+        state: RepartitioningJobState,
+        phase: RepartitioningPhase
     ) : this(state) {
         initialize(id, taskId, status, progress, hasWorkRemaining, result)
         this.phase = phase
     }
 
     constructor(
-            entitySetId: UUID,
-            oldPartitions: List<Int>,
-            newPartitions: Set<Int>
+        entitySetId: UUID,
+        oldPartitions: List<Int>,
+        newPartitions: Set<Int>
     ) : this(RepartitioningJobState(entitySetId, oldPartitions, newPartitions))
 
     override val resumable: Boolean = true
@@ -89,8 +91,8 @@ class RepartitioningJob(
     }
 
     @JsonIgnore
-    override fun setHikariDataSource(hds: HikariDataSource) {
-        this.hds = hds
+    override fun setDataSourceResolver(resolver: DataSourceResolver) {
+        this.hds = resolver.getDefaultDataSource()
     }
 
     override fun initialize() {
@@ -229,7 +231,10 @@ class RepartitioningJob(
         ps.setInt(6, state.newPartitions.size)
     }
 
-    @SuppressFBWarnings(value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"], justification = "Ignore internal kotlin redundant nullchecks")
+    @SuppressFBWarnings(
+        value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"],
+        justification = "Ignore internal kotlin redundant nullchecks"
+    )
     private fun setPartitions(entitySetId: UUID, partitions: Set<Int>) {
         require(entitySets.containsKey(entitySetId)) {
             "Entity set $entitySetId not found"
@@ -321,12 +326,13 @@ private val edgesNeedingMigrationCountSql = """
 """.trimIndent()
 
 private fun latestSql(
-        table: PostgresTableDefinition,
-        column: PostgresColumnDefinition,
-        comparison: PostgresColumnDefinition = column,
-        whenExcludedGreater: PostgresColumnDefinition = column,
-        otherwise: PostgresColumnDefinition = column
-): String = "${column.name} = CASE WHEN EXCLUDED.${comparison.name} > ${table.name}.${comparison.name} THEN EXCLUDED.${whenExcludedGreater.name} ELSE ${table.name}.${otherwise.name} END"
+    table: PostgresTableDefinition,
+    column: PostgresColumnDefinition,
+    comparison: PostgresColumnDefinition = column,
+    whenExcludedGreater: PostgresColumnDefinition = column,
+    otherwise: PostgresColumnDefinition = column
+): String =
+    "${column.name} = CASE WHEN EXCLUDED.${comparison.name} > ${table.name}.${comparison.name} THEN EXCLUDED.${whenExcludedGreater.name} ELSE ${table.name}.${otherwise.name} END"
 
 
 val REPARTITION_DATA_COLUMNS = buildRepartitionColumns(DATA)

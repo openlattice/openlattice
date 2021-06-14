@@ -45,7 +45,7 @@ import javax.inject.Inject
 class DistributableJobStreamSerializer :
         IdGenerationServiceDependent<DistributableJobStreamSerializer>,
         AbstractDistributableJobStreamSerializer(), ByteBlobDataManagerAware {
-    @Inject
+
     private lateinit var resolver: DataSourceResolver
 
     private lateinit var idService: HazelcastIdGenerationService
@@ -68,7 +68,7 @@ class DistributableJobStreamSerializer :
     }
 
     @VisibleForTesting
-    internal fun setHikariDataSource(resolver: DataSourceResolver) {
+    internal fun setDataSourceResolver(resolver: DataSourceResolver) {
         this.resolver = resolver
     }
 

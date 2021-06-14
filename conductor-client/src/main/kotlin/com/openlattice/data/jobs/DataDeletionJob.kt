@@ -41,6 +41,7 @@ import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import java.sql.PreparedStatement
 import java.util.*
@@ -181,6 +182,9 @@ class DataDeletionJob(
             }.toSet()
     }
 
+    @SuppressFBWarnings(value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"],
+                        justification = "This is a bug with spotbugs bytecode parsing for lateinit var."
+    )
     private fun deleteEntities(entityDataKeys: Set<EntityDataKey>): Int {
         val entitySetIdToPartitions = getEntitySetPartitions(entityDataKeys)
 
@@ -323,7 +327,7 @@ class DataDeletionJob(
         ps.addBatch()
     }
 
-    //TODO: entity key ids should be paired with their entity key ids :-/
+    //TODO: entity key ids should be paired with their entity set ids :-/
     @JsonIgnore
     private fun deletePropertyOfEntityFromS3(
         entitySetIds: Collection<UUID>,
