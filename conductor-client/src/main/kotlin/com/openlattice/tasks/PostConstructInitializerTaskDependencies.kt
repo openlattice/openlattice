@@ -22,7 +22,11 @@
 package com.openlattice.tasks
 
 import com.openlattice.data.storage.ByteBlobDataManager
+import com.openlattice.data.storage.DataSourceResolver
+import com.openlattice.hazelcast.serializers.DistributableJobStreamSerializer
 import com.openlattice.hazelcast.serializers.decorators.ByteBlobDataManagerAware
+import com.openlattice.ids.HazelcastIdGenerationService
+import com.openlattice.ids.IdGenerationServiceDependent
 import com.openlattice.transporter.types.TransporterDatastore
 import com.openlattice.transporter.types.TransporterDependent
 import org.slf4j.LoggerFactory
@@ -47,8 +51,19 @@ class PostConstructInitializerTaskDependencies : HazelcastTaskDependencies {
     private lateinit var byteBlobDataManager: ByteBlobDataManager
 
     @Inject
+    private lateinit var idService: HazelcastIdGenerationService
+
+    @Inject
     private lateinit var byteBlobDataManagerAware: Set<ByteBlobDataManagerAware>
 
+    @Inject
+    private lateinit var idGenerationServiceDependent: Set<IdGenerationServiceDependent<*>>
+
+    @Inject
+    private lateinit var distributableJobStreamSerializer: DistributableJobStreamSerializer
+
+    @Inject
+    private lateinit var resolver: DataSourceResolver
 
     @Component
     class PostConstructInitializerTask : HazelcastInitializationTask<PostConstructInitializerTaskDependencies> {
@@ -66,6 +81,13 @@ class PostConstructInitializerTaskDependencies : HazelcastTaskDependencies {
                 it.setByteBlobDataManager(dependencies.byteBlobDataManager)
                 logger.info("Initialized ${it.javaClass} with ByteBlobDataManager")
             }
+
+            dependencies.idGenerationServiceDependent.forEach {
+                it.init(dependencies.idService)
+                logger.info("Initialized ${it.javaClass} with HazelcastIdGenerationService")
+            }
+
+            dependencies.distributableJobStreamSerializer.setDataSourceResolver(dependencies.resolver)
         }
 
         override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
