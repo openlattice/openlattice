@@ -1,4 +1,4 @@
-package com.openlattice.datastore.services.com.openlattice.datastore.data.controllers
+package com.openlattice.datastore.data.controllers
 
 import com.codahale.metrics.annotation.Timed
 import com.google.common.collect.HashMultimap
