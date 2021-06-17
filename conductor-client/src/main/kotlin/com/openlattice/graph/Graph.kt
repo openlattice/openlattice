@@ -23,6 +23,7 @@ package com.openlattice.graph
 
 import com.codahale.metrics.MetricRegistry
 import com.codahale.metrics.annotation.Timed
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.geekbeast.metrics.time
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.collect.ImmutableList
@@ -31,10 +32,7 @@ import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
 import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
 import com.openlattice.analysis.requests.*
-import com.openlattice.data.DataEdgeKey
-import com.openlattice.data.EntityDataKey
-import com.openlattice.data.EntityKeyIdService
-import com.openlattice.data.WriteEvent
+import com.openlattice.data.*
 import com.openlattice.data.storage.DataSourceResolver
 import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.data.storage.entityKeyIdColumns
@@ -153,9 +151,7 @@ class Graph(
     private fun addKeyIds(ps: PreparedStatement, dataEdgeKey: DataEdgeKey, startIndex: Int = 1) {
         val edk = dataEdgeKey.src
         val partitions = partitionManager.getEntitySetPartitions(edk.entitySetId)
-        val partition = getPartition(
-                edk.entityKeyId, partitions.toList()
-        )
+        val partition = getPartition(edk.entityKeyId, partitions.toList())
         ps.setObject(startIndex, partition)
         ps.setObject(startIndex + 1, dataEdgeKey.src.entityKeyId)
         ps.setObject(startIndex + 2, dataEdgeKey.dst.entityKeyId)
@@ -226,7 +222,23 @@ class Graph(
         ps.setLong(2, version)
     }
 
-    override fun deleteEdges(keys: Iterable<DataEdgeKey>): WriteEvent {
+    override fun deleteEdges(keys: Iterable<DataEdgeKey>, deleteType: DeleteType): WriteEvent {
+
+        val sql = when(deleteType) {
+          DeleteType.Hard -> HARD_DELETE_EDGES_SQL
+          DeleteType.Soft -> SOFT_DELETE_EDGES_SQL
+        }
+        val version = -System.currentTimeMillis()
+//        edgeBatch.groupBy { resolver.getDataSourceName(it.entitySetId) }
+//            .forEach { (dataSourceName, entityDataKeysForDataSource) ->
+//                val hds = resolver.getDataSource(dataSourceName)
+//                hds.connection.use { conn ->
+//                    conn.prepareStatement(sql).use { ps ->
+//                        entityDataKeysForDataSource.forEach { bindEdgeDelete(ps, it, version) }
+//                        ps.executeBatch()
+//                    }
+//                }
+//            }
         val updates = lockAndOperateOnEdges(keys, DELETE_BY_VERTEX_SQL) { lockStmt, operationStmt, dataEdgeKey ->
             addKeyIds(lockStmt, dataEdgeKey)
             addKeyIds(operationStmt, dataEdgeKey)
@@ -1494,3 +1506,38 @@ fun bindColumnsForEdge(
     ps.setArray(index++, versions)
     ps.addBatch()
 }
+
+/**
+ * PreparedStatement bind order:
+ *
+ * 1) version
+ * 2) version
+ * 1) entitySetId
+ * 2) entityKeyId
+ */
+@JsonIgnore
+private val SOFT_DELETE_EDGES_SQL = """
+            UPDATE ${E.name}
+            SET
+              ${VERSION.name} = ?,
+              ${VERSIONS.name} = ${VERSIONS.name} || ?
+            WHERE
+              ${EDGE_ENTITY_SET_ID.name} = ?
+              AND ${EDGE_ENTITY_KEY_ID.name} = ? 
+            
+        """.trimIndent()
+
+/**
+ * PreparedStatement bind order:
+ *
+ * 1) entitySetId
+ * 2) entityKeyId
+ */
+@JsonIgnore
+private val HARD_DELETE_EDGES_SQL = """
+            DELETE FROM ${E.name}
+            WHERE
+              ${EDGE_ENTITY_SET_ID.name} = ?
+              AND ${EDGE_ENTITY_KEY_ID.name} = ? 
+        """.trimIndent()
+

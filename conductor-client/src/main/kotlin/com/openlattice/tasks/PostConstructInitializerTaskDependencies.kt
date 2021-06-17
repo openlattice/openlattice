@@ -21,10 +21,12 @@
 
 package com.openlattice.tasks
 
+import com.openlattice.data.DataGraphService
 import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.data.storage.DataSourceResolver
-import com.openlattice.hazelcast.serializers.DistributableJobStreamSerializer
 import com.openlattice.hazelcast.serializers.decorators.ByteBlobDataManagerAware
+import com.openlattice.hazelcast.serializers.decorators.DataGraphAware
+import com.openlattice.hazelcast.serializers.decorators.MetastoreAware
 import com.openlattice.ids.HazelcastIdGenerationService
 import com.openlattice.ids.IdGenerationServiceDependent
 import com.openlattice.transporter.types.TransporterDatastore
@@ -60,7 +62,13 @@ class PostConstructInitializerTaskDependencies : HazelcastTaskDependencies {
     private lateinit var idGenerationServiceDependent: Set<IdGenerationServiceDependent<*>>
 
     @Inject
-    private lateinit var distributableJobStreamSerializer: DistributableJobStreamSerializer
+    private lateinit var dataGraphAware:  Set<DataGraphAware>
+
+    @Inject
+    private lateinit var metastoreAware: Set<MetastoreAware>
+
+    @Inject
+    private lateinit var dataGraphService: DataGraphService
 
     @Inject
     private lateinit var resolver: DataSourceResolver
@@ -87,7 +95,13 @@ class PostConstructInitializerTaskDependencies : HazelcastTaskDependencies {
                 logger.info("Initialized ${it.javaClass} with HazelcastIdGenerationService")
             }
 
-            dependencies.distributableJobStreamSerializer.setDataSourceResolver(dependencies.resolver)
+            dependencies.metastoreAware.forEach {
+                it.setDataSourceResolver(dependencies.resolver)
+            }
+
+            dependencies.dataGraphAware.forEach {
+                it.setDataGraphService(dependencies.dataGraphService)
+            }
         }
 
         override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {

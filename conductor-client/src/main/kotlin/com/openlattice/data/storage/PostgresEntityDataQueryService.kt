@@ -637,7 +637,10 @@ class PostgresEntityDataQueryService(
             .groupBy { getPartition(it, partitions) }
             .map { (partition, entities) ->
                 deletePropertiesFromEntities(
-                    entitySetId, entities, authorizedPropertyTypes, partition
+                    entitySetId,
+                    entities,
+                    authorizedPropertyTypes,
+                    partition
                 )
             }.sum()
 
