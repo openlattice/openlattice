@@ -19,7 +19,7 @@ class ExternalTableStreamSerializer : TestableSelfRegisteringStreamSerializer<Ex
             output.writeUTF(obj.title)
             output.writeUTF(obj.description)
             UUIDStreamSerializerUtils.serialize(output, obj.organizationId)
-            output.writeInt(obj.oid)
+            output.writeLong(obj.oid)
             output.writeUTF(obj.schema)
         }
 
@@ -29,7 +29,7 @@ class ExternalTableStreamSerializer : TestableSelfRegisteringStreamSerializer<Ex
             val title = input.readUTF()
             val description = input.readUTF()
             val orgId = UUIDStreamSerializerUtils.deserialize(input)
-            val oid = input.readInt()
+            val oid = input.readLong()
             val schema = input.readUTF()
             return ExternalTable(id, name, title, Optional.of(description), orgId, oid, schema)
         }
