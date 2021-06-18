@@ -12,19 +12,19 @@ import java.sql.ResultSet
 import java.util.*
 
 open class OrganizationDatabasesMapstore(
-        hds: HikariDataSource
+    hds: HikariDataSource
 ) : AbstractBasePostgresMapstore<UUID, OrganizationDatabase>
-(HazelcastMap.ORGANIZATION_DATABASES, PostgresTable.ORGANIZATION_DATABASES, hds) {
+    (HazelcastMap.ORGANIZATION_DATABASES, PostgresTable.ORGANIZATION_DATABASES, hds) {
 
     override fun bind(ps: PreparedStatement, key: UUID, value: OrganizationDatabase) {
         var index = bind(ps, key, 1)
 
         //create
-        ps.setInt(index++, value.oid)
+        ps.setLong(index++, value.oid)
         ps.setString(index++, value.name)
 
         //update
-        ps.setInt(index++, value.oid)
+        ps.setLong(index++, value.oid)
         ps.setString(index++, value.name)
     }
 
