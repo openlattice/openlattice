@@ -25,10 +25,12 @@ import com.geekbeast.rhizome.jobs.AbstractDistributableJobStreamSerializer
 import com.geekbeast.rhizome.jobs.DistributableJob
 import com.google.common.annotations.VisibleForTesting
 import com.hazelcast.nio.ObjectDataInput
+import com.openlattice.data.DataGraphService
 import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.data.storage.DataSourceResolver
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.hazelcast.serializers.decorators.ByteBlobDataManagerAware
+import com.openlattice.hazelcast.serializers.decorators.DataGraphAware
 import com.openlattice.hazelcast.serializers.decorators.IdGenerationAware
 import com.openlattice.hazelcast.serializers.decorators.MetastoreAware
 import com.openlattice.ids.HazelcastIdGenerationService
@@ -44,13 +46,18 @@ import javax.inject.Inject
 @Component
 class DistributableJobStreamSerializer :
         IdGenerationServiceDependent<DistributableJobStreamSerializer>,
-        AbstractDistributableJobStreamSerializer(), ByteBlobDataManagerAware {
+        AbstractDistributableJobStreamSerializer(),
+        MetastoreAware,
+        DataGraphAware,
+        ByteBlobDataManagerAware {
 
     private lateinit var resolver: DataSourceResolver
 
     private lateinit var idService: HazelcastIdGenerationService
 
     private lateinit var byteBlobDataManager: ByteBlobDataManager
+
+    private lateinit var dataGraphService: DataGraphService
 
     override fun getTypeId(): Int = StreamSerializerTypeIds.DISTRIBUTABLE_JOB.ordinal
     override fun read(`in`: ObjectDataInput): DistributableJob<*> {
@@ -64,12 +71,18 @@ class DistributableJobStreamSerializer :
         if (job is ByteBlobDataManagerAware) {
             job.setByteBlobDataManager(byteBlobDataManager)
         }
+        if( job is DataGraphAware ) {
+            job.setDataGraphService(dataGraphService)
+        }
         return job
     }
 
-    @VisibleForTesting
-    internal fun setDataSourceResolver(resolver: DataSourceResolver) {
+    override fun setDataSourceResolver(resolver: DataSourceResolver) {
         this.resolver = resolver
+    }
+
+    override fun setDataGraphService ( dataGraphService: DataGraphService ) {
+        this.dataGraphService = dataGraphService
     }
 
     override fun init(idService: HazelcastIdGenerationService): DistributableJobStreamSerializer {
