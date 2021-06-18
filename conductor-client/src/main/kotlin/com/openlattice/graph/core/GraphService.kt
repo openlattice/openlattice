@@ -22,6 +22,7 @@ package com.openlattice.graph.core
 import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
 import com.openlattice.analysis.requests.AggregationResult
 import com.openlattice.data.DataEdgeKey
+import com.openlattice.data.DeleteType
 import com.openlattice.data.WriteEvent
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.PagedNeighborRequest
@@ -38,38 +39,42 @@ interface GraphService {
 
     fun clearEdges(keys: Iterable<DataEdgeKey>): Int
 
-    fun deleteEdges(keys: Iterable<DataEdgeKey>): WriteEvent
+    fun deleteEdges(keys: Iterable<DataEdgeKey>, deleteType: DeleteType): WriteEvent
 
     /**
      * Returns all [DataEdgeKey]s that include requested entityKeyIds either as src, dst and/or edge.
      * If includeClearedEdges is set to true, it will also return cleared (version < 0) entities.
      */
     fun getEdgeKeysContainingEntities(
-            entitySetId: UUID,
-            entityKeyIds: Set<UUID>,
-            includeClearedEdges: Boolean
+        entitySetId: UUID,
+        entityKeyIds: Set<UUID>,
+        includeClearedEdges: Boolean
     ): BasePostgresIterable<DataEdgeKey>
 
     fun getEdgesAndNeighborsForVertices(
-            entitySetIds: Set<UUID>,
-            pagedNeighborRequest: PagedNeighborRequest
+        entitySetIds: Set<UUID>,
+        pagedNeighborRequest: PagedNeighborRequest
     ): Stream<Edge>
 
     fun getEdgeEntitySetsConnectedToEntities(
-            entitySetId: UUID,
-            entityKeyIds: Set<UUID>
+        entitySetId: UUID,
+        entityKeyIds: Set<UUID>
     ): Set<UUID>
 
     fun computeTopEntities(
-            limit: Int,
-            entitySetIds: Set<UUID>,
-            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
-            details: List<AuthorizedFilteredNeighborsRanking>,
-            linked: Boolean,
-            linkingEntitySetId: Optional<UUID>
+        limit: Int,
+        entitySetIds: Set<UUID>,
+        authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
+        details: List<AuthorizedFilteredNeighborsRanking>,
+        linked: Boolean,
+        linkingEntitySetId: Optional<UUID>
     ): AggregationResult
 
     fun getNeighborEntitySets(entitySetIds: Set<UUID>): List<NeighborSets>
 
-    fun checkForUnauthorizedEdges(entitySetId: UUID, authorizedEdgeEntitySets: Set<UUID>, entityKeyIds: Set<UUID>?): Boolean
+    fun checkForUnauthorizedEdges(
+        entitySetId: UUID,
+        authorizedEdgeEntitySets: Set<UUID>,
+        entityKeyIds: Set<UUID>?
+    ): Boolean
 }

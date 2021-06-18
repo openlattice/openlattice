@@ -233,6 +233,11 @@ class DataGraphService(
         return associationCreateEvents
     }
 
+    @Timed
+    override fun deleteAssociations(associations: Set<DataEdgeKey>, deleteType: DeleteType): WriteEvent {
+        return graphService.deleteEdges(associations, deleteType)
+    }
+
     /* Top utilizers */
     @Timed
     override fun getFilteredRankings(

@@ -136,7 +136,9 @@ interface EntityDatastore {
      * @param authorizedPropertyTypes The authorized property types to delete the data from.
      */
     fun deleteEntityProperties(
-            entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
+            entitySetId: UUID,
+            entityKeyIds: Set<UUID>,
+            authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent
 
     fun getExpiringEntitiesFromEntitySet(

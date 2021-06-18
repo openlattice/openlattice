@@ -315,6 +315,13 @@ public final class ResultSetAdapters {
         return new EntityDataKey( dstEntitySetId, dstEntityKeyId );
     }
 
+    @NotNull public static EntityDataKey edgeEntityDataKey(
+            @NotNull ResultSet rs ) throws SQLException {
+        final UUID edgeEntitySetId = (UUID) rs.getObject( SRC_ENTITY_SET_ID_FIELD );
+        final UUID edgeEntityKeyId = (UUID) rs.getObject( SRC_ENTITY_KEY_ID_FIELD );
+        return new EntityDataKey( edgeEntitySetId, edgeEntityKeyId );
+    }
+
     public static Double score( ResultSet rs ) throws SQLException {
         return rs.getDouble( SCORE_FIELD );
     }

@@ -21,6 +21,7 @@
 
 package com.openlattice.data
 
+import com.codahale.metrics.annotation.Timed
 import com.google.common.collect.ListMultimap
 import com.google.common.collect.SetMultimap
 import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
@@ -180,4 +181,11 @@ interface DataGraphManager {
             oldPartitions: Set<Int>,
             newPartitions: Set<Int>
     ): UUID
+
+    /**
+     * Deletes a set of edges from the graph.
+     * @param associations Associations to delete
+     */
+    @Timed
+    fun deleteAssociations(associations: Set<DataEdgeKey>, deleteType:DeleteType): WriteEvent
 }
