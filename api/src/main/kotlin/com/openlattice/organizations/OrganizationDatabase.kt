@@ -1,6 +1,6 @@
 package com.openlattice.organizations
 
 data class OrganizationDatabase(
-        val oid: Int,
-        var name: String
+    val oid: Long,
+    var name: String
 )
