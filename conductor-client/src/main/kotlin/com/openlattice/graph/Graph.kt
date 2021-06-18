@@ -229,16 +229,6 @@ class Graph(
           DeleteType.Soft -> SOFT_DELETE_EDGES_SQL
         }
         val version = -System.currentTimeMillis()
-//        edgeBatch.groupBy { resolver.getDataSourceName(it.entitySetId) }
-//            .forEach { (dataSourceName, entityDataKeysForDataSource) ->
-//                val hds = resolver.getDataSource(dataSourceName)
-//                hds.connection.use { conn ->
-//                    conn.prepareStatement(sql).use { ps ->
-//                        entityDataKeysForDataSource.forEach { bindEdgeDelete(ps, it, version) }
-//                        ps.executeBatch()
-//                    }
-//                }
-//            }
         val updates = lockAndOperateOnEdges(keys, DELETE_BY_VERTEX_SQL) { lockStmt, operationStmt, dataEdgeKey ->
             addKeyIds(lockStmt, dataEdgeKey)
             addKeyIds(operationStmt, dataEdgeKey)
@@ -1540,4 +1530,3 @@ private val HARD_DELETE_EDGES_SQL = """
               ${EDGE_ENTITY_SET_ID.name} = ?
               AND ${EDGE_ENTITY_KEY_ID.name} = ? 
         """.trimIndent()
-
