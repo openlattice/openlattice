@@ -476,8 +476,8 @@ public final class ResultSetAdapters {
         return rs.getString( NAMESPACE.getName() );
     }
 
-    public static int oid( ResultSet rs ) throws SQLException {
-        return rs.getInt( "oid" );
+    public static long oid( ResultSet rs ) throws SQLException {
+        return rs.getLong( OID.getName() );
     }
 
     public static String name( ResultSet rs ) throws SQLException {
@@ -1082,16 +1082,14 @@ public final class ResultSetAdapters {
         return new CollectionTemplateKey( entitySetCollectionId, templateTypeId );
     }
 
-    public static ExternalTable externalTable( ResultSet rs )
-            throws SQLException {
+    public static ExternalTable externalTable( ResultSet rs ) throws SQLException {
         UUID id = id( rs );
         String name = name( rs );
         String title = title( rs );
         Optional<String> description = Optional.ofNullable( description( ( rs ) ) );
         UUID organizationId = organizationId( rs );
-        int oid = oid( rs );
+        long oid = oid( rs );
         String schema = schema( rs );
-
         return new ExternalTable( id, name, title, description, organizationId, oid, schema );
     }
 
@@ -1200,10 +1198,7 @@ public final class ResultSetAdapters {
     }
 
     public static OrganizationDatabase organizationDatabase( ResultSet rs ) throws SQLException {
-        int oid = rs.getInt( OID.getName() );
-        String name = name( rs );
-
-        return new OrganizationDatabase( oid, name );
+        return new OrganizationDatabase( oid( rs ), name( rs ) );
     }
 
     public static Set<UUID> organizationIds( ResultSet rs ) throws SQLException {
