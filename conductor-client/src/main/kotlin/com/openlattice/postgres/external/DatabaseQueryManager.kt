@@ -28,7 +28,10 @@ interface DatabaseQueryManager {
 
     fun collaborationMemberRevokeSql(dbName: String, memberRoles: Iterable<String>): String
 
-    fun createAndInitializeSchemas(collaborationId: UUID, schemaNameToAuthorizedPgRoles: Map<String, Collection<String>>)
+    fun createAndInitializeSchemas(
+        collaborationId: UUID,
+        schemaNameToAuthorizedPgRoles: Map<String, Collection<String>>
+    )
 
     fun addMembersToCollabInSchema(collaborationId: UUID, schemaName: String, members: Collection<String>)
 
@@ -43,19 +46,19 @@ interface DatabaseQueryManager {
     fun addMembersToOrganization(organizationId: UUID, dataSource: HikariDataSource, members: Set<Principal>)
 
     fun addMembersToOrganization(
-            organizationId: UUID,
-            authorizedPropertyTypesOfEntitySetsByPrincipal: Map<SecurablePrincipal, Map<EntitySet, Collection<PropertyType>>>
+        organizationId: UUID,
+        authorizedPropertyTypesOfEntitySetsByPrincipal: Map<SecurablePrincipal, Map<EntitySet, Collection<PropertyType>>>
     )
 
     fun addMembersToOrganization(
-            organizationId: UUID,
-            dataSource: HikariDataSource,
-            authorizedPropertyTypesOfEntitySetsByPrincipal: Map<SecurablePrincipal, Map<EntitySet, Collection<PropertyType>>>
+        organizationId: UUID,
+        dataSource: HikariDataSource,
+        authorizedPropertyTypesOfEntitySetsByPrincipal: Map<SecurablePrincipal, Map<EntitySet, Collection<PropertyType>>>
     )
 
     fun removeMembersFromOrganization(
-            organizationId: UUID,
-            principals: Collection<SecurablePrincipal>
+        organizationId: UUID,
+        principals: Collection<SecurablePrincipal>
     )
 
     fun updateCredentialInDatabase(unquotedUserId: String, credential: String)
@@ -74,8 +77,7 @@ interface DatabaseQueryManager {
 
     fun renameDatabase(currentDatabaseName: String, newDatabaseName: String)
 
-    fun getDatabaseOid(dbName: String): Int
+    fun getDatabaseOid(dbName: String): Long
 
     fun createRenameDatabaseFunctionIfNotExists()
-
 }
