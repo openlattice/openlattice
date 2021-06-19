@@ -156,7 +156,7 @@ class BackgroundExternalDatabaseSyncingService(
         recordAuditableEvents(acls, AuditEventType.ADD_PERMISSION)
     }
 
-    private fun getOrCreateTable(orgId: UUID, oid: Int, tableName: String, schemaName: String): ExternalTable {
+    private fun getOrCreateTable(orgId: UUID, oid: Long, tableName: String, schemaName: String): ExternalTable {
         val table = ExternalTable(
                 Optional.empty(),
                 tableName,
