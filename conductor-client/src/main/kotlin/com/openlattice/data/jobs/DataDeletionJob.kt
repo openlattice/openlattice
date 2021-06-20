@@ -455,7 +455,9 @@ class DataDeletionJob(
         }
 
         return """
-            SELECT ${EDGE_ENTITY_SET_ID.name}, ${EDGE_ENTITY_KEY_ID.name}
+            SELECT  ${SRC_ENTITY_SET_ID.name}, ${SRC_ENTITY_KEY_ID.name},
+                    ${DST_ENTITY_SET_ID.name}, ${DST_ENTITY_KEY_ID.name},
+                    ${EDGE_ENTITY_SET_ID.name}, ${EDGE_ENTITY_KEY_ID.name}
             FROM ${E.name}
             WHERE ( $entityMatches )
             ${excludeClearedIfSoftDeleteSql()}
