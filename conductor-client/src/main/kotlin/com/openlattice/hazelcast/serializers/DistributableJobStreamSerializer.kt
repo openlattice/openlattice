@@ -37,6 +37,7 @@ import com.openlattice.ids.IdGenerationServiceDependent
 import com.openlattice.ioc.providers.LateInitAware
 import com.openlattice.ioc.providers.LateInitProvider
 import org.springframework.stereotype.Component
+import javax.inject.Inject
 
 /**
  *
@@ -59,6 +60,7 @@ class DistributableJobStreamSerializer :
 
     private lateinit var dataGraphService: DataGraphService
 
+    @Inject
     private lateinit var lateInitProvider: LateInitProvider
 
     override fun getTypeId(): Int = StreamSerializerTypeIds.DISTRIBUTABLE_JOB.ordinal
