@@ -69,6 +69,7 @@ class DataDeletionJob(
     }
 
     override val resumable = true
+
     companion object {
         private const val BATCH_SIZE = 10_000
         private val ALL_PARTITIONS = (0..257)
@@ -85,6 +86,12 @@ class DataDeletionJob(
 
     @Transient
     private lateinit var propertyTypes: IMap<UUID, PropertyType>
+
+    override fun initializeHazelcastRelatedObjects() {
+        this.entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
+        this.entityTypes = HazelcastMap.ENTITY_TYPES.getMap(hazelcastInstance)
+        this.propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap(hazelcastInstance)
+    }
 
     override fun initialize() {
         state.totalToDelete = getTotalToDelete()
@@ -371,9 +378,6 @@ class DataDeletionJob(
     @JsonIgnore
     override fun setHazelcastInstance(hazelcastInstance: HazelcastInstance) {
         super.setHazelcastInstance(hazelcastInstance)
-        this.entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
-        this.entityTypes = HazelcastMap.ENTITY_TYPES.getMap(hazelcastInstance)
-        this.propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap(hazelcastInstance)
     }
 
     @JsonIgnore
