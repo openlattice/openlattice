@@ -7,15 +7,23 @@ import com.openlattice.hazelcast.serializers.decorators.DataGraphAware
 import com.openlattice.hazelcast.serializers.decorators.MetastoreAware
 import com.openlattice.ids.HazelcastIdGenerationService
 import com.openlattice.ids.IdGenerationServiceDependent
+import javax.inject.Inject
 
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 class OnUseLateInitProvider : LateInitProvider, MetastoreAware, DataGraphAware, IdGenerationServiceDependent {
+    @Inject
     private lateinit var _resolver: DataSourceResolver
+
+    @Inject
     private lateinit var _idService: HazelcastIdGenerationService
+
+    @Inject
     private lateinit var _byteBlobDataManager: ByteBlobDataManager
+
+    @Inject
     private lateinit var _dataGraphService: DataGraphService
 
     override val resolver: DataSourceResolver
