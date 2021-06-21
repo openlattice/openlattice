@@ -105,14 +105,17 @@ class PostConstructInitializerTaskDependencies : HazelcastTaskDependencies {
 
             dependencies.metastoreAware.forEach {
                 it.setDataSourceResolver(dependencies.resolver)
+                logger.info("Initialized ${it.javaClass} with resolver")
             }
 
             dependencies.dataGraphAware.forEach {
                 it.setDataGraphService(dependencies.dataGraphService)
+                logger.info("Initialized ${it.javaClass} with data graph service")
             }
 
             dependencies.lateInitAware.forEach {
                 it.setLateInitProvider(dependencies.lateInitProvider)
+                logger.info("Initialized ${it.javaClass} with late init provider")
             }
         }
 
