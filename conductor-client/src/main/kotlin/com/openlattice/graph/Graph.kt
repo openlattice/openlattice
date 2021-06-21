@@ -235,7 +235,7 @@ class Graph(
                 operationStmt.setLong(opIndex++, version)
                 operationStmt.setLong(opIndex++, version)
             }
-            
+
             addKeyIds(lockStmt, dataEdgeKey)
             addKeyIds(operationStmt, dataEdgeKey, opIndex)
         }
