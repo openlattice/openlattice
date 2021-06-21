@@ -3,11 +3,7 @@ package com.openlattice.ioc.providers
 import com.openlattice.data.DataGraphService
 import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.data.storage.DataSourceResolver
-import com.openlattice.hazelcast.serializers.decorators.DataGraphAware
-import com.openlattice.hazelcast.serializers.decorators.MetastoreAware
 import com.openlattice.ids.HazelcastIdGenerationService
-import com.openlattice.ids.IdGenerationServiceDependent
-import javax.inject.Inject
 
 /**
  *
@@ -30,6 +26,10 @@ class OnUseLateInitProvider : LateInitProvider {
 
     override fun init(idService: HazelcastIdGenerationService) {
         _idService = idService
+    }
+
+    override fun setByteBlobDataManager(byteBlobDataManager: ByteBlobDataManager) {
+        _byteBlobDataManager = byteBlobDataManager
     }
 
     override fun setDataGraphService(dataGraphService: DataGraphService) {
