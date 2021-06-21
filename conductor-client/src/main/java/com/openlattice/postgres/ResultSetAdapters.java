@@ -141,7 +141,9 @@ import static com.openlattice.postgres.PostgresColumn.DST_ENTITY_SET_ID;
 import static com.openlattice.postgres.PostgresColumn.DST_ENTITY_SET_ID_FIELD;
 import static com.openlattice.postgres.PostgresColumn.DST_SELECTS;
 import static com.openlattice.postgres.PostgresColumn.EDGE_ENTITY_KEY_ID;
+import static com.openlattice.postgres.PostgresColumn.EDGE_ENTITY_KEY_ID_FIELD;
 import static com.openlattice.postgres.PostgresColumn.EDGE_ENTITY_SET_ID;
+import static com.openlattice.postgres.PostgresColumn.EDGE_ENTITY_SET_ID_FIELD;
 import static com.openlattice.postgres.PostgresColumn.EMAILS;
 import static com.openlattice.postgres.PostgresColumn.ENTITY_ID_FIELD;
 import static com.openlattice.postgres.PostgresColumn.ENTITY_KEY_IDS_COL;
@@ -317,8 +319,8 @@ public final class ResultSetAdapters {
 
     @NotNull public static EntityDataKey edgeEntityDataKey(
             @NotNull ResultSet rs ) throws SQLException {
-        final UUID edgeEntitySetId = (UUID) rs.getObject( DST_ENTITY_SET_ID_FIELD );
-        final UUID edgeEntityKeyId = (UUID) rs.getObject( DST_ENTITY_KEY_ID_FIELD );
+        final UUID edgeEntitySetId = (UUID) rs.getObject( EDGE_ENTITY_SET_ID_FIELD );
+        final UUID edgeEntityKeyId = (UUID) rs.getObject( EDGE_ENTITY_KEY_ID_FIELD );
         return new EntityDataKey( edgeEntitySetId, edgeEntityKeyId );
     }
 
