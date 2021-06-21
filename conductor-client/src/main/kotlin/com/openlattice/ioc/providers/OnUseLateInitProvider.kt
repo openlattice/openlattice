@@ -13,7 +13,7 @@ import javax.inject.Inject
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class OnUseLateInitProvider : LateInitProvider, MetastoreAware, DataGraphAware, IdGenerationServiceDependent {
+class OnUseLateInitProvider : LateInitProvider {
     private lateinit var _resolver: DataSourceResolver
     private lateinit var _idService: HazelcastIdGenerationService
     private lateinit var _byteBlobDataManager: ByteBlobDataManager
