@@ -39,7 +39,7 @@ Running locally
 * Ensure that:
     * You've completed the "Getting started" section above
     * Xcode is installed and you've agreed to the license
-    * `JAVA_HOME` is configured properly and JDK 8 is installed
+    * `JAVA_HOME` is configured properly and JDK 11 is installed
     
 # From the `openlattice` superproject directory:
 
