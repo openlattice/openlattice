@@ -31,7 +31,7 @@ open class ExternalTablesMapstore(hds: HikariDataSource) : AbstractBasePostgresM
 
         //create
         ps.setString(index++, value.name)
-        ps.setInt(index++, value.oid)
+        ps.setLong(index++, value.oid)
         ps.setString(index++, value.title)
         ps.setString(index++, value.description)
         ps.setObject(index++, value.organizationId)
@@ -39,7 +39,7 @@ open class ExternalTablesMapstore(hds: HikariDataSource) : AbstractBasePostgresM
 
         //update
         ps.setString(index++, value.name)
-        ps.setInt(index++, value.oid)
+        ps.setLong(index++, value.oid)
         ps.setString(index++, value.title)
         ps.setString(index++, value.description)
         ps.setObject(index++, value.organizationId)

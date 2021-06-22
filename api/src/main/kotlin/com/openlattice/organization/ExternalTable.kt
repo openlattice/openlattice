@@ -24,7 +24,7 @@ constructor(
         @JsonProperty(SerializationConstants.TITLE_FIELD) title: String,
         @JsonProperty(SerializationConstants.DESCRIPTION_FIELD) description: Optional<String>,
         @JsonProperty(SerializationConstants.ORGANIZATION_ID) var organizationId: UUID,
-        @JsonProperty(SerializationConstants.OID) val oid: Int,
+        @JsonProperty(SerializationConstants.OID) val oid: Long,
         @JsonProperty(SerializationConstants.SCHEMA) var schema: String
 ) : AbstractSecurableObject(id, title, description) {
 
@@ -34,7 +34,7 @@ constructor(
             title: String,
             description: Optional<String>,
             organizationId: UUID,
-            oid: Int,
+            oid: Long,
             schema: String
     ) : this(Optional.of(id), name, title, description, organizationId, oid, schema)
 
@@ -71,10 +71,8 @@ constructor(
         var result = super.hashCode()
         result = 31 * result + name.hashCode()
         result = 31 * result + organizationId.hashCode()
-        result = 31 * result + oid
+        result = 31 * result + oid.hashCode()
         result = 31 * result + schema.hashCode()
         return result
     }
-
-
 }

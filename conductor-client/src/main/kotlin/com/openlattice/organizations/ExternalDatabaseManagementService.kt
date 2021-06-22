@@ -896,8 +896,8 @@ class ExternalDatabaseManagementService(
 }
 
 data class TableInfo(
-        val oid: Int,
-        val tableName: String,
-        val schemaName: String,
-        val columnNames: List<String>
+    val oid: Long,
+    val tableName: String,
+    val schemaName: String,
+    val columnNames: List<String>
 )

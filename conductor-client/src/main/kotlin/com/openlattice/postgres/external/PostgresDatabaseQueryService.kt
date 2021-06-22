@@ -33,6 +33,7 @@ import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresProjectionService.Companion.RENAME_SERVER_DB_FUNCTION
 import com.openlattice.postgres.PostgresTable.E
+import com.openlattice.postgres.ResultSetAdapters.oid
 import com.openlattice.postgres.external.Schemas.*
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
@@ -597,15 +598,15 @@ class PostgresDatabaseQueryService(
         }
     }
 
-    override fun getDatabaseOid(dbName: String): Int {
-        var oid = -1
+    override fun getDatabaseOid(dbName: String): Long {
+        var oid = -1L
         return try {
             getAtlasConnection().use { conn ->
                 conn.prepareStatement(databaseOidSql).use { ps ->
                     ps.setString(1, dbName)
                     val rs = ps.executeQuery()
                     if (rs.next()) {
-                        oid = rs.getInt(1)
+                        oid = oid( rs )
                     }
                     oid
                 }

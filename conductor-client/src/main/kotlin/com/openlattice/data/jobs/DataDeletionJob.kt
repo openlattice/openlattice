@@ -4,10 +4,10 @@ import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.geekbeast.rhizome.jobs.AbstractDistributedJob
 import com.geekbeast.rhizome.jobs.JobStatus
+import com.google.common.collect.Sets
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.map.IMap
-import com.openlattice.data.DeleteType
-import com.openlattice.data.EntityDataKey
+import com.openlattice.data.*
 import com.openlattice.data.storage.*
 import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.edm.EntitySet
@@ -16,8 +16,10 @@ import com.openlattice.edm.processors.GetPartitionsFromEntitySetEntryProcessor
 import com.openlattice.edm.processors.GetPropertiesFromEntityTypeEntryProcessor
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
+import com.openlattice.graph.edge.Edge
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.serializers.decorators.ByteBlobDataManagerAware
+import com.openlattice.hazelcast.serializers.decorators.DataGraphAware
 import com.openlattice.hazelcast.serializers.decorators.MetastoreAware
 import com.openlattice.linking.graph.PostgresLinkingQueryService
 import com.openlattice.postgres.DataTables.LAST_WRITE
@@ -48,7 +50,10 @@ import java.util.*
 
 class DataDeletionJob(
     state: DataDeletionJobState
-) : AbstractDistributedJob<Long, DataDeletionJobState>(state), MetastoreAware, ByteBlobDataManagerAware {
+) : AbstractDistributedJob<Long, DataDeletionJobState>(state),
+    MetastoreAware,
+    ByteBlobDataManagerAware,
+    DataGraphAware {
 
     @JsonCreator
     constructor(
@@ -77,6 +82,9 @@ class DataDeletionJob(
     private lateinit var byteBlobDataManager: ByteBlobDataManager
 
     @Transient
+    private lateinit var dataGraphService: DataGraphService
+
+    @Transient
     private lateinit var entitySets: IMap<UUID, EntitySet>
 
     @Transient
@@ -100,7 +108,8 @@ class DataDeletionJob(
 
         var edgeBatch = getBatchOfEdgesForIds(entityDataKeys)
         while (edgeBatch.isNotEmpty()) {
-            deleteEntities(edgeBatch)
+            val edgeEdkBatch = edgeBatch.map { it.edge }.toSet()
+            deleteEntities(edgeEdkBatch)
             deleteEdges(edgeBatch)
             edgeBatch = getBatchOfEdgesForIds(entityDataKeys)
         }
@@ -160,7 +169,10 @@ class DataDeletionJob(
     }
 
     @JsonIgnore
-    private fun getBatchOfEdgesForIds(edks: Set<EntityDataKey>): Set<EntityDataKey> {
+    /**
+     * @param edks All these entity data keys should be from the same entity set
+     */
+    private fun getBatchOfEdgesForIds(edks: Set<EntityDataKey>): Set<DataEdgeKey> {
         return edks
             .groupBy { resolver.getDataSourceName(it.entitySetId) }
             .flatMap { (dataSourceName, entityDataKeysForDataSource) ->
@@ -177,13 +189,18 @@ class DataDeletionJob(
                     it.setObject(5, state.entitySetId)
                     it.setArray(6, entityKeyIdsArr)
                 }) {
-                    EntityDataKey(ResultSetAdapters.edgeEntitySetId(it), ResultSetAdapters.edgeEntityKeyId(it))
+                    DataEdgeKey(
+                        ResultSetAdapters.srcEntityDataKey(it),
+                        ResultSetAdapters.dstEntityDataKey(it),
+                        ResultSetAdapters.edgeEntityDataKey(it)
+                    )
                 }
             }.toSet()
     }
 
-    @SuppressFBWarnings(value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"],
-                        justification = "This is a bug with spotbugs bytecode parsing for lateinit var."
+    @SuppressFBWarnings(
+        value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"],
+        justification = "This is a bug with spotbugs bytecode parsing for lateinit var."
     )
     private fun deleteEntities(entityDataKeys: Set<EntityDataKey>): Int {
         val entitySetIdToPartitions = getEntitySetPartitions(entityDataKeys)
@@ -246,8 +263,6 @@ class DataDeletionJob(
                     }.sum()
                 }
             }.sum()
-
-
     }
 
     @JsonIgnore
@@ -300,20 +315,8 @@ class DataDeletionJob(
         ps.addBatch()
     }
 
-    private fun deleteEdges(edgeBatch: Set<EntityDataKey>) {
-        val sql = if (isHardDelete()) HARD_DELETE_EDGES_SQL else SOFT_DELETE_EDGES_SQL
-        val version = -System.currentTimeMillis()
-
-        edgeBatch.groupBy { resolver.getDataSourceName(it.entitySetId) }
-            .forEach { (dataSourceName, entityDataKeysForDataSource) ->
-                val hds = resolver.getDataSource(dataSourceName)
-                hds.connection.use { conn ->
-                    conn.prepareStatement(sql).use { ps ->
-                        entityDataKeysForDataSource.forEach { bindEdgeDelete(ps, it, version) }
-                        ps.executeBatch()
-                    }
-                }
-            }
+    private fun deleteEdges(edgeBatch: Set<DataEdgeKey>) {
+        dataGraphService.deleteAssociations(edgeBatch, state.deleteType)
     }
 
     private fun bindEdgeDelete(ps: PreparedStatement, edk: EntityDataKey, version: Long) {
@@ -371,6 +374,10 @@ class DataDeletionJob(
     @JsonIgnore
     override fun setDataSourceResolver(resolver: DataSourceResolver) {
         this.resolver = resolver
+    }
+
+    override fun setDataGraphService(dataGraphService: DataGraphService) {
+        this.dataGraphService = dataGraphService
     }
 
     @JsonIgnore
@@ -521,40 +528,6 @@ class DataDeletionJob(
      */
     @JsonIgnore
     private val SOFT_DELETE_FROM_IDS_SQL = updateVersionsForEntitiesInEntitySet
-
-    /**
-     * PreparedStatement bind order:
-     *
-     * 1) version
-     * 2) version
-     * 1) entitySetId
-     * 2) entityKeyId
-     */
-    @JsonIgnore
-    private val SOFT_DELETE_EDGES_SQL = """
-            UPDATE ${E.name}
-            SET
-              ${VERSION.name} = ?,
-              ${VERSIONS.name} = ${VERSIONS.name} || ?
-            WHERE
-              ${EDGE_ENTITY_SET_ID.name} = ?
-              AND ${EDGE_ENTITY_KEY_ID.name} = ? 
-            
-        """.trimIndent()
-
-    /**
-     * PreparedStatement bind order:
-     *
-     * 1) entitySetId
-     * 2) entityKeyId
-     */
-    @JsonIgnore
-    private val HARD_DELETE_EDGES_SQL = """
-            DELETE FROM ${E.name}
-            WHERE
-              ${EDGE_ENTITY_SET_ID.name} = ?
-              AND ${EDGE_ENTITY_KEY_ID.name} = ? 
-        """.trimIndent()
 
 
     override fun equals(other: Any?): Boolean {
