@@ -36,6 +36,7 @@ import com.openlattice.ids.HazelcastIdGenerationService
 import com.openlattice.ids.IdGenerationServiceDependent
 import com.openlattice.ioc.providers.LateInitAware
 import com.openlattice.ioc.providers.LateInitProvider
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.springframework.stereotype.Component
 import javax.inject.Inject
 
@@ -43,6 +44,7 @@ import javax.inject.Inject
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
+@SuppressFBWarnings(value= ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"], justification="Kotlin class parsing bug in spotbugs")
 @Component
 class DistributableJobStreamSerializer :
     IdGenerationServiceDependent,
