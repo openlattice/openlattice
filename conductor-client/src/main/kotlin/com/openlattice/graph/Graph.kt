@@ -1521,7 +1521,7 @@ private val SOFT_DELETE_EDGES_SQL = """
               ${PARTITION.name} = ? AND
               ${SRC_ENTITY_KEY_ID.name} = ? AND
               ${DST_ENTITY_KEY_ID.name} = ? AND
-              AND ${EDGE_ENTITY_KEY_ID.name} = ? 
+              ${EDGE_ENTITY_KEY_ID.name} = ? 
             
         """.trimIndent()
 
@@ -1538,5 +1538,5 @@ private val HARD_DELETE_EDGES_SQL = """
               ${PARTITION.name} = ? AND
               ${SRC_ENTITY_KEY_ID.name} = ? AND
               ${DST_ENTITY_KEY_ID.name} = ? AND
-              AND ${EDGE_ENTITY_KEY_ID.name} = ? 
+              ${EDGE_ENTITY_KEY_ID.name} = ? 
         """.trimIndent()
