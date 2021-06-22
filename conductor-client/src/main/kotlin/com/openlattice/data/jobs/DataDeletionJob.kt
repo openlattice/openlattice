@@ -331,6 +331,10 @@ class DataDeletionJob(
         ps.addBatch()
     }
 
+    @SuppressFBWarnings(
+        value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"],
+        justification = "This is a bug with spotbugs bytecode parsing for lateinit var."
+    )
     //TODO: entity key ids should be paired with their entity set ids :-/
     @JsonIgnore
     private fun deletePropertyOfEntityFromS3(
