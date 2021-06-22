@@ -31,6 +31,7 @@ import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.hazelcast.pods.HazelcastQueuePod;
 import com.openlattice.hazelcast.pods.MapstoresPod;
 import com.openlattice.hazelcast.pods.SharedStreamSerializersPod;
+import com.openlattice.ioc.providers.LateInitProvidersPod;
 import com.openlattice.jdbc.JdbcPod;
 import com.openlattice.linking.pods.LinkerPostConfigurationServicesPod;
 import com.openlattice.linking.pods.LinkerSecurityPod;
@@ -60,7 +61,8 @@ public class Linker extends BaseRhizomeServer {
             PlasmaCoupling.class,
             PostgresPod.class,
             SharedStreamSerializersPod.class,
-            TaskSchedulerPod.class
+            TaskSchedulerPod.class,
+            LateInitProvidersPod.class
     };
 
     private static final Class<?>[] webPods = new Class<?>[]{ LinkerServletsPod.class, LinkerSecurityPod.class };

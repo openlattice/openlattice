@@ -34,6 +34,7 @@ import com.openlattice.test.DataSourceResolverPodForTests
 import com.openlattice.hazelcast.pods.MapstoresPod
 import com.openlattice.hazelcast.pods.SharedStreamSerializersPod
 import com.openlattice.hazelcast.pods.TestPod
+import com.openlattice.ioc.providers.LateInitProvidersPod
 import com.openlattice.jdbc.JdbcPod
 import com.openlattice.postgres.PostgresPod
 import com.openlattice.postgres.PostgresTablesPod
@@ -55,6 +56,7 @@ open class TestServer {
             AuditingConfigurationPod::class.java,
             ExternalDatabaseConnectionManagerPod::class.java,
             DataSourceResolverPodForTests::class.java,
+            LateInitProvidersPod::class.java,
             TestPod::class.java
         )
 

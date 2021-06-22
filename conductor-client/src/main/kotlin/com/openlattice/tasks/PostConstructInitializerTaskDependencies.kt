@@ -29,6 +29,8 @@ import com.openlattice.hazelcast.serializers.decorators.DataGraphAware
 import com.openlattice.hazelcast.serializers.decorators.MetastoreAware
 import com.openlattice.ids.HazelcastIdGenerationService
 import com.openlattice.ids.IdGenerationServiceDependent
+import com.openlattice.ioc.providers.LateInitAware
+import com.openlattice.ioc.providers.LateInitProvider
 import com.openlattice.transporter.types.TransporterDatastore
 import com.openlattice.transporter.types.TransporterDependent
 import org.slf4j.LoggerFactory
@@ -59,19 +61,25 @@ class PostConstructInitializerTaskDependencies : HazelcastTaskDependencies {
     private lateinit var byteBlobDataManagerAware: Set<ByteBlobDataManagerAware>
 
     @Inject
-    private lateinit var idGenerationServiceDependent: Set<IdGenerationServiceDependent<*>>
+    private lateinit var idGenerationServiceDependent: Set<IdGenerationServiceDependent>
 
     @Inject
-    private lateinit var dataGraphAware:  Set<DataGraphAware>
+    private lateinit var dataGraphAware: Set<DataGraphAware>
 
     @Inject
     private lateinit var metastoreAware: Set<MetastoreAware>
+
+    @Inject
+    private lateinit var lateInitAware: Set<LateInitAware>
 
     @Inject
     private lateinit var dataGraphService: DataGraphService
 
     @Inject
     private lateinit var resolver: DataSourceResolver
+
+    @Inject
+    private lateinit var lateInitProvider: LateInitProvider
 
     @Component
     class PostConstructInitializerTask : HazelcastInitializationTask<PostConstructInitializerTaskDependencies> {
@@ -97,10 +105,17 @@ class PostConstructInitializerTaskDependencies : HazelcastTaskDependencies {
 
             dependencies.metastoreAware.forEach {
                 it.setDataSourceResolver(dependencies.resolver)
+                logger.info("Initialized ${it.javaClass} with resolver")
             }
 
             dependencies.dataGraphAware.forEach {
                 it.setDataGraphService(dependencies.dataGraphService)
+                logger.info("Initialized ${it.javaClass} with data graph service")
+            }
+
+            dependencies.lateInitAware.forEach {
+                it.setLateInitProvider(dependencies.lateInitProvider)
+                logger.info("Initialized ${it.javaClass} with late init provider")
             }
         }
 
