@@ -21,6 +21,8 @@ import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.serializers.decorators.ByteBlobDataManagerAware
 import com.openlattice.hazelcast.serializers.decorators.DataGraphAware
 import com.openlattice.hazelcast.serializers.decorators.MetastoreAware
+import com.openlattice.ioc.providers.LateInitAware
+import com.openlattice.ioc.providers.LateInitProvider
 import com.openlattice.linking.graph.PostgresLinkingQueryService
 import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresArrays
@@ -51,9 +53,7 @@ import java.util.*
 class DataDeletionJob(
     state: DataDeletionJobState
 ) : AbstractDistributedJob<Long, DataDeletionJobState>(state),
-    MetastoreAware,
-    ByteBlobDataManagerAware,
-    DataGraphAware {
+    LateInitAware {
 
     @JsonCreator
     constructor(
@@ -76,13 +76,7 @@ class DataDeletionJob(
     }
 
     @Transient
-    private lateinit var resolver: DataSourceResolver
-
-    @Transient
-    private lateinit var byteBlobDataManager: ByteBlobDataManager
-
-    @Transient
-    private lateinit var dataGraphService: DataGraphService
+    private lateinit var lateInitProvider: LateInitProvider
 
     @Transient
     private lateinit var entitySets: IMap<UUID, EntitySet>
@@ -92,6 +86,12 @@ class DataDeletionJob(
 
     @Transient
     private lateinit var propertyTypes: IMap<UUID, PropertyType>
+
+    override fun initializeHazelcastRelatedObjects() {
+        this.entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
+        this.entityTypes = HazelcastMap.ENTITY_TYPES.getMap(hazelcastInstance)
+        this.propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap(hazelcastInstance)
+    }
 
     override fun initialize() {
         state.totalToDelete = getTotalToDelete()
@@ -108,6 +108,7 @@ class DataDeletionJob(
 
         var edgeBatch = getBatchOfEdgesForIds(entityDataKeys)
         while (edgeBatch.isNotEmpty()) {
+            logger.info("Deleting edges and entities involving {}", edgeBatch)
             val edgeEdkBatch = edgeBatch.map { it.edge }.toSet()
             deleteEntities(edgeEdkBatch)
             deleteEdges(edgeBatch)
@@ -130,7 +131,7 @@ class DataDeletionJob(
         state.entityKeyIds?.let {
             return it.size.toLong()
         }
-        val hds = resolver.getDefaultDataSource()
+        val hds = lateInitProvider.resolver.getDefaultDataSource()
         return hds.connection.use { connection ->
             connection.prepareStatement(GET_ENTITY_SET_COUNT_SQL).use { ps ->
                 ps.setObject(1, state.entitySetId)
@@ -151,7 +152,7 @@ class DataDeletionJob(
             return entityKeyIds.take(BATCH_SIZE).mapTo(mutableSetOf()) { EntityDataKey(state.entitySetId, it) }
         }
 
-        val hds = resolver.getDefaultDataSource()
+        val hds = lateInitProvider.resolver.getDefaultDataSource()
 
         return BasePostgresIterable(PreparedStatementHolderSupplier(hds, getIdsBatchSql()) {
             it.setObject(1, state.entitySetId)
@@ -163,7 +164,7 @@ class DataDeletionJob(
 
     private fun cleanUpBatch(entityDataKeys: Set<EntityDataKey>) {
         val entityKeyIds = entityDataKeys.mapTo(mutableSetOf()) { it.entityKeyId }
-        val hds = resolver.getDefaultDataSource()
+        val hds = lateInitProvider.resolver.getDefaultDataSource()
         PostgresLinkingQueryService.deleteNeighborhoods(hds, state.entitySetId, entityKeyIds)
         state.entityKeyIds?.removeAll(entityKeyIds)
     }
@@ -174,9 +175,9 @@ class DataDeletionJob(
      */
     private fun getBatchOfEdgesForIds(edks: Set<EntityDataKey>): Set<DataEdgeKey> {
         return edks
-            .groupBy { resolver.getDataSourceName(it.entitySetId) }
+            .groupBy { lateInitProvider.resolver.getDataSourceName(it.entitySetId) }
             .flatMap { (dataSourceName, entityDataKeysForDataSource) ->
-                val hds = resolver.getDataSource(dataSourceName)
+                val hds = lateInitProvider.resolver.getDataSource(dataSourceName)
                 BasePostgresIterable(PreparedStatementHolderSupplier(hds, getEdgesBatchSql()) {
                     val entityKeyIdsArr = PostgresArrays.createUuidArray(
                         it.connection,
@@ -231,10 +232,10 @@ class DataDeletionJob(
             }
         }
 
-        return entityDataKeys.groupBy { resolver.getDataSourceName(it.entitySetId) }
+        return entityDataKeys.groupBy { lateInitProvider.resolver.getDataSourceName(it.entitySetId) }
             .map { (dataSourceName, entityDataKeysForDataSource) ->
-                val dataHds = resolver.getDataSource(dataSourceName)
-                val idsHds = resolver.getDefaultDataSource()
+                val dataHds = lateInitProvider.resolver.getDataSource(dataSourceName)
+                val idsHds = lateInitProvider.resolver.getDefaultDataSource()
                 val entitySetIdToPartitionToIds = entityDataKeysForDataSource
                     .groupBy { edkForDataSource -> edkForDataSource.entitySetId }
                     .mapValues { (entitySetId, edks) ->
@@ -316,7 +317,7 @@ class DataDeletionJob(
     }
 
     private fun deleteEdges(edgeBatch: Set<DataEdgeKey>) {
-        dataGraphService.deleteAssociations(edgeBatch, state.deleteType)
+        lateInitProvider.dataGraphService.deleteAssociations(edgeBatch, state.deleteType)
     }
 
     private fun bindEdgeDelete(ps: PreparedStatement, edk: EntityDataKey, version: Long) {
@@ -330,6 +331,10 @@ class DataDeletionJob(
         ps.addBatch()
     }
 
+    @SuppressFBWarnings(
+        value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"],
+        justification = "This is a bug with spotbugs bytecode parsing for lateinit var."
+    )
     //TODO: entity key ids should be paired with their entity set ids :-/
     @JsonIgnore
     private fun deletePropertyOfEntityFromS3(
@@ -340,9 +345,9 @@ class DataDeletionJob(
 
         val s3Keys =
             entitySetIds
-                .groupBy(resolver::getDataSourceName)
+                .groupBy(lateInitProvider.resolver::getDataSourceName)
                 .flatMap { (dataSourceName, entitySetIdsForDataSource) ->
-                    val hds = resolver.getDataSource(dataSourceName)
+                    val hds = lateInitProvider.resolver.getDataSource(dataSourceName)
                     BasePostgresIterable<String>(
                         PreparedStatementHolderSupplier(hds, selectEntitiesTextProperties, FETCH_SIZE) { ps ->
                             val connection = ps.connection
@@ -359,7 +364,7 @@ class DataDeletionJob(
 
         if (s3Keys.isNotEmpty()) {
             try {
-                byteBlobDataManager.deleteObjects(s3Keys)
+                lateInitProvider.byteBlobDataManager.deleteObjects(s3Keys)
             } catch (e: Exception) {
                 logger.error(
                     "Unable to delete object from s3 for entity sets {} with ids {}",
@@ -371,26 +376,13 @@ class DataDeletionJob(
         }
     }
 
-    @JsonIgnore
-    override fun setDataSourceResolver(resolver: DataSourceResolver) {
-        this.resolver = resolver
-    }
-
-    override fun setDataGraphService(dataGraphService: DataGraphService) {
-        this.dataGraphService = dataGraphService
+    override fun setLateInitProvider(lateInitProvider: LateInitProvider) {
+        this.lateInitProvider = lateInitProvider
     }
 
     @JsonIgnore
     override fun setHazelcastInstance(hazelcastInstance: HazelcastInstance) {
         super.setHazelcastInstance(hazelcastInstance)
-        this.entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
-        this.entityTypes = HazelcastMap.ENTITY_TYPES.getMap(hazelcastInstance)
-        this.propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap(hazelcastInstance)
-    }
-
-    @JsonIgnore
-    override fun setByteBlobDataManager(byteBlobDataManager: ByteBlobDataManager) {
-        this.byteBlobDataManager = byteBlobDataManager
     }
 
     @JsonIgnore
@@ -455,7 +447,9 @@ class DataDeletionJob(
         }
 
         return """
-            SELECT ${EDGE_ENTITY_SET_ID.name}, ${EDGE_ENTITY_KEY_ID.name}
+            SELECT  ${SRC_ENTITY_SET_ID.name}, ${SRC_ENTITY_KEY_ID.name},
+                    ${DST_ENTITY_SET_ID.name}, ${DST_ENTITY_KEY_ID.name},
+                    ${EDGE_ENTITY_SET_ID.name}, ${EDGE_ENTITY_KEY_ID.name}
             FROM ${E.name}
             WHERE ( $entityMatches )
             ${excludeClearedIfSoftDeleteSql()}

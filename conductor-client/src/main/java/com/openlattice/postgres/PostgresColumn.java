@@ -387,7 +387,7 @@ public final class PostgresColumn {
     public static final String                   OID_FIELD                         = "oid";
     public static final PostgresColumnDefinition OID                               = new PostgresColumnDefinition(
             OID_FIELD,
-            INTEGER );
+            BIGINT );
     public static final String                   ORDINAL_POSITION_FIELD            = "ordinal_position";
     public static final PostgresColumnDefinition ORDINAL_POSITION                  =
             new PostgresColumnDefinition( ORDINAL_POSITION_FIELD, INTEGER ).notNull();

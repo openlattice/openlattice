@@ -25,6 +25,6 @@ package com.openlattice.ids
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-interface IdGenerationServiceDependent<T> {
-    fun init(idService: HazelcastIdGenerationService) : T
+interface IdGenerationServiceDependent {
+    fun init(idService: HazelcastIdGenerationService)
 }

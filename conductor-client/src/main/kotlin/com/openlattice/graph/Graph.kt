@@ -223,15 +223,21 @@ class Graph(
     }
 
     override fun deleteEdges(keys: Iterable<DataEdgeKey>, deleteType: DeleteType): WriteEvent {
-
         val sql = when(deleteType) {
           DeleteType.Hard -> HARD_DELETE_EDGES_SQL
           DeleteType.Soft -> SOFT_DELETE_EDGES_SQL
         }
         val version = -System.currentTimeMillis()
-        val updates = lockAndOperateOnEdges(keys, DELETE_BY_VERTEX_SQL) { lockStmt, operationStmt, dataEdgeKey ->
+        val updates = lockAndOperateOnEdges(keys, sql) { lockStmt, operationStmt, dataEdgeKey ->
+            var opIndex = 1
+            //For soft deletes we have to bind version twice
+            if( deleteType == DeleteType.Soft) {
+                operationStmt.setLong(opIndex++, version)
+                operationStmt.setLong(opIndex++, version)
+            }
+
             addKeyIds(lockStmt, dataEdgeKey)
-            addKeyIds(operationStmt, dataEdgeKey)
+            addKeyIds(operationStmt, dataEdgeKey, opIndex)
         }
         return WriteEvent(System.currentTimeMillis(), updates)
     }
@@ -1512,8 +1518,10 @@ private val SOFT_DELETE_EDGES_SQL = """
               ${VERSION.name} = ?,
               ${VERSIONS.name} = ${VERSIONS.name} || ?
             WHERE
-              ${EDGE_ENTITY_SET_ID.name} = ?
-              AND ${EDGE_ENTITY_KEY_ID.name} = ? 
+              ${PARTITION.name} = ? AND
+              ${SRC_ENTITY_KEY_ID.name} = ? AND
+              ${DST_ENTITY_KEY_ID.name} = ? AND
+              ${EDGE_ENTITY_KEY_ID.name} = ? 
             
         """.trimIndent()
 
@@ -1527,6 +1535,8 @@ private val SOFT_DELETE_EDGES_SQL = """
 private val HARD_DELETE_EDGES_SQL = """
             DELETE FROM ${E.name}
             WHERE
-              ${EDGE_ENTITY_SET_ID.name} = ?
-              AND ${EDGE_ENTITY_KEY_ID.name} = ? 
+              ${PARTITION.name} = ? AND
+              ${SRC_ENTITY_KEY_ID.name} = ? AND
+              ${DST_ENTITY_KEY_ID.name} = ? AND
+              ${EDGE_ENTITY_KEY_ID.name} = ? 
         """.trimIndent()

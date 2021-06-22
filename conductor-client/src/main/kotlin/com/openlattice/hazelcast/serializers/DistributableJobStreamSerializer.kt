@@ -23,7 +23,6 @@ package com.openlattice.hazelcast.serializers
 
 import com.geekbeast.rhizome.jobs.AbstractDistributableJobStreamSerializer
 import com.geekbeast.rhizome.jobs.DistributableJob
-import com.google.common.annotations.VisibleForTesting
 import com.hazelcast.nio.ObjectDataInput
 import com.openlattice.data.DataGraphService
 import com.openlattice.data.storage.ByteBlobDataManager
@@ -35,7 +34,9 @@ import com.openlattice.hazelcast.serializers.decorators.IdGenerationAware
 import com.openlattice.hazelcast.serializers.decorators.MetastoreAware
 import com.openlattice.ids.HazelcastIdGenerationService
 import com.openlattice.ids.IdGenerationServiceDependent
-import com.zaxxer.hikari.HikariDataSource
+import com.openlattice.ioc.providers.LateInitAware
+import com.openlattice.ioc.providers.LateInitProvider
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.springframework.stereotype.Component
 import javax.inject.Inject
 
@@ -43,13 +44,15 @@ import javax.inject.Inject
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
+@SuppressFBWarnings(value= ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"], justification="Kotlin class parsing bug in spotbugs")
 @Component
 class DistributableJobStreamSerializer :
-        IdGenerationServiceDependent<DistributableJobStreamSerializer>,
-        AbstractDistributableJobStreamSerializer(),
-        MetastoreAware,
-        DataGraphAware,
-        ByteBlobDataManagerAware {
+    IdGenerationServiceDependent,
+    AbstractDistributableJobStreamSerializer(),
+    MetastoreAware,
+    DataGraphAware,
+    ByteBlobDataManagerAware,
+    LateInitAware {
 
     private lateinit var resolver: DataSourceResolver
 
@@ -58,6 +61,9 @@ class DistributableJobStreamSerializer :
     private lateinit var byteBlobDataManager: ByteBlobDataManager
 
     private lateinit var dataGraphService: DataGraphService
+
+    @Inject
+    private lateinit var lateInitProvider: LateInitProvider
 
     override fun getTypeId(): Int = StreamSerializerTypeIds.DISTRIBUTABLE_JOB.ordinal
     override fun read(`in`: ObjectDataInput): DistributableJob<*> {
@@ -74,6 +80,9 @@ class DistributableJobStreamSerializer :
         if( job is DataGraphAware ) {
             job.setDataGraphService(dataGraphService)
         }
+        if( job is LateInitAware )  {
+            job.setLateInitProvider(lateInitProvider)
+        }
         return job
     }
 
@@ -85,12 +94,15 @@ class DistributableJobStreamSerializer :
         this.dataGraphService = dataGraphService
     }
 
-    override fun init(idService: HazelcastIdGenerationService): DistributableJobStreamSerializer {
+    override fun init(idService: HazelcastIdGenerationService) {
         this.idService = idService
-        return this
     }
 
     override fun setByteBlobDataManager(byteBlobDataManager: ByteBlobDataManager) {
         this.byteBlobDataManager = byteBlobDataManager
+    }
+
+    override fun setLateInitProvider(lateInitProvider: LateInitProvider) {
+        this.lateInitProvider = lateInitProvider
     }
 }
