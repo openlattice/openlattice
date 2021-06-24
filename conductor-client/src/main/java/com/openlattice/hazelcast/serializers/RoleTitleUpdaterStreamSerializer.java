@@ -38,7 +38,7 @@ public class RoleTitleUpdaterStreamSerializer implements SelfRegisteringStreamSe
 
     @Override
     public PrincipalTitleUpdater read( ObjectDataInput in ) throws IOException {
-        String newTitle = in.readUTF();
+        String newTitle = in.readString()!!;
         return new PrincipalTitleUpdater( newTitle );
     }
 

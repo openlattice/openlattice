@@ -84,9 +84,9 @@ public class EntitySetStreamSerializer implements TestableSelfRegisteringStreamS
     public static EntitySet deserialize( ObjectDataInput in ) throws IOException {
         UUID id = UUIDStreamSerializerUtils.deserialize( in );
         UUID entityTypeId = UUIDStreamSerializerUtils.deserialize( in );
-        String name = in.readUTF();
-        String title = in.readUTF();
-        String description = in.readUTF();
+        String name = in.readString()!!;
+        String title = in.readString()!!;
+        String description = in.readString()!!;
         Set<String> contacts = SetStreamSerializers.fastStringSetDeserialize( in );
         Set<UUID> linkedEntitySets = SetStreamSerializers.fastUUIDSetDeserialize( in );
         UUID organizationId = UUIDStreamSerializerUtils.deserialize( in );
@@ -98,8 +98,8 @@ public class EntitySetStreamSerializer implements TestableSelfRegisteringStreamS
         }
 
         LinkedHashSet<Integer> partitions = (LinkedHashSet<Integer>) StreamSerializers.deserializeIntList( in, Sets.newLinkedHashSet() );
-        StorageType storageType = StorageType.valueOf(in.readUTF());
-        String datastore = in.readUTF();
+        StorageType storageType = StorageType.valueOf(in.readString()!!);
+        String datastore = in.readString()!!;
         DataExpiration expiration;
         boolean hasExpiration = in.readBoolean();
         if ( hasExpiration ) {

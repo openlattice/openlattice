@@ -71,7 +71,7 @@ public class RequestStreamSerializer implements SelfRegisteringStreamSerializer<
     public static Request deserialize( ObjectDataInput in ) throws IOException {
         UUID[] aclKey = ListStreamSerializers.fastUUIDArrayDeserialize( in );
         EnumSet<Permission> permissions = DelegatedPermissionEnumSetStreamSerializer.deserialize( in );
-        String reason = in.readUTF();
+        String reason = in.readString()!!;
         return new Request( new AclKey( aclKey ), permissions, reason );
     }
 }
