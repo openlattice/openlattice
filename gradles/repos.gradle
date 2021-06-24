@@ -1,5 +1,3 @@
-apply plugin: "maven"
-
 repositories {
 
   // Hit the local maven repo
