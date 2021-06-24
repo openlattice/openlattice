@@ -72,6 +72,7 @@ tasks.withType(Checkstyle) {
 spotbugs {
     reportLevel = 'high'
     toolVersion = "${spotbugs_annotations_version}"
+    maxHeapSize = '2g'
 }
 
 spotbugsMain {
