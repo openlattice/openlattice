@@ -22,7 +22,7 @@ class AddEntitySetsToLinkingEntitySetProcessorStreamSerializer:
         return AddEntitySetsToLinkingEntitySetProcessor::class.java
     }
 
-    override fun write(out: ObjectDataOutput?, `object`: AddEntitySetsToLinkingEntitySetProcessor?) {
+    override fun write(out: ObjectDataOutput, `object`: AddEntitySetsToLinkingEntitySetProcessor) {
         SetStreamSerializers.fastUUIDSetSerialize( out, `object`!!.entitySetIds )
     }
 

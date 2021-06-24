@@ -27,14 +27,14 @@ class FlightPlanParametersUpdateStreamSerializer : TestableSelfRegisteringStream
 
         @JvmStatic
         fun deserialize(input: ObjectDataInput): FlightPlanParametersUpdate {
-            val sql = OptionalStreamSerializers.deserialize(input, ObjectDataInput::readUTF)
+            val sql = OptionalStreamSerializers.deserialize<String>(input, ObjectDataInput::readString)
             val source = OptionalStreamSerializers.deserialize(input) {
                 val sourceKeys = input.readStringArray()!!.toList()
                 val sourceValues = input.readStringArray()!!.toList()
                 sourceKeys.zip(sourceValues) { key, value -> key to value }.toMap()
             }
-            val sourcePKeyCols = OptionalStreamSerializers.deserializeList(input, ObjectDataInput::readUTF)
-            val flightFilePath = OptionalStreamSerializers.deserialize(input, ObjectDataInput::readUTF)
+            val sourcePKeyCols = OptionalStreamSerializers.deserializeList<String>(input, ObjectDataInput::readString)
+            val flightFilePath = OptionalStreamSerializers.deserialize<String>(input, ObjectDataInput::readString)
             return FlightPlanParametersUpdate(sql, source, sourcePKeyCols, flightFilePath)
         }
     }

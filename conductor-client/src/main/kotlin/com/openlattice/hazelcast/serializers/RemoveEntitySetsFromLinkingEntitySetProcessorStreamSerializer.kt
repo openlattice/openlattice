@@ -21,7 +21,7 @@ class RemoveEntitySetsFromLinkingEntitySetProcessorStreamSerializer:
         return RemoveEntitySetsFromLinkingEntitySetProcessor::class.java
     }
 
-    override fun write(out: ObjectDataOutput?, `object`: RemoveEntitySetsFromLinkingEntitySetProcessor?) {
+    override fun write(out: ObjectDataOutput, `object`: RemoveEntitySetsFromLinkingEntitySetProcessor) {
         SetStreamSerializers.fastUUIDSetSerialize( out, `object`!!.entitySetIds )
     }
 

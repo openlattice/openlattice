@@ -35,7 +35,7 @@ class IntegrationStreamSerializer : TestableSelfRegisteringStreamSerializer<Inte
             val orgId = UUIDStreamSerializerUtils.deserialize(input)
             val logEntitySetId = OptionalStreamSerializers.deserialize(input, UUIDStreamSerializerUtils::deserialize)
             val maxConnections = OptionalStreamSerializers.deserialize(input, ObjectDataInput::readInt)
-            val callbackUrls = OptionalStreamSerializers.deserializeList(input, ObjectDataInput::readUTF)
+            val callbackUrls = OptionalStreamSerializers.deserializeList<String>(input, ObjectDataInput::readString)
             val flightPlanParamsKeys = input.readStringArray()!!
             val flightPlanParamsValues = flightPlanParamsKeys.map{
                 FlightPlanParametersStreamSerializer.deserialize(input)

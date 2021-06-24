@@ -35,7 +35,7 @@ class UpdateAppConfigSettingsProcessorStreamSerializer : SelfRegisteringStreamSe
 
         val settingsToAdd = (0 until size).associate {
             val key: String = `in`.readString()!!
-            val value: Any = `in`.readObject<Any>()
+            val value: Any = `in`.readObject<Any>()!!
 
             key to value
         }
