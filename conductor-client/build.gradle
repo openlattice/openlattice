@@ -150,6 +150,7 @@ dependencies {
     implementation "org.xerial.snappy:snappy-java:${snappy_version}"
     implementation "net.jpountz.lz4:lz4:${lz4_version}"
     implementation "de.javakaffee:kryo-serializers:${kryo_serializers_version}"
+    api "org.apache.commons:commons-text:${commonsText_version}"
 
     api "com.openlattice:api:${api_version}"
     api "com.openlattice:scribe:${scribe_version}"
@@ -165,7 +166,7 @@ dependencies {
     } else {
         testImplementation "com.openlattice:api:${api_version}:tests"
         testImplementation "com.openlattice:scribe:${scribe_version}:tests"
-        testImplementation "com.openlattice:rhizome:${rhizome_version}:tests"
+        testImplementation "com.openlattice:rhizome:${rhizome_version}:test"
         testImplementation "com.openlattice:rhizome-client:${rhizome_client_version}:tests"
     }
     /*

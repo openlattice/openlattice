@@ -189,8 +189,8 @@ dependencies {
     implementation "commons-validator:commons-validator:${commonsvalidator_version}"
     implementation "org.apache.commons:commons-text:${commonsText_version}"
 
-    implementation "com.google.maps:google-maps-services:${google_maps_services}"
-    implementation "com.google.guava:guava:${guava_version}"
+    api "com.google.maps:google-maps-services:${google_maps_services}"
+    api "com.google.guava:guava:${guava_version}"
     implementation "org.apache.olingo:odata-commons-api:${odata_version}"
     implementation "org.apache.olingo:odata-commons-core:${odata_version}"
     implementation "org.apache.olingo:odata-server-api:${odata_version}"
@@ -223,7 +223,7 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     implementation "com.auth0:auth0:${project.auth0_version}"
 
-    implementation "com.openlattice:rhizome-client:${rhizome_client_version}"
+    api "com.openlattice:rhizome-client:${rhizome_client_version}"
     if( project.hasProperty('developmentMode') && project.developmentMode ) {
         testImplementation(project(path: ":rhizome-client", configuration: "tests"))
     } else {
