@@ -97,11 +97,11 @@ dependencies {
     /*
      * ELASTICSEARCH
      */
-    compile("org.elasticsearch:elasticsearch:${elastic_version}") {
+    implementation("org.elasticsearch:elasticsearch:${elastic_version}") {
         exclude module: 'slf4j-log4j12'
     }
 
-    compile("org.elasticsearch.client:transport:${elastic_version}") {
+    implementation("org.elasticsearch.client:transport:${elastic_version}") {
         exclude module: 'slf4j-log4j12'
     }
 
@@ -110,7 +110,7 @@ dependencies {
      */
     testImplementation "junit:junit:${junit_version}"
     testImplementation "org.mockito:mockito-core:$mockito_version"
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version";
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version";
 }
 
 eclipse {
