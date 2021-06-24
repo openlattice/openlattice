@@ -68,10 +68,13 @@ dependencies {
     testCompileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugs_annotations_version}"
 
     testImplementation "com.openlattice:conductor:${conductor_version}"
+    testImplementation "com.openlattice:api:${api_version}"
+    testImplementation "com.openlattice:conductor-client:${conductor_client_version}"
     testImplementation "com.openlattice:datastore:${datastore_version}"
     testImplementation "com.openlattice:shuttle:${shuttle_version}"
     testImplementation "com.openlattice:launchpad:${launchpad_version}"
     testImplementation "com.openlattice:rhizome:${rhizome_version}"
+    testImplementation "com.openlattice:launchpad:${launchpad_version}"
 
     if( project.hasProperty('developmentMode') && project.developmentMode ) {
         logger.quiet(project.name + " using project dependencies.")

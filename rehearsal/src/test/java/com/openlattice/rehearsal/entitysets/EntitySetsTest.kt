@@ -8,7 +8,7 @@ import com.openlattice.edm.type.EntityType
 import com.openlattice.rehearsal.assertException
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
 import com.openlattice.rehearsal.edm.EdmTestConstants
-import org.apache.commons.lang.RandomStringUtils
+import org.apache.commons.lang3.RandomStringUtils
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
