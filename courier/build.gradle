@@ -138,10 +138,6 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 }
 
-install {
-	configuration = configurations.published
-}
-
 eclipse {
     ext.downloadSources = true
     ext.downloadJavadoc = true

@@ -17,8 +17,8 @@ class Base64MediaStreamSerializer : TestableSelfRegisteringStreamSerializer<Base
         }
 
         fun deserialize(`in`: ObjectDataInput): Base64Media {
-            val contentType = `in`.readUTF()
-            val data = `in`.readUTF()
+            val contentType = `in`.readString()!!
+            val data = `in`.readString()!!
             return Base64Media(contentType, data)
         }
     }

@@ -244,10 +244,6 @@ dependencies {
     }
 }
 
-install {
-    configuration = configurations.published
-}
-
 eclipse {
     ext.downloadSources = true
     ext.downloadJavadoc = true

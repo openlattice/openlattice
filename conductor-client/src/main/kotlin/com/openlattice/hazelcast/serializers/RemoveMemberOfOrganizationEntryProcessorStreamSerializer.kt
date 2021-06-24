@@ -21,7 +21,7 @@ class RemoveMemberOfOrganizationEntryProcessorStreamSerializer
     }
 
     override fun read(input: ObjectDataInput?): RemoveMemberOfOrganizationEntryProcessor {
-        return RemoveMemberOfOrganizationEntryProcessor(SetStreamSerializers.deserialize(input) { it.readUTF() })
+        return RemoveMemberOfOrganizationEntryProcessor(SetStreamSerializers.deserialize(input) { it.readString()!! })
     }
 
     override fun write(out: ObjectDataOutput, obj: RemoveMemberOfOrganizationEntryProcessor?) {

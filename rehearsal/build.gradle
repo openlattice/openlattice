@@ -25,8 +25,8 @@ plugins {
     id 'maven-publish'
     id 'signing'
     id 'com.github.spotbugs' version '4.6.0'
-    id 'org.jetbrains.kotlin.jvm' version '1.3.72'
-    id 'org.jetbrains.kotlin.plugin.spring' version '1.3.72'
+    id 'org.jetbrains.kotlin.jvm'
+    id 'org.jetbrains.kotlin.plugin.spring'
 }
 
 description = "Integration Tests"
@@ -90,10 +90,6 @@ dependencies {
         exclude module : 'hamcrest-core'
     }
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-}
-
-install {
-	configuration = configurations.published
 }
 
 eclipse {

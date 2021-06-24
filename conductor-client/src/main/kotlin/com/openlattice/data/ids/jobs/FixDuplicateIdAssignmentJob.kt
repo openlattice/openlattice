@@ -103,6 +103,7 @@ class FixDuplicateIdAssignmentJob(
         markAsNeedingIndexing(ids)
 
         state.idsProceessed += entityKeysAndIds.values.sumBy { it.size }
+
         state.id = ids.max() ?: throw IllegalStateException("Entity key ids cannot be empty.")
         hasWorkRemaining = (ids.size == BATCH_SIZE)
     }

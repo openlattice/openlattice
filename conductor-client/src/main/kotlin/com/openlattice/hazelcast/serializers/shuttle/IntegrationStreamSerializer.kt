@@ -30,7 +30,7 @@ class IntegrationStreamSerializer : TestableSelfRegisteringStreamSerializer<Inte
         fun deserialize(input: ObjectDataInput): Integration {
             val key = UUIDStreamSerializerUtils.deserialize(input)
             val environment = EnvironmentStreamSerializer.deserialize(input)
-            val s3bucket = input.readUTF()
+            val s3bucket = input.readString()!!
             val contacts = input.readUTFArray().toSet()
             val orgId = UUIDStreamSerializerUtils.deserialize(input)
             val logEntitySetId = OptionalStreamSerializers.deserialize(input, UUIDStreamSerializerUtils::deserialize)

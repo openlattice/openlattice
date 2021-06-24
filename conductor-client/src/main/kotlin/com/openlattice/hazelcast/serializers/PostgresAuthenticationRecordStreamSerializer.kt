@@ -23,10 +23,10 @@ class PostgresAuthenticationRecordStreamSerializer : SelfRegisteringStreamSerial
 
         fun deserialize(input: ObjectDataInput): PostgresAuthenticationRecord {
             val connectionType = connectionTypes[input.readInt()]
-            val database = input.readUTF()
-            val username = input.readUTF()
-            val ipAddress = input.readUTF()
-            val authenticationMethod = input.readUTF()
+            val database = input.readString()!!
+            val username = input.readString()!!
+            val ipAddress = input.readString()!!
+            val authenticationMethod = input.readString()!!
             return PostgresAuthenticationRecord(connectionType, database, username, ipAddress, authenticationMethod)
         }
     }

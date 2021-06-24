@@ -30,7 +30,7 @@ class UpdateDefaultAppSettingsProcessorStreamSerializer : TestableSelfRegisterin
         val size = `in`.readInt()
 
         val settings = (0 until size).associate {
-            val key: String = `in`.readUTF()
+            val key: String = `in`.readString()!!
             val value: Any = `in`.readObject<Any>()
 
             key to value

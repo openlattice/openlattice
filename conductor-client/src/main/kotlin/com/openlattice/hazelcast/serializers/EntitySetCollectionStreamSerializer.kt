@@ -42,9 +42,9 @@ class EntitySetCollectionStreamSerializer : SelfRegisteringStreamSerializer<Enti
         val input = `in`!!
 
         val id = UUIDStreamSerializerUtils.deserialize(input)
-        val name = input.readUTF()
-        val title = input.readUTF()
-        val description = Optional.of(input.readUTF())
+        val name = input.readString()!!
+        val title = input.readString()!!
+        val description = Optional.of(input.readString()!!)
         val entityTypeCollectionId = UUIDStreamSerializerUtils.deserialize(input)
         val contacts = SetStreamSerializers.deserialize(input, ObjectDataInput::readUTF)
         val organizationId = UUIDStreamSerializerUtils.deserialize(input)

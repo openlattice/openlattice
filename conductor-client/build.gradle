@@ -183,10 +183,6 @@ test {
     maxHeapSize = "8g"
 }
 
-install {
-	configuration = configurations.published
-}
-
 eclipse {
     ext.downloadSources = true
     ext.downloadJavadoc = true
