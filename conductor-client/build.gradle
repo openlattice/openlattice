@@ -140,7 +140,7 @@ dependencies {
     implementation "org.objenesis:objenesis:${objenesis_version}"
     implementation "net.snowflake:snowflake-jdbc:${snowflake_version}"
 
-    implementation "com.google.guava:guava:${guava_version}"
+    api "com.google.guava:guava:${guava_version}"
     implementation "org.apache.olingo:odata-commons-api:${odata_version}"
     implementation "org.apache.olingo:odata-commons-core:${odata_version}"
     implementation "org.apache.olingo:odata-server-api:${odata_version}"
@@ -151,10 +151,10 @@ dependencies {
     implementation "net.jpountz.lz4:lz4:${lz4_version}"
     implementation "de.javakaffee:kryo-serializers:${kryo_serializers_version}"
 
-    implementation "com.openlattice:api:${api_version}"
-    implementation "com.openlattice:scribe:${scribe_version}"
+    api "com.openlattice:api:${api_version}"
+    api "com.openlattice:scribe:${scribe_version}"
 
-    implementation "com.openlattice:rhizome:${rhizome_version}"
+    api "com.openlattice:rhizome:${rhizome_version}"
     testImplementation "junit:junit:${junit_version}"
 
     if( project.hasProperty('developmentMode') && project.developmentMode ) {
@@ -176,7 +176,6 @@ dependencies {
         exclude module : 'hamcrest'
         exclude module : 'hamcrest-core'
     }
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 }
 
 test {
