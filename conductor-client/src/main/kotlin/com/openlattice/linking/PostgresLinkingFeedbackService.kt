@@ -120,9 +120,9 @@ class PostgresLinkingFeedbackService(
             secondEntitySetPredicate
         }
 
-        val feedbackCount = linkingFeedback.count()
+        val feedbackCount = linkingFeedback.size
         linkingFeedback.removeAll(Predicates.or(firstPredicate, secondPredicate))
-        return feedbackCount - linkingFeedback.count()
+        return feedbackCount - linkingFeedback.size
     }
 
     fun deleteLinkingFeedback(entityPair: EntityKeyPair): Int {
