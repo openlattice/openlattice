@@ -23,7 +23,7 @@ class LongIdsMapstore(hds: HikariDataSource) : AbstractBasePostgresMapstore<Stri
     }
 
     override fun generateTestValue(): Long {
-        return RandomUtils.nextLong(Long.MIN_VALUE, Long.MAX_VALUE)
+        return RandomUtils.nextLong(0, Long.MAX_VALUE)
     }
 
     override fun bind(ps: PreparedStatement, key: String, value: Long) {
