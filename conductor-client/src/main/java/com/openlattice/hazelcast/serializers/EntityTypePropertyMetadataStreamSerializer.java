@@ -26,8 +26,8 @@ public class EntityTypePropertyMetadataStreamSerializer
 
     @Override
     public EntityTypePropertyMetadata read( ObjectDataInput in ) throws IOException {
-        String title = in.readString()!!;
-        String description = in.readString()!!;
+        String title = in.readString();
+        String description = in.readString();
         LinkedHashSet tags = in.readObject();
         Boolean defaultShow = in.readBoolean();
 

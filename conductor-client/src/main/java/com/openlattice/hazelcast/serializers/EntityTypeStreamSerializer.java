@@ -109,7 +109,7 @@ public class EntityTypeStreamSerializer implements TestableSelfRegisteringStream
     public static EntityType deserialize( ObjectDataInput in ) throws IOException {
         final UUID id = UUIDStreamSerializerUtils.deserialize( in );
         final FullQualifiedName type = FullQualifiedNameStreamSerializer.deserialize( in );
-        final String title = in.readString()!!;
+        final String title = in.readString();
         final Optional<String> description = Optional.of( in.readString()!! );
         final Set<FullQualifiedName> schemas = SetStreamSerializers.deserialize( in,
                 FullQualifiedNameStreamSerializer::deserialize );

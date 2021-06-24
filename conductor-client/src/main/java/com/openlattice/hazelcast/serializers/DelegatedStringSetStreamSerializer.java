@@ -51,7 +51,7 @@ public class DelegatedStringSetStreamSerializer extends SetStreamSerializer<Dele
 
     @Override
     protected String readSingleElement( ObjectDataInput in ) throws IOException {
-        return in.readString()!!;
+        return in.readString();
     }
 
     @Override

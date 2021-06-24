@@ -65,8 +65,8 @@ public class FullQualifiedNameStreamSerializer implements SelfRegisteringStreamS
 	}
 	
 	public static  FullQualifiedName  deserialize( ObjectDataInput in ) throws IOException {
-        String namespace = in.readString()!!;
-        String name = in.readString()!!;
+        String namespace = in.readString();
+        String name = in.readString();
         return new FullQualifiedName( namespace, name );
         
     }

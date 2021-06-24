@@ -38,7 +38,7 @@ public class RoleDescriptionUpdaterStreamSerializer implements SelfRegisteringSt
 
     @Override
     public PrincipalDescriptionUpdater read( ObjectDataInput in ) throws IOException {
-        String newDescription = in.readString()!!;
+        String newDescription = in.readString();
         return new PrincipalDescriptionUpdater( newDescription );
     }
 

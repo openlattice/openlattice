@@ -45,9 +45,9 @@ public class Auth0UserBasicStreamSerializer implements SelfRegisteringStreamSeri
     }
 
     @Override public Auth0UserBasic read( ObjectDataInput in ) throws IOException {
-        String userId = in.readString()!!;
-        String email = in.readString()!!;
-        String nickname = in.readString()!!;
+        String userId = in.readString();
+        String email = in.readString();
+        String nickname = in.readString();
         Set<String> roles = SetStreamSerializers.fastStringSetDeserialize( in );
         Set<String> organizations = SetStreamSerializers.fastStringSetDeserialize( in );
 

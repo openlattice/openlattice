@@ -43,7 +43,7 @@ public class TicketKeyStreamSerializer implements SelfRegisteringStreamSerialize
 
     @Override
     public TicketKey read( ObjectDataInput in ) throws IOException {
-        String principalId = in.readString()!!;
+        String principalId = in.readString();
         UUID ticket = UUIDStreamSerializerUtils.deserialize( in );
         return new TicketKey( principalId, ticket );
     }
