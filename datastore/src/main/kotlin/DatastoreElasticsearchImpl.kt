@@ -1124,7 +1124,6 @@ class DatastoreKotlinElasticsearchImpl(
     override fun searchDataSetMetadata(
         dataSetIds: Set<UUID>,
         constraints: List<ConstraintGroup>,
-        sort: SortDefinition,
         start: Int,
         maxHits: Int
     ): SearchResult {

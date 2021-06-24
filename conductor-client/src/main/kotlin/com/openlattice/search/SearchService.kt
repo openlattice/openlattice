@@ -169,7 +169,6 @@ class SearchService(
     fun searchDataSetMetadata(
         organizationIds: Set<UUID>,
         constraints: List<ConstraintGroup>,
-        sort: SortDefinition,
         start: Int,
         maxHits: Int
     ): SearchResult {
@@ -196,7 +195,6 @@ class SearchService(
             elasticsearchApi.searchDataSetMetadata(
                 authorizedDataSetIds,
                 constraints,
-                sort,
                 start,
                 maxHits
             )

@@ -326,7 +326,6 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
         return searchService.searchDataSetMetadata(
                 searchRequest.getOrganizationIds(),
                 searchRequest.getConstraints(),
-                searchRequest.getSort(),
                 searchRequest.getStart(),
                 searchRequest.getMaxHits()
         );

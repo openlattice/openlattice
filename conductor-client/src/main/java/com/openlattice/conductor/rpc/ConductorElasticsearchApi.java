@@ -280,7 +280,6 @@ public interface ConductorElasticsearchApi {
     SearchResult searchDataSetMetadata(
             Set<UUID> dataSetIds,
             List<ConstraintGroup> constraints,
-            SortDefinition sort,
             int start,
             int maxHits
     );

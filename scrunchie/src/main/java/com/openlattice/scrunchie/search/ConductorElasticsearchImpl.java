@@ -1196,7 +1196,6 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     public SearchResult searchDataSetMetadata(
             Set<UUID> dataSetIds,
             List<ConstraintGroup> constraints,
-            SortDefinition sort,
             int start,
             int maxHits
     ) {
