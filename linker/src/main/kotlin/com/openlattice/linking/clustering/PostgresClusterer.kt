@@ -16,7 +16,7 @@ class PostgresClusterer(
 
     companion object {
         private fun scoreCluster( matchedCluster: Cluster ): Double {
-            return matchedCluster.values.flatMap { it.values }.min() ?: 0.0
+            return matchedCluster.values.flatMap { it.values }.minOrNull() ?: 0.0
         }
     }
 
