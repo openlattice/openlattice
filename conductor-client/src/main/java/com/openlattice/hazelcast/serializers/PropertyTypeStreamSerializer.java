@@ -77,7 +77,7 @@ public class PropertyTypeStreamSerializer implements SelfRegisteringStreamSerial
         UUID id = UUIDStreamSerializerUtils.deserialize( in );
         FullQualifiedName type = FullQualifiedNameStreamSerializer.deserialize( in );
         String title = in.readString();
-        Optional<String> description = Optional.of( in.readString()!! );
+        Optional<String> description = Optional.of( in.readString() );
         Set<FullQualifiedName> schemas = SetStreamSerializers.deserialize( in, FullQualifiedNameStreamSerializer::deserialize );
         EdmPrimitiveTypeKind datatype = EdmPrimitiveTypeKindStreamSerializer.deserialize( in );
         Optional<Boolean> piiField = Optional.of( in.readBoolean() );

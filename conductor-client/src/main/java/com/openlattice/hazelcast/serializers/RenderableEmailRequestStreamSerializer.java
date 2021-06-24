@@ -48,7 +48,7 @@ public class RenderableEmailRequestStreamSerializer implements SelfRegisteringSt
     @Override
     public RenderableEmailRequest read( ObjectDataInput in ) throws IOException {
         Optional<String> from = readOptional( in, ObjectDataInput::readUTF );
-        String[] to = in.readStringArray()!!;
+        String[] to = in.readStringArray();
         Optional<String[]> cc = readOptional( in, ObjectDataInput::readUTFArray );
         Optional<String[]> bcc = readOptional( in, ObjectDataInput::readUTFArray );
         String templatePath = in.readString();

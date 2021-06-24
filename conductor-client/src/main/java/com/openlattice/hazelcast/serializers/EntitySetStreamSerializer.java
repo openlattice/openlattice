@@ -98,7 +98,7 @@ public class EntitySetStreamSerializer implements TestableSelfRegisteringStreamS
         }
 
         LinkedHashSet<Integer> partitions = (LinkedHashSet<Integer>) StreamSerializers.deserializeIntList( in, Sets.newLinkedHashSet() );
-        StorageType storageType = StorageType.valueOf(in.readString()!!);
+        StorageType storageType = StorageType.valueOf(in.readString());
         String datastore = in.readString();
         DataExpiration expiration;
         boolean hasExpiration = in.readBoolean();
