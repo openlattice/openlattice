@@ -141,7 +141,7 @@ class IndexingService(
                                         false
                                 )
                             }
-                            cursor = entityKeyIdsWithLastWrite.keys.max()!!
+                            cursor = entityKeyIdsWithLastWrite.keys.maxOrNull()!!
                             indexingPartitionProgress.set(entitySetId, i)
                             indexingProgress.set(entitySetId, cursor)
 

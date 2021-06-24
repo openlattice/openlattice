@@ -140,7 +140,7 @@ class S3BenchmarkTest {
 
     private fun printStats(durations: List<Long>) {
         val mean = durations.average()
-        val max = durations.max()
+        val max = durations.maxOrNull()
         val summation = durations.map { (it - mean).pow(2.0) }.sum()
         val variance = summation / (durations.size - 1)
         val sd = sqrt(variance)

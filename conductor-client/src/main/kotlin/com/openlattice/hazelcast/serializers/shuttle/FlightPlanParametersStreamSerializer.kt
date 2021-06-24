@@ -31,10 +31,10 @@ class FlightPlanParametersStreamSerializer : TestableSelfRegisteringStreamSerial
 
         fun deserialize(input: ObjectDataInput): FlightPlanParameters {
             val sql = input.readString()!!
-            val sourceKeys = input.readUTFArray().toList()
-            val sourceValues = input.readUTFArray().toList()
+            val sourceKeys = input.readStringArray()!!.toList()
+            val sourceValues = input.readStringArray()!!.toList()
             val source = sourceKeys.zip(sourceValues) { key, value -> key to value }.toMap()
-            val srcPkeyCols = input.readUTFArray().toList()
+            val srcPkeyCols = input.readStringArray()!!.toList()
             val flightFilePath = StreamSerializers.deserializeMaybeValue(input) {
                 input.readString()!!
             }

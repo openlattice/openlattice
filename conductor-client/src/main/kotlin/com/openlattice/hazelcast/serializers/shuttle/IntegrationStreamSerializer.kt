@@ -31,12 +31,12 @@ class IntegrationStreamSerializer : TestableSelfRegisteringStreamSerializer<Inte
             val key = UUIDStreamSerializerUtils.deserialize(input)
             val environment = EnvironmentStreamSerializer.deserialize(input)
             val s3bucket = input.readString()!!
-            val contacts = input.readUTFArray().toSet()
+            val contacts = input.readStringArray()!!.toSet()
             val orgId = UUIDStreamSerializerUtils.deserialize(input)
             val logEntitySetId = OptionalStreamSerializers.deserialize(input, UUIDStreamSerializerUtils::deserialize)
             val maxConnections = OptionalStreamSerializers.deserialize(input, ObjectDataInput::readInt)
             val callbackUrls = OptionalStreamSerializers.deserializeList(input, ObjectDataInput::readUTF)
-            val flightPlanParamsKeys = input.readUTFArray()
+            val flightPlanParamsKeys = input.readStringArray()!!
             val flightPlanParamsValues = flightPlanParamsKeys.map{
                 FlightPlanParametersStreamSerializer.deserialize(input)
             }.toList()

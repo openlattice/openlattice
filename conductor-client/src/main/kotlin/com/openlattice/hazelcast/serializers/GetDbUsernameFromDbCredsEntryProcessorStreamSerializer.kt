@@ -18,7 +18,7 @@ class GetDbUsernameFromDbCredsEntryProcessorStreamSerializer: NoOpSelfRegisterin
         return GetDbUsernameFromDbCredsEntryProcessor::class.java
     }
 
-    override fun read(`in`: ObjectDataInput?): GetDbUsernameFromDbCredsEntryProcessor{
+    override fun read(`in`: ObjectDataInput): GetDbUsernameFromDbCredsEntryProcessor{
         return GetDbUsernameFromDbCredsEntryProcessor()
     }
 }

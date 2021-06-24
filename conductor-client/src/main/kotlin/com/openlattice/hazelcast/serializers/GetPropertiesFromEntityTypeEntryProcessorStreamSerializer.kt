@@ -15,7 +15,7 @@ class GetPropertiesFromEntityTypeEntryProcessorStreamSerializer: NoOpSelfRegiste
         return GetPropertiesFromEntityTypeEntryProcessor::class.java
     }
 
-    override fun read(`in`: ObjectDataInput?): GetPropertiesFromEntityTypeEntryProcessor {
+    override fun read(`in`: ObjectDataInput): GetPropertiesFromEntityTypeEntryProcessor {
         return GetPropertiesFromEntityTypeEntryProcessor()
     }
 }

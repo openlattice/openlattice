@@ -26,7 +26,7 @@ class AddEntitySetsToLinkingEntitySetProcessorStreamSerializer:
         SetStreamSerializers.fastUUIDSetSerialize( out, `object`!!.entitySetIds )
     }
 
-    override fun read(`in`: ObjectDataInput?): AddEntitySetsToLinkingEntitySetProcessor {
+    override fun read(`in`: ObjectDataInput): AddEntitySetsToLinkingEntitySetProcessor {
         return AddEntitySetsToLinkingEntitySetProcessor( SetStreamSerializers.fastUUIDSetDeserialize( `in` ) )
     }
 

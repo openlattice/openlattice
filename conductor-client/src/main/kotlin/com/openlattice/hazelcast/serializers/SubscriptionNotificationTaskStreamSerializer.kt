@@ -25,7 +25,7 @@ class SubscriptionNotificationTaskStreamSerializer : SelfRegisteringStreamSerial
 
     }
 
-    override fun read(`in`: ObjectDataInput?): SubscriptionNotificationTask {
+    override fun read(`in`: ObjectDataInput): SubscriptionNotificationTask {
         return SubscriptionNotificationTask()
     }
 

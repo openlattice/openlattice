@@ -38,7 +38,7 @@ class EntitySetCollectionStreamSerializer : SelfRegisteringStreamSerializer<Enti
         }
     }
 
-    override fun read(`in`: ObjectDataInput?): EntitySetCollection {
+    override fun read(`in`: ObjectDataInput): EntitySetCollection {
         val input = `in`!!
 
         val id = UUIDStreamSerializerUtils.deserialize(input)
