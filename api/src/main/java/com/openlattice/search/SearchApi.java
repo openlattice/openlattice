@@ -239,7 +239,7 @@ public interface SearchApi {
      * @return A search result object, containing the total number of hits for the given query, and the hits themselves
      */
     @POST( BASE + DATASETS )
-    SearchResult executeDatasetSearch( @Body DataSetSearchRequest searchTerm );
+    SearchResult searchDataSetMetadata( @Body DataSetSearchRequest searchRequest );
 
     /**
      * Executes a search over all entity types to find ones that match the given name and namespace, including partial

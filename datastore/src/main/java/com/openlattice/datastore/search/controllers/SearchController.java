@@ -322,12 +322,14 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             produces = { MediaType.APPLICATION_JSON_VALUE } )
     @Override
     @Timed
-    public SearchResult executeDatasetSearch( @RequestBody DataSetSearchRequest searchTerm ) {
-        return searchService.executeDatasetQuery( searchTerm.getSearchTerm(),
-                searchTerm.getStart(),
-                searchTerm.getMaxHits(),
-                searchTerm.getExcludeColumns(),
-                searchTerm.getOrganizationIds() );
+    public SearchResult searchDataSetMetadata( @RequestBody DataSetSearchRequest searchRequest ) {
+        return searchService.searchDataSetMetadata(
+                searchRequest.getOrganizationIds(),
+                searchRequest.getConstraints(),
+                searchRequest.getSort(),
+                searchRequest.getStart(),
+                searchRequest.getMaxHits()
+        );
     }
 
     @RequestMapping(

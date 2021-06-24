@@ -7,13 +7,8 @@ import com.google.common.eventbus.EventBus
 import com.google.common.eventbus.Subscribe
 import com.openlattice.IdConstants
 import com.openlattice.apps.App
-import com.openlattice.authorization.AccessCheck
-import com.openlattice.authorization.AclKey
-import com.openlattice.authorization.AuthorizationManager
+import com.openlattice.authorization.*
 import com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION
-import com.openlattice.authorization.Permission
-import com.openlattice.authorization.Principal
-import com.openlattice.authorization.Principals
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
 import com.openlattice.data.DataEdgeKey
@@ -47,11 +42,7 @@ import com.openlattice.organizations.events.OrganizationCreatedEvent
 import com.openlattice.organizations.events.OrganizationDeletedEvent
 import com.openlattice.organizations.events.OrganizationUpdatedEvent
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
-import com.openlattice.search.requests.DataSearchResult
-import com.openlattice.search.requests.EntityNeighborsFilter
-import com.openlattice.search.requests.SearchConstraints
-import com.openlattice.search.requests.SearchResult
-import com.openlattice.search.requests.SearchTerm
+import com.openlattice.search.requests.*
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -174,34 +165,40 @@ class SearchService(
         }
     }
 
-
     @Timed
-    fun executeDatasetQuery(
-            searchTerm: String,
-            start: Int,
-            maxHits: Int,
-            excludeColumns: Boolean,
-            organizationIds: Set<UUID>?
+    fun searchDataSetMetadata(
+        organizationIds: Set<UUID>,
+        constraints: List<ConstraintGroup>,
+        sort: SortDefinition,
+        start: Int,
+        maxHits: Int
     ): SearchResult {
-        var authorizedDatasetIds = authorizations.getAuthorizedObjectsOfTypes(
+
+        var authorizedDataSetIds = authorizations
+            .getAuthorizedObjectsOfTypes(
                 Principals.getCurrentPrincipals(),
                 listOf(SecurableObjectType.EntitySet, SecurableObjectType.OrganizationExternalDatabaseTable),
                 READ_PERMISSION
-        ).map { it.first() }.collect(Collectors.toSet())
+            )
+            .map { it.first() }
+            .collect(Collectors.toSet())
 
-        if (organizationIds != null) {
-            authorizedDatasetIds = datasetService.filterDatasetIdsByOrganizations(authorizedDatasetIds, organizationIds)
+        if (organizationIds.isNotEmpty()) {
+            authorizedDataSetIds = datasetService.filterDatasetIdsByOrganizations(
+                authorizedDataSetIds,
+                organizationIds
+            )
         }
 
-        return if (authorizedDatasetIds.size == 0) {
-            SearchResult(0, Lists.newArrayList())
+        return if (authorizedDataSetIds.size == 0) {
+            SearchResult(0, emptyList())
         } else {
-            elasticsearchApi.executeDatasetSearch(
-                    searchTerm,
-                    start,
-                    maxHits,
-                    authorizedDatasetIds,
-                    excludeColumns
+            elasticsearchApi.searchDataSetMetadata(
+                authorizedDataSetIds,
+                constraints,
+                sort,
+                start,
+                maxHits
             )
         }
     }

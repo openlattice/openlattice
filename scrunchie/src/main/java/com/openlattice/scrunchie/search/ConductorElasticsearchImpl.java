@@ -54,6 +54,7 @@ import com.openlattice.search.requests.EntityDataKeySearchResult;
 import com.openlattice.search.requests.SearchConstraints;
 import com.openlattice.search.requests.SearchDetails;
 import com.openlattice.search.requests.SearchResult;
+import com.openlattice.search.requests.SearchType;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.lucene.search.join.ScoreMode;
@@ -75,7 +76,13 @@ import org.elasticsearch.common.unit.Fuzziness;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
-import org.elasticsearch.index.query.*;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.MatchQueryBuilder;
+import org.elasticsearch.index.query.Operator;
+import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.QueryStringQueryBuilder;
+import org.elasticsearch.index.query.RangeQueryBuilder;
 import org.elasticsearch.index.reindex.BulkByScrollResponse;
 import org.elasticsearch.index.reindex.DeleteByQueryAction;
 import org.elasticsearch.index.reindex.DeleteByQueryRequestBuilder;
@@ -92,6 +99,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 
 import java.io.IOException;
 import java.net.UnknownHostException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -1185,36 +1193,57 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     @Override
-    public SearchResult executeDatasetSearch(
-            String searchTerm,
+    public SearchResult searchDataSetMetadata(
+            Set<UUID> dataSetIds,
+            List<ConstraintGroup> constraints,
+            SortDefinition sort,
             int start,
-            int maxHits,
-            Set<UUID> authorizedIds,
-            boolean excludeColumns ) {
-        if ( !verifyElasticsearchConnection() ) { return new SearchResult( 0, Lists.newArrayList() ); }
+            int maxHits
+    ) {
+
+        if (!verifyElasticsearchConnection()) {
+            return new SearchResult(0, List.of());
+        }
 
         BoolQueryBuilder query = new BoolQueryBuilder();
 
-        query.must( QueryBuilders.queryStringQuery( getFormattedFuzzyString( searchTerm ) ).lenient( true ) );
+        for ( ConstraintGroup group : constraints ) {
+            BoolQueryBuilder groupQuery = QueryBuilders.boolQuery().minimumShouldMatch( group.getMinimumMatches() );
+            for ( Constraint constraint : group.getConstraints() ) {
+                if ( constraint.getSearchType() == SearchType.simple ) {
+                    String searchTerm = constraint.getSearchTerm().get();
+                    if ( constraint.getFuzzy().orElse( false ) ) {
+                        searchTerm = getFormattedFuzzyString( searchTerm );
+                    }
+                    groupQuery.should(
+                            QueryBuilders.queryStringQuery( searchTerm ).lenient( true )
+                    );
+                } else {
+                    throw new UnsupportedOperationException( "\"${searchType}\" search type is not yet supported" );
+                }
+            }
+            query.must(groupQuery);
+        }
 
-        query.filter( QueryBuilders.idsQuery()
-                .addIds( authorizedIds.stream().map( UUID::toString ).toArray( String[]::new ) ) );
-        SearchResponse response = client.prepareSearch( DATASET_INDEX )
+        query.filter(
+                QueryBuilders.idsQuery().addIds( dataSetIds.stream().map( UUID::toString ).toArray( String[]::new ) )
+        );
+
+        SearchResponse response = client
+                .prepareSearch( DATASET_INDEX )
+                .setFetchSource( DATASET, null )
                 .setQuery( query )
-                .setFetchSource( new String[] { DATASET, COLUMNS }, null )
                 .setFrom( start )
                 .setSize( maxHits )
+                .setTrackTotalHits( true )
+                .addSort( buildSort( sort ) )
                 .execute()
                 .actionGet();
 
-        List<Map<String, Object>> hits = Lists.newArrayList();
-        response.getHits().forEach( hit -> {
-            Map<String, Object> datasetResult = hit.getSourceAsMap();
-            if ( excludeColumns ) {
-                datasetResult.remove( COLUMNS );
-            }
-            hits.add( datasetResult );
-        } );
+        List<Map<String, Object>> hits = Arrays
+                .stream( response.getHits().getHits() )
+                .map( hit -> (Map<String, Object>) hit.getSourceAsMap().get( DATASET ) )
+                .collect( Collectors.toList() );
 
         return new SearchResult( response.getHits().getTotalHits().value, hits );
     }

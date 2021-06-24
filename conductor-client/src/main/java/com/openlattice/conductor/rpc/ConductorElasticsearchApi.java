@@ -34,6 +34,8 @@ import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organizations.Organization;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
+import com.openlattice.search.SortDefinition;
+import com.openlattice.search.requests.ConstraintGroup;
 import com.openlattice.search.requests.EntityDataKeySearchResult;
 import com.openlattice.search.requests.SearchConstraints;
 import com.openlattice.search.requests.SearchResult;
@@ -275,12 +277,12 @@ public interface ConductorElasticsearchApi {
             int start,
             int maxHits );
 
-    SearchResult executeDatasetSearch(
-            String searchTerm,
+    SearchResult searchDataSetMetadata(
+            Set<UUID> dataSetIds,
+            List<ConstraintGroup> constraints,
+            SortDefinition sort,
             int start,
-            int maxHits,
-            Set<UUID> authorizedIds,
-            boolean excludeColumns
+            int maxHits
     );
 
     /**
