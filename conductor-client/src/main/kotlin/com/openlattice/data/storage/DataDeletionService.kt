@@ -112,7 +112,7 @@ class DataDeletionService(
     override fun authCheckForEntitySetAndItsNeighbors(entitySetId: UUID, deleteType: DeleteType, principals: Set<Principal>, entityKeyIds: Set<UUID>?) {
         val isAssociationEntitySet = entitySetManager.getEntitySet(entitySetId)!!.flags.contains(EntitySetFlag.ASSOCIATION)
 
-        val authorizedEdgeEntitySets = if (isAssociationEntitySet) setOf() else entitySetManager.getAuthorizedNeighborEntitySets(
+        val authorizedEdgeEntitySets = if (isAssociationEntitySet) mutableSetOf() else entitySetManager.getAuthorizedNeighborEntitySets(
                 principals,
                 setOf(entitySetId),
                 EntityNeighborsFilter(setOf(entitySetId))
