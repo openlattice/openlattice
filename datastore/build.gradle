@@ -113,6 +113,13 @@ spotbugsMain {
     }
 }
 
+spotbugsTest {
+    reports {
+        xml.enabled = false
+        html.enabled = true
+    }
+}
+
 run {
     if (DS_ARGS != null) {
         args DS_ARGS.split();
