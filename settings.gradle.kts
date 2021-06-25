@@ -8,7 +8,7 @@ pluginManagement {
         id("org.hidetake.swagger.generator")            version "2.18.2" apply false
         id("com.github.johnrengelman.shadow")           version "2.0.0" apply false
         id("org.jetbrains.kotlin.plugin.spring")        version "1.5.10" apply false
-        id("com.github.jk1.dependency-license-report")  version "1.11" apply false
+        id("com.github.jk1.dependency-license-report")  version "1.16" apply false
     }
     repositories {
         maven(url = "https://artifactory.openlattice.com/artifactory/gradle-release/")
