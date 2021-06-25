@@ -64,6 +64,7 @@ spotbugsTest {
         xml.enabled = false
         html.enabled = true
     }
+}
 
 
 jacoco {
