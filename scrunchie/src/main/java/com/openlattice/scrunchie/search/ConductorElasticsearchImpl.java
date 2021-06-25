@@ -1235,7 +1235,6 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 .setFrom( start )
                 .setSize( maxHits )
                 .setTrackTotalHits( true )
-                .addSort( buildSort( sort ) )
                 .execute()
                 .actionGet();
 
