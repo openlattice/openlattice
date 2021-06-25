@@ -20,7 +20,7 @@ class EntitySetCollectionStreamSerializer : SelfRegisteringStreamSerializer<Enti
         return EntitySetCollection::class.java
     }
 
-    override fun write(out: ObjectDataOutput?, collection: EntitySetCollection) {
+    override fun write(out: ObjectDataOutput, collection: EntitySetCollection) {
         UUIDStreamSerializerUtils.serialize(out, collection.id)
         out?.writeUTF(collection.name)
         out?.writeUTF(collection.title)
@@ -38,15 +38,15 @@ class EntitySetCollectionStreamSerializer : SelfRegisteringStreamSerializer<Enti
         }
     }
 
-    override fun read(`in`: ObjectDataInput?): EntitySetCollection {
+    override fun read(`in`: ObjectDataInput): EntitySetCollection {
         val input = `in`!!
 
         val id = UUIDStreamSerializerUtils.deserialize(input)
-        val name = input.readUTF()
-        val title = input.readUTF()
-        val description = Optional.of(input.readUTF())
+        val name = input.readString()!!
+        val title = input.readString()!!
+        val description = Optional.of(input.readString()!!)
         val entityTypeCollectionId = UUIDStreamSerializerUtils.deserialize(input)
-        val contacts = SetStreamSerializers.deserialize(input, ObjectDataInput::readUTF)
+        val contacts = SetStreamSerializers.deserialize<String>(input, ObjectDataInput::readString)
         val organizationId = UUIDStreamSerializerUtils.deserialize(input)
 
         val templateSize = input.readInt()

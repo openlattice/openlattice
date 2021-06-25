@@ -113,6 +113,13 @@ spotbugsMain {
     }
 }
 
+spotbugsTest {
+    reports {
+        xml.enabled = false
+        html.enabled = true
+    }
+}
+
 run {
     if (DS_ARGS != null) {
         args DS_ARGS.split();
@@ -127,7 +134,7 @@ configurations {
     tests
     published.extendsFrom tests, archives
 
-    compile {
+    implementation {
         exclude group: 'com.google.code.findbugs', module: 'jsr305'
     }
 }
@@ -144,10 +151,10 @@ dependencies {
     testCompileOnly "net.jcip:jcip-annotations:${jcip_version}"
     testCompileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugs_annotations_version}"
 
-    compile "com.openlattice:conductor-client:${conductor_client_version}"
-    compile "com.openlattice:scrunchie:${scrunchie_version}"
-    compile "com.openlattice:api:${api_version}"
-    compile "com.openlattice:rhizome:${rhizome_version}"
+    implementation "com.openlattice:conductor-client:${conductor_client_version}"
+    implementation "com.openlattice:scrunchie:${scrunchie_version}"
+    implementation "com.openlattice:api:${api_version}"
+    implementation "com.openlattice:rhizome:${rhizome_version}"
 
     testImplementation "com.openlattice:conductor:${conductor_version}"
 
@@ -161,14 +168,14 @@ dependencies {
         testImplementation "com.openlattice:rhizome-client:${rhizome_client_version}:tests"
     }
 
-    compile group: "com.twilio.sdk", name: "twilio", version: "${twilio_version}"
+    implementation group: "com.twilio.sdk", name: "twilio", version: "${twilio_version}"
 
-    compile "javax.annotation:javax.annotation-api:$javax_annotation_api_version"
-    compile "org.apache.olingo:odata-server-api:${odata_version}"
-    compile "org.apache.olingo:odata-server-core:${odata_version}"
-    compile "org.apache.olingo:odata-commons-api:${odata_version}"
-    compile "org.apache.olingo:odata-commons-core:${odata_version}"
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    implementation "javax.annotation:javax.annotation-api:$javax_annotation_api_version"
+    implementation "org.apache.olingo:odata-server-api:${odata_version}"
+    implementation "org.apache.olingo:odata-server-core:${odata_version}"
+    implementation "org.apache.olingo:odata-commons-api:${odata_version}"
+    implementation "org.apache.olingo:odata-commons-core:${odata_version}"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 
     /*
      * TESTING
@@ -218,7 +225,7 @@ jar {
     doFirst {
         manifest {
             attributes (
-                    "Class-Path": configurations.runtime.files.collect { it.getName() }.join(" "),
+                    "Class-Path": configurations.runtimeClasspath.files.collect { it.getName() }.join(" "),
                     "Main-Class": mainClassName
             )
         }

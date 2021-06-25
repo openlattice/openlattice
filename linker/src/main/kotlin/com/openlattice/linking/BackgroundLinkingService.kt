@@ -214,7 +214,7 @@ class BackgroundLinkingService(
                 val maybeBestCluster = clusters.asSequence()
                         .map { clusterer.cluster(candidate, KeyedCluster.fromEntry(it)) }
                         .filter { it.score > MINIMUM_SCORE }
-                        .maxBy { it.score }
+                        .maxByOrNull { it.score }
                 return@lockClustersDoWorkAndCommit if (maybeBestCluster != null) {
                     Triple(maybeBestCluster.clusterId, maybeBestCluster.cluster, false)
                 } else {
@@ -286,6 +286,6 @@ class BackgroundLinkingService(
     }
 
     private fun completeLinkCluster( matchedCluster: Cluster ): Double {
-        return matchedCluster.values.flatMap { it.values }.min() ?: 0.0
+        return matchedCluster.values.flatMap { it.values }.minOrNull() ?: 0.0
     }
 }

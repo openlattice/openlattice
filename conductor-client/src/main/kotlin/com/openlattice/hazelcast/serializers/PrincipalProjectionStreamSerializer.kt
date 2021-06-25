@@ -15,7 +15,7 @@ class PrincipalProjectionStreamSerializer: NoOpSelfRegisteringStreamSerializer<P
         return PrincipalProjection::class.java
     }
 
-    override fun read(`in`: ObjectDataInput?): PrincipalProjection {
+    override fun read(`in`: ObjectDataInput): PrincipalProjection {
         return PrincipalProjection()
     }
 }

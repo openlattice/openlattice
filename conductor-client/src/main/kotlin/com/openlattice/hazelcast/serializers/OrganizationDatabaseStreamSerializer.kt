@@ -29,7 +29,7 @@ class OrganizationDatabaseStreamSerializer : TestableSelfRegisteringStreamSerial
 
     override fun read(`in`: ObjectDataInput): OrganizationDatabase {
         val oid = `in`.readLong()
-        val name = `in`.readUTF()
+        val name = `in`.readString()!!
         return OrganizationDatabase(oid, name)
     }
 }

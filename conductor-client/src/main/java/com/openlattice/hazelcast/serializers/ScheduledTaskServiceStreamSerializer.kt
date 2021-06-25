@@ -12,7 +12,7 @@ class ScheduledTaskServiceStreamSerializer : NoOpSelfRegisteringStreamSerializer
         return ScheduledTaskService::class.java
     }
 
-    override fun read(`in`: ObjectDataInput?): ScheduledTaskService {
+    override fun read(`in`: ObjectDataInput): ScheduledTaskService {
         return ScheduledTaskService()
     }
 

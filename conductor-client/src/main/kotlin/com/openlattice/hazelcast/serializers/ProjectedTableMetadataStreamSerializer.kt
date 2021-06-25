@@ -30,7 +30,7 @@ class ProjectedTableMetadataStreamSerializer : TestableSelfRegisteringStreamSeri
 
     override fun read(`in`: ObjectDataInput): ProjectedTableMetadata {
         val organizationId = UUIDStreamSerializerUtils.deserialize(`in`)
-        val tableName = `in`.readUTF()
+        val tableName = `in`.readString()!!
 
         return ProjectedTableMetadata(organizationId, tableName)
     }

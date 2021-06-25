@@ -44,8 +44,8 @@ class ScheduledTaskStreamSerializer : TestableSelfRegisteringStreamSerializer<Sc
         val id = UUIDStreamSerializerUtils.deserialize(`in`)
         val scheduledDateTime = OffsetDateTimeStreamSerializer.deserialize(`in`)
 
-        val clazz = Class.forName(`in`.readUTF()) as Class<out RunnableTask>
-        val task = mapper.readValue(`in`.readUTF(), clazz)
+        val clazz = Class.forName(`in`.readString()!!) as Class<out RunnableTask>
+        val task = mapper.readValue(`in`.readString()!!, clazz)
 
         return ScheduledTask(id, scheduledDateTime, task)
     }

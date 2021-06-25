@@ -40,7 +40,7 @@ class ExternalTableEntryProcessorStreamSerializer : SelfRegisteringStreamSeriali
     }
 
     override fun read(input: ObjectDataInput): ExternalTableEntryProcessor {
-        val bais = ByteArrayInputStream(input.readByteArray())
+        val bais = ByteArrayInputStream(input.readByteArray()!!)
         val ois = ObjectInputStream(bais)
         return try {
             ois.readObject() as ExternalTableEntryProcessor
