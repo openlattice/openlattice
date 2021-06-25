@@ -28,9 +28,9 @@ class ExternalColumnStreamSerializer : TestableSelfRegisteringStreamSerializer<E
 
         fun deserialize(input: ObjectDataInput): ExternalColumn {
             val id = UUIDStreamSerializerUtils.deserialize(input)
-            val name = input.readUTF()
-            val title = input.readUTF()
-            val description = input.readUTF()
+            val name = input.readString()!!
+            val title = input.readString()!!
+            val description = input.readString()!!
             val tableId = UUIDStreamSerializerUtils.deserialize(input)
             val orgId = UUIDStreamSerializerUtils.deserialize(input)
             val dataType = PostgresDatatypeStreamSerializer.deserialize(input)

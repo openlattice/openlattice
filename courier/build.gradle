@@ -83,18 +83,18 @@ dependencies {
     testCompileOnly "net.jcip:jcip-annotations:${jcip_version}"
     testCompileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugs_annotations_version}"
 
-    compile "com.fasterxml.jackson.dataformat:jackson-dataformat-csv:${jackson_version}"
-    compile "com.esotericsoftware:kryo-shaded:${kryo_shaded_version}"
-    compile "com.esotericsoftware:minlog:${minlog_version}"
-    compile "com.esotericsoftware:reflectasm:${reflectasm_version}"
-    compile "org.objenesis:objenesis:${objenesis_version}"
+    implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-csv:${jackson_version}"
+    implementation "com.esotericsoftware:kryo-shaded:${kryo_shaded_version}"
+    implementation "com.esotericsoftware:minlog:${minlog_version}"
+    implementation "com.esotericsoftware:reflectasm:${reflectasm_version}"
+    implementation "org.objenesis:objenesis:${objenesis_version}"
 
-    compile "javax.mail:javax.mail-api:${javax_mail_api}"
-    compile "com.sun.mail:javax.mail:${sun_javax_mail_version}"
-    compile "com.sun.mail:all:${sun_mail_all_version}"
+    implementation "javax.mail:javax.mail-api:${javax_mail_api}"
+    implementation "com.sun.mail:javax.mail:${sun_javax_mail_version}"
+    implementation "com.sun.mail:all:${sun_mail_all_version}"
 
-    compile "com.openlattice:scribe:${scribe_version}"
-    compile "com.openlattice:rhizome:${rhizome_version}"
+    implementation "com.openlattice:scribe:${scribe_version}"
+    implementation "com.openlattice:rhizome:${rhizome_version}"
 
     if( project.hasProperty('developmentMode') && project.developmentMode ) {
         testImplementation(project(path: ":rhizome-client", configuration: "tests"))
@@ -134,12 +134,8 @@ dependencies {
      *
      * Java implementation of Mustache, a logic-less template system.
      */
-    compile "com.samskivert:jmustache:${jmustache_version}"
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-}
-
-install {
-	configuration = configurations.published
+    implementation "com.samskivert:jmustache:${jmustache_version}"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 }
 
 eclipse {

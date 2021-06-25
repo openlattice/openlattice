@@ -40,7 +40,7 @@ class TransporterPropagateDataEntryProcessorStreamSerializer :
         val entitySets = SetStreamSerializers.deserialize(`in`) {
             EntitySetStreamSerializer.deserialize(`in`)
         }
-        val partitions = `in`.readIntArray().toList()
+        val partitions = `in`.readIntArray()!!.toList()
         return TransporterPropagateDataEntryProcessor(entitySets, partitions).init(data)
     }
 

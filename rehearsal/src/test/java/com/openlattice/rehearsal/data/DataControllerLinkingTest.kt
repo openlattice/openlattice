@@ -32,7 +32,7 @@ import com.openlattice.edm.type.EntityType
 import com.openlattice.rehearsal.SetupTestData
 import com.openlattice.rehearsal.assertException
 import com.openlattice.rehearsal.edm.EdmTestConstants
-import org.apache.commons.lang.RandomStringUtils
+import org.apache.commons.lang3.RandomStringUtils
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.junit.AfterClass
 import org.junit.Assert

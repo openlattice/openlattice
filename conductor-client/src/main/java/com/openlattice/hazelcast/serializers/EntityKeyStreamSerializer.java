@@ -69,7 +69,7 @@ public class EntityKeyStreamSerializer implements SelfRegisteringStreamSerialize
 
     public static EntityKey deserialize( ObjectDataInput in ) throws IOException {
         final UUID entitySetId = UUIDStreamSerializerUtils.deserialize( in );
-        final String entityId = in.readUTF();
+        final String entityId = in.readString();
         return new EntityKey( entitySetId, entityId );
     }
 

@@ -39,6 +39,7 @@ import com.openlattice.postgres.PostgresTable.SYNC_IDS
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
+import com.openlattice.rhizome.DelegatedIntSet
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
@@ -102,7 +103,7 @@ class BackgroundIndexedEntitiesDeletionService(
                         }
                     }.sum()
 
-            val totalDeletedEntitySetUpdates = deletedEntitySets
+            val totalDeletedEntitySetUpdates = (deletedEntitySets as Map<UUID, DelegatedIntSet>)
                     .map { (id, partitions) -> EntitySetForDeletion(id, "Deleted entity set [$id]", partitions) }
                     .shuffled()
                     .map {

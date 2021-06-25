@@ -129,6 +129,7 @@ class AdminController : AdminApi, AuthorizingComponent {
 
     @Timed
     @GetMapping(value = [RELOAD_CACHE])
+    @SuppressFBWarnings("NP_ALWAYS_NULL", justification="Issue with spotbugs handling of Kotlin")
     override fun reloadCache() {
         ensureAdminAccess()
         HazelcastMap.values().forEach {

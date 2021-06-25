@@ -49,7 +49,7 @@ import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
 import com.openlattice.rehearsal.edm.EdmTestConstants
 import com.openlattice.search.requests.EntityNeighborsFilter
 import com.openlattice.search.requests.SearchTerm
-import org.apache.commons.lang.RandomStringUtils
+import org.apache.commons.lang3.RandomStringUtils
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.junit.Assert
 import org.junit.BeforeClass
@@ -75,7 +75,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val fqnCache: LoadingCache<UUID, FullQualifiedName> = CacheBuilder.newBuilder()
                 .build(
                         object : CacheLoader<UUID, FullQualifiedName>() {
-                            override fun load(key: UUID?): FullQualifiedName {
+                            override fun load(key: UUID): FullQualifiedName {
                                 return edmApi.getPropertyType(key!!).type
                             }
 

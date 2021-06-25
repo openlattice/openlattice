@@ -66,11 +66,11 @@ class SecurableObjectMetadataUpdateStreamSerializer : TestableSelfRegisteringStr
         }
 
         fun deserialize(`in`: ObjectDataInput): SecurableObjectMetadataUpdate {
-            val title = deserializeNullable(`in`) { it.readUTF() }
-            val description = deserializeNullable(`in`) { it.readUTF() }
+            val title = deserializeNullable(`in`) { it.readString()!! }
+            val description = deserializeNullable(`in`) { it.readString()!! }
             val contacts = deserializeNullable(`in`) { SetStreamSerializers.orderedFastStringSetDeserialize(it) }
             val flags = deserializeNullable(`in`) { SetStreamSerializers.orderedFastStringSetDeserialize(it) }
-            val metadata = deserializeNullable(`in`) { mapper.readValue(`in`.readUTF(), jacksonTypeRef<MutableMap<String, Any>>()) }
+            val metadata = deserializeNullable(`in`) { mapper.readValue(`in`.readString()!!, jacksonTypeRef<MutableMap<String, Any>>()) }
 
             return SecurableObjectMetadataUpdate(title, description, contacts, flags, metadata)
         }

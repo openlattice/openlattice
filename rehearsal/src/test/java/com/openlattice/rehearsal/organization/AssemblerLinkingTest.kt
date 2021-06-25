@@ -39,7 +39,7 @@ import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.rehearsal.assertException
 import com.openlattice.rehearsal.edm.EdmTestConstants
-import org.apache.commons.lang.RandomStringUtils
+import org.apache.commons.lang3.RandomStringUtils
 import org.junit.AfterClass
 import org.junit.Assert
 import org.junit.BeforeClass

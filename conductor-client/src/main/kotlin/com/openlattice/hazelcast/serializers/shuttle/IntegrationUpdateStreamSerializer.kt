@@ -44,16 +44,16 @@ class IntegrationUpdateStreamSerializer : TestableSelfRegisteringStreamSerialize
             val env = OptionalStreamSerializers.deserialize(input) {
                 EnvironmentStreamSerializer.deserialize(it)
             }
-            val s3bucket = OptionalStreamSerializers.deserialize(input, ObjectDataInput::readUTF)
-            val contacts = OptionalStreamSerializers.deserializeSet(input, ObjectDataInput::readUTF)
+            val s3bucket = OptionalStreamSerializers.deserialize<String>(input, ObjectDataInput::readString)
+            val contacts = OptionalStreamSerializers.deserializeSet<String>(input, ObjectDataInput::readString)
             val orgId = OptionalStreamSerializers.deserialize(input) {
                 UUIDStreamSerializerUtils.deserialize(it)
             }
             val maxConnections = OptionalStreamSerializers.deserialize(input, ObjectDataInput::readInt)
-            val callbackUrls = OptionalStreamSerializers.deserializeList(input, ObjectDataInput::readUTF)
+            val callbackUrls = OptionalStreamSerializers.deserializeList<String>(input, ObjectDataInput::readString)
             val flightPlanParameters = if (input.readBoolean()) {
                 val size = input.readInt()
-                val keys = input.readUTFArray()
+                val keys = input.readStringArray()!!
                 val vals = mutableListOf<FlightPlanParametersUpdate>()
                 for (i in 0 until size) {
                     vals.add(FlightPlanParametersUpdateStreamSerializer.deserialize(input))

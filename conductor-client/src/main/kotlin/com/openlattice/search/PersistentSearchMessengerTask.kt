@@ -93,7 +93,7 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
     private fun getLatestRead(vehicleReads: List<Map<FullQualifiedName, Set<Any>>>): OffsetDateTime? {
         return vehicleReads
                 .flatMap { it[EdmConstants.LAST_WRITE_FQN] ?: emptySet() }
-                .map { it as OffsetDateTime }.max()
+                .map { it as OffsetDateTime }.maxOrNull()
     }
 
     private fun getHitEntityKeyIds(hits: List<Map<FullQualifiedName, Set<Any>>>): Set<UUID> {

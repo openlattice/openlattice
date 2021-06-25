@@ -25,12 +25,12 @@ class ExternalTableStreamSerializer : TestableSelfRegisteringStreamSerializer<Ex
 
         fun deserialize(input: ObjectDataInput): ExternalTable {
             val id = UUIDStreamSerializerUtils.deserialize(input)
-            val name = input.readUTF()
-            val title = input.readUTF()
-            val description = input.readUTF()
+            val name = input.readString()!!
+            val title = input.readString()!!
+            val description = input.readString()!!
             val orgId = UUIDStreamSerializerUtils.deserialize(input)
             val oid = input.readLong()
-            val schema = input.readUTF()
+            val schema = input.readString()!!
             return ExternalTable(id, name, title, Optional.of(description), orgId, oid, schema)
         }
     }

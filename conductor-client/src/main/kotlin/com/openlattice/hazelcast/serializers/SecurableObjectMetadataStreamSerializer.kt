@@ -38,11 +38,11 @@ class SecurableObjectMetadataStreamSerializer : TestableSelfRegisteringStreamSer
     }
 
     override fun read(`in`: ObjectDataInput): SecurableObjectMetadata {
-        val title = `in`.readUTF()
-        val description = `in`.readUTF()
+        val title = `in`.readString()!!
+        val description = `in`.readString()!!
         val contacts = SetStreamSerializers.orderedFastStringSetDeserialize(`in`)
         val flags = SetStreamSerializers.orderedFastStringSetDeserialize(`in`)
-        val metadata = mapper.readValue(`in`.readUTF(), jacksonTypeRef<MutableMap<String, Any>>())
+        val metadata = mapper.readValue(`in`.readString()!!, jacksonTypeRef<MutableMap<String, Any>>())
 
         return SecurableObjectMetadata(title, description, contacts, flags, metadata)
     }

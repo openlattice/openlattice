@@ -38,8 +38,8 @@ class EntityTypeCollectionStreamSerializer : TestableSelfRegisteringStreamSerial
     override fun read(`in`: ObjectDataInput): EntityTypeCollection {
         val id = UUIDStreamSerializerUtils.deserialize(`in`)
         val type = FullQualifiedNameStreamSerializer.deserialize(`in`)
-        val title = `in`.readUTF()
-        val description = Optional.of(`in`.readUTF())
+        val title = `in`.readString()!!
+        val description = Optional.of(`in`.readString()!!)
         val schemas = SetStreamSerializers.deserialize(`in`, FullQualifiedNameStreamSerializer::deserialize)
 
         val templateSize = `in`.readInt()

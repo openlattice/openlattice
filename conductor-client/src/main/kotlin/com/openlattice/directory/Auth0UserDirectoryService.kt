@@ -25,7 +25,7 @@ class Auth0UserDirectoryService(
 
 
     override fun getAllUsers(): Map<String, User> {
-        return ImmutableMap.copyOf(users)
+        return ImmutableMap.copyOf(users as Map<String,User>)
     }
 
     override fun getUser(userId: String): User {

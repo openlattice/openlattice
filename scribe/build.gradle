@@ -103,10 +103,10 @@ dependencies {
 
     implementation "com.hazelcast:hazelcast:${hazelcast_version}"
 
-    compile "com.esotericsoftware:kryo-shaded:${kryo_shaded_version}"
-    compile "com.esotericsoftware:minlog:${minlog_version}"
-    compile "com.esotericsoftware:reflectasm:${reflectasm_version}"
-    compile "org.objenesis:objenesis:${objenesis_version}"
+    implementation "com.esotericsoftware:kryo-shaded:${kryo_shaded_version}"
+    implementation "com.esotericsoftware:minlog:${minlog_version}"
+    implementation "com.esotericsoftware:reflectasm:${reflectasm_version}"
+    implementation "org.objenesis:objenesis:${objenesis_version}"
 
     implementation "com.openlattice:rhizome:${rhizome_client_version}"
 
@@ -124,11 +124,7 @@ dependencies {
         exclude module : 'hamcrest'
         exclude module : 'hamcrest-core'
     }
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-}
-
-install {
-	configuration = configurations.published
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 }
 
 eclipse {
