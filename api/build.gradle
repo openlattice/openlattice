@@ -5,7 +5,7 @@ buildscript {
     }
 
     dependencies {
-        classpath "org.openapitools:openapi-generator-gradle-plugin:4.3.1"
+        classpath "org.openapitools:openapi-generator-gradle-plugin:5.1.1"
     }
 
     configurations.classpath {
@@ -169,7 +169,7 @@ dependencies {
     testCompileOnly "net.jcip:jcip-annotations:${jcip_version}"
     testCompileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugs_annotations_version}"
 
-    swaggerCodegen 'io.swagger.codegen.v3:swagger-codegen-cli:3.0.8'
+    swaggerCodegen 'io.swagger.codegen.v3:swagger-codegen-cli:3.0.26'
     swaggerUI 'org.webjars:swagger-ui:3.22.2'
 
     /*
