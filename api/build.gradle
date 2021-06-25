@@ -75,6 +75,13 @@ spotbugsMain {
     }
 }
 
+spotbugsTest {
+    reports {
+        xml.enabled = false
+        html.enabled = true
+    }
+}
+
 checkstyle {
     toolVersion = '7.4'
     showViolations = false
