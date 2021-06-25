@@ -34,6 +34,7 @@ class AuditingTypes(
     private val lock = ReentrantLock()
     private var initialized = false
 
+    @SuppressFBWarnings("NP_ALWAYS_NULL",justification="Seems to be a spotbugs kotlin issue.")
     fun intialize() {
         if (!initialized) {
             if (lock.tryLock()) {
