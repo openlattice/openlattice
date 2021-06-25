@@ -59,6 +59,13 @@ spotbugsMain {
     }
 }
 
+spotbugsTest {
+    reports {
+        xml.enabled = false
+        html.enabled = true
+    }
+
+
 jacoco {
     toolVersion = "0.8.2"
 }

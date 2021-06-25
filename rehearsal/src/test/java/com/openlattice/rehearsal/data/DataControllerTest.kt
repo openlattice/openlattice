@@ -75,7 +75,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val fqnCache: LoadingCache<UUID, FullQualifiedName> = CacheBuilder.newBuilder()
                 .build(
                         object : CacheLoader<UUID, FullQualifiedName>() {
-                            override fun load(key: UUID?): FullQualifiedName {
+                            override fun load(key: UUID): FullQualifiedName {
                                 return edmApi.getPropertyType(key!!).type
                             }
 
