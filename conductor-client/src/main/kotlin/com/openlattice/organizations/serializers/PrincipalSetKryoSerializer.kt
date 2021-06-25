@@ -19,7 +19,7 @@ class PrincipalSetKryoSerializer:Serializer<PrincipalSet>() {
         }
     }
 
-    override fun read(kryo: Kryo, input: Input, type: Class<PrincipalSet>?): PrincipalSet {
+    override fun read(kryo: Kryo, input: Input, type: Class<PrincipalSet>): PrincipalSet {
         val size = input.readInt()
         val principalSet = PrincipalSet.wrap( HashSet<Principal>( size ) )
         for( i in 1..size ) {
