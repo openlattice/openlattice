@@ -222,7 +222,9 @@ public class IndexerPostConfigurationServicesPod {
                 transporterService,
                 dbcs,
                 hikariDataSource,
-                dataSetService );
+                dataSetService,
+                searchService()
+        );
     }
 
     @Bean
@@ -237,7 +239,8 @@ public class IndexerPostConfigurationServicesPod {
                 organizationMetadataEntitySetsService,
                 reservationService,
                 principalsMapManager,
-                dataSetService );
+                searchService()
+        );
     }
 
     @Bean
