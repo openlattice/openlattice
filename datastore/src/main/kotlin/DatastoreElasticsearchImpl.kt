@@ -1076,51 +1076,6 @@ class DatastoreKotlinElasticsearchImpl(
         return deleteObjectById(indexName, typeName, objectId.toString())
     }
 
-    override fun saveDatasetToElasticsearch(dataset: DataSet, columns: List<DataSetColumn?>): Boolean {
-        if (!verifyElasticsearchConnection()) {
-            return false
-        }
-        val datasetMapping: Map<String, Any> = ImmutableMap.of(
-                ConductorElasticsearchApi.DATASET, dataset,
-                ConductorElasticsearchApi.COLUMNS, columns)
-        try {
-            val s = ObjectMappers.getJsonMapper().writeValueAsString(datasetMapping)
-            client.prepareIndex(ConductorElasticsearchApi.DATASET_INDEX, ConductorElasticsearchApi.DATASET, dataset.id.toString())
-                    .setSource(s, XContentType.JSON)
-                    .execute().actionGet()
-            return true
-        } catch (e: JsonProcessingException) {
-            logger.debug("error saving dataset to elasticsearch")
-        }
-        return false
-    }
-
-    override fun updateColumnsInDataset(datasetId: UUID, updatedColumns: List<DataSetColumn?>): Boolean {
-        if (!verifyElasticsearchConnection()) {
-            return false
-        }
-        val columns: Map<String, Any> = ImmutableMap.of<String, Any>(ConductorElasticsearchApi.COLUMNS, updatedColumns)
-        try {
-            val s = ObjectMappers.getJsonMapper().writeValueAsString(columns)
-            val updateRequest = UpdateRequest(
-                    ConductorElasticsearchApi.DATASET_INDEX,
-                    datasetId.toString()).doc(s, XContentType.JSON)
-            client.update(updateRequest).actionGet()
-            return true
-        } catch (e: IOException) {
-            logger.debug("error updating columns of dataset in elasticsearch")
-        }
-        return false
-    }
-
-    override fun deleteDatasetFromElasticsearch(id: UUID): Boolean {
-        if (!verifyElasticsearchConnection()) {
-            return false
-        }
-        client.prepareDelete(ConductorElasticsearchApi.DATASET_INDEX, ConductorElasticsearchApi.DATASET, id.toString()).execute().actionGet()
-        return true
-    }
-
     override fun searchDataSetMetadata(
         dataSetIds: Set<UUID>,
         constraints: List<ConstraintGroup>,
@@ -1675,4 +1630,115 @@ class DatastoreKotlinElasticsearchImpl(
         verifyElasticsearchConnection()
     }
 
+    //
+    // data set indexing
+    //
+
+    override fun deleteIndexedDataSet(dataSetId: UUID): Boolean {
+
+        if (!verifyElasticsearchConnection()) {
+            return false
+        }
+
+        try {
+            client
+                .prepareDelete(
+                    ConductorElasticsearchApi.DATASET_INDEX,
+                    ConductorElasticsearchApi.DATASET,
+                    dataSetId.toString()
+                )
+                .execute()
+                .actionGet()
+            logger.info("successfully deleted data set {} from elasticsearch", dataSetId)
+            return true
+        } catch (e: Exception) {
+            logger.error("error while deleting data set {} from elasticsearch", dataSetId, e)
+        }
+
+        return false
+    }
+
+    override fun indexDataSet(dataSet: DataSet, columns: List<DataSetColumn?>): Boolean {
+
+        if (!verifyElasticsearchConnection()) {
+            return false
+        }
+
+        try {
+            val objectToIndex = ImmutableMap.of(
+                ConductorElasticsearchApi.DATASET, dataSet,
+                ConductorElasticsearchApi.COLUMNS, columns
+            )
+            val objectToIndexAsString = ObjectMappers.getJsonMapper().writeValueAsString(objectToIndex)
+            client
+                .prepareIndex(
+                    ConductorElasticsearchApi.DATASET_INDEX,
+                    ConductorElasticsearchApi.DATASET,
+                    dataSet.id.toString()
+                )
+                .setSource(objectToIndexAsString, XContentType.JSON)
+                .execute()
+                .actionGet()
+            logger.info("successfully indexed data set {} in elasticsearch", dataSet.id)
+            return true
+        } catch (e: Exception) {
+            logger.error("error while indexing data set {} in elasticsearch", dataSet.id, e)
+        }
+
+        return false
+    }
+
+    override fun updateIndexedDataSet(dataSet: DataSet): Boolean {
+
+        if (!verifyElasticsearchConnection()) {
+            return false
+        }
+
+        try {
+            val objectToIndex = ImmutableMap.of(ConductorElasticsearchApi.DATASET, dataSet)
+            val objectToIndexAsString = ObjectMappers.getJsonMapper().writeValueAsString(objectToIndex)
+            client
+                .prepareUpdate(
+                    ConductorElasticsearchApi.DATASET_INDEX,
+                    ConductorElasticsearchApi.DATASET,
+                    dataSet.id.toString()
+                )
+                .setDoc(objectToIndexAsString, XContentType.JSON)
+                .execute()
+                .actionGet()
+            logger.info("successfully updated data set {} in elasticsearch", dataSet.id)
+            return true
+        } catch (e: Exception) {
+            logger.error("error while updating data set {} in elasticsearch", dataSet.id, e)
+        }
+
+        return false
+    }
+
+    override fun updateIndexedDataSetColumns(dataSetId: UUID, columns: List<DataSetColumn?>): Boolean {
+
+        if (!verifyElasticsearchConnection()) {
+            return false
+        }
+
+        try {
+            val objectToIndex = ImmutableMap.of(ConductorElasticsearchApi.COLUMNS, columns)
+            val objectToIndexAsString = ObjectMappers.getJsonMapper().writeValueAsString(objectToIndex)
+            client
+                .prepareUpdate(
+                    ConductorElasticsearchApi.DATASET_INDEX,
+                    ConductorElasticsearchApi.DATASET,
+                    dataSetId.toString()
+                )
+                .setDoc(objectToIndexAsString, XContentType.JSON)
+                .execute()
+                .actionGet()
+            logger.info("successfully updated data set {} columns in elasticsearch", dataSetId)
+            return true
+        } catch (e: Exception) {
+            logger.error("error while updating data set {} columns in elasticsearch", dataSetId, e)
+        }
+
+        return false
+    }
 }

@@ -1142,57 +1142,6 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     @Override
-    public boolean saveDatasetToElasticsearch( DataSet dataset, List<DataSetColumn> columns ) {
-        if ( !verifyElasticsearchConnection() ) {
-            return false;
-        }
-
-        Map<String, Object> datasetMapping = ImmutableMap.of(
-                DATASET, dataset,
-                COLUMNS, columns );
-
-        try {
-            String s = ObjectMappers.getJsonMapper().writeValueAsString( datasetMapping );
-            client.prepareIndex( DATASET_INDEX, DATASET, dataset.getId().toString() )
-                    .setSource( s, XContentType.JSON )
-                    .execute().actionGet();
-
-            return true;
-        } catch ( JsonProcessingException e ) {
-            logger.debug( "error saving dataset to elasticsearch" );
-        }
-        return false;
-    }
-
-    @Override
-    public boolean updateColumnsInDataset( UUID datasetId, List<DataSetColumn> updatedColumns ) {
-        if ( !verifyElasticsearchConnection() ) { return false; }
-
-        Map<String, Object> columns = ImmutableMap.of( COLUMNS, updatedColumns );
-        try {
-            String s = ObjectMappers.getJsonMapper().writeValueAsString( columns );
-            UpdateRequest updateRequest = new UpdateRequest(
-                    DATASET_INDEX,
-                    datasetId.toString() ).doc( s, XContentType.JSON );
-            client.update( updateRequest ).actionGet();
-            return true;
-        } catch ( IOException e ) {
-            logger.debug( "error updating columns of dataset in elasticsearch" );
-        }
-        return false;
-    }
-
-    @Override
-    public boolean deleteDatasetFromElasticsearch( UUID id ) {
-        if ( !verifyElasticsearchConnection() ) {
-            return false;
-        }
-
-        client.prepareDelete( DATASET_INDEX, DATASET, id.toString() ).execute().actionGet();
-        return true;
-    }
-
-    @Override
     public SearchResult searchDataSetMetadata(
             Set<UUID> dataSetIds,
             List<ConstraintGroup> constraints,
@@ -1696,4 +1645,103 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         verifyElasticsearchConnection();
     }
 
+    //
+    // data set indexing
+    //
+
+    @Override
+    public boolean deleteIndexedDataSet( UUID dataSetId ) {
+
+        if ( !verifyElasticsearchConnection() ) {
+            return false;
+        }
+
+        try {
+            client
+                    .prepareDelete( DATASET_INDEX, DATASET, dataSetId.toString() )
+                    .execute()
+                    .actionGet();
+            logger.info( "successfully deleted data set {} from elasticsearch", dataSetId );
+            return true;
+        } catch ( Exception e ) {
+            logger.error( "error while deleting data set {} from elasticsearch", dataSetId, e );
+        }
+
+        return false;
+    }
+
+    @Override
+    public boolean indexDataSet( DataSet dataSet, List<DataSetColumn> columns ) {
+
+        if ( !verifyElasticsearchConnection() ) {
+            return false;
+        }
+
+        try {
+            Map<String, Object> objectToIndex = ImmutableMap.of(
+                    DATASET, dataSet,
+                    COLUMNS, columns
+            );
+            String objectToIndexAsString = ObjectMappers.getJsonMapper().writeValueAsString( objectToIndex );
+            client
+                    .prepareIndex( DATASET_INDEX, DATASET, dataSet.getId().toString() )
+                    .setSource( objectToIndexAsString, XContentType.JSON )
+                    .execute()
+                    .actionGet();
+            logger.info( "successfully indexed data set {} in elasticsearch", dataSet.getId() );
+            return true;
+        } catch ( Exception e ) {
+            logger.error( "error while indexing data set {} in elasticsearch", dataSet.getId(), e );
+        }
+
+        return false;
+    }
+
+    @Override
+    public boolean updateIndexedDataSet( DataSet dataSet ) {
+
+        if ( !verifyElasticsearchConnection() ) {
+            return false;
+        }
+
+        try {
+            Map<String, Object> objectToIndex = ImmutableMap.of( DATASET, dataSet );
+            String objectToIndexAsString = ObjectMappers.getJsonMapper().writeValueAsString( objectToIndex );
+            client
+                    .prepareUpdate( DATASET_INDEX, DATASET, dataSet.getId().toString() )
+                    .setDoc( objectToIndexAsString, XContentType.JSON )
+                    .execute()
+                    .actionGet();
+            logger.info( "successfully updated data set {} in elasticsearch", dataSet.getId() );
+            return true;
+        } catch ( Exception e ) {
+            logger.error( "error while updating data set {} in elasticsearch", dataSet.getId(), e );
+        }
+
+        return false;
+    }
+
+    @Override
+    public boolean updateIndexedDataSetColumns( UUID dataSetId, List<DataSetColumn> columns ) {
+
+        if ( !verifyElasticsearchConnection() ) {
+            return false;
+        }
+
+        try {
+            Map<String, Object> objectToIndex = ImmutableMap.of( COLUMNS, columns );
+            String objectToIndexAsString = ObjectMappers.getJsonMapper().writeValueAsString( objectToIndex );
+            client
+                    .prepareUpdate( DATASET_INDEX, DATASET, dataSetId.toString() )
+                    .setDoc( objectToIndexAsString, XContentType.JSON )
+                    .execute()
+                    .actionGet();
+            logger.info( "successfully updated data set {} columns in elasticsearch", dataSetId );
+            return true;
+        } catch ( Exception e ) {
+            logger.error( "error while updating data set {} columns in elasticsearch", dataSetId, e );
+        }
+
+        return false;
+    }
 }
