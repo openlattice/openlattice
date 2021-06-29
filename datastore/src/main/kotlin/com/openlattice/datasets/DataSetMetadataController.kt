@@ -47,7 +47,7 @@ constructor(
     private val authzHelper: EdmAuthorizationHelper,
     private val deletionManager: DataDeletionManager,
     private val entitySetManager: EntitySetManager,
-    private val dataSetService: DatasetService,
+    private val dataSetService: DataSetService,
     private val edms: ExternalDatabaseManagementService
 ) : DataSetMetadataApi, AuthorizingComponent, AuditingComponent {
 

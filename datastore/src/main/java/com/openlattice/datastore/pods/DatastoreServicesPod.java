@@ -67,7 +67,7 @@ import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.data.storage.*;
 import com.openlattice.data.storage.aws.AwsDataSinkService;
 import com.openlattice.data.storage.partitions.PartitionManager;
-import com.openlattice.datasets.DatasetService;
+import com.openlattice.datasets.DataSetService;
 import com.openlattice.datastore.configuration.DatastoreConfiguration;
 import com.openlattice.datastore.configuration.ReadonlyDatasourceSupplier;
 import com.openlattice.datastore.services.AnalysisService;
@@ -297,8 +297,8 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    DatasetService datasetService() {
-        return new DatasetService( hazelcastInstance, eventBus );
+    DataSetService dataSetService() {
+        return new DataSetService( hazelcastInstance, eventBus );
     }
 
     @Bean
@@ -309,7 +309,7 @@ public class DatastoreServicesPod {
                 authorizationManager(),
                 entityTypeManager(),
                 schemaManager(),
-                datasetService()
+                dataSetService()
         );
     }
 
@@ -324,7 +324,7 @@ public class DatastoreServicesPod {
                 dataModelService(),
                 hikariDataSource,
                 organizationMetadataEntitySetsService(),
-                datasetService(),
+                dataSetService(),
                 auditingConfiguration
         );
     }
@@ -564,7 +564,7 @@ public class DatastoreServicesPod {
                 graphApi(),
                 entityDatastore(),
                 indexingMetadataManager(),
-                datasetService()
+                dataSetService()
         );
     }
 
@@ -690,7 +690,7 @@ public class DatastoreServicesPod {
                 transporterService,
                 dcs(),
                 hikariDataSource,
-                datasetService() );
+                dataSetService() );
     }
 
     @Bean

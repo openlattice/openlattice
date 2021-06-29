@@ -5,7 +5,6 @@ import com.google.common.base.Preconditions.checkState
 import com.google.common.net.InetAddresses
 import com.openlattice.authorization.*
 import com.openlattice.controllers.exceptions.ForbiddenException
-import com.openlattice.datasets.DatasetService
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.organization.*
 import com.openlattice.organizations.ExternalDatabaseManagementService
@@ -33,9 +32,6 @@ class DatasetController : DatasetApi, AuthorizingComponent {
 
     @Inject
     private lateinit var aclKeyReservations: HazelcastAclKeyReservationService
-
-    @Inject
-    private lateinit var datasetService: DatasetService
 
     @Timed
     @PostMapping(path = [ID_PATH + USER_ID_PATH + CONNECTION_TYPE_PATH + EXTERNAL_DATABASE])

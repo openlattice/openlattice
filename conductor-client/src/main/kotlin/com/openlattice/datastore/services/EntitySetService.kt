@@ -45,7 +45,7 @@ import com.openlattice.authorization.securable.SecurableObjectType.PropertyTypeI
 import com.openlattice.controllers.exceptions.ResourceNotFoundException
 import com.openlattice.data.storage.PostgresEntitySetSizesInitializationTask
 import com.openlattice.data.storage.partitions.PartitionManager
-import com.openlattice.datasets.DatasetService
+import com.openlattice.datasets.DataSetService
 import com.openlattice.datasets.SecurableObjectMetadata
 import com.openlattice.datasets.SecurableObjectMetadataUpdate
 import com.openlattice.datastore.util.Util
@@ -98,7 +98,7 @@ class EntitySetService(
     private val edm: EdmManager,
     private val hds: HikariDataSource,
     private val organizationMetadataEntitySetsService: OrganizationMetadataEntitySetsService,
-    private val dataSetService: DatasetService,
+    private val dataSetService: DataSetService,
     private val searchService: SearchService,
     auditingConfiguration: AuditingConfiguration
 ) : EntitySetManager {

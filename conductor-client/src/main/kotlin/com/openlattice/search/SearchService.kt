@@ -21,7 +21,7 @@ import com.openlattice.data.requests.NeighborEntityIds
 import com.openlattice.data.storage.EntityDatastore
 import com.openlattice.data.storage.IndexingMetadataManager
 import com.openlattice.data.storage.MetadataOption
-import com.openlattice.datasets.DatasetService
+import com.openlattice.datasets.DataSetService
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EdmConstants
@@ -63,7 +63,7 @@ class SearchService(
     val graphService: GraphService,
     val dataManager: EntityDatastore,
     val indexingMetadataManager: IndexingMetadataManager,
-    val dataSetService: DatasetService
+    val dataSetService: DataSetService
 ) {
 
     companion object {

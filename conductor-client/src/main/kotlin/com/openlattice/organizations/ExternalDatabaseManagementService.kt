@@ -8,7 +8,7 @@ import com.hazelcast.query.QueryConstants
 import com.openlattice.authorization.*
 import com.openlattice.authorization.mapstores.PermissionMapstore
 import com.openlattice.authorization.securable.SecurableObjectType
-import com.openlattice.datasets.DatasetService
+import com.openlattice.datasets.DataSetService
 import com.openlattice.datasets.SecurableObjectMetadata
 import com.openlattice.datasets.SecurableObjectMetadataUpdate
 import com.openlattice.edm.PropertyTypeIdFqn
@@ -85,7 +85,7 @@ class ExternalDatabaseManagementService(
     private val transporterService: TransporterService,
     private val dbCredentialService: DbCredentialService,
     private val hds: HikariDataSource,
-    private val dataSetService: DatasetService,
+    private val dataSetService: DataSetService,
     private val searchService: SearchService
 ) {
 

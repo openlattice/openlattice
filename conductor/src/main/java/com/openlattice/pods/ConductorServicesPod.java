@@ -66,7 +66,7 @@ import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
 import com.openlattice.data.storage.*;
 import com.openlattice.data.storage.partitions.PartitionManager;
-import com.openlattice.datasets.DatasetService;
+import com.openlattice.datasets.DataSetService;
 import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EdmService;
@@ -520,8 +520,8 @@ public class ConductorServicesPod {
     }
 
     @Bean
-    DatasetService datasetService() {
-        return new DatasetService( hazelcastInstance, eventBus );
+    DataSetService dataSetService() {
+        return new DataSetService( hazelcastInstance, eventBus );
     }
 
     @Bean
@@ -532,7 +532,7 @@ public class ConductorServicesPod {
                 authorizationManager(),
                 entityTypeManager(),
                 schemaManager(),
-                datasetService()
+                dataSetService()
         );
     }
 
@@ -562,7 +562,7 @@ public class ConductorServicesPod {
                 dataModelService(),
                 hikariDataSource,
                 organizationMetadataEntitySetsService(),
-                datasetService(),
+                dataSetService(),
                 auditingConfiguration
         );
     }

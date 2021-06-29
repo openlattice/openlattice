@@ -39,7 +39,7 @@ import com.openlattice.data.storage.EntityDatastore;
 import com.openlattice.data.storage.IndexingMetadataManager;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
 import com.openlattice.data.storage.partitions.PartitionManager;
-import com.openlattice.datasets.DatasetService;
+import com.openlattice.datasets.DataSetService;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.EntitySetManager;
 import com.openlattice.graph.core.GraphService;
@@ -140,7 +140,7 @@ public class IndexerPostConfigurationServicesPod {
     private HazelcastJobService jobService;
 
     @Inject
-    private DatasetService datasetService;
+    private DataSetService dataSetService;
 
     @Inject
     private EventBus eventBus;
@@ -222,7 +222,7 @@ public class IndexerPostConfigurationServicesPod {
                 transporterService,
                 dbcs,
                 hikariDataSource,
-                datasetService );
+                dataSetService );
     }
 
     @Bean
@@ -237,7 +237,7 @@ public class IndexerPostConfigurationServicesPod {
                 organizationMetadataEntitySetsService,
                 reservationService,
                 principalsMapManager,
-                datasetService );
+                dataSetService );
     }
 
     @Bean
@@ -261,7 +261,7 @@ public class IndexerPostConfigurationServicesPod {
                 graphApi,
                 entityDatastore,
                 indexingMetadataManager(),
-                datasetService
+                dataSetService
         );
     }
 
