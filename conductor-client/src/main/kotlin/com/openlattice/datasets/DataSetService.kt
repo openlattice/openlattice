@@ -4,19 +4,25 @@ import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicates
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.securable.SecurableObjectType
+import com.openlattice.conductor.rpc.ConductorElasticsearchApi
 import com.openlattice.edm.EntitySet
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organization.ExternalTable
 import com.openlattice.organizations.mapstores.ExternalTablesMapstore
 import com.openlattice.postgres.mapstores.EntitySetMapstore
-import com.openlattice.search.SearchService
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.util.*
 
 @Service
-class DataSetService(hazelcast: HazelcastInstance) {
+class DataSetService(
+    hazelcast: HazelcastInstance,
+    private val elasticsearchApi: ConductorElasticsearchApi
+) {
 
-    lateinit var searchService: SearchService
+    companion object {
+        private val logger = LoggerFactory.getLogger(DataSetService::class.java)
+    }
 
     private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcast)
     private val propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap(hazelcast)
@@ -48,19 +54,20 @@ class DataSetService(hazelcast: HazelcastInstance) {
     }
 
     fun deleteObjectMetadata(aclKey: AclKey) {
-        objectMetadata.delete(aclKey)
+        if (aclKey.size == 1) {
+            objectMetadata.removeAll(Predicates.equal(ObjectMetadataMapstore.ROOT_OBJECT_INDEX, aclKey.first()))
+        }
+        else {
+            objectMetadata.delete(aclKey)
+        }
         deleteIndexedObject(aclKey)
     }
 
-    fun deleteObjectMetadataForRootObject(id: UUID) {
-        objectMetadata.removeAll(Predicates.equal(ObjectMetadataMapstore.ROOT_OBJECT_INDEX, id))
+    fun getDataSet(id: UUID): DataSet? {
+        return getDataSets(setOf(id))[id]
     }
 
-    fun getDataset(id: UUID): DataSet {
-        return getDatasets(setOf(id)).getValue(id)
-    }
-
-    fun getDatasets(ids: Set<UUID>): Map<UUID, DataSet> {
+    fun getDataSets(ids: Set<UUID>): Map<UUID, DataSet> {
         val datasetsAsMap = mutableMapOf<UUID, DataSet>()
         val aclKeys = ids.mapTo(mutableSetOf()) { AclKey(it) }
 
@@ -185,20 +192,34 @@ class DataSetService(hazelcast: HazelcastInstance) {
         return externalTables.values
     }
 
+    //
+    // indexing
+    //
 
     private fun deleteIndexedObject(aclKey: AclKey) {
-        if (aclKey.size != 1) {
-            return
+        if (aclKey.size == 1) {
+            elasticsearchApi.deleteIndexedDataSet(aclKey.first())
+        } else {
+            // NOTE: deleteIndexedObject is called by deleteObjectMetadata, which deletes the column from the mapstore,
+            // so we just need to update the index with the remaining columns
+            updateIndexedObject(aclKey)
         }
-        searchService.deleteIndexedDataSet(aclKey.first())
+    }
+
+    fun indexDataSet(dataSetId: UUID) {
+        val dataSet = getDataSet(dataSetId)
+        val columns = getColumnsInDataset(dataSetId)
+        elasticsearchApi.indexDataSet(dataSet, columns)
     }
 
     private fun updateIndexedObject(aclKey: AclKey) {
-        val rootObjectId = aclKey.first()
+        val dataSetId = aclKey.first()
+        val dataSet = getDataSet(dataSetId)
         if (aclKey.size == 1) {
-            searchService.updateIndexedDataSet(rootObjectId)
+            elasticsearchApi.updateIndexedDataSet(dataSet)
         } else {
-            searchService.updateIndexedDataSetColumns(rootObjectId)
+            val columns = getColumnsInDataset(dataSetId)
+            elasticsearchApi.updateIndexedDataSetColumns(dataSetId, columns)
         }
     }
 }

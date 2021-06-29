@@ -80,7 +80,6 @@ import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.StatementHolderSupplier
 import com.openlattice.rhizome.DelegatedIntSet
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
-import com.openlattice.search.SearchService
 import com.openlattice.search.requests.EntityNeighborsFilter
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
@@ -116,8 +115,6 @@ class EntitySetService(
     companion object {
         private val logger = LoggerFactory.getLogger(EntitySetManager::class.java)
     }
-
-    override lateinit var searchService: SearchService
 
     private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
     private val entityTypes = HazelcastMap.ENTITY_TYPES.getMap(hazelcastInstance)
@@ -185,7 +182,7 @@ class EntitySetService(
 
             val ownablePropertyTypes = propertyTypes.getAll(entityType.properties).values.toList()
             eventBus.post(EntitySetCreatedEvent(entitySet, ownablePropertyTypes))
-            searchService.indexDataSet(entitySet.id)
+            dataSetService.indexDataSet(entitySet.id)
 
         } catch (e: Exception) {
             logger.error("Unable to create entity set ${entitySet.name} (${entitySet.id}) for principal $principal", e)
@@ -376,7 +373,7 @@ class EntitySetService(
                 }
 
         aclKeyReservations.release(entitySet.id)
-        dataSetService.deleteObjectMetadataForRootObject(entitySet.id)
+        dataSetService.deleteObjectMetadata(AclKey(entitySet.id))
         entitySets.delete(entitySet.id)
         deletedEntitySets[entitySet.id] = DelegatedIntSet(entitySet.partitions)
     }

@@ -7,6 +7,7 @@ import com.openlattice.auditing.AuditingManager
 import com.openlattice.authorization.*
 import com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION
 import com.openlattice.authorization.securable.SecurableObjectType
+import com.openlattice.controllers.exceptions.ResourceNotFoundException
 import com.openlattice.data.DataDeletionManager
 import com.openlattice.data.DataGraphManager
 import com.openlattice.datasets.DataSetMetadataApi.Companion.COLUMNS_PATH
@@ -58,7 +59,8 @@ constructor(
     )
     override fun getDataSetMetadata(@PathVariable(DATA_SET_ID_PARAM) dataSetId: UUID): DataSet {
         ensureReadAccess(AclKey(dataSetId))
-        return dataSetService.getDataset(dataSetId)
+        return dataSetService.getDataSet(dataSetId)
+            ?: throw ResourceNotFoundException("data set $dataSetId not found")
     }
 
     @Timed
@@ -69,7 +71,7 @@ constructor(
     )
     override fun getDataSetsMetadata(@RequestBody dataSetIds: Set<UUID>): Map<UUID, DataSet> {
         accessCheck(dataSetIds.associate { AclKey(it) to EnumSet.of(Permission.READ) })
-        return dataSetService.getDatasets(dataSetIds)
+        return dataSetService.getDataSets(dataSetIds)
     }
 
     @Timed
@@ -123,7 +125,7 @@ constructor(
             .filter { it.permissions.getOrDefault(Permission.READ, false) }
             .map { it.aclKey.first() }
             .collect(Collectors.toSet())
-        return dataSetService.getDatasets(authorizedDataSetIds)
+        return dataSetService.getDataSets(authorizedDataSetIds)
     }
 
     @Timed

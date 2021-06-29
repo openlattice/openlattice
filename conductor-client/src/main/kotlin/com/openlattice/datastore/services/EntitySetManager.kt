@@ -37,8 +37,6 @@ import java.util.*
 
 interface EntitySetManager {
 
-    var searchService: SearchService
-
     fun createEntitySet(principal: Principal, entitySet: EntitySet): UUID
 
     fun deleteEntitySet(entitySet: EntitySet)

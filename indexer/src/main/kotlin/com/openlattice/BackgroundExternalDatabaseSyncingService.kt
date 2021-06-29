@@ -9,6 +9,7 @@ import com.openlattice.auditing.AuditRecordEntitySetsManager
 import com.openlattice.auditing.AuditableEvent
 import com.openlattice.auditing.AuditingManager
 import com.openlattice.authorization.*
+import com.openlattice.datasets.DataSetService
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastMap.Companion.EXTERNAL_COLUMNS
 import com.openlattice.hazelcast.HazelcastMap.Companion.EXTERNAL_TABLES
@@ -22,7 +23,6 @@ import com.openlattice.organizations.mapstores.ORGANIZATION_ID_INDEX
 import com.openlattice.postgres.TableColumn
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService
 import com.openlattice.postgres.external.Schemas
-import com.openlattice.search.SearchService
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import java.time.OffsetDateTime
@@ -40,7 +40,7 @@ class BackgroundExternalDatabaseSyncingService(
     private val organizationMetadataEntitySetsService: OrganizationMetadataEntitySetsService,
     private val reservationService: HazelcastAclKeyReservationService,
     private val principalsMapManager: PrincipalsMapManager,
-    private val searchService: SearchService
+    private val dataSetService: DataSetService
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(BackgroundExternalDatabaseSyncingService::class.java)
@@ -111,7 +111,7 @@ class BackgroundExternalDatabaseSyncingService(
         edms.getTableInfoForOrganization(orgId).forEach { (oid, tableName, schemaName, _) ->
             val table = getOrCreateTable(orgId, oid, tableName, schemaName)
             val columns = syncTableColumns(table)
-            searchService.indexDataSet(table.id)
+            dataSetService.indexDataSet(table.id)
 
             initializeTablePermissions(orgId, table, columns, adminRolePrincipal)
 

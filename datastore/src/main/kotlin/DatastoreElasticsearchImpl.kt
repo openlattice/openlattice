@@ -1736,6 +1736,10 @@ class DatastoreKotlinElasticsearchImpl(
             logger.info("successfully updated data set {} columns in elasticsearch", dataSetId)
             return true
         } catch (e: Exception) {
+            // NOTE: it is currently expected for elasticsearch to throw DocumentMissingException when a data set
+            // has been deleted because BackgroundExternalDatabaseSyncingService first deletes the table,
+            // which clears the data set document from elasticsearch, and then deletes the columns,
+            // which is when elasticsearch will throw because the data set document no longer exists
             logger.error("error while updating data set {} columns in elasticsearch", dataSetId, e)
         }
 

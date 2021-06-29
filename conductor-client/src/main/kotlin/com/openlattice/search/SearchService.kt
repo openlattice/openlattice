@@ -76,8 +76,6 @@ class SearchService(
     }
 
     init {
-        dataSetService.searchService = this
-        entitySetService.searchService = this
         eventBus.register(this)
     }
 
@@ -901,30 +899,6 @@ class SearchService(
     }
 
     //
-    // data set indexing
-    //
-
-    fun deleteIndexedDataSet(dataSetId: UUID) {
-        elasticsearchApi.deleteIndexedDataSet(dataSetId)
-    }
-
-    fun indexDataSet(dataSetId: UUID) {
-        val dataSet = dataSetService.getDataset(dataSetId)
-        val columns = dataSetService.getColumnsInDataset(dataSetId)
-        elasticsearchApi.indexDataSet(dataSet, columns)
-    }
-
-    fun updateIndexedDataSet(dataSetId: UUID) {
-        val dataSet = dataSetService.getDataset(dataSetId)
-        elasticsearchApi.updateIndexedDataSet(dataSet)
-    }
-
-    fun updateIndexedDataSetColumns(dataSetId: UUID) {
-        val columns = dataSetService.getColumnsInDataset(dataSetId)
-        elasticsearchApi.updateIndexedDataSetColumns(dataSetId, columns)
-    }
-
-    //
     // trigger functions
     //
 
@@ -987,11 +961,11 @@ class SearchService(
     fun triggerAllDatasetIndex() {
 
         entitySetService.getEntitySets().forEach {
-            indexDataSet(it.id)
+            dataSetService.indexDataSet(it.id)
         }
 
         dataSetService.getExternalTables().forEach {
-            indexDataSet(it.id)
+            dataSetService.indexDataSet(it.id)
         }
     }
 }

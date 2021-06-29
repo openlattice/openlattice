@@ -56,7 +56,6 @@ import com.openlattice.postgres.external.Schemas.STAGING_SCHEMA
 import com.openlattice.postgres.external.dropAllConnectionsToDatabaseSql
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.StatementHolderSupplier
-import com.openlattice.search.SearchService
 import com.openlattice.transporter.processors.GetPropertyTypesFromTransporterColumnSetEntryProcessor
 import com.openlattice.transporter.services.TransporterService
 import com.zaxxer.hikari.HikariDataSource
@@ -85,8 +84,7 @@ class ExternalDatabaseManagementService(
     private val transporterService: TransporterService,
     private val dbCredentialService: DbCredentialService,
     private val hds: HikariDataSource,
-    private val dataSetService: DataSetService,
-    private val searchService: SearchService
+    private val dataSetService: DataSetService
 ) {
 
     private val logger = LoggerFactory.getLogger(ExternalDatabaseManagementService::class.java)
@@ -118,7 +116,7 @@ class ExternalDatabaseManagementService(
         authorizationManager.setSecurableObjectType(tableAclKey, SecurableObjectType.OrganizationExternalDatabaseTable)
 
         dataSetService.initializeMetadata(tableAclKey, SecurableObjectMetadata.fromExternalTable(table))
-        searchService.indexDataSet(table.id)
+        dataSetService.indexDataSet(table.id)
 
         return table.id
     }
@@ -384,7 +382,7 @@ class ExternalDatabaseManagementService(
     fun deleteExternalTableObjects(tableIds: Set<UUID>) {
         tableIds.forEach {
             val aclKey = AclKey(it)
-            dataSetService.deleteObjectMetadataForRootObject(it)
+            dataSetService.deleteObjectMetadata(aclKey)
             authorizationManager.deletePermissions(aclKey)
             securableObjectTypes.remove(aclKey)
             aclKeyReservations.release(it)

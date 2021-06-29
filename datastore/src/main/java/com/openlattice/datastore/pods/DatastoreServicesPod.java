@@ -298,7 +298,7 @@ public class DatastoreServicesPod {
 
     @Bean
     DataSetService dataSetService() {
-        return new DataSetService( hazelcastInstance );
+        return new DataSetService( hazelcastInstance, elasticsearchApi() );
     }
 
     @Bean
@@ -548,7 +548,7 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    public ConductorElasticsearchApi conductorElasticsearchApi() {
+    public ConductorElasticsearchApi elasticsearchApi() {
         return new DatastoreKotlinElasticsearchImpl(  datastoreConfiguration.getSearchConfiguration() );
     }
 
@@ -558,7 +558,7 @@ public class DatastoreServicesPod {
                 eventBus,
                 metricRegistry,
                 authorizationManager(),
-                conductorElasticsearchApi(),
+                elasticsearchApi(),
                 dataModelService(),
                 entitySetManager(),
                 graphApi(),
@@ -690,8 +690,7 @@ public class DatastoreServicesPod {
                 transporterService,
                 dcs(),
                 hikariDataSource,
-                dataSetService(),
-                searchService()
+                dataSetService()
         );
     }
 
