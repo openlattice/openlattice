@@ -80,6 +80,7 @@ import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.StatementHolderSupplier
 import com.openlattice.rhizome.DelegatedIntSet
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
+import com.openlattice.search.SearchService
 import com.openlattice.search.requests.EntityNeighborsFilter
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
@@ -89,16 +90,17 @@ import kotlin.collections.LinkedHashSet
 
 @Service
 class EntitySetService(
-        hazelcastInstance: HazelcastInstance,
-        private val eventBus: EventBus,
-        private val aclKeyReservations: HazelcastAclKeyReservationService,
-        private val authorizations: AuthorizationManager,
-        private val partitionManager: PartitionManager,
-        private val edm: EdmManager,
-        private val hds: HikariDataSource,
-        private val organizationMetadataEntitySetsService: OrganizationMetadataEntitySetsService,
-        private val datasetService: DatasetService,
-        auditingConfiguration: AuditingConfiguration
+    hazelcastInstance: HazelcastInstance,
+    private val eventBus: EventBus,
+    private val aclKeyReservations: HazelcastAclKeyReservationService,
+    private val authorizations: AuthorizationManager,
+    private val partitionManager: PartitionManager,
+    private val edm: EdmManager,
+    private val hds: HikariDataSource,
+    private val organizationMetadataEntitySetsService: OrganizationMetadataEntitySetsService,
+    private val dataSetService: DatasetService,
+    private val searchService: SearchService,
+    auditingConfiguration: AuditingConfiguration
 ) : EntitySetManager {
     init {
         organizationMetadataEntitySetsService.entitySetsManager = this
@@ -182,7 +184,7 @@ class EntitySetService(
 
             val ownablePropertyTypes = propertyTypes.getAll(entityType.properties).values.toList()
             eventBus.post(EntitySetCreatedEvent(entitySet, ownablePropertyTypes))
-            datasetService.signalDatasetCreated(entitySet.id)
+            searchService.indexDataSet(entitySet.id)
 
         } catch (e: Exception) {
             logger.error("Unable to create entity set ${entitySet.name} (${entitySet.id}) for principal $principal", e)
@@ -311,7 +313,7 @@ class EntitySetService(
         aclKeyReservations.reserveIdAndValidateType(entitySet)
 
         checkState(entitySets.putIfAbsent(entitySet.id, entitySet) == null, "Entity set already exists.")
-        datasetService.initializeMetadata(AclKey(entitySet.id), SecurableObjectMetadata.fromEntitySet(entitySet))
+        dataSetService.initializeMetadata(AclKey(entitySet.id), SecurableObjectMetadata.fromEntitySet(entitySet))
         return entitySet.id
     }
 
@@ -320,7 +322,7 @@ class EntitySetService(
         val propertyTags = entityType.propertyTags
         val propertyTypes = edm.getPropertyTypes(entityType.properties)
 
-        datasetService.initializeMetadata(propertyTypes.associate {
+        dataSetService.initializeMetadata(propertyTypes.associate {
             val flags = propertyTags.getOrDefault(it.id, LinkedHashSet())
             AclKey(entitySetId, it.id) to SecurableObjectMetadata.fromPropertyType(it, flags)
         })
@@ -357,7 +359,7 @@ class EntitySetService(
         deleteEntitySet(entitySet, entityType)
 
         eventBus.post(EntitySetDeletedEvent(entitySet.id, entityType.id))
-        datasetService.deleteObjectMetadata(AclKey(entitySet.id))
+        dataSetService.deleteObjectMetadata(AclKey(entitySet.id))
         logger.info("Entity set ${entitySet.name} (${entitySet.id}) deleted successfully.")
     }
 
@@ -373,7 +375,7 @@ class EntitySetService(
                 }
 
         aclKeyReservations.release(entitySet.id)
-        datasetService.deleteObjectMetadataForRootObject(entitySet.id)
+        dataSetService.deleteObjectMetadataForRootObject(entitySet.id)
         entitySets.delete(entitySet.id)
         deletedEntitySets[entitySet.id] = DelegatedIntSet(entitySet.partitions)
     }
@@ -657,7 +659,7 @@ class EntitySetService(
 
     override fun updateEntitySetPropertyMetadata(entitySetId: UUID, propertyTypeId: UUID, update: MetadataUpdate) {
         val key = AclKey(entitySetId, propertyTypeId)
-        datasetService.updateObjectMetadata(key, SecurableObjectMetadataUpdate.fromMetadataUpdate(update))
+        dataSetService.updateObjectMetadata(key, SecurableObjectMetadataUpdate.fromMetadataUpdate(update))
     }
 
     override fun updateEntitySet(entitySetId: UUID, update: MetadataUpdate) {
@@ -707,7 +709,7 @@ class EntitySetService(
         }
 
         val newEntitySet = updateEntitySetMetadata(entitySetId, update)
-        datasetService.updateObjectMetadata(AclKey(entitySetId), SecurableObjectMetadataUpdate.fromMetadataUpdate(update))
+        dataSetService.updateObjectMetadata(AclKey(entitySetId), SecurableObjectMetadataUpdate.fromMetadataUpdate(update))
         eventBus.post(EntitySetMetadataUpdatedEvent(newEntitySet))
     }
 
