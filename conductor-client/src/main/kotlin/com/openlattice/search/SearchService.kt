@@ -22,9 +22,6 @@ import com.openlattice.data.storage.EntityDatastore
 import com.openlattice.data.storage.IndexingMetadataManager
 import com.openlattice.data.storage.MetadataOption
 import com.openlattice.datasets.DatasetService
-import com.openlattice.datasets.events.DatasetColumnsUpdatedEvent
-import com.openlattice.datasets.events.DatasetCreatedEvent
-import com.openlattice.datasets.events.DatasetDeletedEvent
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EdmConstants
@@ -472,24 +469,6 @@ class SearchService(
                 )
     }
 
-    @Subscribe
-    fun createDataset(event: DatasetCreatedEvent) {
-        val dataset = datasetService.getDataset(event.id)
-        val columns = datasetService.getColumnsInDataset(event.id)
-        elasticsearchApi.saveDatasetToElasticsearch(dataset, columns)
-    }
-
-    @Subscribe
-    fun deleteDataset(event: DatasetDeletedEvent) {
-        elasticsearchApi.deleteDatasetFromElasticsearch(event.id)
-    }
-
-    @Subscribe
-    fun updateDatasetColumns(event: DatasetColumnsUpdatedEvent) {
-        val columns = datasetService.getColumnsInDataset(event.datasetId)
-        elasticsearchApi.updateColumnsInDataset(event.datasetId, columns)
-    }
-
     /**
      * Handle deleting the index for that property type.
      * At this point, none of the entity sets should contain this property type anymore, so the entity set data mappings
@@ -919,6 +898,34 @@ class SearchService(
         return dataManager.getEntityKeyIdsOfLinkingIds(linkingIds, normalEntitySetIds).toMap()
     }
 
+    //
+    // data set indexing
+    //
+
+    fun deleteIndexedDataSet(dataSetId: UUID) {
+        elasticsearchApi.deleteIndexedDataSet(dataSetId)
+    }
+
+    fun indexDataSet(dataSetId: UUID) {
+        val dataSet = datasetService.getDataset(dataSetId)
+        val columns = datasetService.getColumnsInDataset(dataSetId)
+        elasticsearchApi.indexDataSet(dataSet, columns)
+    }
+
+    fun updateIndexedDataSet(dataSetId: UUID) {
+        val dataSet = datasetService.getDataset(dataSetId)
+        elasticsearchApi.updateIndexedDataSet(dataSet)
+    }
+
+    fun updateIndexedDataSetColumns(dataSetId: UUID) {
+        val columns = datasetService.getColumnsInDataset(dataSetId)
+        elasticsearchApi.updateIndexedDataSetColumns(dataSetId, columns)
+    }
+
+    //
+    // trigger functions
+    //
+
     fun triggerPropertyTypeIndex(propertyTypes: List<PropertyType>) {
         elasticsearchApi.triggerSecurableObjectIndex(SecurableObjectType.PropertyTypeInEntitySet, propertyTypes)
     }
@@ -976,14 +983,14 @@ class SearchService(
     }
 
     fun triggerAllDatasetIndex() {
+
         entitySetService.getEntitySets().forEach {
-            createDataset(DatasetCreatedEvent(it.id))
+            indexDataSet(it.id)
         }
 
         datasetService.getExternalTables().forEach {
-            createDataset(DatasetCreatedEvent(it.id))
+            indexDataSet(it.id)
         }
     }
-
 }
 
