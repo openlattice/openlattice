@@ -54,16 +54,16 @@ import kotlin.streams.toList
  */
 @Service
 class SearchService(
-        val eventBus: EventBus,
-        val metricRegistry: MetricRegistry,
-        val authorizations: AuthorizationManager,
-        val elasticsearchApi: ConductorElasticsearchApi,
-        val dataModelService: EdmManager,
-        val entitySetService: EntitySetManager,
-        val graphService: GraphService,
-        val dataManager: EntityDatastore,
-        val indexingMetadataManager: IndexingMetadataManager,
-        val datasetService: DatasetService
+    val eventBus: EventBus,
+    val metricRegistry: MetricRegistry,
+    val authorizations: AuthorizationManager,
+    val elasticsearchApi: ConductorElasticsearchApi,
+    val dataModelService: EdmManager,
+    val entitySetService: EntitySetManager,
+    val graphService: GraphService,
+    val dataManager: EntityDatastore,
+    val indexingMetadataManager: IndexingMetadataManager,
+    val dataSetService: DatasetService
 ) {
 
     companion object {
@@ -180,7 +180,7 @@ class SearchService(
             .collect(Collectors.toSet())
 
         if (organizationIds.isNotEmpty()) {
-            authorizedDataSetIds = datasetService.filterDatasetIdsByOrganizations(
+            authorizedDataSetIds = dataSetService.filterDatasetIdsByOrganizations(
                 authorizedDataSetIds,
                 organizationIds
             )
@@ -907,18 +907,18 @@ class SearchService(
     }
 
     fun indexDataSet(dataSetId: UUID) {
-        val dataSet = datasetService.getDataset(dataSetId)
-        val columns = datasetService.getColumnsInDataset(dataSetId)
+        val dataSet = dataSetService.getDataset(dataSetId)
+        val columns = dataSetService.getColumnsInDataset(dataSetId)
         elasticsearchApi.indexDataSet(dataSet, columns)
     }
 
     fun updateIndexedDataSet(dataSetId: UUID) {
-        val dataSet = datasetService.getDataset(dataSetId)
+        val dataSet = dataSetService.getDataset(dataSetId)
         elasticsearchApi.updateIndexedDataSet(dataSet)
     }
 
     fun updateIndexedDataSetColumns(dataSetId: UUID) {
-        val columns = datasetService.getColumnsInDataset(dataSetId)
+        val columns = dataSetService.getColumnsInDataset(dataSetId)
         elasticsearchApi.updateIndexedDataSetColumns(dataSetId, columns)
     }
 
@@ -988,7 +988,7 @@ class SearchService(
             indexDataSet(it.id)
         }
 
-        datasetService.getExternalTables().forEach {
+        dataSetService.getExternalTables().forEach {
             indexDataSet(it.id)
         }
     }
