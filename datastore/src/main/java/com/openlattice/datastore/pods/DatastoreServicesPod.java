@@ -298,7 +298,7 @@ public class DatastoreServicesPod {
 
     @Bean
     DataSetService dataSetService() {
-        return new DataSetService( hazelcastInstance, eventBus );
+        return new DataSetService( hazelcastInstance );
     }
 
     @Bean
@@ -690,7 +690,9 @@ public class DatastoreServicesPod {
                 transporterService,
                 dcs(),
                 hikariDataSource,
-                dataSetService() );
+                dataSetService(),
+                searchService()
+        );
     }
 
     @Bean

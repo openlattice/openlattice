@@ -297,7 +297,7 @@ public class IndexerServicesPod {
 
     @Bean
     DataSetService dataSetService() {
-        return new DataSetService( hazelcastInstance, eventBus );
+        return new DataSetService( hazelcastInstance );
     }
 
     @Bean

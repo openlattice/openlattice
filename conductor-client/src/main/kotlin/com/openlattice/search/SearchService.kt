@@ -76,6 +76,8 @@ class SearchService(
     }
 
     init {
+        dataSetService.searchService = this
+        entitySetService.searchService = this
         eventBus.register(this)
     }
 

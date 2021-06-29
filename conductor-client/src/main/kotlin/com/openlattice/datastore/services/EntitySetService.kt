@@ -99,7 +99,6 @@ class EntitySetService(
     private val hds: HikariDataSource,
     private val organizationMetadataEntitySetsService: OrganizationMetadataEntitySetsService,
     private val dataSetService: DataSetService,
-    private val searchService: SearchService,
     auditingConfiguration: AuditingConfiguration
 ) : EntitySetManager {
     init {
@@ -117,6 +116,8 @@ class EntitySetService(
     companion object {
         private val logger = LoggerFactory.getLogger(EntitySetManager::class.java)
     }
+
+    override lateinit var searchService: SearchService
 
     private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
     private val entityTypes = HazelcastMap.ENTITY_TYPES.getMap(hazelcastInstance)

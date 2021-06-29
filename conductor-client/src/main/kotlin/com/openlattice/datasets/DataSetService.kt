@@ -14,10 +14,9 @@ import org.springframework.stereotype.Service
 import java.util.*
 
 @Service
-class DataSetService(
-    hazelcast: HazelcastInstance,
-    val searchService: SearchService
-) {
+class DataSetService(hazelcast: HazelcastInstance) {
+
+    lateinit var searchService: SearchService
 
     private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcast)
     private val propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap(hazelcast)
