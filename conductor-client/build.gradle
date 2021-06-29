@@ -162,7 +162,7 @@ dependencies {
 
     api "com.openlattice:api:${api_version}"
     api "com.openlattice:scribe:${scribe_version}"
-
+    api "com.openlattice:scrunchie:${scrunchie_version}"
     api "com.openlattice:rhizome:${rhizome_version}"
     testImplementation "junit:junit:${junit_version}"
 
