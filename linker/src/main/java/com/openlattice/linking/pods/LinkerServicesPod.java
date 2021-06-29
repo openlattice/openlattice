@@ -141,7 +141,7 @@ public class LinkerServicesPod {
     }
 
     @Bean
-    public ConductorElasticsearchApi elasticsearchApi() throws IOException {
+    public ConductorElasticsearchApi elasticsearchApi() {
         return new ConductorElasticsearchImpl( linkingConfiguration.getSearchConfiguration() );
     }
 
@@ -267,7 +267,7 @@ public class LinkerServicesPod {
 
     @Bean
     DataSetService dataSetService() {
-        return new DataSetService( hazelcastInstance );
+        return new DataSetService( hazelcastInstance, elasticsearchApi() );
     }
 
     @Bean
