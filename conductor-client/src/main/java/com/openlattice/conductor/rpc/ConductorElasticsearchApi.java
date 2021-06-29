@@ -1,5 +1,3 @@
-
-
 /*
  * Copyright (C) 2018. OpenLattice, Inc.
  *
@@ -34,7 +32,6 @@ import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organizations.Organization;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
-import com.openlattice.search.SortDefinition;
 import com.openlattice.search.requests.ConstraintGroup;
 import com.openlattice.search.requests.EntityDataKeySearchResult;
 import com.openlattice.search.requests.SearchConstraints;
@@ -232,13 +229,6 @@ public interface ConductorElasticsearchApi {
 
     boolean deleteSecurableObjectFromElasticsearch( SecurableObjectType securableObjectType, UUID objectId );
 
-    /* Dataset create and delete */
-    boolean saveDatasetToElasticsearch( DataSet dataset, List<DataSetColumn> columns );
-
-    boolean updateColumnsInDataset( UUID datasetId, List<DataSetColumn> updatedColumns );
-
-    boolean deleteDatasetFromElasticsearch( UUID id );
-
     /**
      * EDM / SecurableObject Metadata Searches
      **/
@@ -283,6 +273,18 @@ public interface ConductorElasticsearchApi {
             int start,
             int maxHits
     );
+
+    //
+    // data set indexing
+    //
+
+    boolean deleteIndexedDataSet( UUID dataSetId );
+
+    boolean indexDataSet( DataSet dataSet, List<DataSetColumn> columns );
+
+    boolean updateIndexedDataSet( DataSet dataSet );
+
+    boolean updateIndexedDataSetColumns( UUID dataSetId, List<DataSetColumn> columns );
 
     /**
      * Re-indexing
