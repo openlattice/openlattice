@@ -296,7 +296,7 @@ public class IndexerServicesPod {
     }
 
     @Bean
-    DataSetService dataSetService() {
+    public DataSetService dataSetService() {
         return new DataSetService( hazelcastInstance, elasticsearchApi() );
     }
 
