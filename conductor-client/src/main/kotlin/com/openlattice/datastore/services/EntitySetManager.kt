@@ -31,7 +31,6 @@ import com.openlattice.edm.set.EntitySetPropertyMetadata
 import com.openlattice.edm.type.AssociationType
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
-import com.openlattice.search.SearchService
 import com.openlattice.search.requests.EntityNeighborsFilter
 import java.util.*
 
