@@ -1,20 +1,11 @@
 package com.openlattice.search.renderers
 
-import com.google.common.collect.Lists
-import com.google.common.collect.Maps
 import com.openlattice.data.requests.NeighborEntityDetails
 import com.openlattice.mail.RenderableEmailRequest
 import com.openlattice.search.requests.PersistentSearch
-import jodd.mail.EmailAttachment
 import org.apache.olingo.commons.api.edm.FullQualifiedName
-import java.io.ByteArrayOutputStream
-import java.io.IOException
-import java.net.URL
-import java.time.LocalDate
 import java.time.OffsetDateTime
-import java.time.format.DateTimeFormatter
 import java.util.*
-import javax.imageio.ImageIO
 
 private const val FROM_EMAIL = "courier@openlattice.com"
 private const val TEMPLATE_PATH = "mail/templates/shared/CodexMessageAlertTemplate.mustache"
@@ -69,10 +60,11 @@ class CodexAlertEmailRenderer {
             return tags
         }
 
-        fun getMetadataTemplateObjects(alertMetadata: Map<String, Any>): Map<String, Any> {
+        private fun getMetadataTemplateObjects(alertMetadata: Map<String, Any>): Map<String, Any> {
             val tags = mutableMapOf<String, Any>()
 
-            tags[CONVERSATION_URL_METADATA] = alertMetadata[CONVERSATION_URL_METADATA]?.let { "<a href=\"$it\">$it</a>" } ?: ""
+            tags[CONVERSATION_URL_METADATA] = alertMetadata[CONVERSATION_URL_METADATA]?.let { "<a href=\"$it\">$it</a>" }
+                    ?: ""
 
             return tags
         }

@@ -25,9 +25,7 @@ package com.openlattice.hazelcast.pods;
 import com.auth0.json.mgmt.users.User;
 import com.geekbeast.rhizome.jobs.DistributableJob;
 import com.geekbeast.rhizome.jobs.PostgresJobsMapStore;
-import com.google.common.base.Charsets;
 import com.google.common.eventbus.EventBus;
-import com.google.common.io.Resources;
 import com.kryptnostic.rhizome.mapstores.SelfRegisteringMapStore;
 import com.openlattice.apps.App;
 import com.openlattice.apps.AppConfigKey;
@@ -40,22 +38,28 @@ import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.auth0.AwsAuth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
-import com.openlattice.authorization.*;
+import com.openlattice.authorization.AccessTarget;
+import com.openlattice.authorization.AceKey;
+import com.openlattice.authorization.AceValue;
+import com.openlattice.authorization.AclKey;
+import com.openlattice.authorization.SecurablePrincipal;
 import com.openlattice.authorization.mapstores.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.collaborations.mapstores.CollaborationMapstore;
+import com.openlattice.collaborations.mapstores.ProjectedTablesMapstore;
 import com.openlattice.collections.CollectionTemplateKey;
 import com.openlattice.collections.EntitySetCollection;
 import com.openlattice.collections.EntityTypeCollection;
 import com.openlattice.collections.mapstores.EntitySetCollectionConfigMapstore;
 import com.openlattice.collections.mapstores.EntitySetCollectionMapstore;
 import com.openlattice.collections.mapstores.EntityTypeCollectionMapstore;
+import com.openlattice.datasets.ObjectMetadataMapstore;
 import com.openlattice.directory.MaterializedViewAccount;
 import com.openlattice.edm.EntitySet;
-import com.openlattice.edm.set.EntitySetPropertyKey;
-import com.openlattice.edm.set.EntitySetPropertyMetadata;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
+import com.openlattice.entitysets.DeletedEntitySetMapstore;
 import com.openlattice.hazelcast.mapstores.shuttle.IntegrationJobsMapstore;
 import com.openlattice.hazelcast.mapstores.shuttle.IntegrationsMapstore;
 import com.openlattice.ids.IdGenerationMapstore;
@@ -63,12 +67,12 @@ import com.openlattice.ids.Range;
 import com.openlattice.ids.mapstores.LongIdsMapstore;
 import com.openlattice.linking.mapstores.LinkingFeedbackMapstore;
 import com.openlattice.notifications.sms.SmsInformationMapstore;
-import com.openlattice.organization.OrganizationExternalDatabaseColumn;
-import com.openlattice.organization.OrganizationExternalDatabaseTable;
+import com.openlattice.organization.ExternalColumn;
+import com.openlattice.organization.ExternalTable;
 import com.openlattice.organizations.Organization;
+import com.openlattice.organizations.mapstores.ExternalColumnsMapstore;
+import com.openlattice.organizations.mapstores.ExternalTablesMapstore;
 import com.openlattice.organizations.mapstores.OrganizationDatabasesMapstore;
-import com.openlattice.organizations.mapstores.OrganizationExternalDatabaseColumnMapstore;
-import com.openlattice.organizations.mapstores.OrganizationExternalDatabaseTableMapstore;
 import com.openlattice.organizations.mapstores.OrganizationsMapstore;
 import com.openlattice.postgres.PostgresPod;
 import com.openlattice.postgres.PostgresTableManager;
@@ -87,10 +91,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 
 import javax.inject.Inject;
-import java.io.IOException;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.UUID;
 
 @Configuration
@@ -131,6 +131,11 @@ public class MapstoresPod {
     @Bean
     public SelfRegisteringMapStore<AceKey, AceValue> permissionMapstore() {
         return new PermissionMapstore( hikariDataSource, eventBus );
+    }
+
+    @Bean
+    public SelfRegisteringMapStore<AccessTarget, UUID> externalPermissionRoleMapstore() {
+        return new ExternalPermissionRolesMapstore( hikariDataSource );
     }
 
     @Bean
@@ -189,7 +194,7 @@ public class MapstoresPod {
     }
 
     @Bean
-    public SelfRegisteringMapStore<String, MaterializedViewAccount> dbCredentialsMapstore() {
+    public SelfRegisteringMapStore<AclKey, MaterializedViewAccount> dbCredentialsMapstore() {
         return new PostgresCredentialMapstore( hikariDataSource );
     }
 
@@ -206,11 +211,6 @@ public class MapstoresPod {
     @Bean
     public SelfRegisteringMapStore<UUID, Organization> organizationsMapstore() {
         return new OrganizationsMapstore( hikariDataSource );
-    }
-
-    @Bean
-    public SelfRegisteringMapStore<EntitySetPropertyKey, EntitySetPropertyMetadata> entitySetPropertyMetadataMapstore() {
-        return new EntitySetPropertyMetadataMapstore( hikariDataSource );
     }
 
     @Bean
@@ -244,13 +244,13 @@ public class MapstoresPod {
     }
 
     @Bean
-    public SelfRegisteringMapStore<UUID, OrganizationExternalDatabaseTable> organizationExternalDatabaseTableMapstore() {
-        return new OrganizationExternalDatabaseTableMapstore( hikariDataSource );
+    public SelfRegisteringMapStore<UUID, ExternalTable> externalTablesMapstore() {
+        return new ExternalTablesMapstore( hikariDataSource );
     }
 
     @Bean
-    public SelfRegisteringMapStore<UUID, OrganizationExternalDatabaseColumn> organizationExternalDatabaseColumnMapstore() {
-        return new OrganizationExternalDatabaseColumnMapstore( hikariDataSource );
+    public SelfRegisteringMapStore<UUID, ExternalColumn> externalColumnsMapstore() {
+        return new ExternalColumnsMapstore( hikariDataSource );
     }
 
     @Bean
@@ -299,7 +299,27 @@ public class MapstoresPod {
     }
 
     @Bean
-    public OrganizationDatabasesMapstore OrganizationDatabasesMapstore() {
+    public OrganizationDatabasesMapstore organizationDatabasesMapstore() {
         return new OrganizationDatabasesMapstore( hikariDataSource );
+    }
+
+    @Bean
+    public CollaborationMapstore collaborationMapstore() {
+        return new CollaborationMapstore( hikariDataSource );
+    }
+
+    @Bean
+    public ProjectedTablesMapstore projectedTablesMapstore() {
+        return new ProjectedTablesMapstore( hikariDataSource );
+    }
+
+    @Bean
+    public DeletedEntitySetMapstore deletedEntitySetMapstore() {
+        return new DeletedEntitySetMapstore( hikariDataSource );
+    }
+
+    @Bean
+    public ObjectMetadataMapstore objectMetadataMapstore() {
+        return new ObjectMetadataMapstore( hikariDataSource );
     }
 }

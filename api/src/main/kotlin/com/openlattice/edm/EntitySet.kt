@@ -45,9 +45,12 @@ data class EntitySet
                 EnumSet.of(EntitySetFlag.EXTERNAL),
         @JsonProperty(SerializationConstants.PARTITIONS) val partitions: LinkedHashSet<Int> = linkedSetOf(),
         @JsonProperty(SerializationConstants.EXPIRATION) var expiration: DataExpiration? = null,
-        @JsonProperty(SerializationConstants.STORAGE_TYPE) val storageType: StorageType = StorageType.STANDARD
+        @JsonProperty(SerializationConstants.STORAGE_TYPE) val storageType: StorageType = StorageType.STANDARD,
+        @JsonProperty(SerializationConstants.DATASTORE) var datastore: String = DEFAULT_DATASOURCE
 ) : AbstractSecurableObject(_id, _title, _description) {
-
+    companion object {
+        const val DEFAULT_DATASOURCE = "default"
+    }
     init {
         require(StringUtils.isNotBlank(name)) { "Entity set name cannot be blank." }
         require(this.linkedEntitySets.isEmpty() || isLinking) {
@@ -90,7 +93,7 @@ data class EntitySet
         this.flags.remove(flag)
     }
 
-    internal fun addPartitions(partitions: Collection<Int>) {
+    private fun addPartitions(partitions: Collection<Int>) {
         this.partitions.addAll(partitions)
     }
 

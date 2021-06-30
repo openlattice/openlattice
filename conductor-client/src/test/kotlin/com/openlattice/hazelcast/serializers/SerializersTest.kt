@@ -4,8 +4,6 @@ import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuil
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.openlattice.TestServer.Companion.testServer
-import com.openlattice.assembler.AssemblerConnectionManager
-import com.openlattice.assembler.AssemblerConnectionManagerDependent
 import com.openlattice.rhizome.KotlinDelegatedUUIDSet
 import com.openlattice.transporter.types.TransporterDatastore
 import com.openlattice.transporter.types.TransporterDependent
@@ -27,13 +25,9 @@ class SerializersTest(val serializer: TestableSelfRegisteringStreamSerializer<An
         @Parameterized.Parameters(name = "{1}")
         fun getSerializers(): Array<Array<Any>> {
             val serializers: MutableCollection<TestableSelfRegisteringStreamSerializer<*>> = testServer.context.getBeansOfType(TestableSelfRegisteringStreamSerializer::class.java).values
-            val acm = Mockito.mock(AssemblerConnectionManager::class.java)
             val tds = Mockito.mock(TransporterDatastore::class.java)
             return serializers
                     .map { ss ->
-                        if (ss is AssemblerConnectionManagerDependent<*>) {
-                            ss.init(acm)
-                        }
                         if (ss is TransporterDependent<*>) {
                             ss.init(tds)
                         }

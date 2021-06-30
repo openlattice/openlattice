@@ -70,15 +70,11 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
                     val sql = "DELETE from ${PRINCIPAL_TREES.name} " +
                             "WHERE ${ACL_KEY.name} = ${toPostgres(entry.key)} $filterPrincipal"
                     stmt.addBatch(sql)
-                    entry.value.forEach {
-                        stmt.addBatch(
-                                "INSERT INTO ${PRINCIPAL_TREES.name} " +
-                                        "VALUES (${toPostgres(aclKey)}, ${
-                                            toPostgres(
-                                                    it
-                                            )
-                                        }) ON CONFLICT DO NOTHING"
-                        )
+                    entry.value.forEach { ak ->
+                        stmt.addBatch("""
+                            INSERT INTO ${PRINCIPAL_TREES.name}
+                            VALUES (${toPostgres(aclKey)}, ${toPostgres(ak)}) ON CONFLICT DO NOTHING
+                        """.trimIndent())
                     }
                 }
                 stmt.executeBatch()

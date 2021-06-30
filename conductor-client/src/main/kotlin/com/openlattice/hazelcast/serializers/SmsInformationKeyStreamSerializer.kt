@@ -28,7 +28,7 @@ class SmsInformationKeyStreamSerializer : SelfRegisteringStreamSerializer<SmsInf
     }
 
     override fun read(input: ObjectDataInput): SmsInformationKey {
-        val phoneNumber = input.readUTF()
+        val phoneNumber = input.readString()!!
         val organizationId = UUIDStreamSerializerUtils.deserialize(input)
         return SmsInformationKey(phoneNumber, organizationId)
     }

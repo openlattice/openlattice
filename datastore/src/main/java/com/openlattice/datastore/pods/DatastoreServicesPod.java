@@ -1,3 +1,4 @@
+
 /*
  * Copyright (C) 2018. OpenLattice, Inc.
  *
@@ -35,11 +36,15 @@ import com.kryptnostic.rhizome.configuration.ConfigurationConstants;
 import com.openlattice.apps.services.AppService;
 import com.openlattice.assembler.Assembler;
 import com.openlattice.assembler.AssemblerConfiguration;
-import com.openlattice.assembler.AssemblerConnectionManager;
-import com.openlattice.assembler.AssemblerDependencies;
+import com.openlattice.assembler.UserRoleSyncTaskDependencies;
 import com.openlattice.assembler.pods.AssemblerConfigurationPod;
 import com.openlattice.assembler.tasks.UserCredentialSyncTask;
-import com.openlattice.auditing.*;
+import com.openlattice.auditing.AuditRecordEntitySetsManager;
+import com.openlattice.auditing.AuditingConfiguration;
+import com.openlattice.auditing.AuditingManager;
+import com.openlattice.auditing.AuditingProfiles;
+import com.openlattice.auditing.LocalAuditingService;
+import com.openlattice.auditing.S3AuditingService;
 import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.auth0.AwsAuth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
@@ -47,6 +52,9 @@ import com.openlattice.authorization.*;
 import com.openlattice.authorization.mapstores.ResolvedPrincipalTreesMapLoader;
 import com.openlattice.authorization.mapstores.SecurablePrincipalsMapLoader;
 import com.openlattice.codex.CodexService;
+import com.openlattice.collaborations.CollaborationDatabaseManager;
+import com.openlattice.collaborations.CollaborationService;
+import com.openlattice.collaborations.PostgresCollaborationDatabaseService;
 import com.openlattice.collections.CollectionsManager;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.DataDeletionManager;
@@ -59,9 +67,15 @@ import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.data.storage.*;
 import com.openlattice.data.storage.aws.AwsDataSinkService;
 import com.openlattice.data.storage.partitions.PartitionManager;
+import com.openlattice.datasets.DatasetService;
 import com.openlattice.datastore.configuration.DatastoreConfiguration;
 import com.openlattice.datastore.configuration.ReadonlyDatasourceSupplier;
-import com.openlattice.datastore.services.*;
+import com.openlattice.datastore.services.AnalysisService;
+import com.openlattice.datastore.services.DatastoreKotlinElasticsearchImpl;
+import com.openlattice.datastore.services.EdmManager;
+import com.openlattice.datastore.services.EdmService;
+import com.openlattice.datastore.services.EntitySetManager;
+import com.openlattice.datastore.services.EntitySetService;
 import com.openlattice.directory.Auth0UserDirectoryService;
 import com.openlattice.directory.LocalUserDirectoryService;
 import com.openlattice.directory.UserDirectoryService;
@@ -69,13 +83,13 @@ import com.openlattice.edm.PostgresEdmManager;
 import com.openlattice.edm.properties.PostgresTypeManager;
 import com.openlattice.edm.schemas.SchemaQueryService;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
-import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService;
 import com.openlattice.graph.Graph;
 import com.openlattice.graph.GraphQueryService;
 import com.openlattice.graph.PostgresGraphQueryService;
 import com.openlattice.graph.core.GraphService;
 import com.openlattice.ids.HazelcastIdGenerationService;
 import com.openlattice.ids.HazelcastLongIdService;
+import com.openlattice.jdbc.DataSourceManager;
 import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
@@ -87,8 +101,13 @@ import com.openlattice.organizations.OrganizationMetadataEntitySetsService;
 import com.openlattice.organizations.pods.OrganizationExternalDatabaseConfigurationPod;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
+import com.openlattice.postgres.PostgresTable;
 import com.openlattice.postgres.PostgresTableManager;
+import com.openlattice.postgres.external.DatabaseQueryManager;
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
+import com.openlattice.postgres.external.ExternalDatabasePermissioner;
+import com.openlattice.postgres.external.ExternalDatabasePermissioningService;
+import com.openlattice.postgres.external.PostgresDatabaseQueryService;
 import com.openlattice.requests.HazelcastRequestsManager;
 import com.openlattice.requests.RequestQueryService;
 import com.openlattice.search.PersistentSearchService;
@@ -97,7 +116,8 @@ import com.openlattice.subscriptions.PostgresSubscriptionService;
 import com.openlattice.subscriptions.SubscriptionService;
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies;
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask;
-import com.openlattice.transporter.types.TransporterDatastore;
+import com.openlattice.transporter.pods.TransporterPod;
+import com.openlattice.transporter.services.TransporterService;
 import com.openlattice.twilio.TwilioConfiguration;
 import com.openlattice.twilio.pods.TwilioConfigurationPod;
 import com.openlattice.users.Auth0SyncService;
@@ -114,13 +134,12 @@ import org.springframework.context.annotation.Profile;
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 
-import static com.openlattice.datastore.util.Util.returnAndLog;
-
 @Configuration
 @Import( {
         Auth0Pod.class,
         ByteBlobServicePod.class,
         AssemblerConfigurationPod.class,
+        TransporterPod.class,
         TwilioConfigurationPod.class,
         OrganizationExternalDatabaseConfigurationPod.class
 } )
@@ -178,7 +197,36 @@ public class DatastoreServicesPod {
     private ExternalDatabaseConnectionManager externalDbConnMan;
 
     @Inject
-    private TransporterDatastore transporterDatastore;
+    private TransporterService transporterService;
+
+    @Inject
+    private DataSourceManager dataSourceManager;
+
+    @Bean
+    public PrincipalsMapManager principalsMapManager() {
+        return new HazelcastPrincipalsMapManager( hazelcastInstance, aclKeyReservationService() );
+    }
+
+    @Bean
+    public SecurePrincipalsManager securePrincipalsManager() {
+        return new HazelcastPrincipalService(
+                hazelcastInstance,
+                aclKeyReservationService(),
+                authorizationManager(),
+                principalsMapManager(),
+                externalDatabasePermissionsManager()
+        );
+    }
+
+    @Bean
+    public ExternalDatabasePermissioningService externalDatabasePermissionsManager() {
+        return new ExternalDatabasePermissioner(
+                hazelcastInstance,
+                externalDbConnMan,
+                dcs(),
+                principalsMapManager()
+        );
+    }
 
     @Bean
     public PostgresUserApi pgUserApi() {
@@ -200,7 +248,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public Auth0SyncService auth0SyncService() {
-        return new Auth0SyncService( hazelcastInstance, principalService(), organizationsManager() );
+        return new Auth0SyncService( hazelcastInstance, securePrincipalsManager(), organizationsManager() );
     }
 
     @Bean
@@ -218,7 +266,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public AuthorizationManager authorizationManager() {
-        return new HazelcastAuthorizationService( hazelcastInstance, eventBus );
+        return new HazelcastAuthorizationService( hazelcastInstance, eventBus, principalsMapManager() );
     }
 
     @Bean
@@ -228,7 +276,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public SchemaQueryService schemaQueryService() {
-        return new PostgresSchemaQueryService( hikariDataSource );
+        return entityTypeManager();
     }
 
     @Bean
@@ -240,12 +288,17 @@ public class DatastoreServicesPod {
 
     @Bean
     public PostgresTypeManager entityTypeManager() {
-        return new PostgresTypeManager( hikariDataSource );
+        return new PostgresTypeManager( hikariDataSource, hazelcastInstance );
     }
 
     @Bean
     PartitionManager partitionManager() {
         return new PartitionManager( hazelcastInstance, hikariDataSource );
+    }
+
+    @Bean
+    DatasetService datasetService() {
+        return new DatasetService( hazelcastInstance, eventBus );
     }
 
     @Bean
@@ -255,7 +308,8 @@ public class DatastoreServicesPod {
                 aclKeyReservationService(),
                 authorizationManager(),
                 entityTypeManager(),
-                schemaManager()
+                schemaManager(),
+                datasetService()
         );
     }
 
@@ -270,6 +324,7 @@ public class DatastoreServicesPod {
                 dataModelService(),
                 hikariDataSource,
                 organizationMetadataEntitySetsService(),
+                datasetService(),
                 auditingConfiguration
         );
     }
@@ -306,9 +361,9 @@ public class DatastoreServicesPod {
     public Assembler assembler() {
         return new Assembler(
                 dcs(),
-                hikariDataSource,
                 authorizationManager(),
-                principalService(),
+                securePrincipalsManager(),
+                dbQueryManager(),
                 metricRegistry,
                 hazelcastInstance,
                 eventBus
@@ -326,16 +381,43 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    public SecurePrincipalsManager principalService() {
-        return new HazelcastPrincipalService( hazelcastInstance,
-                aclKeyReservationService(),
-                authorizationManager(),
-                eventBus );
+    public PhoneNumberService phoneNumberService() {
+        return new PhoneNumberService( hazelcastInstance );
     }
 
     @Bean
-    public PhoneNumberService phoneNumberService() {
-        return new PhoneNumberService( hazelcastInstance );
+    public DatabaseQueryManager dbQueryManager() {
+        return new PostgresDatabaseQueryService(
+                assemblerConfiguration,
+                externalDbConnMan,
+                securePrincipalsManager(),
+                dcs()
+        );
+    }
+
+    @Bean
+    public CollaborationDatabaseManager collaborationDatabaseManager() {
+        return new PostgresCollaborationDatabaseService(
+                hazelcastInstance,
+                dbQueryManager(),
+                externalDbConnMan,
+                authorizationManager(),
+                externalDatabasePermissionsManager(),
+                securePrincipalsManager(),
+                dcs(),
+                assemblerConfiguration
+        );
+    }
+
+    @Bean
+    public CollaborationService collaborationService() {
+        return new CollaborationService(
+                hazelcastInstance,
+                aclKeyReservationService(),
+                authorizationManager(),
+                securePrincipalsManager(),
+                collaborationDatabaseManager()
+        );
     }
 
     @Bean
@@ -344,16 +426,22 @@ public class DatastoreServicesPod {
                 hazelcastInstance,
                 aclKeyReservationService(),
                 authorizationManager(),
-                principalService(),
+                securePrincipalsManager(),
                 phoneNumberService(),
                 partitionManager(),
                 assembler(),
-                organizationMetadataEntitySetsService() );
+                organizationMetadataEntitySetsService(),
+                collaborationService() );
     }
 
     @Bean
-    public AssemblerDependencies assemblerDependencies() {
-        return new AssemblerDependencies( hikariDataSource, dcs(), externalDbConnMan, assemblerConnectionManager() );
+    public UserRoleSyncTaskDependencies assemblerDependencies() {
+        return new UserRoleSyncTaskDependencies(
+                dcs(),
+                externalDbConnMan,
+                externalDatabasePermissionsManager(),
+                securePrincipalsManager()
+        );
     }
 
     @Bean
@@ -376,8 +464,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public GraphService graphApi() {
-        return new Graph( hikariDataSource,
-                rds().getReadOnlyReplica(),
+        return new Graph( dataSourceResolver(),
                 entitySetManager(),
                 partitionManager(),
                 dataQueryService(),
@@ -391,9 +478,16 @@ public class DatastoreServicesPod {
     }
 
     @Bean
+    public DataSourceResolver dataSourceResolver() {
+        dataSourceManager.registerTablesWithAllDatasources( PostgresTable.E );
+        dataSourceManager.registerTablesWithAllDatasources( PostgresTable.DATA );
+        return new DataSourceResolver( hazelcastInstance, dataSourceManager );
+    }
+
+    @Bean
     public EntityKeyIdService idService() {
         return new PostgresEntityKeyIdService(
-                hikariDataSource,
+                dataSourceResolver(),
                 idGenerationService(),
                 partitionManager() );
     }
@@ -410,7 +504,12 @@ public class DatastoreServicesPod {
 
     @Bean
     public OrganizationMetadataEntitySetsService organizationMetadataEntitySetsService() {
-        return new OrganizationMetadataEntitySetsService( dataModelService() );
+        return new OrganizationMetadataEntitySetsService(
+                hazelcastInstance,
+                dataModelService(),
+                principalsMapManager(),
+                authorizationManager()
+        );
     }
 
     @Bean
@@ -425,17 +524,16 @@ public class DatastoreServicesPod {
 
     @Bean
     public AppService appService() {
-        return returnAndLog(
-                new AppService(
-                        hazelcastInstance,
-                        dataModelService(),
-                        organizationsManager(),
-                        authorizationManager(),
-                        principalService(),
-                        aclKeyReservationService(),
-                        collectionsManager(),
-                        entitySetManager()
-                ), "Checkpoint app service"
+        logger.info( "Checkpoint app service" );
+        return new AppService(
+                hazelcastInstance,
+                dataModelService(),
+                organizationsManager(),
+                authorizationManager(),
+                securePrincipalsManager(),
+                aclKeyReservationService(),
+                collectionsManager(),
+                entitySetManager()
         );
     }
 
@@ -451,7 +549,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public ConductorElasticsearchApi conductorElasticsearchApi() {
-        return new DatastoreElasticsearchImpl( datastoreConfiguration.getSearchConfiguration() );
+        return new DatastoreKotlinElasticsearchImpl(  datastoreConfiguration.getSearchConfiguration() );
     }
 
     @Bean
@@ -465,7 +563,8 @@ public class DatastoreServicesPod {
                 entitySetManager(),
                 graphApi(),
                 entityDatastore(),
-                indexingMetadataManager()
+                indexingMetadataManager(),
+                datasetService()
         );
     }
 
@@ -490,36 +589,22 @@ public class DatastoreServicesPod {
     @Bean
     public PostgresEntityDataQueryService dataQueryService() {
         return new PostgresEntityDataQueryService(
-                hikariDataSource,
-                rds().getReadOnlyReplica(),
+                dataSourceResolver(),
                 byteBlobDataManager,
                 partitionManager()
         );
     }
 
     @Bean
-    public AssemblerConnectionManager assemblerConnectionManager() {
-        return new AssemblerConnectionManager(
-                assemblerConfiguration,
-                externalDbConnMan,
-                hikariDataSource,
-                principalService(),
-                organizationsManager(),
-                dcs(),
-                eventBus,
-                metricRegistry );
-    }
-
-    @Bean
     public PersistentSearchService persistentSearchService() {
-        return new PersistentSearchService( hikariDataSource, principalService() );
+        return new PersistentSearchService( hikariDataSource, securePrincipalsManager() );
     }
 
     @Bean AwsDataSinkService awsDataSinkService() {
         return new AwsDataSinkService(
                 partitionManager(),
                 byteBlobDataManager,
-                hikariDataSource,
+                dataSourceResolver(),
                 rds().getReadOnlyReplica()
         );
     }
@@ -583,13 +668,12 @@ public class DatastoreServicesPod {
     @Bean
     public DataDeletionManager dataDeletionManager() {
         return new DataDeletionService(
-                dataModelService(),
                 entitySetManager(),
-                dataGraphService(),
                 authorizationManager(),
-                auditRecordEntitySetsManager(),
                 entityDatastore(),
-                graphApi()
+                graphApi(),
+                jobService(),
+                partitionManager()
         );
     }
 
@@ -598,13 +682,15 @@ public class DatastoreServicesPod {
         return new ExternalDatabaseManagementService(
                 hazelcastInstance,
                 externalDbConnMan,
-                principalService(),
+                principalsMapManager(),
                 aclKeyReservationService(),
                 authorizationManager(),
                 organizationExternalDatabaseConfiguration,
-                transporterDatastore,
+                externalDatabasePermissionsManager(),
+                transporterService,
                 dcs(),
-                hikariDataSource );
+                hikariDataSource,
+                datasetService() );
     }
 
     @Bean
@@ -616,7 +702,7 @@ public class DatastoreServicesPod {
                 dataModelService(),
                 dataGraphService(),
                 idService(),
-                principalService(),
+                securePrincipalsManager(),
                 organizationsManager(),
                 collectionsManager(),
                 executor,
@@ -640,7 +726,10 @@ public class DatastoreServicesPod {
 
     @PostConstruct
     void initPrincipals() {
-        Principals.init( principalService(), hazelcastInstance );
-        organizationMetadataEntitySetsService().dataGraphManager = dataGraphService();
+        Principals.init( securePrincipalsManager(), hazelcastInstance );
+
+        OrganizationMetadataEntitySetsService metadataService = organizationMetadataEntitySetsService();
+        metadataService.dataDeletionService = dataDeletionManager();
+        metadataService.dataGraphManager = dataGraphService();
     }
 }

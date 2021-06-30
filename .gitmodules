@@ -1,60 +1,27 @@
-[submodule "socrates"]
-	path = socrates
-	url = git@github.com:openlattice/socrates.git
-[submodule "api"]
-	path = api
-	url = git@github.com:openlattice/api.git
 [submodule "chronicle-api"]
 	path = chronicle-api
 	url = git@github.com:openlattice/chronicle-api.git
 [submodule "chronicle-server"]
 	path = chronicle-server
 	url = git@github.com:openlattice/chronicle-server.git
-[submodule "conductor-client"]
-	path = conductor-client
-	url = git@github.com:openlattice/conductor-client.git
-[submodule "conductor"]
-	path = conductor
-	url = git@github.com:openlattice/conductor.git
-[submodule "datastore"]
-	path = datastore
-	url = git@github.com:openlattice/datastore.git
-[submodule "courier"]
-	path = courier
-	url = git@github.com:openlattice/courier.git
-[submodule "scribe"]
-	path = scribe
-	url = git@github.com:openlattice/scribe.git
-[submodule "gradles"]
-	path = gradles
-	url = git@github.com:openlattice/gradles.git
-[submodule "rehearsal"]
-	path = rehearsal
-	url = git@github.com:openlattice/rehearsal.git
+[submodule "launchpad"]
+	path = launchpad
+	url = git@github.com:openlattice/launchpad.git
+[submodule "mechanic"]
+	path = mechanic
+	url = git@github.com:openlattice/mechanic.git
+[submodule "neuron"]
+	path = neuron
+	url = git@github.com:openlattice/neuron.git
 [submodule "rhizome-client"]
 	path = rhizome-client
 	url = git@github.com:geekbeast/rhizome-client.git
 [submodule "rhizome"]
 	path = rhizome
 	url = git@github.com:geekbeast/rhizome.git
-[submodule "neuron"]
-	path = neuron
-	url = git@github.com:openlattice/neuron.git
-[submodule "mechanic"]
-	path = mechanic
-	url = git@github.com:openlattice/mechanic.git
-[submodule "launchpad"]
-	path = launchpad
-	url = git@github.com:openlattice/launchpad.git
 [submodule "shuttle"]
 	path = shuttle
 	url = git@github.com:openlattice/shuttle.git
-[submodule "indexer"]
-	path = indexer
-	url = git@github.com:openlattice/indexer.git
-[submodule "transporter"]
-	path = transporter
-	url = git@github.com:openlattice/transporter.git
-[submodule "linker"]
-	path = linker
-	url = git@github.com:openlattice/linker.git
+[submodule "socrates"]
+	path = socrates
+	url = git@github.com:openlattice/socrates.git

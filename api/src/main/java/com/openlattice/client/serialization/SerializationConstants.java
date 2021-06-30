@@ -28,6 +28,7 @@ public final class SerializationConstants {
     public static final String ACL_OBJECT_PATH                  = "aclKey";                  // Correspond to single hierarchy of securable objects.
     public static final String ACL_OBJECT_ROOT                  = "aclRoot";
     public static final String ACTION                           = "action";
+    public static final String ADMIN_ROLE_ACL_KEY               = "adminRoleAclKey";
     public static final String AGGREGATIONS                     = "aggregations";
     public static final String AGGREGATION_TYPE                 = "aggregationType";
     public static final String ALERT_METADATA                   = "alertMetadata";
@@ -84,6 +85,7 @@ public final class SerializationConstants {
     public static final String DATA                             = "data";
     public static final String DATABASE                         = "database";
     public static final String DATASOURCE_IDS                   = "datasourceIds";
+    public static final String DATASTORE                        = "datastore";
     public static final String DATATYPE_FIELD                   = "datatype";
     public static final String DATA_ID                          = "dataId";
     public static final String DEFAULT_SHOW                     = "defaultShow";
@@ -93,6 +95,7 @@ public final class SerializationConstants {
     public static final String DESCRIPTION_FIELD                = "description";
     public static final String DETAILS_FIELD                    = "details";
     public static final String DIFF                             = "diff";
+    public static final String DRIVER                           = "driver";
     public static final String DST                              = "dst";
     public static final String DST_ENTITY_INDEX                 = "dstEntityIndex";
     public static final String DST_ENTITY_KEY_ID                = "dstEntityKeyId";
@@ -212,6 +215,7 @@ public final class SerializationConstants {
     public static final String PAGING_TOKEN                     = "pagingToken";
     public static final String PARENT_TYPE_FIELD                = "parentType";
     public static final String PARTITIONS                       = "partitions";
+    public static final String PASSWORD                         = "password";
     public static final String PATH                             = "path";
     public static final String PERMISSIONS                      = "permissions";
     public static final String PERMISSIONS_MAP                  = "permissionsMap";

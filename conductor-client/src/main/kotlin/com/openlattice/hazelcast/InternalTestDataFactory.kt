@@ -83,9 +83,9 @@ class InternalTestDataFactory {
             for (j in 0 until 10 ) {
                 val inner = mutableMapOf<UUID, UUID>()
                 for ( i in 0 until 10 ){
-                    inner.put(UUID.randomUUID(), UUID.randomUUID())
+                    inner[UUID.randomUUID()] = UUID.randomUUID()
                 }
-                outer.put(UUID.randomUUID(), inner)
+                outer[UUID.randomUUID()] = inner
             }
             return CollectionTemplates( outer )
         }

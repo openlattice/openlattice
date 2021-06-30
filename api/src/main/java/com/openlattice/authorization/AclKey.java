@@ -21,12 +21,13 @@
 package com.openlattice.authorization;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.common.collect.ImmutableList;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDList;
 
 import java.util.List;
+import java.util.StringJoiner;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 /**
  * Immutable list of uuids for use in Hazelcast
@@ -62,7 +63,11 @@ public class AclKey extends DelegatedUUIDList implements Comparable<AclKey> {
     }
 
     public String getIndex() {
-        return stream().map( UUID::toString ).collect( Collectors.joining() );
+        StringJoiner joiner = new StringJoiner(",");
+        for( UUID uuid : this ) {
+            joiner.add(uuid.toString());
+        }
+        return joiner.toString();
     }
 
     public int getSize() {
@@ -93,6 +98,11 @@ public class AclKey extends DelegatedUUIDList implements Comparable<AclKey> {
     @JsonCreator
     public static AclKey wrap( ImmutableList<UUID> uuids ) {
         return new AclKey( uuids );
+    }
+
+    @JsonIgnore
+    public UUID getRoot() {
+        return this.get( 0 );
     }
 
 }

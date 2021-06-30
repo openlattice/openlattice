@@ -3,12 +3,29 @@ package com.openlattice.transporter
 import com.openlattice.ApiHelpers
 import com.openlattice.IdConstants
 import com.openlattice.edm.EdmConstants
-import com.openlattice.postgres.*
-import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.edm.PropertyTypeIdFqn
+import com.openlattice.postgres.PostgresArrays
+import com.openlattice.postgres.PostgresColumn.DST_ENTITY_KEY_ID
+import com.openlattice.postgres.PostgresColumn.DST_ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.EDGE_ENTITY_KEY_ID
+import com.openlattice.postgres.PostgresColumn.EDGE_ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.ID_VALUE
+import com.openlattice.postgres.PostgresColumn.LAST_TRANSPORT
+import com.openlattice.postgres.PostgresColumn.LINKING_ID
+import com.openlattice.postgres.PostgresColumn.ORIGIN_ID
+import com.openlattice.postgres.PostgresColumn.PARTITION
+import com.openlattice.postgres.PostgresColumn.PROPERTY_TYPE_ID
+import com.openlattice.postgres.PostgresColumn.SRC_ENTITY_KEY_ID
+import com.openlattice.postgres.PostgresColumn.SRC_ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.VERSION
+import com.openlattice.postgres.PostgresColumnDefinition
+import com.openlattice.postgres.PostgresExpressionIndexDefinition
+import com.openlattice.postgres.PostgresTable
+import com.openlattice.postgres.PostgresTableDefinition
+import com.openlattice.postgres.external.Schemas
 import com.openlattice.transporter.types.TransporterColumn
-import com.openlattice.transporter.types.TransporterDatastore.Companion.PUBLIC_SCHEMA
 import com.zaxxer.hikari.HikariDataSource
-import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.Logger
 import java.sql.Connection
 import java.util.*
@@ -20,23 +37,22 @@ private val transportTimestampColumn: PostgresColumnDefinition = LAST_TRANSPORT
 private const val BATCH_LIMIT = 10_000
 
 val MAT_EDGES_TABLE = edgesTableDefinition()
-val MAT_EDGES_COLUMNS_LIST = MAT_EDGES_TABLE.columns.map { it.name }.toList()
 const val MAT_EDGES_TABLE_NAME = "et_edges"
 
-fun unquotedTableName(entityTypeId: UUID): String {
+fun entityTypeTableName(entityTypeId: UUID): String {
     return "et_$entityTypeId"
 }
 
-internal fun tableName(entityTypeId: UUID): String {
-    return ApiHelpers.dbQuote(unquotedTableName(entityTypeId))
+internal fun quotedEtTableName(entityTypeId: UUID): String {
+    return ApiHelpers.dbQuote(entityTypeTableName(entityTypeId))
 }
 
-internal fun tableNameWithSchema(schema: String, entityTypeId: UUID): String {
-    return "${schema}.${tableName(entityTypeId)}"
+internal fun tableNameWithSchema(schema: Schemas, entityTypeId: UUID): String {
+    return "${schema}.${quotedEtTableName(entityTypeId)}"
 }
 
 fun edgesTableDefinition(): PostgresTableDefinition {
-    val definition = PostgresTableDefinition("$PUBLIC_SCHEMA.$MAT_EDGES_TABLE_NAME")
+    val definition = PostgresTableDefinition("${Schemas.PUBLIC_SCHEMA}.$MAT_EDGES_TABLE_NAME")
     definition.addColumns(
             SRC_ENTITY_SET_ID,
             SRC_ENTITY_KEY_ID,
@@ -57,8 +73,8 @@ fun edgesTableDefinition(): PostgresTableDefinition {
 }
 
 fun tableDefinition(entityTypeId: UUID, propertyColumns: Collection<PostgresColumnDefinition>): PostgresTableDefinition {
-    val definition = PostgresTableDefinition(tableNameWithSchema(PUBLIC_SCHEMA, entityTypeId))
-    val indexPrefix = unquotedTableName(entityTypeId) + "_"
+    val definition = PostgresTableDefinition(tableNameWithSchema(Schemas.PUBLIC_SCHEMA, entityTypeId))
+    val indexPrefix = entityTypeTableName(entityTypeId) + "_"
     definition.addColumns(
             ENTITY_SET_ID,
             ID_VALUE,
@@ -156,7 +172,7 @@ fun updateRowsForPropertyType(
  * 1 - partitions array
  * 2 - entity set ids array
  */
-fun updatePrimaryKeyForEntitySets(destTable: String): String {
+fun updateEntityTypeTableEntries(destTable: String): String {
     val selectFromIds = "SELECT " +
             "${ENTITY_SET_ID.name},${ID_VALUE.name},${LINKING_ID.name},${VERSION.name} " +
             "FROM ${PostgresTable.IDS.name} " +
@@ -247,7 +263,7 @@ fun updateRowsForEdges(): String {
 }
 
 /**
- * Update [IDS] with new transport time
+ * Update [PostgresTable.IDS] with new transport time
  *
  * column bindings are
  * 1 - last write value being processed
@@ -264,23 +280,9 @@ fun updateLastWriteForId(): String {
             " AND abs(${VERSION.name}) > ${transportTimestampColumn.name} "
 }
 
-fun importTablesFromForeignSchemaQuery(
-    remoteSchema: String,
-    remoteTables: Set<String>,
-    localSchema: String,
-    usingFdwName: String
-): String {
-    val tablesClause = if (remoteTables.isEmpty()) {
-        ""
-    } else {
-        "LIMIT TO (${remoteTables.joinToString(",")})"
-    }
-    return "import foreign schema $remoteSchema $tablesClause from server $usingFdwName INTO $localSchema;"
-}
-
-fun checkIfTableExistsQuery(
-    schema: String,
-    table: String
+internal fun checkIfTableExistsQuery(
+        schema: Schemas,
+        table: String
 ): String {
     return """
         SELECT EXISTS (
@@ -291,10 +293,10 @@ fun checkIfTableExistsQuery(
         """.trimIndent()
 }
 
-fun addAllMissingColumnsQuery(table: PostgresTableDefinition, columns: Set<PostgresColumnDefinition>): String =
+internal fun addAllMissingColumnsQuery(table: PostgresTableDefinition, columns: Set<PostgresColumnDefinition>): String =
         "ALTER TABLE ${table.name} " + columns.joinToString(",") { c -> "ADD COLUMN IF NOT EXISTS ${c.sql()}" }
 
-fun removeColumnsQuery(table: PostgresTableDefinition, columns: List<PostgresColumnDefinition>): String =
+internal fun removeColumnsQuery(table: PostgresTableDefinition, columns: List<PostgresColumnDefinition>): String =
         "ALTER TABLE ${table.name} " + columns.joinToString(",") { c -> "DROP COLUMN ${c.name}" }
 
 // TODO also need to refresh views when property types change (drop view, recreate view)
@@ -327,57 +329,58 @@ fun transportTable(
     }
 }
 
-fun setUserInhertRolePrivileges(role: String): String {
+internal fun setUserInhertRolePrivileges(role: String): String {
     return "ALTER ROLE ${ApiHelpers.dbQuote(role)} INHERIT"
 }
 
-fun revokeTablePermissionsForRole(schema: String, entitySetName: String, role: String): String {
-    return "REVOKE ALL PRIVILEGES ON $schema.${ApiHelpers.dbQuote(entitySetName)} FROM ${ApiHelpers.dbQuote(role)}"
+internal fun grantUsageOnSchemaSql(schema: Schemas, orgUserId: String): String {
+    return "GRANT USAGE ON SCHEMA $schema TO ${ApiHelpers.dbQuote(orgUserId)}"
 }
 
-fun grantUsageOnschemaSql(schemaName: String, orgUserId: String): String {
-    return "GRANT USAGE ON SCHEMA $schemaName TO ${ApiHelpers.dbQuote(orgUserId)}"
+internal fun removePreviouslyTransportedEntities(schema: Schemas, entitySetId: UUID, entityTypeId: UUID): String {
+    return "DELETE FROM $schema.${quotedEtTableName(entityTypeId)} " +
+            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId'"
 }
 
-fun dropForeignTypeTable(schema: String, entityTypeId: UUID): String {
-    return "DROP FOREIGN TABLE IF EXISTS $schema.${tableName(entityTypeId)}"
+internal fun dropForeignTypeTable(schema: Schemas, entityTypeId: UUID): String {
+    return "DROP FOREIGN TABLE IF EXISTS $schema.${quotedEtTableName(entityTypeId)}"
 }
 
-fun destroyEdgeView(schema: String, entitySetName: String): String {
+internal fun destroyEdgeView(schema: Schemas, entitySetName: String): String {
     return "DROP VIEW IF EXISTS $schema.${ApiHelpers.dbQuote(edgeViewName(entitySetName))}"
 }
 
-fun destroyView(schema: String, entitySetName: String): String {
+fun destroyView(schema: Schemas, entitySetName: String): String {
     return "DROP VIEW IF EXISTS $schema.${ApiHelpers.dbQuote(entitySetName)}"
 }
 
 fun createEntitySetViewInSchemaFromSchema(
         entitySetName: String,
         entitySetId: UUID,
-        destinationSchema: String,
+        destinationSchema: Schemas,
         entityTypeId: UUID,
-        propertyTypes: Map<UUID, FullQualifiedName>,
-        sourceSchema: String
+        propertyTypes: Set<PropertyTypeIdFqn>,
+        sourceSchema: Schemas
 ): String {
-    val colsSql = propertyTypes.map { (id, ptName) ->
+    val colsSql = propertyTypes.joinToString { (id, fqn) ->
         val column = ApiHelpers.dbQuote(id.toString())
-        val quotedPt = ApiHelpers.dbQuote(ptName.toString())
+        val quotedPt = ApiHelpers.dbQuote(fqn.toString())
         "$column as $quotedPt"
-    }.joinToString()
+    }
 
     return """
             CREATE OR REPLACE VIEW $destinationSchema.${ApiHelpers.dbQuote(entitySetName)} AS 
                 SELECT ${ID_VALUE.name} as ${ApiHelpers.dbQuote(EdmConstants.ID_FQN.toString())}, 
-                    $colsSql FROM $sourceSchema.${tableName(entityTypeId)}
+                    $colsSql FROM $sourceSchema.${quotedEtTableName(entityTypeId)}
                 WHERE ${ENTITY_SET_ID.name} = '$entitySetId'
         """.trimIndent()
 }
 
-fun createEdgeSetViewInSchema(
+internal fun createEdgeSetViewInSchema(
         entitySetName: String,
         entitySetId: UUID,
-        destinationSchema: String,
-        sourceSchema: String
+        destinationSchema: Schemas,
+        sourceSchema: Schemas
 ): String {
     return """
         CREATE OR REPLACE VIEW $destinationSchema.${ApiHelpers.dbQuote(edgeViewName(entitySetName))} AS
@@ -388,11 +391,11 @@ fun createEdgeSetViewInSchema(
     """.trimIndent()
 }
 
-fun grantRoleToUser(roleName: String, username: String): String {
+internal fun grantRoleToUser(roleName: String, username: String): String {
     return "GRANT ${ApiHelpers.dbQuote(roleName)} to ${ApiHelpers.dbQuote(username)}"
 }
 
-fun grantSelectOnColumnsToRoles(schema: String, entitySetName: String, role: String, columns: List<String>): String {
+internal fun grantSelectOnColumnsToRoles(schema: Schemas, entitySetName: String, role: String, columns: List<String>): String {
     if (columns.isEmpty()) {
         return ""
     }
@@ -406,10 +409,6 @@ fun grantSelectOnColumnsToRoles(schema: String, entitySetName: String, role: Str
 /**
  * The below are intentionally unquoted
  */
-fun edgeViewName(entitySetName: String): String {
+internal fun edgeViewName(entitySetName: String): String {
     return "${entitySetName}_edges"
-}
-
-fun viewRoleName(entitySetName: String, columnName: String): String {
-    return "${entitySetName}_$columnName"
 }

@@ -21,8 +21,6 @@
 
 package com.openlattice.postgres.mapstores;
 
-import static com.openlattice.postgres.PostgresTable.ORGANIZATION_ASSEMBLIES;
-
 import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.config.IndexConfig;
 import com.hazelcast.config.IndexType;
@@ -32,12 +30,15 @@ import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.organization.OrganizationEntitySetFlag;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.zaxxer.hikari.HikariDataSource;
+
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.EnumSet;
 import java.util.Map;
 import java.util.UUID;
+
+import static com.openlattice.postgres.PostgresTable.ORGANIZATION_ASSEMBLIES;
 
 public class OrganizationAssemblyMapstore extends AbstractBasePostgresMapstore<UUID, OrganizationAssembly> {
     public static final String INITIALIZED_INDEX                 = "initialized";
@@ -51,7 +52,8 @@ public class OrganizationAssemblyMapstore extends AbstractBasePostgresMapstore<U
         materializedEntitySetsMapStore = new MaterializedEntitySetMapStore( hds );
     }
 
-    @Override protected void bind( PreparedStatement ps, UUID key, OrganizationAssembly value ) throws SQLException {
+    @Override
+    protected void bind( PreparedStatement ps, UUID key, OrganizationAssembly value ) throws SQLException {
 
         bind( ps, key, 1 );
         ps.setBoolean( 2, value.getInitialized() );
@@ -60,12 +62,14 @@ public class OrganizationAssemblyMapstore extends AbstractBasePostgresMapstore<U
         ps.setBoolean( 3, value.getInitialized() );
     }
 
-    @Override protected int bind( PreparedStatement ps, UUID key, int parameterIndex ) throws SQLException {
+    @Override
+    protected int bind( PreparedStatement ps, UUID key, int parameterIndex ) throws SQLException {
         ps.setObject( parameterIndex++, key );
         return parameterIndex;
     }
 
-    @Override protected OrganizationAssembly mapToValue( ResultSet rs ) throws SQLException {
+    @Override
+    protected OrganizationAssembly mapToValue( ResultSet rs ) throws SQLException {
         final UUID organizationId = ResultSetAdapters.organizationId( rs );
         final boolean initialized = ResultSetAdapters.initialized( rs );
 
@@ -76,22 +80,26 @@ public class OrganizationAssemblyMapstore extends AbstractBasePostgresMapstore<U
         return new OrganizationAssembly( organizationId, initialized, materializedEntitySets );
     }
 
-    @Override protected UUID mapToKey( ResultSet rs ) throws SQLException {
+    @Override
+    protected UUID mapToKey( ResultSet rs ) throws SQLException {
         return ResultSetAdapters.organizationId( rs );
     }
 
-    @Override public UUID generateTestKey() {
+    @Override
+    public UUID generateTestKey() {
         return testKey;
     }
 
-    @Override public OrganizationAssembly generateTestValue() {
+    @Override
+    public OrganizationAssembly generateTestValue() {
         return new OrganizationAssembly(
                 testKey,
                 false,
                 Map.of() );
     }
 
-    @Override public MapConfig getMapConfig() {
+    @Override
+    public MapConfig getMapConfig() {
         return super
                 .getMapConfig()
                 .addIndexConfig( new IndexConfig( IndexType.HASH, INITIALIZED_INDEX ) )

@@ -7,19 +7,33 @@ import com.google.common.eventbus.EventBus
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
+import com.openlattice.IdConstants
 import com.openlattice.assembler.Assembler
 import com.openlattice.assembler.PostgresDatabases
-import com.openlattice.authorization.*
+import com.openlattice.authorization.Ace
+import com.openlattice.authorization.Acl
+import com.openlattice.authorization.AclKey
+import com.openlattice.authorization.AuthorizationManager
+import com.openlattice.authorization.HazelcastAclKeyReservationService
+import com.openlattice.authorization.Permission
+import com.openlattice.authorization.Principal
+import com.openlattice.authorization.PrincipalType
+import com.openlattice.authorization.SecurablePrincipal
 import com.openlattice.authorization.mapstores.PrincipalMapstore
+import com.openlattice.collaborations.CollaborationService
+import com.openlattice.collections.mapstores.EntitySetCollectionMapstore
 import com.openlattice.controllers.exceptions.ResourceNotFoundException
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.hazelcast.processors.GetMembersOfOrganizationEntryProcessor
 import com.openlattice.notifications.sms.PhoneNumberService
 import com.openlattice.notifications.sms.SmsEntitySetInformation
 import com.openlattice.organization.OrganizationPrincipal
 import com.openlattice.organization.roles.Role
-import com.openlattice.organizations.events.*
+import com.openlattice.organizations.events.MembersAddedToOrganizationEvent
+import com.openlattice.organizations.events.MembersRemovedFromOrganizationEvent
+import com.openlattice.organizations.events.OrganizationCreatedEvent
+import com.openlattice.organizations.events.OrganizationDeletedEvent
+import com.openlattice.organizations.events.OrganizationUpdatedEvent
 import com.openlattice.organizations.mapstores.CONNECTIONS_INDEX
 import com.openlattice.organizations.mapstores.MEMBERS_INDEX
 import com.openlattice.organizations.processors.OrganizationEntryProcessor
@@ -27,15 +41,17 @@ import com.openlattice.organizations.processors.OrganizationEntryProcessor.Resul
 import com.openlattice.organizations.processors.OrganizationReadEntryProcessor
 import com.openlattice.organizations.processors.UpdateOrganizationSmsEntitySetInformationEntryProcessor
 import com.openlattice.organizations.roles.SecurePrincipalsManager
+import com.openlattice.postgres.mapstores.AppConfigMapstore
+import com.openlattice.postgres.mapstores.EntitySetMapstore
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
 import com.openlattice.users.getAppMetadata
 import com.openlattice.users.processors.aggregators.UsersWithConnectionsAggregator
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.util.*
+import java.util.stream.Collectors
 import java.util.stream.Stream
 import javax.inject.Inject
-import kotlin.streams.asSequence
 
 /**
  * This class manages organizations.
@@ -65,26 +81,39 @@ class HazelcastOrganizationService(
         private val phoneNumbers: PhoneNumberService,
         private val partitionManager: PartitionManager,
         private val assembler: Assembler,
-        private val organizationMetadataEntitySetsService: OrganizationMetadataEntitySetsService
+        private val organizationMetadataEntitySetsService: OrganizationMetadataEntitySetsService,
+        private val collaborationService: CollaborationService
 ) {
-    init { organizationMetadataEntitySetsService.organizationService = this }
+    init {
+        organizationMetadataEntitySetsService.organizationService = this
+    }
 
     protected val organizations = HazelcastMap.ORGANIZATIONS.getMap(hazelcastInstance)
     protected val users = HazelcastMap.USERS.getMap(hazelcastInstance)
     protected val organizationDatabases = HazelcastMap.ORGANIZATION_DATABASES.getMap(hazelcastInstance)
+    protected val entitySetMapstore = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
+    protected val entitySetCollectionsMapstore = HazelcastMap.ENTITY_SET_COLLECTIONS.getMap(hazelcastInstance)
+    protected val appConfigsMapstore = HazelcastMap.APP_CONFIGS.getMap(hazelcastInstance)
 
     @Inject
     private lateinit var eventBus: EventBus
 
     @Timed
     fun getOrganization(p: Principal): OrganizationPrincipal {
-        return checkNotNull(securePrincipalsManager.getPrincipal(p.id) as OrganizationPrincipal)
+        return checkNotNull(securePrincipalsManager.getSecurablePrincipal(p.id) as OrganizationPrincipal)
+    }
+
+    @Timed
+    fun getOrganizationPrincipals(ids: Set<UUID>): Collection<OrganizationPrincipal> {
+        return organizations.executeOnKeys(ids) {
+            it.value.securablePrincipal
+        }.values
     }
 
     @Timed
     fun maybeGetOrganization(p: Principal): Optional<SecurablePrincipal> {
         return try {
-            Optional.of(securePrincipalsManager.getPrincipal(p.id))
+            Optional.of(securePrincipalsManager.getSecurablePrincipal(p.id))
         } catch (e: NullPointerException) {
             Optional.empty()
         }
@@ -106,21 +135,21 @@ class HazelcastOrganizationService(
         }
     }
 
-    private fun initializeOrganizationAdminRole(principal: Principal, organization: Organization) {
+    private fun initializeOrganizationAdminRole(principal: Principal, adminRoleAclKey: AclKey, organization: Organization): Role {
         //Create the admin role for the organization and give it ownership of organization.
-        val adminRole = createOrganizationAdminRole(organization.securablePrincipal)
+        val adminRole = createOrganizationAdminRole(organization.securablePrincipal, adminRoleAclKey)
         createRoleIfNotExists(principal, adminRole)
-        authorizations.addPermission(
-                organization.getAclKey(), adminRole.principal, EnumSet.allOf(Permission::class.java)
-        )
+        authorizations.addPermission(organization.getAclKey(), adminRole.principal, EnumSet.allOf(Permission::class.java))
         addRoleToPrincipalInOrganization(organization.id, adminRole.id, principal)
 
         //Grant the creator of the organizations
         authorizations.addPermission(organization.getAclKey(), principal, EnumSet.allOf(Permission::class.java))
+
+        return adminRole
     }
 
     @Timed
-    fun createOrganization(principal: Principal, organization: Organization) {
+    fun createOrganization(creatorPrincipal: Principal, organization: Organization): UUID {
         /*
          * Roles shouldn't be members of an organizations.
          *
@@ -129,32 +158,33 @@ class HazelcastOrganizationService(
          *
          * In order to function roles must have READ access on the organization and
          */
-        val membersToAdd = when (principal.type) {
-            PrincipalType.USER ->
-                //Add the organization principal to the creator marking them as a member of the organization
-                setOf(principal)
-            PrincipalType.ROLE ->
-                //For a role we ensure that it has
-                setOf()
-            else -> throw IllegalStateException("Only users and roles can create organizations.")
-        }//Fall through by design
 
-        initializeOrganizationPrincipal(principal, organization)
+        check(ALLOWED_ORG_CREATOR_PRINCIPAL_TYPES.contains(creatorPrincipal.type)) {
+            "Error creating org ${organization.title} -- only $ALLOWED_ORG_CREATOR_PRINCIPAL_TYPES can create organizations."
+        }
+
+        initializeOrganizationPrincipal(creatorPrincipal, organization)
         initializeOrganization(organization)
-        organizationMetadataEntitySetsService.initializeOrganizationMetadataEntitySets(organization.id)
 
         // set up organization database
-        val orgDatabase = assembler.createOrganizationAndReturnOid(organization.id)
-        organizationDatabases.set(organization.id, orgDatabase)
+        val orgDb = assembler.createOrganizationAndReturnOid(organization.id)
+        organizationDatabases[organization.id] = orgDb
 
-        initializeOrganizationAdminRole(principal, organization)
+        val adminRole = initializeOrganizationAdminRole(creatorPrincipal, organization.adminRoleAclKey, organization)
 
-        if (membersToAdd.isNotEmpty()) {
-            addMembers(organization.getAclKey().first(), membersToAdd, mapOf())
+        organizationMetadataEntitySetsService.initializeOrganizationMetadataEntitySets(adminRole)
+
+        if (creatorPrincipal.type == PrincipalType.USER) {
+            val userAclKey = securePrincipalsManager.lookup(creatorPrincipal)
+
+            addMembers(organization.id, setOf(creatorPrincipal), mapOf())
+            securePrincipalsManager.addPrincipalToPrincipal(organization.adminRoleAclKey, userAclKey)
         }
 
         eventBus.post(OrganizationCreatedEvent(organization))
         setSmsEntitySetInformation(organization.smsEntitySetInfo)
+
+        return organization.id
     }
 
     private fun initializeOrganization(organization: Organization) {
@@ -170,8 +200,10 @@ class HazelcastOrganizationService(
     fun getOrganization(organizationId: UUID): Organization? {
         val org = organizations[organizationId]
         val roles = getRoles(organizationId)
+        val members = getMembers(organizationId)
 
         org?.roles?.addAll(roles)
+        org?.members?.addAll(members)
 
         return org
     }
@@ -183,26 +215,50 @@ class HazelcastOrganizationService(
         }) as Set<UUID>
     }
 
+    @Timed
+    fun getAdminRoleAclKey(organizationId: UUID): AclKey {
+        return organizations.executeOnKey(organizationId, OrganizationReadEntryProcessor {
+            it.adminRoleAclKey
+        }) as AclKey
+    }
+
     fun getOrganizationDatabaseName(organizationId: UUID): String {
         return organizationDatabases.getValue(organizationId).name
     }
 
-    fun getOrganizations(organizationIds: Stream<UUID>): Iterable<Organization> {
+    @Deprecated("Calls to load multiple organizations at once should use OrganizationService.getOrganizationPrincipals. " +
+            "Organization members (and other data) should only be loaded per organization as needed.")
+    @JvmOverloads
+    fun getOrganizations(organizationIdStream: Stream<UUID>, includeMembers: Boolean = false): Iterable<Organization> {
         //TODO: Figure out why copy is here?
-        return organizationIds.asSequence().map(this::getOrganization)
+
+        val orgIds = organizationIdStream.collect(Collectors.toSet())
+
+        val membersByOrg = if (includeMembers) {
+            securePrincipalsManager.getOrganizationMembers(orgIds).mapValues { it.value.map { sp -> sp.principal }.toMutableSet() }
+        } else {
+            mapOf()
+        }
+
+        return organizations.getAll(orgIds)
+                .values
                 .filterNotNull()
-                .map { org ->
+                .map {
                     Organization(
-                            org.securablePrincipal,
-                            org.emailDomains,
-                            org.members,
+                            it.securablePrincipal,
+                            it.adminRoleAclKey,
+                            it.emailDomains,
+                            membersByOrg[it.id] ?: mutableSetOf(),
                             //TODO: If you're an organization you can view its roles.
-                            org.roles,
-                            org.smsEntitySetInfo,
-                            org.partitions,
-                            org.apps
+                            getRoles(it.id).toMutableSet(),
+                            it.smsEntitySetInfo,
+                            it.partitions,
+                            it.apps,
+                            it.connections,
+                            it.grants,
+                            it.organizationMetadataEntitySetIds
                     )
-                }.asIterable()
+                }
     }
 
     fun destroyOrganization(organizationId: UUID) {
@@ -212,10 +268,34 @@ class HazelcastOrganizationService(
         securePrincipalsManager.deleteAllRolesInOrganization(organizationId)
         securePrincipalsManager.deletePrincipal(aclKey)
         organizations.delete(organizationId)
-        organizationDatabases.delete(organizationId)
-        reservations.release(organizationId)
         assembler.destroyOrganization(organizationId)
+        reservations.release(organizationId)
         eventBus.post(OrganizationDeletedEvent(organizationId))
+
+        appConfigsMapstore.removeAll(Predicates.equal(AppConfigMapstore.ORGANIZATION_ID, organizationId))
+        collaborationService.handleOrganizationDeleted(organizationId)
+        changeEntitySetsAndCollectionsOrganizationId(organizationId, IdConstants.GLOBAL_ORGANIZATION_ID.id)
+    }
+
+    fun changeEntitySetsAndCollectionsOrganizationId(oldOrgId: UUID, newOrgId: UUID) {
+        val entitySetIds = entitySetMapstore.keySet(Predicates.equal(EntitySetMapstore.ORGANIZATION_INDEX, oldOrgId))
+        val entitySetCollectionIds = entitySetCollectionsMapstore.keySet(Predicates.equal(EntitySetCollectionMapstore.ORGANIZATION_ID_INDEX, oldOrgId))
+
+        if (entitySetIds.isNotEmpty()) {
+            entitySetMapstore.executeOnKeys(entitySetIds) {
+                val entitySet = it.value
+                it.value.organizationId = newOrgId
+                it.setValue(entitySet)
+            }
+        }
+
+        if (entitySetCollectionIds.isNotEmpty()) {
+            entitySetCollectionsMapstore.executeOnKeys(entitySetCollectionIds) {
+                val entitySetCollection = it.value
+                entitySetCollection.organizationId = newOrgId
+                it.setValue(entitySetCollection)
+            }
+        }
     }
 
     @Timed
@@ -253,6 +333,10 @@ class HazelcastOrganizationService(
         return organizations[organizationId]?.emailDomains ?: setOf()
     }
 
+    fun organizationExists(id: UUID): Boolean {
+        return organizations.containsKey(id)
+    }
+
     fun ensureOrganizationExists(id: UUID) {
         Preconditions.checkState(
                 organizations.containsKey(id),
@@ -287,7 +371,20 @@ class HazelcastOrganizationService(
 
     @Timed
     fun getMembers(organizationId: UUID): Set<Principal> {
-        return organizations.executeOnKey(organizationId, GetMembersOfOrganizationEntryProcessor()) ?: setOf()
+        return securePrincipalsManager.getOrganizationMemberPrincipals(organizationId)
+    }
+
+    @Timed
+    fun getMemberCountsForOrganizations(organizationIds: Set<UUID>): Map<UUID, Int> {
+        val orgSecurablePrincipals = organizations.getAll(organizationIds).values.map { it.securablePrincipal }.toSet()
+        return securePrincipalsManager.bulkGetUnderlyingPrincipals(orgSecurablePrincipals)
+                .map { it.key.id to it.value.size }
+                .toMap()
+    }
+
+    @Timed
+    fun getRoleCountsForOrganizations(organizationIds: Set<UUID>): Map<UUID, Int> {
+        return securePrincipalsManager.getAllRolesInOrganizations(organizationIds).mapValues { it.value.size }
     }
 
     @Timed
@@ -306,10 +403,11 @@ class HazelcastOrganizationService(
         val newMembers = addMembers(AclKey(organizationId), securablePrincipals, profiles)
 
         if (newMembers.isNotEmpty()) {
-            val securablePrincipals = securePrincipalsManager.getSecurablePrincipals(newMembers)
+            val newMemberSecurablePrincipals = securePrincipalsManager.getSecurablePrincipals(newMembers)
+            collaborationService.handleMembersAdddedToOrg(organizationId, newMemberSecurablePrincipals.map { it.aclKey }.toSet())
             eventBus.post(
                     MembersAddedToOrganizationEvent(
-                            organizationId, SecurablePrincipalList(securablePrincipals.toMutableList())
+                            organizationId, SecurablePrincipalList(newMemberSecurablePrincipals.toMutableList())
                     )
             )
         }
@@ -325,24 +423,15 @@ class HazelcastOrganizationService(
             profiles: Map<Principal, Map<String, Set<String>>>
     ): Set<Principal> {
         require(orgAclKey.size == 1) { "Organization acl key should only be of length 1" }
-        val members = membersToAdd.keys.toSet()
         val organizationId = orgAclKey[0]
-        val newMembers: Set<Principal> = organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
-            val newMembers = members - it.members
-            it.members.addAll(newMembers)
-            //We're always persisting here.
-            return@OrganizationEntryProcessor Result(newMembers)
-        }) as Set<Principal>
 
         //Always trigger as this won't cause a write to organizations table.
-        grantOrganizationPrincipals(
+        return grantOrganizationPrincipals(
                 organizationId,
                 membersToAdd,
                 orgAclKey,
                 profiles
         )
-
-        return newMembers
     }
 
     private fun grantOrganizationPrincipals(
@@ -350,12 +439,22 @@ class HazelcastOrganizationService(
             members: Map<Principal, AclKey>,
             orgAclKey: AclKey = AclKey(organizationId),
             profiles: Map<Principal, Map<String, Set<String>>> = mapOf()
-    ) {
+    ): Set<Principal> {
+        //Add the organization principal to each user
+        val newMemberAclKeys = securePrincipalsManager.addPrincipalToPrincipals(orgAclKey, members.values.toSet())
+        val newMembers = members.filter { newMemberAclKeys.contains(it.value) }
+
+        //Grant read on the organization
+        val newMemberPermissions = EnumSet.of(Permission.READ)
+        authorizations.addPermissions(listOf(
+                Acl(AclKey(organizationId), newMembers.keys.map { Ace(it, newMemberPermissions) })
+        ))
+
         /*
-         * Grant each member any of the roles, for which they meet the crieria.
+         * Grant each new member any of the roles for which they meet the criteria.
          */
         val organization = organizations.getValue(organizationId)
-        members.forEach { (member, _) ->
+        newMembers.forEach { (member, _) ->
             organization.grants.forEach { (roleId, grants) ->
                 grants.forEach { (_, grant) ->
                     val profile = profiles.getOrElse(member) { mapOf() }
@@ -380,31 +479,21 @@ class HazelcastOrganizationService(
                 }
             }
         }
-        //Add the organization principal to each user
-        members.forEach { (principal, target) ->
-            //Grant read on the organization
-            authorizations.addPermission(orgAclKey, principal, EnumSet.of(Permission.READ))
-            //Assign organization principal.
-            securePrincipalsManager.addPrincipalToPrincipal(orgAclKey, target)
-        }
+
+        return newMembers.keys
     }
 
     @Timed
     fun removeMembers(organizationId: UUID, members: Set<Principal>) {
         val users = members.filter { it.type == PrincipalType.USER }
         val securablePrincipals = securePrincipalsManager.getSecurablePrincipals(users)
-        val userAclKeys = securePrincipalsManager
-                .getSecurablePrincipals(users)
-                .map { it.aclKey }
-                .toSet()
+        val userAclKeys = securablePrincipals.map { it.aclKey }.toSet()
 
         removeRolesFromMembers(getRoles(organizationId).map { it.aclKey }, userAclKeys)
-        organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
-            Result(it.members.removeAll(members))
-        })
 
         val orgAclKey = AclKey(organizationId)
         removeOrganizationFromMembers(orgAclKey, userAclKeys)
+        collaborationService.handleMembersRemovedFromOrg(organizationId, userAclKeys)
         eventBus.post(
                 MembersRemovedFromOrganizationEvent(
                         organizationId,
@@ -424,8 +513,7 @@ class HazelcastOrganizationService(
     @Timed
     fun createRoleIfNotExists(callingUser: Principal, role: Role) {
         val organizationId = role.organizationId
-        val orgPrincipal = securePrincipalsManager
-                .getSecurablePrincipal(AclKey(organizationId))
+        val orgPrincipal = securePrincipalsManager.getSecurablePrincipal(AclKey(organizationId))
 
         /*
          * We set the organization to be the owner of the principal and grant everyone in the organization read access
@@ -567,8 +655,9 @@ class HazelcastOrganizationService(
         val currentDatabaseName = getOrganizationDatabaseName(organizationId)
 
         try {
-            assembler.renameOrganizationDatabase(currentDatabaseName, newDatabaseName)
+            assembler.renameDatabase(currentDatabaseName, newDatabaseName)
             executeDatabaseNameUpdate(organizationId, newDatabaseName)
+            collaborationService.handleOrganizationDatabaseRename(organizationId, currentDatabaseName, newDatabaseName)
         } catch (e: Exception) {
             throw IllegalStateException(
                     "An error occurred while trying to rename org $organizationId database " +
@@ -602,20 +691,13 @@ class HazelcastOrganizationService(
 
     @JvmOverloads
     fun removeMemberFromAllOrganizations(principal: Principal, clearPermissions: Boolean = true) {
-        val membersPredicate = Predicates.equal<UUID, Organization>(MEMBERS_INDEX, principal)
-        val organizationIds = if (clearPermissions) {
-            val orgIds = organizations.keySet(membersPredicate)
-            orgIds.forEach { organizationId ->
-                removeMembers(organizationId, setOf(principal))
-            }
-            orgIds
-        } else {
-            organizations.executeOnEntries(OrganizationEntryProcessor {
-                Result(null, it.members.remove(principal))
-            }, membersPredicate).keys
-        }
+        val organizationIds = securePrincipalsManager.getAllPrincipals(securePrincipalsManager.getSecurablePrincipal(principal.id))
+                .filter { it.principalType == PrincipalType.ORGANIZATION }
+                .map { it.id }
 
-        logger.info("Removed {} from organizations: {}", organizationIds)
+        organizationIds.forEach { removeMembers(it, setOf(principal)) }
+
+        logger.info("Removed {} from organizations: {}", principal, organizationIds)
     }
 
     fun getOrganizationMetadataEntitySetIds(organizationId: UUID): OrganizationMetadataEntitySetIds {
@@ -640,6 +722,8 @@ class HazelcastOrganizationService(
 
         private val logger = LoggerFactory.getLogger(HazelcastOrganizationService::class.java)
 
+        private val ALLOWED_ORG_CREATOR_PRINCIPAL_TYPES = setOf(PrincipalType.USER, PrincipalType.ROLE)
+
         private fun constructOrganizationAdminRolePrincipalTitle(organization: SecurablePrincipal): String {
             return organization.name + " - ADMIN"
         }
@@ -648,12 +732,13 @@ class HazelcastOrganizationService(
             return organization.id.toString() + "|" + constructOrganizationAdminRolePrincipalTitle(organization)
         }
 
-        private fun createOrganizationAdminRole(organization: SecurablePrincipal): Role {
+        private fun createOrganizationAdminRole(organization: SecurablePrincipal, adminRoleAclKey: AclKey): Role {
+            val roleId = adminRoleAclKey[1]
             val principalTitle = constructOrganizationAdminRolePrincipalTitle(organization)
             val principalId = constructOrganizationAdminRolePrincipalId(organization)
             val rolePrincipal = Principal(PrincipalType.ROLE, principalId)
             return Role(
-                    Optional.empty(),
+                    Optional.of(roleId),
                     organization.id,
                     rolePrincipal,
                     principalTitle,

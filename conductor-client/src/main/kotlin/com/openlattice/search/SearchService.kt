@@ -7,8 +7,13 @@ import com.google.common.eventbus.EventBus
 import com.google.common.eventbus.Subscribe
 import com.openlattice.IdConstants
 import com.openlattice.apps.App
-import com.openlattice.authorization.*
+import com.openlattice.authorization.AccessCheck
+import com.openlattice.authorization.AclKey
+import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION
+import com.openlattice.authorization.Permission
+import com.openlattice.authorization.Principal
+import com.openlattice.authorization.Principals
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
 import com.openlattice.data.DataEdgeKey
@@ -21,6 +26,10 @@ import com.openlattice.data.requests.NeighborEntityIds
 import com.openlattice.data.storage.EntityDatastore
 import com.openlattice.data.storage.IndexingMetadataManager
 import com.openlattice.data.storage.MetadataOption
+import com.openlattice.datasets.DatasetService
+import com.openlattice.datasets.events.DatasetColumnsUpdatedEvent
+import com.openlattice.datasets.events.DatasetCreatedEvent
+import com.openlattice.datasets.events.DatasetDeletedEvent
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EdmConstants
@@ -38,7 +47,11 @@ import com.openlattice.organizations.events.OrganizationCreatedEvent
 import com.openlattice.organizations.events.OrganizationDeletedEvent
 import com.openlattice.organizations.events.OrganizationUpdatedEvent
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
-import com.openlattice.search.requests.*
+import com.openlattice.search.requests.DataSearchResult
+import com.openlattice.search.requests.EntityNeighborsFilter
+import com.openlattice.search.requests.SearchConstraints
+import com.openlattice.search.requests.SearchResult
+import com.openlattice.search.requests.SearchTerm
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -61,7 +74,8 @@ class SearchService(
         val entitySetService: EntitySetManager,
         val graphService: GraphService,
         val dataManager: EntityDatastore,
-        val indexingMetadataManager: IndexingMetadataManager
+        val indexingMetadataManager: IndexingMetadataManager,
+        val datasetService: DatasetService
 ) {
 
     companion object {
@@ -158,7 +172,38 @@ class SearchService(
                     maxHits
             )
         }
+    }
 
+
+    @Timed
+    fun executeDatasetQuery(
+            searchTerm: String,
+            start: Int,
+            maxHits: Int,
+            excludeColumns: Boolean,
+            organizationIds: Set<UUID>?
+    ): SearchResult {
+        var authorizedDatasetIds = authorizations.getAuthorizedObjectsOfTypes(
+                Principals.getCurrentPrincipals(),
+                listOf(SecurableObjectType.EntitySet, SecurableObjectType.OrganizationExternalDatabaseTable),
+                READ_PERMISSION
+        ).map { it.first() }.collect(Collectors.toSet())
+
+        if (organizationIds != null) {
+            authorizedDatasetIds = datasetService.filterDatasetIdsByOrganizations(authorizedDatasetIds, organizationIds)
+        }
+
+        return if (authorizedDatasetIds.size == 0) {
+            SearchResult(0, Lists.newArrayList())
+        } else {
+            elasticsearchApi.executeDatasetSearch(
+                    searchTerm,
+                    start,
+                    maxHits,
+                    authorizedDatasetIds,
+                    excludeColumns
+            )
+        }
     }
 
     @Timed
@@ -432,6 +477,24 @@ class SearchService(
                 )
     }
 
+    @Subscribe
+    fun createDataset(event: DatasetCreatedEvent) {
+        val dataset = datasetService.getDataset(event.id)
+        val columns = datasetService.getColumnsInDataset(event.id)
+        elasticsearchApi.saveDatasetToElasticsearch(dataset, columns)
+    }
+
+    @Subscribe
+    fun deleteDataset(event: DatasetDeletedEvent) {
+        elasticsearchApi.deleteDatasetFromElasticsearch(event.id)
+    }
+
+    @Subscribe
+    fun updateDatasetColumns(event: DatasetColumnsUpdatedEvent) {
+        val columns = datasetService.getColumnsInDataset(event.datasetId)
+        elasticsearchApi.updateColumnsInDataset(event.datasetId, columns)
+    }
+
     /**
      * Handle deleting the index for that property type.
      * At this point, none of the entity sets should contain this property type anymore, so the entity set data mappings
@@ -495,50 +558,6 @@ class SearchService(
                 start,
                 maxHits
         )
-    }
-
-    private fun getAuthorizedFilterEntitySetOptions(
-            entitySetIds: Set<UUID>,
-            filter: EntityNeighborsFilter,
-            principals: Set<Principal>
-    ): Pair<EntityNeighborsFilter, Map<UUID, Map<UUID, PropertyType>>> {
-
-        val srcEntitySetIds = mutableSetOf<UUID>()
-        val dstEntitySetIds = mutableSetOf<UUID>()
-        val associationEntitySetIds = mutableSetOf<UUID>()
-
-        graphService.getNeighborEntitySets(entitySetIds).forEach { neighborSet ->
-            srcEntitySetIds.add(neighborSet.srcEntitySetId)
-            dstEntitySetIds.add(neighborSet.dstEntitySetId)
-            associationEntitySetIds.add(neighborSet.edgeEntitySetId)
-        }
-
-        val authorizedEntitySetIds = authorizations
-                .accessChecksForPrincipals(
-                        (srcEntitySetIds + dstEntitySetIds + associationEntitySetIds).map { esId ->
-                            AccessCheck(AclKey(esId), READ_PERMISSION)
-                        }.toSet(),
-                        principals
-                )
-                .filter { auth -> auth.permissions.getValue(Permission.READ) }
-                .map { auth -> auth.aclKey.first() }
-                .collect(Collectors.toSet())
-
-        val authorizedPropertyTypesByEntitySet = getAuthorizedPropertyTypesOfEntitySets(authorizedEntitySetIds, principals)
-
-        val srcFilteredEntitySetIds = filter.srcEntitySetIds.orElse(srcEntitySetIds)
-                .filter { srcEntitySetIds.contains(it) && authorizedPropertyTypesByEntitySet.contains(it) }.toSet()
-        val dstFilteredEntitySetIds = filter.dstEntitySetIds.orElse(dstEntitySetIds)
-                .filter { dstEntitySetIds.contains(it) && authorizedPropertyTypesByEntitySet.contains(it) }.toSet()
-        val associationFilteredEntitySetIds = filter.associationEntitySetIds.orElse(associationEntitySetIds)
-                .filter { associationEntitySetIds.contains(it) && authorizedPropertyTypesByEntitySet.contains(it) }.toSet()
-
-        return EntityNeighborsFilter(
-                filter.entityKeyIds,
-                Optional.of(srcFilteredEntitySetIds),
-                Optional.of(dstFilteredEntitySetIds),
-                Optional.of(associationFilteredEntitySetIds)
-        ) to authorizedPropertyTypesByEntitySet
     }
 
     private fun getAuthorizedPropertyTypesOfEntitySets(
@@ -663,11 +682,8 @@ class SearchService(
 
         /* Load all possible association/neighbor entity set combos and perform auth checks **/
 
-        val (filter, entitySetsIdsToAuthorizedProps) = getAuthorizedFilterEntitySetOptions(
-                entitySetIds,
-                pagedNeighborRequest.filter,
-                principals
-        )
+        val filter = entitySetService.getAuthorizedNeighborEntitySets(principals, entitySetIds, pagedNeighborRequest.filter)
+
         val authorizedPagedNeighborRequest = PagedNeighborRequest(filter, pagedNeighborRequest.bookmark, pagedNeighborRequest.pageSize)
 
         val allEntitySets = filter.srcEntitySetIds.get() + filter.dstEntitySetIds.get() + filter.associationEntitySetIds.get()
@@ -694,6 +710,8 @@ class SearchService(
         val edges = graphService.getEdgesAndNeighborsForVertices(allBaseEntitySetIds, authorizedPagedNeighborRequest).toList()
 
         val entitySetIdToEntityKeyId = getNeighborEntitySetIdToEntityKeyIdForEdges(edges, entityKeyIds)
+
+        val entitySetsIdsToAuthorizedProps = getAuthorizedPropertyTypesOfEntitySets(entitySetIdToEntityKeyId.keySet(), principals)
 
         val entitiesByEntitySetId = dataManager
                 .getEntitiesAcrossEntitySets(entitySetIdToEntityKeyId, entitySetsIdsToAuthorizedProps)
@@ -832,11 +850,7 @@ class SearchService(
             principals: Set<Principal>
     ): Map<UUID, Map<UUID, SetMultimap<UUID, NeighborEntityIds>>> {
 
-        val (filter, _) = getAuthorizedFilterEntitySetOptions(
-                entitySetIds,
-                requestedFilter,
-                principals
-        )
+        val filter = entitySetService.getAuthorizedNeighborEntitySets(principals, entitySetIds, requestedFilter)
 
         if (filter.associationEntitySetIds.isPresent && filter.associationEntitySetIds.get().isEmpty()) {
             logger.info("Missing association entity set ids. Returning empty result.")
@@ -874,7 +888,7 @@ class SearchService(
             entityKeyIds: Set<UUID>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             linking: Boolean
-    ): List<Map<FullQualifiedName, Set<Any>>> {
+    ): Collection<Map<FullQualifiedName, Set<Any>>> {
         if (entityKeyIds.isEmpty()) {
             return ImmutableList.of()
         }
@@ -890,7 +904,7 @@ class SearchService(
                     linkingIdsByEntitySetIds,
                     authorizedPropertiesOfNormalEntitySets,
                     EnumSet.of(MetadataOption.LAST_WRITE)
-            ).toList()
+            )
         } else {
             return dataManager
                     .getEntitiesWithMetadata(
@@ -951,7 +965,7 @@ class SearchService(
     }
 
     fun triggerAllEntitySetDataIndex() {
-        entitySetService.getEntitySets().forEach { entitySet -> triggerEntitySetDataIndex(entitySet.getId()) }
+        entitySetService.getEntitySets().forEach { entitySet -> triggerEntitySetDataIndex(entitySet.id) }
     }
 
     fun triggerAppIndex(apps: List<App>) {
@@ -964,6 +978,16 @@ class SearchService(
 
     fun triggerOrganizationIndex(organization: Organization) {
         elasticsearchApi.triggerOrganizationIndex(Lists.newArrayList(organization))
+    }
+
+    fun triggerAllDatasetIndex() {
+        entitySetService.getEntitySets().forEach {
+            createDataset(DatasetCreatedEvent(it.id))
+        }
+
+        datasetService.getExternalTables().forEach {
+            createDataset(DatasetCreatedEvent(it.id))
+        }
     }
 
 }

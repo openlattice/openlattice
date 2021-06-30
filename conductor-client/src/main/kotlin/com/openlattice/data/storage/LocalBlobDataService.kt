@@ -29,7 +29,7 @@ class LocalBlobDataService(private val hds: HikariDataSource) : ByteBlobDataMana
     }
 
     override fun getPresignedUrl(
-            key: Any, expiration: Date, httpMethod: HttpMethod, contentType: Optional<String>
+            key: Any, expiration: Date, httpMethod: HttpMethod, contentType: String?, contentDisposition: String?
     ): URL {
         throw UnsupportedOperationException()
     }
@@ -38,8 +38,16 @@ class LocalBlobDataService(private val hds: HikariDataSource) : ByteBlobDataMana
         throw UnsupportedOperationException()
     }
 
-    override fun putObject(s3Key: String, data: ByteArray, contentType: String) {
-        insertEntity(s3Key, data)
+    override fun getPresignedUrlsWithDispositions(keysToDispositions: Map<String, String?>): Map<String, URL> {
+        throw UnsupportedOperationException()
+    }
+
+    override fun getDefaultExpirationDateTime(): Date {
+        throw UnsupportedOperationException()
+    }
+
+    override fun putObject(s3Key: String, binaryObjectWithMetadata: BinaryObjectWithMetadata) {
+        insertEntity(s3Key, binaryObjectWithMetadata.data)
     }
 
     override fun deleteObject(s3Key: String) {

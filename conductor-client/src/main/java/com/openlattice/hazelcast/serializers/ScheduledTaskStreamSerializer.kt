@@ -1,6 +1,7 @@
 package com.openlattice.hazelcast.serializers
 
 import com.dataloom.mappers.ObjectMappers
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
@@ -14,7 +15,7 @@ import org.springframework.stereotype.Component
 class ScheduledTaskStreamSerializer : TestableSelfRegisteringStreamSerializer<ScheduledTask> {
 
     companion object {
-        val mapper = ObjectMappers.getJsonMapper()
+        val mapper: ObjectMapper = ObjectMappers.getJsonMapper()
     }
 
     override fun generateTestValue(): ScheduledTask {
@@ -43,8 +44,8 @@ class ScheduledTaskStreamSerializer : TestableSelfRegisteringStreamSerializer<Sc
         val id = UUIDStreamSerializerUtils.deserialize(`in`)
         val scheduledDateTime = OffsetDateTimeStreamSerializer.deserialize(`in`)
 
-        val clazz = Class.forName(`in`.readUTF()) as Class<out RunnableTask>
-        val task = mapper.readValue(`in`.readUTF(), clazz)
+        val clazz = Class.forName(`in`.readString()!!) as Class<out RunnableTask>
+        val task = mapper.readValue(`in`.readString()!!, clazz)
 
         return ScheduledTask(id, scheduledDateTime, task)
     }

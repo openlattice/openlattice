@@ -28,7 +28,6 @@ import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicates
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
 import com.openlattice.data.EntityDataKey
-import com.openlattice.edm.EntitySet
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.linking.*
 import com.openlattice.linking.util.PersonProperties
@@ -38,7 +37,6 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.util.*
 import java.util.concurrent.TimeUnit
-import kotlin.streams.asSequence
 
 
 private val logger = LoggerFactory.getLogger(ElasticsearchBlocker::class.java)
@@ -54,35 +52,43 @@ class ElasticsearchBlocker(
         hazelcast: HazelcastInstance
 ) : Blocker {
 
-    private val entitySets = HazelcastMap.ENTITY_SETS.getMap( hazelcast )
-    private val entityTypes = HazelcastMap.ENTITY_TYPES.getMap( hazelcast )
+    private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcast)
+    private val entityTypes = HazelcastMap.ENTITY_TYPES.getMap(hazelcast)
+    private val propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap(hazelcast)
 
     private val personEntityType = entityTypes.values(
             Predicates.equal(EntityTypeMapstore.FULLQUALIFIED_NAME_PREDICATE, PersonProperties.PERSON_TYPE_FQN.fullQualifiedNameAsString)
     ).first()
+    private val personLinkingPropertyTypeIds = propertyTypes.getAll(personEntityType.properties).values
+            .filter { PersonProperties.FQNS.contains(it.type) }.map { it.id }.toSet()
 
-    @Deprecated("Unused")
-    private val entitySetsCache = Suppliers
-            .memoizeWithExpiration({
-                entitySets.values.filter { it.entityTypeId == personEntityType.id }
-                        .map(EntitySet::getId)
-            }, 1000, TimeUnit.MILLISECONDS)
+    private val entitySetKeysCache = Suppliers.memoizeWithExpiration({
+        entitySets.keys.toSet()
+    }, 1, TimeUnit.MINUTES)
 
     @Timed
     override fun block(
             entityDataKey: EntityDataKey,
-            entity: Optional<Map<UUID, Set<Any>>>,
             top: Int
-    ): Pair<EntityDataKey, Map<EntityDataKey, Map<UUID, Set<Any>>>> {
+    ): Block {
         logger.info("Blocking for entity data key {}", entityDataKey)
 
         val sw = Stopwatch.createStarted()
+
+        val loadedCandidateData = dataLoader.getLinkingEntity(entityDataKey)
+
+        if (isEntityEmpty(loadedCandidateData)) { // has no relevant data
+            return Block.emptyBlock(entityDataKey)
+        }
+
         var blockedEntitySetSearchResults = elasticsearch.executeBlockingSearch(
                 personEntityType.id,
-                getFieldSearches(entity.orElseGet { dataLoader.getEntity(entityDataKey) }),
+                getFieldSearches(loadedCandidateData),
                 top,
                 false
-        )
+        ).filter {
+            entitySetKeysCache.get().contains(it.key)
+        }
 
         logger.info(
                 "Entity data key {} blocked to {} elements in {} ms.", entityDataKey,
@@ -109,46 +115,56 @@ class ElasticsearchBlocker(
         sw.reset()
         sw.start()
 
-        val loadedData = entityDataKey to
-                removeNegativeFeedbackFromSearchResult(entityDataKey, blockedEntitySetSearchResults)
-                        .filter { it.value.isNotEmpty() }
-                        .entries
-                        .parallelStream()
-                        .flatMap { entry ->
-                            dataLoader
-                                    .getEntityStream(entry.key, entry.value)
-                                    .stream()
-                                    .map { EntityDataKey(entry.key, it.first) to it.second }
-                        }
-                        .asSequence()
-                        .toMap()
+        val filteredSearchResults = removeNegativeFeedbackFromSearchResult(entityDataKey, blockedEntitySetSearchResults)
 
+        val block = Block(
+                entityDataKey,
+                filteredSearchResults.entries
+                        .filter { it.value.isNotEmpty() }
+                        .flatMap { entry ->
+                            dataLoader.getLinkingEntityStream(entry.key, entry.value)
+                                    .filter { !isEntityEmpty(it.second) }
+                                    .map { EntityDataKey(entry.key, it.first) to it.second }
+                                    .filter { it.second.isNotEmpty() }
+                        }.toMap()
+        )
         logger.info(
-                "Loading {} entities took {} ms.", loadedData.second.values.map { it.size }.sum(),
+                "Loading {} entities took {} ms.", block.size,
                 sw.elapsed(TimeUnit.MILLISECONDS)
         )
-
-        return loadedData
-
+        return block
     }
 
+    private fun isEntityEmpty(candidateData: Map<UUID, Set<Any>>): Boolean {
+        return personLinkingPropertyTypeIds.all { candidateData[it]?.isEmpty() ?: true }
+    }
     /**
      * Handles rendering an object into field searches for blocking.
      */
     private fun getFieldSearches(entity: Map<UUID, Set<Any>>): Map<UUID, DelegatedStringSet> {
-        return entity.map { it.key to DelegatedStringSet.wrap(it.value.map { it.toString() }.toSet()) }.toMap()
+        return entity.entries.associate { (key, contents) ->
+            key to DelegatedStringSet.wrap(
+                    contents.mapTo(mutableSetOf()) {
+                        it.toString()
+                    }
+            )
+        }
     }
 
     private fun removeNegativeFeedbackFromSearchResult(
-            entity: EntityDataKey, searchResult: Map<UUID, Set<UUID>>
+            entity: EntityDataKey,
+            searchResult: Map<UUID, Set<UUID>>
     ): Map<UUID, Set<UUID>> {
         val negFeedbacks = linkingFeedbackService.getLinkingFeedbackEntityKeyPairs(FeedbackType.Negative, entity)
         return searchResult.mapValues {
-            it.value.filter {
+            it.value.filterTo(mutableSetOf()) {
                 // remove pairs which have feedbacks for not matching this entity
                 entityKeyId ->
-                !negFeedbacks.contains(EntityKeyPair(entity, EntityDataKey(it.key, entityKeyId)))
-            }.toSet()
+                !negFeedbacks.contains(
+                        EntityKeyPair(entity,
+                                EntityDataKey(it.key, entityKeyId))
+                )
+            }
         }
     }
 }

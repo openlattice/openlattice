@@ -48,11 +48,17 @@ public class PagingSecurableObjectsTest extends HzAuthzTest {
     protected static final Principal               r1                = TestDataFactory.rolePrincipal();
     protected static final Principal               r2                = TestDataFactory.rolePrincipal();
     protected static final Principal               r3                = TestDataFactory.rolePrincipal();
-    protected static final NavigableSet<Principal> currentPrincipals = new TreeSet<Principal>();
+    protected static final NavigableSet<Principal> currentPrincipals = new TreeSet<>();
 
     @BeforeClass
     public static void init() {
         HzAuthzTest.init();
+
+        initializePrincipal( u1 );
+        initializePrincipal( r1 );
+        initializePrincipal( r2 );
+        initializePrincipal( r3 );
+
         currentPrincipals.add( u1 );
         currentPrincipals.add( r1 );
         currentPrincipals.add( r2 );

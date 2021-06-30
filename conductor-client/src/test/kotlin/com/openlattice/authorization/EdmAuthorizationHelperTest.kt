@@ -24,11 +24,11 @@ import com.google.common.eventbus.EventBus
 import com.openlattice.auditing.AuditingConfiguration
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.data.storage.partitions.PartitionManager
+import com.openlattice.datasets.DatasetService
 import com.openlattice.datastore.services.EdmService
 import com.openlattice.datastore.services.EntitySetService
 import com.openlattice.edm.properties.PostgresTypeManager
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager
-import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.organizations.OrganizationMetadataEntitySetsService
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -42,22 +42,27 @@ class EdmAuthorizationHelperTest : HzAuthzTest() {
 
     init {
         val auditingConfig = testServer.context.getBean(AuditingConfiguration::class.java)
+        val pgTypeMan = PostgresTypeManager(hds, hazelcastInstance)
+        val eventBus = Mockito.mock(EventBus::class.java)
+        val datasetService = DatasetService(hazelcastInstance, eventBus)
         val edmManager = EdmService(
                 hazelcastInstance,
                 HazelcastAclKeyReservationService(hazelcastInstance),
                 hzAuthz,
-                PostgresTypeManager(hds),
-                HazelcastSchemaManager(hazelcastInstance, PostgresSchemaQueryService(hds))
+                pgTypeMan,
+                HazelcastSchemaManager(hazelcastInstance, pgTypeMan),
+                datasetService
         )
         val entitySetManager = EntitySetService(
                 hazelcastInstance,
-                Mockito.mock(EventBus::class.java),
+                eventBus,
                 HazelcastAclKeyReservationService(hazelcastInstance),
                 hzAuthz,
                 PartitionManager(hazelcastInstance, hds),
                 edmManager,
                 hds,
                 Mockito.mock(OrganizationMetadataEntitySetsService::class.java),
+                datasetService,
                 auditingConfig
         )
 
@@ -81,8 +86,8 @@ class EdmAuthorizationHelperTest : HzAuthzTest() {
         )
         val entitySet = TestDataFactory.entitySetWithType(entityType.id)
 
-        val principal1 = TestDataFactory.userPrincipal()
-        val principal2 = TestDataFactory.userPrincipal()
+        val principal1 = initializePrincipal(TestDataFactory.userPrincipal())
+        val principal2 = initializePrincipal(TestDataFactory.userPrincipal())
 
         val property1Acl = AclKey(entitySet.id, propertyType1.id)
         hzAuthz.setSecurableObjectType(property1Acl, SecurableObjectType.PropertyTypeInEntitySet)

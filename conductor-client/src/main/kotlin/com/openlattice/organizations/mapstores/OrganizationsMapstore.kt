@@ -2,7 +2,11 @@ package com.openlattice.organizations.mapstores
 
 import com.dataloom.mappers.ObjectMappers
 import com.fasterxml.jackson.module.kotlin.readValue
-import com.hazelcast.config.*
+import com.hazelcast.config.InMemoryFormat
+import com.hazelcast.config.IndexConfig
+import com.hazelcast.config.IndexType
+import com.hazelcast.config.MapConfig
+import com.hazelcast.config.MapStoreConfig
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.organizations.Organization
@@ -26,7 +30,9 @@ const val DOMAINS_INDEX = "emailDomains[any]"
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 @Component
-class OrganizationsMapstore(val hds: HikariDataSource) : AbstractBasePostgresMapstore<UUID, Organization>(
+class OrganizationsMapstore(
+        hds: HikariDataSource
+) : AbstractBasePostgresMapstore<UUID, Organization>(
         HazelcastMap.ORGANIZATIONS, ORGANIZATIONS, hds
 ) {
     private val mapper = ObjectMappers.newJsonMapper()
@@ -43,7 +49,7 @@ class OrganizationsMapstore(val hds: HikariDataSource) : AbstractBasePostgresMap
     }
 
     override fun bind(ps: PreparedStatement, key: UUID, value: Organization) {
-        var offset = bind(ps, key, 1)
+        val offset = bind(ps, key, 1)
         val orgJson = mapper.writeValueAsString(value)
         ps.setObject(offset, orgJson)
     }

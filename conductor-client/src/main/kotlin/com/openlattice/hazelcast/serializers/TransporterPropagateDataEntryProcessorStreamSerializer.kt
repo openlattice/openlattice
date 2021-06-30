@@ -27,6 +27,7 @@ class TransporterPropagateDataEntryProcessorStreamSerializer :
     }
 
     override fun write(out: ObjectDataOutput, `object`: TransporterPropagateDataEntryProcessor) {
+        check(::data.isInitialized) { TransporterDependent.NOT_INITIALIZED }
         SetStreamSerializers.serialize(out, `object`.entitySets) { es ->
             EntitySetStreamSerializer.serialize(out, es)
         }
@@ -35,11 +36,11 @@ class TransporterPropagateDataEntryProcessorStreamSerializer :
     }
 
     override fun read(`in`: ObjectDataInput): TransporterPropagateDataEntryProcessor {
+        check(::data.isInitialized) { TransporterDependent.NOT_INITIALIZED }
         val entitySets = SetStreamSerializers.deserialize(`in`) {
             EntitySetStreamSerializer.deserialize(`in`)
         }
-        val partitions = `in`.readIntArray().toList()
-        check(::data.isInitialized) { TransporterDependent.NOT_INITIALIZED }
+        val partitions = `in`.readIntArray()!!.toList()
         return TransporterPropagateDataEntryProcessor(entitySets, partitions).init(data)
     }
 
