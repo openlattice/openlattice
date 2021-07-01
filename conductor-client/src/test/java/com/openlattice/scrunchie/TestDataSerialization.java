@@ -19,7 +19,7 @@
  *
  */
 
-package com.openlattice.scrunchie.search;
+package com.openlattice.scrunchie;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;

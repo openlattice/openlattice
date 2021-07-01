@@ -173,9 +173,21 @@ dependencies {
     } else {
         testImplementation "com.openlattice:api:${api_version}:tests"
         testImplementation "com.openlattice:scribe:${scribe_version}:tests"
-        testImplementation "com.openlattice:rhizome:${rhizome_version}:test"
+        testImplementation "com.openlattice:rhizome:${rhizome_version}:tests"
         testImplementation "com.openlattice:rhizome-client:${rhizome_client_version}:tests"
     }
+
+    /*
+     * ELASTICSEARCH
+     */
+    api("org.elasticsearch:elasticsearch:${elastic_version}") {
+        exclude module: 'slf4j-log4j12'
+    }
+
+    api("org.elasticsearch.client:transport:${elastic_version}") {
+        exclude module: 'slf4j-log4j12'
+    }
+
     /*
      * TESTING
      */

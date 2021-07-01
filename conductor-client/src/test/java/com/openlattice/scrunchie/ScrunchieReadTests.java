@@ -18,7 +18,7 @@
  *
  */
 
-package com.openlattice.scrunchie.search;
+package com.openlattice.scrunchie;
 
 public class ScrunchieReadTests {
 

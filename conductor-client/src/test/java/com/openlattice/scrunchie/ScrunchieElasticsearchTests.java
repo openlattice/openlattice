@@ -18,7 +18,7 @@
  *
  */
 
-package com.openlattice.scrunchie.search;
+package com.openlattice.scrunchie;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;

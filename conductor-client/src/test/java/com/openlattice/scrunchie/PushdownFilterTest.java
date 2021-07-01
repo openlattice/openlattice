@@ -18,7 +18,7 @@
  *
  */
 
-package com.openlattice.scrunchie.search;
+package com.openlattice.scrunchie;
 
 import org.junit.Test;
 
@@ -26,7 +26,7 @@ public class PushdownFilterTest {
     // TEST: testing pushdown for spark join
     @Test
     public void testPushDown(){
-        
+
         //Load DataSet from "Employees" Table
 //        Dataset<Row> dfEmployee = sparkSession
 //                .read()
@@ -36,7 +36,7 @@ public class PushdownFilterTest {
 //                .option( "pushdown", true )
 //                .load()
 //                .selectExpr( "entityid" );
-//        
+//
 //        //Load DataSet from "Employees-DEPT" Table
 //        Dataset<Row> dfPropertyEmployeeDept = sparkSession
 //                .read()
@@ -47,7 +47,7 @@ public class PushdownFilterTest {
 //                .load()
 //                .select( "entityid", "value" )
 //                .where( "value = 'FIRE'");
-//        
+//
 //        //Test 1.1: Did pushdown happen for the where equality clause
 //        System.out.println( "** Test 1.1: Did pushdown happen for where = clause in selecting rows in Cassandra Table turned DataFrame **" );
 //        System.err.println( "** Test 1.1: Did pushdown happen for where = clause in selecting rows in Cassandra Table turned DataFrame **" );
@@ -55,8 +55,8 @@ public class PushdownFilterTest {
 //        dfPropertyEmployeeDept.show();
 //        System.out.println( "** End of Test 1.1 **" );
 //        System.err.println( "** End of Test 1.1 **" );
-//        
-//        
+//
+//
 //        //Load DataSet from "Salary" Table
 //        Dataset<Row> dfPropertySalary = sparkSession
 //                .read()
@@ -66,9 +66,9 @@ public class PushdownFilterTest {
 //                .option( "pushdown", true )
 //                .load()
 //                .select( "entityid", "value" );
-//        
+//
 //        Dataset<Row> dfPropertySalaryFilteredWhere = dfPropertySalary.where( "value > 80000");
-//        
+//
 //        //Test 1.2: Did pushdown happen for the where > clause
 //        System.out.println( "** Test 1.2: Did pushdown happen for where > clause in selecting rows in Cassandra Table turned DataFrame **" );
 //        System.err.println( "** Test 1.2: Did pushdown happen for where > clause in selecting rows in Cassandra Table turned DataFrame **" );
@@ -97,11 +97,11 @@ public class PushdownFilterTest {
 //        dfPropertySalaryFilteredSQL.show();
 //        System.out.println( "** End of Test 1.4 **" );
 //        System.err.println( "** End of Test 1.4 **" );
-//        
+//
 //        //Do a join of all three data frames
 //        Dataset<Row> dfJoined = dfEmployee.join( dfPropertyEmployeeDept, "entityid").withColumnRenamed("value", "dept");
 //        dfJoined = dfJoined.join( dfPropertySalaryFilteredWhere, "entityid").withColumnRenamed( "value", "salary" );
-//        
+//
 //        //Test 2: Did pushdown happen in spark join
 //        System.out.println( "** Test 2: Did pushdown happen for joining Cassandra Table turned DataFrame **" );
 //        System.err.println( "** Test 2: Did pushdown happen for joining Cassandra Table turned DataFrame **" );
@@ -109,7 +109,7 @@ public class PushdownFilterTest {
 //        dfJoined.show();
 //        System.out.println( "** End of Test 2 **" );
 //        System.err.println( "** End of Test 2 **" );
-//        
+//
 //        dfJoined.createOrReplaceTempView("joinedTableView");
 //        String queryMultiple = "SELECT * from joinedTableView WHERE salary > 80000 AND dept = 'FIRE'";
 //        Dataset<Row> dfJoinedFilteredSQL = sparkSession.sql( queryMultiple );
@@ -119,8 +119,8 @@ public class PushdownFilterTest {
 //        dfJoinedFilteredSQL.explain();
 //        dfJoinedFilteredSQL.show();
 //        System.out.println( "** End of Test 3.1 **" );
-//        System.err.println( "** End of Test 3.1 **" );        
-//        
+//        System.err.println( "** End of Test 3.1 **" );
+//
 //        dfJoined.createOrReplaceTempView("joinedTableView");
 //        String queryMultipleTwo = "SELECT * from joinedTableView WHERE salary < 150000 AND dept = 'FIRE'";
 //        Dataset<Row> dfJoinedFilteredSQLTwo = sparkSession.sql( queryMultipleTwo );
@@ -130,6 +130,6 @@ public class PushdownFilterTest {
 //        dfJoinedFilteredSQLTwo.explain();
 //        dfJoinedFilteredSQLTwo.show();
 //        System.out.println( "** End of Test 3.2 **" );
-//        System.err.println( "** End of Test 3.2 **" );    
+//        System.err.println( "** End of Test 3.2 **" );
     }
 }
