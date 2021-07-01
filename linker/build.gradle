@@ -181,7 +181,6 @@ dependencies {
     implementation "org.nd4j:nd4j-cuda-9.2-platform:${deeplearning4j}"
 
     implementation "com.openlattice:conductor-client:${conductor_client_version}"
-    implementation "com.openlattice:scrunchie:${scrunchie_version}"
     implementation "com.openlattice:courier:${courier_version}"
     implementation "com.openlattice:rhizome:${rhizome_version}"
 
