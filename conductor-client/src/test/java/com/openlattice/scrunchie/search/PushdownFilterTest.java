@@ -18,7 +18,7 @@
  *
  */
 
-package com.openlattice.scrunchie;
+package com.openlattice.scrunchie.search;
 
 import org.junit.Test;
 
