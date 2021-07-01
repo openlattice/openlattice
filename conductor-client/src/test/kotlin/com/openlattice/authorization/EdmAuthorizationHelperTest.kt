@@ -23,6 +23,7 @@ package com.openlattice.authorization
 import com.google.common.eventbus.EventBus
 import com.openlattice.auditing.AuditingConfiguration
 import com.openlattice.authorization.securable.SecurableObjectType
+import com.openlattice.conductor.rpc.ConductorConfiguration
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datasets.DataSetService
 import com.openlattice.datastore.configuration.DatastoreConfiguration
@@ -44,10 +45,10 @@ class EdmAuthorizationHelperTest : HzAuthzTest() {
 
     init {
         val auditingConfig = testServer.context.getBean(AuditingConfiguration::class.java)
-        val datastoreConfig = testServer.context.getBean(DatastoreConfiguration::class.java)
+        val conductorConfiguration = testServer.context.getBean(ConductorConfiguration::class.java)
         val pgTypeMan = PostgresTypeManager(hds, hazelcastInstance)
         val eventBus = Mockito.mock(EventBus::class.java)
-        val elasticsearchApi = ConductorElasticsearchImpl( datastoreConfig.searchConfiguration )
+        val elasticsearchApi = ConductorElasticsearchImpl( conductorConfiguration.searchConfiguration )
         val dataSetService = DataSetService(hazelcastInstance, elasticsearchApi)
         val edmManager = EdmService(
                 hazelcastInstance,
