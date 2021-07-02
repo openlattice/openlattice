@@ -56,7 +56,7 @@ import com.openlattice.data.storage.EntityDatastore;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
 import com.openlattice.data.storage.PostgresEntityDatastore;
 import com.openlattice.data.storage.partitions.PartitionManager;
-import com.openlattice.datasets.DatasetService;
+import com.openlattice.datasets.DataSetService;
 import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EdmService;
@@ -296,8 +296,8 @@ public class IndexerServicesPod {
     }
 
     @Bean
-    DatasetService datasetService() {
-        return new DatasetService( hazelcastInstance, eventBus );
+    public DataSetService dataSetService() {
+        return new DataSetService( hazelcastInstance, elasticsearchApi() );
     }
 
     @Bean
@@ -308,7 +308,7 @@ public class IndexerServicesPod {
                 authorizationManager(),
                 entityTypeManager(),
                 schemaManager(),
-                datasetService()
+                dataSetService()
         );
     }
 
@@ -323,7 +323,7 @@ public class IndexerServicesPod {
                 dataModelService(),
                 hikariDataSource,
                 organizationMetadataEntitySetsService(),
-                datasetService(),
+                dataSetService(),
                 auditingConfiguration
         );
     }

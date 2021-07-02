@@ -32,7 +32,7 @@ import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.authorization.util.AuthorizationUtilsKt;
 import com.openlattice.data.requests.NeighborEntityDetails;
 import com.openlattice.data.requests.NeighborEntityIds;
-import com.openlattice.datasets.DatasetSearchRequest;
+import com.openlattice.datasets.DataSetSearchRequest;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.EntitySetManager;
 import com.openlattice.edm.EntitySet;
@@ -322,12 +322,13 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             produces = { MediaType.APPLICATION_JSON_VALUE } )
     @Override
     @Timed
-    public SearchResult executeDatasetSearch( @RequestBody DatasetSearchRequest searchTerm ) {
-        return searchService.executeDatasetQuery( searchTerm.getSearchTerm(),
-                searchTerm.getStart(),
-                searchTerm.getMaxHits(),
-                searchTerm.getExcludeColumns(),
-                searchTerm.getOrganizationIds() );
+    public SearchResult searchDataSetMetadata( @RequestBody DataSetSearchRequest searchRequest ) {
+        return searchService.searchDataSetMetadata(
+                searchRequest.getOrganizationIds(),
+                searchRequest.getConstraints(),
+                searchRequest.getStart(),
+                searchRequest.getMaxHits()
+        );
     }
 
     @RequestMapping(

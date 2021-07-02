@@ -132,7 +132,6 @@ ext.indexer_version="${monorepo_version}"
 ext.linker_version="${monorepo_version}"
 ext.rehearsal_version="${monorepo_version}"
 ext.scribe_version="${monorepo_version}"
-ext.scrunchie_version="${monorepo_version}"
 
 /**
  * Internal Versions

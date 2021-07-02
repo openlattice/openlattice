@@ -35,6 +35,7 @@ import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.organizations.Organization;
+import com.openlattice.scrunchie.search.ConductorElasticsearchImpl;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
@@ -103,8 +104,8 @@ public class BaseElasticsearchTest {
     protected static       EntitySet                  entitySet2;
     protected static       Principal                  owner;
     protected static       Principal                  openlatticeUser;
-    protected static       Organization               organization;
-    protected static       ConductorElasticsearchImpl elasticsearchApi;
+    protected static Organization               organization;
+    protected static ConductorElasticsearchImpl elasticsearchApi;
 
     @BeforeClass
     public static void init() {

@@ -128,6 +128,7 @@ dependencies {
     annotationProcessor "com.github.spotbugs:spotbugs-annotations:${spotbugs_annotations_version}"
     testAnnotationProcessor "net.jcip:jcip-annotations:${jcip_version}"
     testAnnotationProcessor "com.github.spotbugs:spotbugs-annotations:${spotbugs_annotations_version}"
+    testCompileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugs_annotations_version}"
 
     compileOnly "com.google.code.findbugs:findbugs:${findbugs_version}"
     /*
@@ -162,9 +163,7 @@ dependencies {
 
     api "com.openlattice:api:${api_version}"
     api "com.openlattice:scribe:${scribe_version}"
-
     api "com.openlattice:rhizome:${rhizome_version}"
-    testImplementation "junit:junit:${junit_version}"
 
     if( project.hasProperty('developmentMode') && project.developmentMode ) {
         testImplementation(project(path: ":api", configuration: "tests"))
@@ -174,9 +173,21 @@ dependencies {
     } else {
         testImplementation "com.openlattice:api:${api_version}:tests"
         testImplementation "com.openlattice:scribe:${scribe_version}:tests"
-        testImplementation "com.openlattice:rhizome:${rhizome_version}:test"
+        testImplementation "com.openlattice:rhizome:${rhizome_version}:tests"
         testImplementation "com.openlattice:rhizome-client:${rhizome_client_version}:tests"
     }
+
+    /*
+     * ELASTICSEARCH
+     */
+    api("org.elasticsearch:elasticsearch:${elastic_version}") {
+        exclude module: 'slf4j-log4j12'
+    }
+
+    api("org.elasticsearch.client:transport:${elastic_version}") {
+        exclude module: 'slf4j-log4j12'
+    }
+
     /*
      * TESTING
      */

@@ -9,7 +9,7 @@ import com.openlattice.auditing.AuditRecordEntitySetsManager
 import com.openlattice.auditing.AuditableEvent
 import com.openlattice.auditing.AuditingManager
 import com.openlattice.authorization.*
-import com.openlattice.datasets.DatasetService
+import com.openlattice.datasets.DataSetService
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastMap.Companion.EXTERNAL_COLUMNS
 import com.openlattice.hazelcast.HazelcastMap.Companion.EXTERNAL_TABLES
@@ -30,22 +30,17 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 
-/**
- *
- */
-
-
 class BackgroundExternalDatabaseSyncingService(
-        hazelcastInstance: HazelcastInstance,
-        private val edms: ExternalDatabaseManagementService,
-        private val extDbPermsService: ExternalDatabasePermissioningService,
-        private val auditingManager: AuditingManager,
-        private val ares: AuditRecordEntitySetsManager,
-        private val indexerConfiguration: IndexerConfiguration,
-        private val organizationMetadataEntitySetsService: OrganizationMetadataEntitySetsService,
-        private val reservationService: HazelcastAclKeyReservationService,
-        private val principalsMapManager: PrincipalsMapManager,
-        private val datasetService: DatasetService
+    hazelcastInstance: HazelcastInstance,
+    private val edms: ExternalDatabaseManagementService,
+    private val extDbPermsService: ExternalDatabasePermissioningService,
+    private val auditingManager: AuditingManager,
+    private val ares: AuditRecordEntitySetsManager,
+    private val indexerConfiguration: IndexerConfiguration,
+    private val organizationMetadataEntitySetsService: OrganizationMetadataEntitySetsService,
+    private val reservationService: HazelcastAclKeyReservationService,
+    private val principalsMapManager: PrincipalsMapManager,
+    private val dataSetService: DataSetService
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(BackgroundExternalDatabaseSyncingService::class.java)
@@ -116,7 +111,7 @@ class BackgroundExternalDatabaseSyncingService(
         edms.getTableInfoForOrganization(orgId).forEach { (oid, tableName, schemaName, _) ->
             val table = getOrCreateTable(orgId, oid, tableName, schemaName)
             val columns = syncTableColumns(table)
-            datasetService.signalDatasetCreated(table.id)
+            dataSetService.indexDataSet(table.id)
 
             initializeTablePermissions(orgId, table, columns, adminRolePrincipal)
 

@@ -31,7 +31,7 @@ import com.openlattice.conductor.rpc.MapboxConfiguration;
 import com.openlattice.data.storage.EntityDatastore;
 import com.openlattice.data.storage.IndexingMetadataManager;
 import com.openlattice.data.storage.partitions.PartitionManager;
-import com.openlattice.datasets.DatasetService;
+import com.openlattice.datasets.DataSetService;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EntitySetManager;
 import com.openlattice.graph.core.GraphService;
@@ -99,7 +99,7 @@ public class ConductorPostInitializationPod {
     private EntityDatastore entityDatastore;
 
     @Inject
-    private DatasetService datasetService;
+    private DataSetService dataSetService;
 
     @Bean
     public ConductorElasticsearchApi elasticsearchApi() {
@@ -137,7 +137,7 @@ public class ConductorPostInitializationPod {
                 graphService,
                 entityDatastore,
                 indexingMetadataManager,
-                datasetService
+                dataSetService
         );
     }
 }

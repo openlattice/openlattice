@@ -152,7 +152,6 @@ dependencies {
     testCompileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugs_annotations_version}"
 
     implementation "com.openlattice:conductor-client:${conductor_client_version}"
-    implementation "com.openlattice:scrunchie:${scrunchie_version}"
     implementation "com.openlattice:api:${api_version}"
     implementation "com.openlattice:rhizome:${rhizome_version}"
 

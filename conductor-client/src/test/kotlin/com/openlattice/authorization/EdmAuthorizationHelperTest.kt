@@ -23,14 +23,17 @@ package com.openlattice.authorization
 import com.google.common.eventbus.EventBus
 import com.openlattice.auditing.AuditingConfiguration
 import com.openlattice.authorization.securable.SecurableObjectType
+import com.openlattice.conductor.rpc.ConductorConfiguration
 import com.openlattice.data.storage.partitions.PartitionManager
-import com.openlattice.datasets.DatasetService
+import com.openlattice.datasets.DataSetService
+import com.openlattice.datastore.configuration.DatastoreConfiguration
 import com.openlattice.datastore.services.EdmService
 import com.openlattice.datastore.services.EntitySetService
 import com.openlattice.edm.properties.PostgresTypeManager
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.organizations.OrganizationMetadataEntitySetsService
+import com.openlattice.scrunchie.search.ConductorElasticsearchImpl
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.junit.Assert
 import org.junit.Test
@@ -42,16 +45,18 @@ class EdmAuthorizationHelperTest : HzAuthzTest() {
 
     init {
         val auditingConfig = testServer.context.getBean(AuditingConfiguration::class.java)
+        val conductorConfiguration = testServer.context.getBean(ConductorConfiguration::class.java)
         val pgTypeMan = PostgresTypeManager(hds, hazelcastInstance)
         val eventBus = Mockito.mock(EventBus::class.java)
-        val datasetService = DatasetService(hazelcastInstance, eventBus)
+        val elasticsearchApi = ConductorElasticsearchImpl( conductorConfiguration.searchConfiguration )
+        val dataSetService = DataSetService(hazelcastInstance, elasticsearchApi)
         val edmManager = EdmService(
                 hazelcastInstance,
                 HazelcastAclKeyReservationService(hazelcastInstance),
                 hzAuthz,
                 pgTypeMan,
                 HazelcastSchemaManager(hazelcastInstance, pgTypeMan),
-                datasetService
+                dataSetService
         )
         val entitySetManager = EntitySetService(
                 hazelcastInstance,
@@ -62,7 +67,7 @@ class EdmAuthorizationHelperTest : HzAuthzTest() {
                 edmManager,
                 hds,
                 Mockito.mock(OrganizationMetadataEntitySetsService::class.java),
-                datasetService,
+                dataSetService,
                 auditingConfig
         )
 
