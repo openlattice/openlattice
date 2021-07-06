@@ -21,23 +21,20 @@ class PostgresRoles private constructor() {
 
         @JvmStatic
         fun getOrCreatePermissionRolesAsync(
-                permissionRoleNames: IMap<AccessTarget, UUID>,
-                targets: Set<AccessTarget>,
+                permissionRoleNames: IMap<AccessTarget, String>,
+                targetRoleNames: Map<AccessTarget, String>,
                 orgDataSource: HikariDataSource
         ): CompletionStage<Map<AccessTarget, UUID>> {
-            val allExistingRoleNames = permissionRoleNames.getAll(targets)
+            val allExistingRoleNames = permissionRoleNames.getAll(targetRoleNames)
             val finalRoles = mutableMapOf<AccessTarget, UUID>()
             finalRoles.putAll(allExistingRoleNames)
 
-            val targetsToNewIds = targets.filterNot {
+            val newTargetRoleNames = targetRoleNames.filterNot {
                 // filter out roles that already exist
                 allExistingRoleNames.containsKey(it)
-            }.associateWith {
-                val newRole = UUID.randomUUID()
-                newRole
             }
 
-            if (targetsToNewIds.isEmpty()) {
+            if (newTargetRoleNames.isEmpty()) {
                 return CompletableFuture.supplyAsync {
                     finalRoles
                 }
@@ -45,14 +42,14 @@ class PostgresRoles private constructor() {
 
             orgDataSource.connection.use { conn ->
                 conn.createStatement().use { stmt ->
-                    targetsToNewIds.values.forEach { roleName ->
-                        stmt.execute(createExternalDatabaseRoleIfNotExistsSql(roleName.toString()))
+                    newTargetRoleNames.values.forEach { roleName ->
+                        stmt.execute(createExternalDatabaseRoleIfNotExistsSql(roleName))
                     }
                 }
             }
 
-            val roleSetCompletion = permissionRoleNames.putAllAsync(targetsToNewIds)
-            finalRoles.putAll(targetsToNewIds)
+            val roleSetCompletion = permissionRoleNames.putAllAsync(newTargetRoleNames)
+            finalRoles.putAll(newTargetRoleNames)
 
             return roleSetCompletion.thenApplyAsync {
                 finalRoles
