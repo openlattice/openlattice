@@ -134,7 +134,8 @@ class BackgroundExternalDatabaseSyncingService(
         extDbPermsService.initializeExternalTablePermissions(
                 organizationId,
                 table,
-                columns
+                columns,
+                adminRolePrincipal
         )
         val columnAcls = columns.map {
             Acl(it.getAclKey(), listOf(Ace(adminRolePrincipal, EnumSet.allOf(Permission::class.java))))

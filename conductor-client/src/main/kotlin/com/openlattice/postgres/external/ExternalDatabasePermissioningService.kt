@@ -67,7 +67,8 @@ interface ExternalDatabasePermissioningService {
     fun initializeExternalTablePermissions(
             organizationId: UUID,
             table: ExternalTable,
-            columns: Set<ExternalColumn>
+            columns: Set<ExternalColumn>,
+            adminRolePrincipal: Principal
     )
 
     /**

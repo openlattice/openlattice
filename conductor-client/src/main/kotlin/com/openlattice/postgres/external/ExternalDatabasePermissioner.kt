@@ -288,13 +288,15 @@ class ExternalDatabasePermissioner(
     override fun initializeExternalTablePermissions(
             organizationId: UUID,
             table: ExternalTable,
-            columns: Set<ExternalColumn>
+            columns: Set<ExternalColumn>,
+            adminRolePrincipal: Principal
     ) {
         initializePermissionSetForExternalTable(
                 hikariDataSource = extDbManager.connectToOrg(organizationId),
                 tableSchema = table.schema,
                 tableName = table.name,
                 columns = columns,
+                principal = adminRolePrincipal,
                 permissions = allTablePermissions
 
         )
@@ -324,21 +326,24 @@ class ExternalDatabasePermissioner(
             tableSchema: String,
             tableName: String,
             columns: Set<ExternalColumn>,
+            principal: Principal,
             permissions: Set<Permission>
     ) {
         val targetsToColumns = mutableMapOf<AccessTarget, ExternalColumn>()
 
-        val targets = columns.flatMapTo(mutableSetOf()) { column ->
+        val targetsForSingularPrincipal = columns.flatMapTo(mutableSetOf()) { column ->
             permissions.map { permission ->
                 val at = AccessTarget.forPermissionOnTarget(permission, column.tableId, column.id)
                 targetsToColumns[at] = column
                 at
             }
+        }.associateWith {
+            dbCredentialService.getDbUsername(principalsMapManager.getSecurablePrincipal(principal))
         }
 
         PostgresRoles.getOrCreatePermissionRolesAsync(
                 externalRoleNames,
-                targets,
+                targetsForSingularPrincipal,
                 hikariDataSource
         ).thenApplyAsync { targetToRoleNames ->
             targetToRoleNames.map { (target, roleName) ->
@@ -349,7 +354,7 @@ class ExternalDatabasePermissioner(
                         ApiHelpers.dbQuote(column.name),
                         tableSchema,
                         tableName,
-                        roleName.toString()
+                        roleName
                 )
             }
         }.thenAccept { sqls ->
