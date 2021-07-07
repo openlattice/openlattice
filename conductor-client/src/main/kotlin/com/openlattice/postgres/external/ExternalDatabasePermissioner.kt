@@ -500,21 +500,26 @@ class ExternalDatabasePermissioner(
     private fun lookUpPermissionRoles(
             permissions: Set<Permission>,
             columnAcl: Acl,
-            permissionRoles: Map<AccessTarget, UUID>
-    ): List<UUID> {
+            permissionRoles: Map<AccessTarget, String>
+    ): List<String> {
         return permissions.mapNotNull { permissionRoles[AccessTarget(columnAcl.aclKey, it)] }
     }
 
-    private fun getPermissionRolesForAcls(orgId: UUID, acls: List<Acl>, permissions: Set<Permission>): Map<AccessTarget, UUID> {
-        val accessTargets = acls
-                .map { it.aclKey }
-                .flatMap {
-                    permissions.map { permission -> AccessTarget(it, permission) }
-                }.toSet()
+    private fun getPermissionRolesForAcls(orgId: UUID, acls: List<Acl>, permissions: Set<Permission>): Map<AccessTarget, String> {
+        val accessTargetsToRoleNames = mutableMapOf<AccessTarget, String>()
+        acls.forEach {
+            it.aces.forEach { ace -> 
+                permissions.forEach { permission -> 
+                    val at = AccessTarget(it.aclKey, permission)
+                    accessTargetsToRoleNames[at] = dbCredentialService.getDbUsername(principalsMapManager.getSecurablePrincipal(a.principal)) 
+                    } 
+                }
+            }
+        }
 
         return PostgresRoles.getOrCreatePermissionRolesAsync(
                 externalRoleNames,
-                accessTargets,
+                accessTargetsToRoleNames,
                 extDbManager.connectToOrg(orgId)
         ).toCompletableFuture().get()
     }
@@ -545,12 +550,12 @@ class ExternalDatabasePermissioner(
     private fun grantPermissionsOnColumnSql(
             userRole: String,
             column: TableColumn,
-            permissionRoles: List<UUID>
+            permissionRoles: List<String>
     ): List<String> {
         val sqls = mutableListOf<String>()
 
         permissionRoles.forEach {
-            sqls.add(grantRoleToRole(it.toString(), setOf(userRole)))
+            sqls.add(grantRoleToRole(it, setOf(userRole)))
 
             if (column.schema != null) {
                 sqls.add(grantUsageOnSchemaSql(column.schema, userRole))
@@ -572,7 +577,17 @@ class ExternalDatabasePermissioner(
         val targets = targetRoles.joinToString {
             ApiHelpers.dbQuote(it)
         }
-        return "${action.name} ${ApiHelpers.dbQuote(roleName)} ${action.verb} $targets"
+        return "DO\n" +
+                "\$do\$\n" +
+                "BEGIN\n" +
+                "   ${action.name} ${ApiHelpers.dbQuote(roleName)} ${action.verb} $targets;\n" +
+                "   EXCEPTION\n" +
+                "      WHEN INVALID_GRANT_OPERATION THEN\n" +
+                "         NULL;\n" +
+                "      WHEN OTHERS THEN\n" +
+                "         RAISE;\n" +
+                "END\n" +
+                "\$do\$;"
     }
 
     internal fun createRoleIfNotExistsSql(dbRole: String): String {
