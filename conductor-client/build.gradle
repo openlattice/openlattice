@@ -44,6 +44,7 @@ ext.connectionUrl = 'scm:git:https://github.com/openlattice/conductor-client.git
 ext.developerConnectionUrl = 'scm:git:https://github.com/openlattice/conductor-client.git'
 
 apply from: "../gradles/openlattice.gradle"
+apply plugin: "kotlin"
 
 sourceCompatibility=JavaVersion.VERSION_11
 targetCompatibility=JavaVersion.VERSION_11
@@ -71,9 +72,17 @@ tasks.withType(Checkstyle) {
 spotbugs {
     reportLevel = 'high'
     toolVersion = "${spotbugs_annotations_version}"
+    maxHeapSize = '2g'
 }
 
 spotbugsMain {
+    reports {
+        xml.enabled = false
+        html.enabled = true
+    }
+}
+
+spotbugsTest {
     reports {
         xml.enabled = false
         html.enabled = true
@@ -119,42 +128,42 @@ dependencies {
     annotationProcessor "com.github.spotbugs:spotbugs-annotations:${spotbugs_annotations_version}"
     testAnnotationProcessor "net.jcip:jcip-annotations:${jcip_version}"
     testAnnotationProcessor "com.github.spotbugs:spotbugs-annotations:${spotbugs_annotations_version}"
+    testCompileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugs_annotations_version}"
 
     compileOnly "com.google.code.findbugs:findbugs:${findbugs_version}"
     /*
      * SL4J
      */
-    compile group: "org.slf4j", name: "slf4j-api", version:"${slf4j_version}"
+    implementation group: "org.slf4j", name: "slf4j-api", version:"${slf4j_version}"
 
     /*
      * @Inject and @Nullable support
      */
-    compile "javax.inject:javax.inject:${javax_inject_version}"
+    implementation "javax.inject:javax.inject:${javax_inject_version}"
 
-    compile "com.fasterxml.jackson.dataformat:jackson-dataformat-csv:${jackson_version}"
-    compile "com.fasterxml.jackson.dataformat:jackson-dataformat-xml:${jackson_version}"
-    compile "com.esotericsoftware:kryo-shaded:${kryo_shaded_version}"
-    compile "com.esotericsoftware:minlog:${minlog_version}"
-    compile "com.esotericsoftware:reflectasm:${reflectasm_version}"
-    compile "org.objenesis:objenesis:${objenesis_version}"
-    compile "net.snowflake:snowflake-jdbc:${snowflake_version}"
+    implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-csv:${jackson_version}"
+    implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-xml:${jackson_version}"
+    implementation "com.esotericsoftware:kryo-shaded:${kryo_shaded_version}"
+    implementation "com.esotericsoftware:minlog:${minlog_version}"
+    implementation "com.esotericsoftware:reflectasm:${reflectasm_version}"
+    implementation "org.objenesis:objenesis:${objenesis_version}"
+    implementation "net.snowflake:snowflake-jdbc:${snowflake_version}"
 
-    compile "com.google.guava:guava:${guava_version}"
-    compile "org.apache.olingo:odata-commons-api:${odata_version}"
-    compile "org.apache.olingo:odata-commons-core:${odata_version}"
-    compile "org.apache.olingo:odata-server-api:${odata_version}"
-    compile "org.apache.olingo:odata-server-core:${odata_version}"
-    //compile "org.apache.tika:tika-core:1.19.1"
+    api "com.google.guava:guava:${guava_version}"
+    implementation "org.apache.olingo:odata-commons-api:${odata_version}"
+    implementation "org.apache.olingo:odata-commons-core:${odata_version}"
+    implementation "org.apache.olingo:odata-server-api:${odata_version}"
+    implementation "org.apache.olingo:odata-server-core:${odata_version}"
+    //implementation "org.apache.tika:tika-core:1.19.1"
 
-    compile "org.xerial.snappy:snappy-java:${snappy_version}"
-    compile "net.jpountz.lz4:lz4:${lz4_version}"
-    compile "de.javakaffee:kryo-serializers:${kryo_serializers_version}"
+    implementation "org.xerial.snappy:snappy-java:${snappy_version}"
+    implementation "net.jpountz.lz4:lz4:${lz4_version}"
+    implementation "de.javakaffee:kryo-serializers:${kryo_serializers_version}"
+    api "org.apache.commons:commons-text:${commonsText_version}"
 
-    compile "com.openlattice:api:${api_version}"
-    compile "com.openlattice:scribe:${scribe_version}"
-
-    compile "com.openlattice:rhizome:${rhizome_version}"
-    testImplementation "junit:junit:${junit_version}"
+    api "com.openlattice:api:${api_version}"
+    api "com.openlattice:scribe:${scribe_version}"
+    api "com.openlattice:rhizome:${rhizome_version}"
 
     if( project.hasProperty('developmentMode') && project.developmentMode ) {
         testImplementation(project(path: ":api", configuration: "tests"))
@@ -167,6 +176,18 @@ dependencies {
         testImplementation "com.openlattice:rhizome:${rhizome_version}:tests"
         testImplementation "com.openlattice:rhizome-client:${rhizome_client_version}:tests"
     }
+
+    /*
+     * ELASTICSEARCH
+     */
+    api("org.elasticsearch:elasticsearch:${elastic_version}") {
+        exclude module: 'slf4j-log4j12'
+    }
+
+    api("org.elasticsearch.client:transport:${elastic_version}") {
+        exclude module: 'slf4j-log4j12'
+    }
+
     /*
      * TESTING
      */
@@ -175,16 +196,11 @@ dependencies {
         exclude module : 'hamcrest'
         exclude module : 'hamcrest-core'
     }
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 }
 
 test {
     ignoreFailures = true
     maxHeapSize = "8g"
-}
-
-install {
-	configuration = configurations.published
 }
 
 eclipse {

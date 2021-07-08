@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component
 class GetPropertyTypesFromTransporterColumnSetEntryProcessorStreamSerializer:
         NoOpSelfRegisteringStreamSerializer<GetPropertyTypesFromTransporterColumnSetEntryProcessor>()
 {
-    override fun read(`in`: ObjectDataInput?): GetPropertyTypesFromTransporterColumnSetEntryProcessor{
+    override fun read(`in`: ObjectDataInput): GetPropertyTypesFromTransporterColumnSetEntryProcessor{
         return GetPropertyTypesFromTransporterColumnSetEntryProcessor()
     }
 

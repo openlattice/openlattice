@@ -10,7 +10,7 @@ import com.openlattice.assembler.events.MaterializedEntitySetEdmChangeEvent
 import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.controllers.exceptions.TypeExistsException
-import com.openlattice.datasets.DatasetService
+import com.openlattice.datasets.DataSetService
 import com.openlattice.datasets.SecurableObjectMetadata
 import com.openlattice.edm.EntityDataModel
 import com.openlattice.edm.EntityDataModelDiff
@@ -47,7 +47,7 @@ class EdmService(
         private val authorizations: AuthorizationManager,
         private val entityTypeManager: PostgresTypeManager,
         private val schemaManager: HazelcastSchemaManager,
-        private val datasetService: DatasetService
+        private val dataSetService: DataSetService
 ) : EdmManager {
 
     private val propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap(hazelcastInstance)
@@ -425,7 +425,7 @@ class EdmService(
 
         entitySetIdsOfEntityType.forEach {
             markMaterializedEntitySetDirtyWithEdmChanges(it)
-            propertyTypeIds.forEach { ptId -> datasetService.deleteObjectMetadata(AclKey(it, ptId)) }
+            propertyTypeIds.forEach { ptId -> dataSetService.deleteObjectMetadata(AclKey(it, ptId)) }
         }
 
     }

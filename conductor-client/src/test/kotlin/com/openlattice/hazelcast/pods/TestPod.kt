@@ -21,11 +21,15 @@
 
 package com.openlattice.hazelcast.pods
 
+import com.kryptnostic.rhizome.pods.ConfigurationLoader
+import com.openlattice.auditing.AuditingConfiguration
+import com.openlattice.conductor.rpc.ConductorConfiguration
 import com.openlattice.datastore.services.EdmService
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService
 import org.mockito.Mockito
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import javax.inject.Inject
 
 /**
  *
@@ -33,6 +37,10 @@ import org.springframework.context.annotation.Configuration
  */
 @Configuration
 class TestPod {
+
+    @Inject
+    private lateinit var configurationLoader: ConfigurationLoader
+
     @Bean
     fun edmService() : EdmService {
         return Mockito.mock(EdmService::class.java)
@@ -41,5 +49,10 @@ class TestPod {
     @Bean
     fun externalDatabasePermissionsManager(): ExternalDatabasePermissioningService {
         return Mockito.mock(ExternalDatabasePermissioningService::class.java)
+    }
+
+    @Bean
+    fun conductorConfiguration(): ConductorConfiguration {
+        return configurationLoader.logAndLoad( "conductor", ConductorConfiguration::class.java )
     }
 }

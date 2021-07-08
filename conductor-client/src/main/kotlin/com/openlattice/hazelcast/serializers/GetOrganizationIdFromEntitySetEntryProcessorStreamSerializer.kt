@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component
 class GetOrganizationIdFromEntitySetEntryProcessorStreamSerializer:
         NoOpSelfRegisteringStreamSerializer<GetOrganizationIdFromEntitySetEntryProcessor>()
 {
-    override fun read(`in`: ObjectDataInput?): GetOrganizationIdFromEntitySetEntryProcessor{
+    override fun read(`in`: ObjectDataInput): GetOrganizationIdFromEntitySetEntryProcessor{
         return GetOrganizationIdFromEntitySetEntryProcessor()
     }
 

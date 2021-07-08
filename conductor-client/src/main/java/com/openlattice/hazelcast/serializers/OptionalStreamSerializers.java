@@ -29,6 +29,7 @@ import com.kryptnostic.rhizome.hazelcast.serializers.IoPerformingConsumer;
 import com.kryptnostic.rhizome.hazelcast.serializers.IoPerformingFunction;
 import com.kryptnostic.rhizome.hazelcast.serializers.ListStreamSerializers;
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers;
+import javax.annotation.Nonnull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -172,6 +173,7 @@ public final class OptionalStreamSerializers {
         }
     }
 
+    @Nonnull
     public static <T> Optional<Set<T>> deserializeSet( ObjectDataInput in, IoPerformingFunction<ObjectDataInput, T> f )
             throws IOException {
         if ( in.readBoolean() ) {

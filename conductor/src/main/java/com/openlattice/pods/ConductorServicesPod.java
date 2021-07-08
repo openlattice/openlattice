@@ -58,6 +58,7 @@ import com.openlattice.collaborations.CollaborationService;
 import com.openlattice.collaborations.PostgresCollaborationDatabaseService;
 import com.openlattice.collections.CollectionsManager;
 import com.openlattice.conductor.rpc.ConductorConfiguration;
+import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.conductor.rpc.MapboxConfiguration;
 import com.openlattice.data.DataDeletionManager;
 import com.openlattice.data.DataGraphManager;
@@ -66,7 +67,7 @@ import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
 import com.openlattice.data.storage.*;
 import com.openlattice.data.storage.partitions.PartitionManager;
-import com.openlattice.datasets.DatasetService;
+import com.openlattice.datasets.DataSetService;
 import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EdmService;
@@ -112,6 +113,7 @@ import com.openlattice.postgres.tasks.PostgresMetaDataPropertiesInitializationDe
 import com.openlattice.postgres.tasks.PostgresMetaDataPropertiesInitializationTask;
 import com.openlattice.scheduling.ScheduledTaskService;
 import com.openlattice.scheduling.ScheduledTaskServiceDependencies;
+import com.openlattice.scrunchie.search.ConductorElasticsearchImpl;
 import com.openlattice.subscriptions.PostgresSubscriptionService;
 import com.openlattice.subscriptions.SubscriptionNotificationDependencies;
 import com.openlattice.subscriptions.SubscriptionNotificationTask;
@@ -520,8 +522,8 @@ public class ConductorServicesPod {
     }
 
     @Bean
-    DatasetService datasetService() {
-        return new DatasetService( hazelcastInstance, eventBus );
+    DataSetService dataSetService() {
+        return new DataSetService( hazelcastInstance, elasticsearchApi() );
     }
 
     @Bean
@@ -532,7 +534,7 @@ public class ConductorServicesPod {
                 authorizationManager(),
                 entityTypeManager(),
                 schemaManager(),
-                datasetService()
+                dataSetService()
         );
     }
 
@@ -562,7 +564,7 @@ public class ConductorServicesPod {
                 dataModelService(),
                 hikariDataSource,
                 organizationMetadataEntitySetsService(),
-                datasetService(),
+                dataSetService(),
                 auditingConfiguration
         );
     }
@@ -740,6 +742,11 @@ public class ConductorServicesPod {
         dataSourceManager.registerTablesWithAllDatasources( PostgresTable.E );
         dataSourceManager.registerTablesWithAllDatasources( PostgresTable.DATA );
         return new DataSourceResolver( hazelcastInstance, dataSourceManager );
+    }
+
+    @Bean
+    public ConductorElasticsearchApi elasticsearchApi() {
+        return new ConductorElasticsearchImpl( conductorConfiguration().getSearchConfiguration() );
     }
 
     @PostConstruct

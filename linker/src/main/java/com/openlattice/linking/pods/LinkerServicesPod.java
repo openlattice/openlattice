@@ -36,10 +36,8 @@ import com.openlattice.collaborations.CollaborationDatabaseManager;
 import com.openlattice.collaborations.CollaborationService;
 import com.openlattice.collaborations.PostgresCollaborationDatabaseService;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
-import com.openlattice.data.DataGraphManager;
-import com.openlattice.data.DataGraphService;
 import com.openlattice.data.storage.partitions.PartitionManager;
-import com.openlattice.datasets.DatasetService;
+import com.openlattice.datasets.DataSetService;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.EntitySetManager;
@@ -47,8 +45,6 @@ import com.openlattice.datastore.services.EntitySetService;
 import com.openlattice.edm.properties.PostgresTypeManager;
 import com.openlattice.edm.schemas.SchemaQueryService;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
-import com.openlattice.graph.Graph;
-import com.openlattice.graph.core.GraphService;
 import com.openlattice.ids.HazelcastLongIdService;
 import com.openlattice.linking.LinkingConfiguration;
 import com.openlattice.linking.LinkingLogService;
@@ -145,7 +141,7 @@ public class LinkerServicesPod {
     }
 
     @Bean
-    public ConductorElasticsearchApi elasticsearchApi() throws IOException {
+    public ConductorElasticsearchApi elasticsearchApi() {
         return new ConductorElasticsearchImpl( linkingConfiguration.getSearchConfiguration() );
     }
 
@@ -270,8 +266,8 @@ public class LinkerServicesPod {
     }
 
     @Bean
-    DatasetService datasetService() {
-        return new DatasetService( hazelcastInstance, eventBus );
+    DataSetService dataSetService() {
+        return new DataSetService( hazelcastInstance, elasticsearchApi() );
     }
 
     @Bean
@@ -282,7 +278,7 @@ public class LinkerServicesPod {
                 authorizationManager(),
                 entityTypeManager(),
                 schemaManager(),
-                datasetService()
+                dataSetService()
         );
     }
 
@@ -297,7 +293,7 @@ public class LinkerServicesPod {
                 dataModelService(),
                 hikariDataSource,
                 organizationMetadataEntitySetsService(),
-                datasetService(),
+                dataSetService(),
                 auditingConfiguration
         );
     }

@@ -5,7 +5,7 @@ buildscript {
     }
 
     dependencies {
-        classpath "org.openapitools:openapi-generator-gradle-plugin:4.3.1"
+        classpath "org.openapitools:openapi-generator-gradle-plugin:5.1.1"
     }
 
     configurations.classpath {
@@ -69,6 +69,13 @@ spotbugs {
 }
 
 spotbugsMain {
+    reports {
+        xml.enabled = false
+        html.enabled = true
+    }
+}
+
+spotbugsTest {
     reports {
         xml.enabled = false
         html.enabled = true
@@ -162,44 +169,44 @@ dependencies {
     testCompileOnly "net.jcip:jcip-annotations:${jcip_version}"
     testCompileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugs_annotations_version}"
 
-    swaggerCodegen 'io.swagger.codegen.v3:swagger-codegen-cli:3.0.8'
+    swaggerCodegen 'io.swagger.codegen.v3:swagger-codegen-cli:3.0.26'
     swaggerUI 'org.webjars:swagger-ui:3.22.2'
 
     /*
      * SL4J
      */
-    compile group: "org.slf4j", name: "slf4j-api", version: "${slf4j_version}"
+    implementation group: "org.slf4j", name: "slf4j-api", version: "${slf4j_version}"
 
     /*
      * @Inject and @Nullable support
      */
-    compile "javax.inject:javax.inject:${javax_inject_version}"
+    implementation "javax.inject:javax.inject:${javax_inject_version}"
 
-    compile group: "com.twilio.sdk", name: "twilio", version: "$twilio_version"
+    implementation group: "com.twilio.sdk", name: "twilio", version: "$twilio_version"
 
-    compile "com.fasterxml.jackson.dataformat:jackson-dataformat-csv:${jackson_version}"
-    compile "com.esotericsoftware:kryo-shaded:${kryo_shaded_version}"
-    compile "com.esotericsoftware:minlog:${minlog_version}"
-    compile "com.esotericsoftware:reflectasm:${reflectasm_version}"
-    compile "org.objenesis:objenesis:${objenesis_version}"
-    compile "de.javakaffee:kryo-serializers:$kryo_serializers_version"
+    implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-csv:${jackson_version}"
+    implementation "com.esotericsoftware:kryo-shaded:${kryo_shaded_version}"
+    implementation "com.esotericsoftware:minlog:${minlog_version}"
+    implementation "com.esotericsoftware:reflectasm:${reflectasm_version}"
+    implementation "org.objenesis:objenesis:${objenesis_version}"
+    implementation "de.javakaffee:kryo-serializers:$kryo_serializers_version"
 
-    compile "org.apache.commons:commons-lang3:${commonsLang_version}"
-    compile "commons-io:commons-io:${commonsio_version}"
-    compile "commons-validator:commons-validator:${commonsvalidator_version}"
-    compile "org.apache.commons:commons-text:${commonsText_version}"
+    implementation "org.apache.commons:commons-lang3:${commonsLang_version}"
+    implementation "commons-io:commons-io:${commonsio_version}"
+    implementation "commons-validator:commons-validator:${commonsvalidator_version}"
+    implementation "org.apache.commons:commons-text:${commonsText_version}"
 
-    compile "com.google.maps:google-maps-services:${google_maps_services}"
-    compile "com.google.guava:guava:${guava_version}"
-    compile "org.apache.olingo:odata-commons-api:${odata_version}"
-    compile "org.apache.olingo:odata-commons-core:${odata_version}"
-    compile "org.apache.olingo:odata-server-api:${odata_version}"
-    compile "org.apache.olingo:odata-server-core:${odata_version}"
+    api "com.google.maps:google-maps-services:${google_maps_services}"
+    api "com.google.guava:guava:${guava_version}"
+    implementation "org.apache.olingo:odata-commons-api:${odata_version}"
+    implementation "org.apache.olingo:odata-commons-core:${odata_version}"
+    implementation "org.apache.olingo:odata-server-api:${odata_version}"
+    implementation "org.apache.olingo:odata-server-core:${odata_version}"
 
-    compile "org.xerial.snappy:snappy-java:${snappy_version}"
-    compile "net.jpountz.lz4:lz4:${lz4_version}"
-    compile "com.squareup.retrofit2:retrofit:${retrofit2_version}"
-    compile "com.auth0:auth0:${project.auth0_version}"
+    implementation "org.xerial.snappy:snappy-java:${snappy_version}"
+    implementation "net.jpountz.lz4:lz4:${lz4_version}"
+    implementation "com.squareup.retrofit2:retrofit:${retrofit2_version}"
+    implementation "com.auth0:auth0:${project.auth0_version}"
     /*
      * JACKSON SERIALIZATION
      * YAML via SnakeYaml
@@ -209,21 +216,21 @@ dependencies {
      * Jersey integration
      * Jaxb annotation support
      */
-    compile "com.fasterxml.jackson.core:jackson-core:${jackson_version}"
-    compile "com.fasterxml.jackson.core:jackson-databind:${jackson_version}"
-    compile "com.fasterxml.jackson.datatype:jackson-datatype-guava:${jackson_version}"
-    compile "com.fasterxml.jackson.module:jackson-module-jaxb-annotations:${jackson_version}"
-    compile "com.fasterxml.jackson.module:jackson-module-afterburner:${jackson_version}"
-    compile "com.fasterxml.jackson.dataformat:jackson-dataformat-smile:${jackson_version}"
-    compile "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:${jackson_version}"
-    compile "com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:${jackson_version}"
-    compile "com.fasterxml.jackson.datatype:jackson-datatype-joda:${jackson_version}"
-    compile "org.yaml:snakeyaml:${snakeyaml_version}"
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
-    compile "com.auth0:auth0:${project.auth0_version}"
+    implementation "com.fasterxml.jackson.core:jackson-core:${jackson_version}"
+    implementation "com.fasterxml.jackson.core:jackson-databind:${jackson_version}"
+    implementation "com.fasterxml.jackson.datatype:jackson-datatype-guava:${jackson_version}"
+    implementation "com.fasterxml.jackson.module:jackson-module-jaxb-annotations:${jackson_version}"
+    implementation "com.fasterxml.jackson.module:jackson-module-afterburner:${jackson_version}"
+    implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-smile:${jackson_version}"
+    implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:${jackson_version}"
+    implementation "com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:${jackson_version}"
+    implementation "com.fasterxml.jackson.datatype:jackson-datatype-joda:${jackson_version}"
+    implementation "org.yaml:snakeyaml:${snakeyaml_version}"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    implementation "com.auth0:auth0:${project.auth0_version}"
 
-    implementation "com.openlattice:rhizome-client:${rhizome_client_version}"
+    api "com.openlattice:rhizome-client:${rhizome_client_version}"
     if( project.hasProperty('developmentMode') && project.developmentMode ) {
         testImplementation(project(path: ":rhizome-client", configuration: "tests"))
     } else {
@@ -242,10 +249,6 @@ dependencies {
         exclude module: 'hamcrest'
         exclude module: 'hamcrest-core'
     }
-}
-
-install {
-    configuration = configurations.published
 }
 
 eclipse {
