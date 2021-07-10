@@ -125,29 +125,46 @@ class BackgroundExternalDatabaseSyncingService(
     }
 
     private fun initializeTablePermissions(
-            organizationId: UUID,
-            table: ExternalTable,
-            columns: Set<ExternalColumn>,
-            adminRolePrincipal: Principal
+        organizationId: UUID,
+        table: ExternalTable,
+        columns: Set<ExternalColumn>,
+        adminRolePrincipal: Principal
     ) {
-        // initialize database permissions
-        extDbPermsService.initializeExternalTablePermissions(
-                organizationId,
-                table,
-                columns
+
+        var timer = Stopwatch.createStarted()
+        extDbPermsService.initializeExternalTablePermissions(organizationId, table, columns)
+        logger.info(
+            "initializing external table permissions took {} ms - org {} table {}",
+            timer.elapsed(TimeUnit.MILLISECONDS),
+            organizationId,
+            table.id
         )
+
         val columnAcls = columns.map {
             Acl(it.getAclKey(), listOf(Ace(adminRolePrincipal, EnumSet.allOf(Permission::class.java))))
         }
         val tableColsByAclKey = columns.associate {
             it.getAclKey() to TableColumn(it.organizationId, it.tableId, it.id, Schemas.fromName(table.schema))
         }
+
+        timer = Stopwatch.createStarted()
         extDbPermsService.updateExternalTablePermissions(Action.ADD, columnAcls, tableColsByAclKey)
+        logger.info(
+            "updating external table permissions took {} ms - org {} table {}",
+            timer.elapsed(TimeUnit.MILLISECONDS),
+            organizationId,
+            table.id
+        )
 
-        // initialize OL permissions
+        timer = Stopwatch.createStarted()
         val acls = edms.syncPermissions(adminRolePrincipal, table, columns)
+        logger.info(
+            "syncing permissions took {} ms - org {} table {}",
+            timer.elapsed(TimeUnit.MILLISECONDS),
+            organizationId,
+            table.id
+        )
 
-        // audit
         recordAuditableEvents(acls, AuditEventType.ADD_PERMISSION)
     }
 
