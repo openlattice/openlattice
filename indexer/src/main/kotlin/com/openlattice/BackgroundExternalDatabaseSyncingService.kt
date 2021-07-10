@@ -78,7 +78,7 @@ class BackgroundExternalDatabaseSyncingService(
                 .filter { it != IdConstants.GLOBAL_ORGANIZATION_ID.id }
                 .shuffled()
                 .parallelStream()
-                .forEach { syncOrganizationDatabases(it) }
+                .forEach { syncOrganizationDatabase(it) }
             logger.info("Completed syncing database objects in {}", timer)
         } catch (ex: Exception) {
             logger.error("Failed while syncing external database metadata", ex)
@@ -87,10 +87,10 @@ class BackgroundExternalDatabaseSyncingService(
         }
     }
 
-    private fun syncOrganizationDatabases(organizationId: UUID) {
+    private fun syncOrganizationDatabase(organizationId: UUID) {
 
         if (orgsBeingSynced.contains(organizationId)) {
-            logger.info("syncing organization databases is in progress - org {}", organizationId)
+            logger.info("syncing organization database is in progress - org {}", organizationId)
             return
         }
 
@@ -98,7 +98,11 @@ class BackgroundExternalDatabaseSyncingService(
             val timer = Stopwatch.createStarted()
             orgsBeingSynced.add(organizationId)
 
-            logger.info("starting syncing organization databases - org {}", organizationId)
+            if (organizationId == UUID.fromString("ef691fe3-a8ce-45ed-bf2e-e4fa15499067")) {
+                Thread.sleep(10000L)
+            }
+
+            logger.info("starting syncing organization database - org {}", organizationId)
 
             val databaseName = organizationDatabases[organizationId]?.name
             if (databaseName == null) {
@@ -133,7 +137,7 @@ class BackgroundExternalDatabaseSyncingService(
             )
         }
         catch (e: Exception) {
-            logger.error("error syncing organization databases - org {}", organizationId, e)
+            logger.error("error syncing organization database - org {}", organizationId, e)
         }
         finally {
             orgsBeingSynced.remove(organizationId)
