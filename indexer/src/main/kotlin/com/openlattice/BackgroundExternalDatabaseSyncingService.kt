@@ -98,10 +98,6 @@ class BackgroundExternalDatabaseSyncingService(
             val timer = Stopwatch.createStarted()
             orgsBeingSynced.add(organizationId)
 
-            if (organizationId == UUID.fromString("ef691fe3-a8ce-45ed-bf2e-e4fa15499067")) {
-                Thread.sleep(10000L)
-            }
-
             logger.info("starting syncing organization database - org {}", organizationId)
 
             val databaseName = organizationDatabases[organizationId]?.name
