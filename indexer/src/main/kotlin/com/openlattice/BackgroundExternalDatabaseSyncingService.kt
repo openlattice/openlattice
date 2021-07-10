@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import java.time.OffsetDateTime
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 
@@ -46,6 +47,7 @@ class BackgroundExternalDatabaseSyncingService(
         private val logger = LoggerFactory.getLogger(BackgroundExternalDatabaseSyncingService::class.java)
 
         const val SCAN_RATE = 1_000L * 30 // 30 seconds
+        val orgsBeingSynced: ConcurrentHashMap.KeySetView<UUID, Boolean> = ConcurrentHashMap.newKeySet()
     }
 
     private val organizationExternalDatabaseColumns = EXTERNAL_COLUMNS.getMap(hazelcastInstance)
@@ -72,18 +74,11 @@ class BackgroundExternalDatabaseSyncingService(
 
         try {
             val timer = Stopwatch.createStarted()
-
             organizations.keys
-                    .filter { it != IdConstants.GLOBAL_ORGANIZATION_ID.id }
-                    .shuffled()
-                    .forEach {
-                        try {
-                            syncOrganizationDatabases(it)
-                        } catch (e: Exception) {
-                            logger.error("An error occurred when trying to sync database for org {}", it, e)
-                        }
-                    }
-
+                .filter { it != IdConstants.GLOBAL_ORGANIZATION_ID.id }
+                .shuffled()
+                .parallelStream()
+                .forEach { syncOrganizationDatabases(it) }
             logger.info("Completed syncing database objects in {}", timer)
         } catch (ex: Exception) {
             logger.error("Failed while syncing external database metadata", ex)
@@ -92,36 +87,57 @@ class BackgroundExternalDatabaseSyncingService(
         }
     }
 
-    private fun syncOrganizationDatabases(orgId: UUID) {
-        val sw = Stopwatch.createStarted()
-        logger.info("About to sync database for organization {}", orgId)
-        val dbName = organizationDatabases[orgId]?.name
+    private fun syncOrganizationDatabases(organizationId: UUID) {
 
-        if (dbName == null) {
-            logger.error("Organization {} does not exist in the organizationDatabases mapstore", orgId)
+        if (orgsBeingSynced.contains(organizationId)) {
+            logger.info("syncing organization databases is in progress - org {}", organizationId)
             return
         }
 
-        val adminRoleAclKey = organizations.getValue(orgId).adminRoleAclKey
-        val adminRolePrincipal = principalsMapManager.getSecurablePrincipal(adminRoleAclKey)!!.principal
+        try {
+            val timer = Stopwatch.createStarted()
+            orgsBeingSynced.add(organizationId)
 
-        val tableIds = mutableSetOf<UUID>()
-        val columnIds = mutableSetOf<UUID>()
+            logger.info("starting syncing organization databases - org {}", organizationId)
 
-        edms.getTableInfoForOrganization(orgId).forEach { (oid, tableName, schemaName, _) ->
-            val table = getOrCreateTable(orgId, oid, tableName, schemaName)
-            val columns = syncTableColumns(table)
-            dataSetService.indexDataSet(table.id)
+            val databaseName = organizationDatabases[organizationId]?.name
+            if (databaseName == null) {
+                logger.error("database name is null - org {}", organizationId)
+                return
+            }
 
-            initializeTablePermissions(orgId, table, columns, adminRolePrincipal)
+            val adminRoleAclKey = organizations.getValue(organizationId).adminRoleAclKey
+            val adminRolePrincipal = principalsMapManager.getSecurablePrincipal(adminRoleAclKey)!!.principal
 
-            tableIds.add(table.id)
-            columnIds.addAll(columns.map { it.id })
+            val tableIds = mutableSetOf<UUID>()
+            val columnIds = mutableSetOf<UUID>()
+
+            edms.getTableInfoForOrganization(organizationId).forEach { (oid, tableName, schemaName, _) ->
+                val table = getOrCreateTable(organizationId, oid, tableName, schemaName)
+                val columns = syncTableColumns(table)
+                dataSetService.indexDataSet(table.id)
+
+                initializeTablePermissions(organizationId, table, columns, adminRolePrincipal)
+
+                tableIds.add(table.id)
+                columnIds.addAll(columns.map { it.id })
+            }
+
+            removeNonexistentTablesAndColumnsForOrg(organizationId, tableIds, columnIds)
+
+            logger.info(
+                "syncing organization database took {} ms - org {} db {}",
+                timer.elapsed(TimeUnit.MILLISECONDS),
+                organizationId,
+                databaseName
+            )
         }
-
-        removeNonexistentTablesAndColumnsForOrg(orgId, tableIds, columnIds)
-
-        logger.info("Finished syncing database for organization {} in {} ms", orgId, sw.elapsed(TimeUnit.MILLISECONDS))
+        catch (e: Exception) {
+            logger.error("error syncing organization databases - org {}", organizationId, e)
+        }
+        finally {
+            orgsBeingSynced.remove(organizationId)
+        }
     }
 
     private fun initializeTablePermissions(
