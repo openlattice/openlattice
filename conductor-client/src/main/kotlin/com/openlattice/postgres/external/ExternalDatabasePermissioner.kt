@@ -317,7 +317,6 @@ class ExternalDatabasePermissioner(
                 tableName = table.name,
                 columns = columns,
                 permissions = allViewPermissions
-
         )
     }
 

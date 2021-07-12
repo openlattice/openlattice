@@ -1234,8 +1234,8 @@ public final class ResultSetAdapters {
         return rs.getObject( COLLABORATION_ID.getName(), UUID.class );
     }
 
-    @NotNull public static UUID roleId( @NotNull ResultSet rs ) throws SQLException {
-        return rs.getObject( ROLE_ID.getName(), UUID.class );
+    @NotNull public static String roleId( @NotNull ResultSet rs ) throws SQLException {
+        return rs.getObject( ROLE_ID.getName(), String.class );
     }
 
     @NotNull public static Permission permission( @NotNull ResultSet rs ) throws SQLException {
