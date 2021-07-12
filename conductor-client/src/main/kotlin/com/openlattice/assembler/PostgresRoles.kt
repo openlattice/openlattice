@@ -25,13 +25,13 @@ class PostgresRoles private constructor() {
                 targetRoleNames: Map<AccessTarget, String>,
                 orgDataSource: HikariDataSource
         ): CompletionStage<Map<AccessTarget, String>> {
-            val allExistingRoleNames = permissionRoleNames.getAll(targetRoleNames)
+            val allExistingRoleNames = permissionRoleNames.getAll(targetRoleNames.keys)
             val finalRoles = mutableMapOf<AccessTarget, String>()
             finalRoles.putAll(allExistingRoleNames)
 
             val newTargetRoleNames = targetRoleNames.filterNot {
                 // filter out roles that already exist
-                allExistingRoleNames.containsKey(it)
+                allExistingRoleNames.containsKey(it.key)
             }
 
             if (newTargetRoleNames.isEmpty()) {

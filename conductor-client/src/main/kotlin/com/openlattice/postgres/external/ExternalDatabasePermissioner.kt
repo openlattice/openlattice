@@ -511,11 +511,10 @@ class ExternalDatabasePermissioner(
             it.aces.forEach { ace -> 
                 permissions.forEach { permission -> 
                     val at = AccessTarget(it.aclKey, permission)
-                    accessTargetsToRoleNames[at] = dbCredentialService.getDbUsername(principalsMapManager.getSecurablePrincipal(a.principal)) 
+                    accessTargetsToRoleNames[at] = dbCredentialService.getDbUsername(principalsMapManager.getSecurablePrincipal(ace.principal)) 
                     } 
                 }
             }
-        }
 
         return PostgresRoles.getOrCreatePermissionRolesAsync(
                 externalRoleNames,
@@ -524,9 +523,9 @@ class ExternalDatabasePermissioner(
         ).toCompletableFuture().get()
     }
 
-    private fun removePermissionsOnColumn(userRole: String, permissionRoles: List<UUID>): List<String> {
+    private fun removePermissionsOnColumn(userRole: String, permissionRoles: List<String>): List<String> {
         return permissionRoles.map {
-            revokeRoleSql(it.toString(), setOf(userRole))
+            revokeRoleSql(it, setOf(userRole))
         }
     }
 
