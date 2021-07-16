@@ -79,6 +79,7 @@ import com.openlattice.organizations.OrganizationDatabase;
 import com.openlattice.requests.Request;
 import com.openlattice.requests.RequestStatus;
 import com.openlattice.requests.Status;
+import com.openlattice.rhizome.hazelcast.DelegatedStringSet
 import com.openlattice.scheduling.RunnableTask;
 import com.openlattice.scheduling.ScheduledTask;
 import com.openlattice.search.PersistentSearchNotificationType;
@@ -1234,8 +1235,8 @@ public final class ResultSetAdapters {
         return rs.getObject( COLLABORATION_ID.getName(), UUID.class );
     }
 
-    @NotNull public static String roleId( @NotNull ResultSet rs ) throws SQLException {
-        return rs.getObject( ROLE_ID.getName(), String.class );
+    @NotNull public static DelegatedStringSet roleId( @NotNull ResultSet rs ) throws SQLException {
+        return rs.getObject( ROLE_ID.getName(), DelegatedStringSet.class );
     }
 
     @NotNull public static Permission permission( @NotNull ResultSet rs ) throws SQLException {

@@ -20,6 +20,7 @@ import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresPrivileges
 import com.openlattice.postgres.TableColumn
 import com.openlattice.postgres.mapstores.SecurableObjectTypeMapstore
+import com.openlattice.rhizome.hazelcast.DelegatedStringSet
 import com.openlattice.transporter.grantUsageOnSchemaSql
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
@@ -243,6 +244,7 @@ class ExternalDatabasePermissioner(
         PostgresRoles.getOrCreatePermissionRolesAsync(
                 externalRoleNames,
                 targets,
+                setOf(),
                 orgDatasource
         ).thenApplyAsync { targetsToRoleNames ->
             propertyTypes.map { (id, fqn) ->
@@ -250,14 +252,14 @@ class ExternalDatabasePermissioner(
                     ApiHelpers.dbQuote(it.toString())
                 }
                 val permissions = olToPostgres.getValue(Permission.READ)
-                val roleName = targetsToRoleNames[AccessTarget.forPermissionOnTarget(Permission.READ, entitySetId, id)].toString()
-                grantUsageOnSchemaSql(Schemas.ASSEMBLED_ENTITY_SETS, roleName) to
+                val roleNames = targetsToRoleNames[AccessTarget.forPermissionOnTarget(Permission.READ, entitySetId, id)]?.unwrap() ?: setOf()
+                grantUsageOnSchemaSql(Schemas.ASSEMBLED_ENTITY_SETS, roleNames) to
                         grantPermissionsOnColumnsOnTableToRoleSql(
                                 permissions,
                                 quotedColumns,
                                 Schemas.ASSEMBLED_ENTITY_SETS.label,
                                 entitySetName,
-                                roleName)
+                                roleNames)
             }
         }.thenAccept { ptToSqls ->
             orgDatasource.connection.use { conn ->
@@ -330,19 +332,18 @@ class ExternalDatabasePermissioner(
     ) {
         val targetsToColumns = mutableMapOf<AccessTarget, ExternalColumn>()
 
-        val targetsForSingularPrincipal = columns.flatMapTo(mutableSetOf()) { column ->
+        val targets = columns.flatMapTo(mutableSetOf()) { column ->
             permissions.map { permission ->
                 val at = AccessTarget.forPermissionOnTarget(permission, column.tableId, column.id)
                 targetsToColumns[at] = column
                 at
             }
-        }.associateWith {
-            dbCredentialService.getDbUsername(principalsMapManager.getSecurablePrincipal(principal))
         }
 
         PostgresRoles.getOrCreatePermissionRolesAsync(
                 externalRoleNames,
-                targetsForSingularPrincipal,
+                targets,
+                setOf(dbCredentialService.getDbUsername(principalsMapManager.getSecurablePrincipal(principal))),
                 hikariDataSource
         ).thenApplyAsync { targetToRoleNames ->
             targetToRoleNames.map { (target, roleName) ->
@@ -425,7 +426,11 @@ class ExternalDatabasePermissioner(
         val allPermissions = if (tableType == TableType.TABLE) allTablePermissions else allViewPermissions
 
         val principalAclKeys = principalsMapManager.getAclKeyByPrincipal(
-                columnAcls.flatMap { it.aces.map { a -> a.principal } }.toSet()
+                columnAcls.flatMap { 
+                    it.aces.map { a -> 
+                        a.principal 
+                    } 
+                }.toSet()
         )
         val usernamesByAclKey = dbCredentialService.getDbUsernamesAsMap(principalAclKeys.values.toSet())
         val principalToUsername = principalAclKeys.mapValues { usernamesByAclKey.getValue(it.value) }
@@ -499,25 +504,31 @@ class ExternalDatabasePermissioner(
     private fun lookUpPermissionRoles(
             permissions: Set<Permission>,
             columnAcl: Acl,
-            permissionRoles: Map<AccessTarget, String>
+            permissionRoles: Map<AccessTarget, DelegatedStringSet>
     ): List<String> {
-        return permissions.mapNotNull { permissionRoles[AccessTarget(columnAcl.aclKey, it)] }
+        return permissions.flatMap { permissionRoles[AccessTarget(columnAcl.aclKey, it)]?.unwrap() ?: setOf() }
     }
 
-    private fun getPermissionRolesForAcls(orgId: UUID, acls: List<Acl>, permissions: Set<Permission>): Map<AccessTarget, String> {
-        val accessTargetsToRoleNames = mutableMapOf<AccessTarget, String>()
-        acls.forEach {
-            it.aces.forEach { ace -> 
-                permissions.forEach { permission -> 
-                    val at = AccessTarget(it.aclKey, permission)
-                    accessTargetsToRoleNames[at] = dbCredentialService.getDbUsername(principalsMapManager.getSecurablePrincipal(ace.principal)) 
-                    } 
+    private fun getPermissionRolesForAcls(orgId: UUID, acls: List<Acl>, permissions: Set<Permission>): Map<AccessTarget, DelegatedStringSet> {
+        val roleNames = mutableSetOf<String>()
+        val accessTargets = acls
+                .map { 
+                    it.aces.forEach { ace ->
+                        roleNames.add(
+                            dbCredentialService
+                                .getDbUsername(principalsMapManager.getSecurablePrincipal(ace.principal))
+                        )
+                    }
+                    it.aclKey
                 }
-            }
+                .flatMap {
+                    permissions.map { permission -> AccessTarget(it, permission) }
+                }.toSet()
 
         return PostgresRoles.getOrCreatePermissionRolesAsync(
                 externalRoleNames,
-                accessTargetsToRoleNames,
+                accessTargets,
+                roleNames,
                 extDbManager.connectToOrg(orgId)
         ).toCompletableFuture().get()
     }
@@ -533,15 +544,18 @@ class ExternalDatabasePermissioner(
             columns: String,
             schemaName: String,
             tableName: String,
-            roleName: String
+            roleNames: Set<String>
     ): String {
+        val targets = roleNames.joinToString {
+            ApiHelpers.dbQuote(it)
+        }
         val privilegeString = privileges.joinToString { privilege ->
             "$privilege ( $columns )"
         }
         return """
             GRANT $privilegeString 
             ON $schemaName.${ApiHelpers.dbQuote(tableName)}
-            TO ${ApiHelpers.dbQuote(roleName)}
+            TO $targets
         """.trimIndent()
     }
 

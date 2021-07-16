@@ -5,6 +5,7 @@ import com.openlattice.ApiHelpers
 import com.openlattice.authorization.AccessTarget
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.PrincipalType
+import com.openlattice.rhizome.hazelcast.DelegatedStringSet
 import com.zaxxer.hikari.HikariDataSource
 import java.util.*
 import java.util.concurrent.CompletableFuture
@@ -21,35 +22,42 @@ class PostgresRoles private constructor() {
 
         @JvmStatic
         fun getOrCreatePermissionRolesAsync(
-                permissionRoleNames: IMap<AccessTarget, String>,
-                targetRoleNames: Map<AccessTarget, String>,
+                permissionRoleNames: IMap<AccessTarget, DelegatedStringSet>,
+                targets: Set<AccessTarget>,
+                roleNameSet: Set<String>,
                 orgDataSource: HikariDataSource
-        ): CompletionStage<Map<AccessTarget, String>> {
-            val allExistingRoleNames = permissionRoleNames.getAll(targetRoleNames.keys)
-            val finalRoles = mutableMapOf<AccessTarget, String>()
+        ): CompletionStage<Map<AccessTarget, DelegatedStringSet>> {
+            val allExistingRoleNames = permissionRoleNames.getAll(targets)
+            allExistingRoleNames.forEach { (_, roleNames) ->
+                roleNames.addAll(roleNameSet)
+            }
+            val finalRoles = mutableMapOf<AccessTarget, DelegatedStringSet>()
             finalRoles.putAll(allExistingRoleNames)
-
-            val newTargetRoleNames = targetRoleNames.filterNot {
-                // filter out roles that already exist
-                allExistingRoleNames.containsKey(it.key)
-            }
-
-            if (newTargetRoleNames.isEmpty()) {
-                return CompletableFuture.supplyAsync {
-                    finalRoles
-                }
-            }
 
             orgDataSource.connection.use { conn ->
                 conn.createStatement().use { stmt ->
-                    newTargetRoleNames.values.forEach { roleName ->
+                    roleNameSet.forEach { roleName ->
                         stmt.execute(createExternalDatabaseRoleIfNotExistsSql(roleName))
                     }
                 }
             }
 
-            val roleSetCompletion = permissionRoleNames.putAllAsync(newTargetRoleNames)
-            finalRoles.putAll(newTargetRoleNames)
+            val roleNames = DelegatedStringSet(roleNameSet)
+            val targetsToRoleNames = targets.filterNot {
+                // filter out roles that already exist
+                allExistingRoleNames.containsKey(it)
+            }.associateWith {
+                roleNames
+            }
+
+            if (targetsToRoleNames.isEmpty()) {
+                return CompletableFuture.supplyAsync {
+                    finalRoles
+                }
+            }
+
+            val roleSetCompletion = permissionRoleNames.putAllAsync(targetsToRoleNames)
+            finalRoles.putAll(targetsToRoleNames)
 
             return roleSetCompletion.thenApplyAsync {
                 finalRoles
