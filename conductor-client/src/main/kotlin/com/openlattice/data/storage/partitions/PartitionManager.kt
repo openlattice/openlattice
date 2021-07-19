@@ -59,9 +59,7 @@ class PartitionManager @JvmOverloads constructor(
 
     fun getDefaultPartitions(organizationId: UUID): List<Int> {
         val partitions = organizations.executeOnKey(organizationId, OrganizationReadEntryProcessor { DelegatedIntList(it.partitions) })
-        if (partitions == null) {
-            logger.error("loading default partitions for organization {} returned null", organizationId);
-        }
+        checkNotNull(partitions, {"default partitions for organization $organizationId should not be null"})
 
         return partitions as DelegatedIntList
     }
