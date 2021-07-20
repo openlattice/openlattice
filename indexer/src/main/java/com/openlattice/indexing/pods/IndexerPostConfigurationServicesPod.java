@@ -230,6 +230,7 @@ public class IndexerPostConfigurationServicesPod {
     public BackgroundExternalDatabaseSyncingService backgroundExternalDatabaseUpdatingService() {
         return new BackgroundExternalDatabaseSyncingService(
                 hazelcastInstance,
+                executor,
                 edms(),
                 externalDatabasePermissioningService,
                 auditingManager,
