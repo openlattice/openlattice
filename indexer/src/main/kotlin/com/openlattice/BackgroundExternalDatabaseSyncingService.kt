@@ -2,6 +2,7 @@ package com.openlattice
 
 import com.google.common.base.Stopwatch
 import com.google.common.collect.ImmutableMap
+import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicates
 import com.openlattice.auditing.AuditEventType
@@ -27,11 +28,12 @@ import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import java.time.OffsetDateTime
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.locks.ReentrantLock
 
 class BackgroundExternalDatabaseSyncingService(
     hazelcastInstance: HazelcastInstance,
+    private val executor: ListeningExecutorService,
     private val edms: ExternalDatabaseManagementService,
     private val extDbPermsService: ExternalDatabasePermissioningService,
     private val auditingManager: AuditingManager,
@@ -45,7 +47,8 @@ class BackgroundExternalDatabaseSyncingService(
     companion object {
         private val logger = LoggerFactory.getLogger(BackgroundExternalDatabaseSyncingService::class.java)
 
-        const val SCAN_RATE = 1_000L * 30 // 30 seconds
+        const val SCAN_RATE = 1_000L * 30
+        private val orgsToBeSynced: ConcurrentHashMap.KeySetView<UUID, Boolean> = ConcurrentHashMap.newKeySet()
     }
 
     private val organizationExternalDatabaseColumns = EXTERNAL_COLUMNS.getMap(hazelcastInstance)
@@ -53,75 +56,87 @@ class BackgroundExternalDatabaseSyncingService(
     private val organizationDatabases = ORGANIZATION_DATABASES.getMap(hazelcastInstance)
     private val organizations = HazelcastMap.ORGANIZATIONS.getMap(hazelcastInstance)
 
-    private val taskLock = ReentrantLock()
+    // NOTE: commenting this out in case we want to bring it back in the future
+    // private val taskLock = ReentrantLock()
 
     @Suppress("UNUSED")
     @Scheduled(fixedDelay = SCAN_RATE)
-    fun scanOrganizationDatabases() {
-        logger.info("Starting background external database sync task.")
+    fun syncOrganizationDatabases() {
 
         if (!indexerConfiguration.backgroundExternalDatabaseSyncingEnabled) {
-            logger.info("Skipping external database syncing as it is not enabled.")
-            return
-        }
-
-        if (!taskLock.tryLock()) {
-            logger.info("Not starting new external database sync task as an existing one is running")
+            logger.info("organization database syncing is not enabled in the config")
             return
         }
 
         try {
-            val timer = Stopwatch.createStarted()
-
-            organizations.keys
-                    .filter { it != IdConstants.GLOBAL_ORGANIZATION_ID.id }
-                    .shuffled()
-                    .forEach {
-                        try {
-                            syncOrganizationDatabases(it)
-                        } catch (e: Exception) {
-                            logger.error("An error occurred when trying to sync database for org {}", it, e)
-                        }
-                    }
-
-            logger.info("Completed syncing database objects in {}", timer)
-        } catch (ex: Exception) {
-            logger.error("Failed while syncing external database metadata", ex)
-        } finally {
-            taskLock.unlock()
+            logger.info("starting to sync organization databases - {}", organizations.size)
+            organizations
+                .keys
+                .filter { it != IdConstants.GLOBAL_ORGANIZATION_ID.id }
+                .shuffled()
+                .forEach { syncOrganizationDatabase(it) }
+        }
+        catch (e: Exception) {
+            logger.error("error syncing organization databases", e)
         }
     }
 
-    private fun syncOrganizationDatabases(orgId: UUID) {
-        val sw = Stopwatch.createStarted()
-        logger.info("About to sync database for organization {}", orgId)
-        val dbName = organizationDatabases[orgId]?.name
+    private fun syncOrganizationDatabase(organizationId: UUID) {
 
-        if (dbName == null) {
-            logger.error("Organization {} does not exist in the organizationDatabases mapstore", orgId)
+        if (orgsToBeSynced.contains(organizationId)) {
+            logger.info("syncing organization database is in progress - org {}", organizationId)
             return
         }
 
-        val adminRoleAclKey = organizations.getValue(orgId).adminRoleAclKey
-        val adminRolePrincipal = principalsMapManager.getSecurablePrincipal(adminRoleAclKey)!!.principal
+        val queueTime = System.currentTimeMillis()
+        orgsToBeSynced.add(organizationId)
 
-        val tableIds = mutableSetOf<UUID>()
-        val columnIds = mutableSetOf<UUID>()
+        executor.submit {
+            try {
+                logger.info(
+                    "waiting to start syncing organization database took {} ms - org {}",
+                    System.currentTimeMillis() - queueTime,
+                    organizationId
+                )
 
-        edms.getTableInfoForOrganization(orgId).forEach { (oid, tableName, schemaName, _) ->
-            val table = getOrCreateTable(orgId, oid, tableName, schemaName)
-            val columns = syncTableColumns(table)
-            dataSetService.indexDataSet(table.id)
+                val timer = Stopwatch.createStarted()
 
-            initializeTablePermissions(orgId, table, columns, adminRolePrincipal)
+                // not sure if this is possible (it shouldn't be) but just in case
+                if (!orgsToBeSynced.contains(organizationId)) {
+                    orgsToBeSynced.add(organizationId)
+                }
 
-            tableIds.add(table.id)
-            columnIds.addAll(columns.map { it.id })
+                val database = organizationDatabases[organizationId]
+                logger.info("starting to sync organization database - org {} db {}", organizationId, database!!.name)
+
+                val adminRoleAclKey = organizations.getValue(organizationId).adminRoleAclKey
+                val adminRolePrincipal = principalsMapManager.getSecurablePrincipal(adminRoleAclKey)!!.principal
+
+                val tableIds = mutableSetOf<UUID>()
+                val columnIds = mutableSetOf<UUID>()
+                edms.getTableInfoForOrganization(organizationId).forEach { (oid, tableName, schemaName, _) ->
+                    val table = getOrCreateTable(organizationId, oid, tableName, schemaName)
+                    val columns = syncTableColumns(table)
+                    dataSetService.indexDataSet(table.id)
+                    initializeTablePermissions(organizationId, table, columns, adminRolePrincipal)
+                    tableIds.add(table.id)
+                    columnIds.addAll(columns.map { it.id })
+                }
+
+                removeNonexistentTablesAndColumnsForOrg(organizationId, tableIds, columnIds)
+
+                logger.info(
+                    "syncing organization database took {} ms - org {} db {}",
+                    timer.elapsed(TimeUnit.MILLISECONDS),
+                    organizationId,
+                    database.name
+                )
+            } catch (e: Exception) {
+                logger.error("error syncing organization database - org {}", organizationId, e)
+            } finally {
+                orgsToBeSynced.remove(organizationId)
+            }
         }
-
-        removeNonexistentTablesAndColumnsForOrg(orgId, tableIds, columnIds)
-
-        logger.info("Finished syncing database for organization {} in {} ms", orgId, sw.elapsed(TimeUnit.MILLISECONDS))
     }
 
     private fun initializeTablePermissions(
@@ -195,8 +210,6 @@ class BackgroundExternalDatabaseSyncingService(
     ): UUID {
         val newTableId = edms.createOrganizationExternalDatabaseTable(orgId, table)
 
-        organizationMetadataEntitySetsService.addDataset(orgId, table)
-
         //create audit entity set and audit permissions
         ares.createAuditEntitySetForExternalDBTable(table)
 
@@ -239,7 +252,6 @@ class BackgroundExternalDatabaseSyncingService(
 
         if (tableIdsToDelete.isNotEmpty()) {
             edms.deleteExternalTableObjects(tableIdsToDelete)
-            organizationMetadataEntitySetsService.deleteDatasets(orgId, tableIdsToDelete)
         }
 
 
@@ -253,7 +265,6 @@ class BackgroundExternalDatabaseSyncingService(
 
         if (columnIdsToDelete.isNotEmpty()) {
             edms.deleteExternalColumnObjects(orgId, columnIdsToDelete)
-            organizationMetadataEntitySetsService.deleteDatasetColumns(orgId, columnIdsToDelete)
         }
     }
 
@@ -307,12 +318,6 @@ class BackgroundExternalDatabaseSyncingService(
             table: ExternalTable
     ): Int {
         var totalSynced = 0
-
-        organizationMetadataEntitySetsService.addDatasetColumns(
-                table.organizationId,
-                edms.getExternalTable(columns.first().tableId),
-                columns
-        )
 
         columns.forEach { column ->
             edms.createOrganizationExternalDatabaseColumn(table.organizationId, column)
