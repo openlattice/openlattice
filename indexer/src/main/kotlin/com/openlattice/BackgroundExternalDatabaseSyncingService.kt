@@ -210,8 +210,6 @@ class BackgroundExternalDatabaseSyncingService(
     ): UUID {
         val newTableId = edms.createOrganizationExternalDatabaseTable(orgId, table)
 
-        organizationMetadataEntitySetsService.addDataset(orgId, table)
-
         //create audit entity set and audit permissions
         ares.createAuditEntitySetForExternalDBTable(table)
 
@@ -254,7 +252,6 @@ class BackgroundExternalDatabaseSyncingService(
 
         if (tableIdsToDelete.isNotEmpty()) {
             edms.deleteExternalTableObjects(tableIdsToDelete)
-            organizationMetadataEntitySetsService.deleteDatasets(orgId, tableIdsToDelete)
         }
 
 
@@ -268,7 +265,6 @@ class BackgroundExternalDatabaseSyncingService(
 
         if (columnIdsToDelete.isNotEmpty()) {
             edms.deleteExternalColumnObjects(orgId, columnIdsToDelete)
-            organizationMetadataEntitySetsService.deleteDatasetColumns(orgId, columnIdsToDelete)
         }
     }
 
@@ -322,12 +318,6 @@ class BackgroundExternalDatabaseSyncingService(
             table: ExternalTable
     ): Int {
         var totalSynced = 0
-
-        organizationMetadataEntitySetsService.addDatasetColumns(
-                table.organizationId,
-                edms.getExternalTable(columns.first().tableId),
-                columns
-        )
 
         columns.forEach { column ->
             edms.createOrganizationExternalDatabaseColumn(table.organizationId, column)
