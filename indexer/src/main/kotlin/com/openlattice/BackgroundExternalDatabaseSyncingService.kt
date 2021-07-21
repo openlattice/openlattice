@@ -165,12 +165,9 @@ class BackgroundExternalDatabaseSyncingService(
         val tableColsByAclKey = columns.associate {
             it.getAclKey() to TableColumn(it.organizationId, it.tableId, it.id, Schemas.fromName(table.schema))
         }
-        // val columnsByAclKey = columns.associate {
-        //     it.getAclKey() to it
-        // }
 
         timer = Stopwatch.createStarted()
-        extDbPermsService.updateExternalTablePermissions(Action.ADD, columnAcls, columnsByAclKey)
+        extDbPermsService.updateExternalTablePermissions(Action.ADD, columnAcls, tableColsByAclKey)
         logger.info(
             "updating external table permissions took {} ms - org {} table {}",
             timer.elapsed(TimeUnit.MILLISECONDS),
