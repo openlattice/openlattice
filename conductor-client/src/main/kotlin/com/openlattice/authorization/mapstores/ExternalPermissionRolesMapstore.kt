@@ -7,7 +7,6 @@ import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore
-import com.openlattice.rhizome.hazelcast.DelegatedStringSet
 import com.zaxxer.hikari.HikariDataSource
 import org.springframework.stereotype.Component
 import org.apache.commons.lang3.RandomStringUtils
@@ -20,7 +19,7 @@ import java.sql.ResultSet
 @Component
 class ExternalPermissionRolesMapstore(
         hds: HikariDataSource
-) : AbstractBasePostgresMapstore<AccessTarget, DelegatedStringSet>(
+) : AbstractBasePostgresMapstore<AccessTarget, String>(
         HazelcastMap.EXTERNAL_PERMISSION_ROLES, PostgresTable.EXTERNAL_PERMISSION_ROLES, hds
 ) {
     override fun generateTestKey(): AccessTarget {
@@ -30,15 +29,15 @@ class ExternalPermissionRolesMapstore(
         )
     }
 
-    override fun generateTestValue(): DelegatedStringSet {
-        return DelegatedStringSet(setOf(RandomStringUtils.randomAlphabetic(15)))
+    override fun generateTestValue(): String {
+        return RandomStringUtils.randomAlphabetic(15)
     }
 
-    override fun bind(ps: PreparedStatement, key: AccessTarget, value: DelegatedStringSet) {
+    override fun bind(ps: PreparedStatement, key: AccessTarget, value: String) {
         var index = bind(ps, key, 1)
-        ps.setString(index++, value?.unwrap().joinToString() ?: String())
+        ps.setString(index++, value)
 
-        ps.setString(index++, value?.unwrap().joinToString() ?: String())
+        ps.setString(index++, value)
     }
 
     override fun mapToKey(rs: ResultSet): AccessTarget {
@@ -52,7 +51,7 @@ class ExternalPermissionRolesMapstore(
         return index
     }
 
-    override fun mapToValue(rs: ResultSet): DelegatedStringSet {
+    override fun mapToValue(rs: ResultSet): String {
         return ResultSetAdapters.roleId(rs)
     }
 }

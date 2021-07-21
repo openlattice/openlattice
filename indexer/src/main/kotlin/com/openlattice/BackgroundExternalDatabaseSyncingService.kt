@@ -150,8 +150,7 @@ class BackgroundExternalDatabaseSyncingService(
         extDbPermsService.initializeExternalTablePermissions(
                 organizationId,
                 table,
-                columns,
-                adminRolePrincipal
+                columns
         )
         logger.info(
             "initializing external table permissions took {} ms - org {} table {}",
@@ -166,9 +165,12 @@ class BackgroundExternalDatabaseSyncingService(
         val tableColsByAclKey = columns.associate {
             it.getAclKey() to TableColumn(it.organizationId, it.tableId, it.id, Schemas.fromName(table.schema))
         }
+        // val columnsByAclKey = columns.associate {
+        //     it.getAclKey() to it
+        // }
 
         timer = Stopwatch.createStarted()
-        extDbPermsService.updateExternalTablePermissions(Action.ADD, columnAcls, tableColsByAclKey)
+        extDbPermsService.updateExternalTablePermissions(Action.ADD, columnAcls, columnsByAclKey)
         logger.info(
             "updating external table permissions took {} ms - org {} table {}",
             timer.elapsed(TimeUnit.MILLISECONDS),

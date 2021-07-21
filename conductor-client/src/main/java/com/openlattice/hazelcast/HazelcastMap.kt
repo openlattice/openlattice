@@ -124,7 +124,7 @@ class HazelcastMap<K, V> internal constructor(val name: String) : TypedMapIdenti
         @JvmField val ENTITY_TYPE_COLLECTIONS = HazelcastMap<UUID, EntityTypeCollection>("ENTITY_TYPE_COLLECTIONS")
         @JvmField val ENTITY_TYPE_PROPERTY_METADATA = HazelcastMap<EntityTypePropertyKey, EntityTypePropertyMetadata>("ENTITY_TYPE_PROPERTY_METADATA")
         @JvmField val ENTITY_TYPES = HazelcastMap<UUID, EntityType>("ENTITY_TYPES")
-        @JvmField val EXTERNAL_PERMISSION_ROLES = HazelcastMap<AccessTarget, DelegatedStringSet>("EXTERNAL_PERMISSION_ROLES")
+        @JvmField val EXTERNAL_PERMISSION_ROLES = HazelcastMap<AccessTarget, String>("EXTERNAL_PERMISSION_ROLES")
         @JvmField val EXTERNAL_COLUMNS = HazelcastMap<UUID, ExternalColumn>("EXTERNAL_COLUMNS")
         @JvmField val EXTERNAL_TABLES = HazelcastMap<UUID, ExternalTable>("EXTERNAL_TABLES")
         @JvmField val ID_GENERATION = HazelcastMap<Long, Range>("ID_GENERATION")

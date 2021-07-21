@@ -470,7 +470,7 @@ public final class PostgresColumn {
             new PostgresColumnDefinition( ROLES_FIELD, JSONB ).notNull().withDefault( "'{}'" );
     public static final String                   ROLE_ID_FIELD                     = "role_id";
     public static final PostgresColumnDefinition ROLE_ID                           =
-            new PostgresColumnDefinition( ROLE_ID_FIELD, TEXT_ARRAY ).notNull();
+            new PostgresColumnDefinition( ROLE_ID_FIELD, TEXT ).notNull();
     public static final String                   SCHEDULED_DATE_FIELD              = "scheduled_date";
     public static final PostgresColumnDefinition SCHEDULED_DATE                    = new PostgresColumnDefinition(
             SCHEDULED_DATE_FIELD,
