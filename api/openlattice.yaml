@@ -5141,7 +5141,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DataSetMetadata"
+                $ref: "#/components/schemas/DataSet"
   /datastore/metadata/datasets:
     post:
       summary: Gets the dataset metadata objects given data set ids the caller has READ permissions on
@@ -5166,7 +5166,7 @@ paths:
               schema:
                 type: object
                 additionalProperties:
-                  $ref: "#/components/schemas/DataSetMetadata"
+                  $ref: "#/components/schemas/DataSet"
   /datastore/metadata/columns/{dataId}/{columnId}:
     get:
       summary: Gets the dataset column metadata objects using data ID and column ID
@@ -5195,7 +5195,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DataSetColumnMetadata"
+                $ref: "#/components/schemas/DataSetColumn"
   /datastore/metadata/columns:
     post:
       summary: Gets all data set column metadata objects that caller has READ on that belong to given data set ids
@@ -5222,7 +5222,7 @@ paths:
                 additionalProperties:
                   type: array
                   items:
-                    $ref: "#/components/schemas/DataSetColumnMetadata"
+                    $ref: "#/components/schemas/DataSetColumn"
   /datastore/metadata/datasets/organizations/{organizationId}:
     get:
       summary: Gets all data set column metadata objects that caller has READ on that belong to given data set ids
@@ -5247,7 +5247,7 @@ paths:
               schema:
                 type: object
                 additionalProperties:
-                  $ref: "#/components/schemas/DataSetMetadata"
+                  $ref: "#/components/schemas/DataSet"
   /datastore/metadata/update/{dataId}:
     patch:
       summary: Applies the given metadata updates to the data set given data set id. Must be OWNER of the dataset.
@@ -5265,7 +5265,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/DataMetadata"
+              $ref: "#/components/schemas/SecurableObjectMetadataUpdate"
       security:
         - openlattice_auth: []
         - http_auth: []
@@ -5295,7 +5295,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/DataMetadata"
+              $ref: "#/components/schemas/SecurableObjectMetadataUpdate"
       security:
         - openlattice_auth: []
         - http_auth: []
@@ -6806,7 +6806,7 @@ components:
           type: object
           additionalProperties:
             $ref: "#/components/schemas/Filter"
-    DataMetadata:
+    SecurableObjectMetadataUpdate:
       type: object
       properties:
         title:
@@ -6825,7 +6825,7 @@ components:
           type: array
           items:
             type: string
-    DataSetMetadata:
+    DataSet:
       type: object
       properties:
         id:
@@ -6842,8 +6842,8 @@ components:
           type: string
           enum: [EntitySet, ExternalTable]
         metadata:
-          $ref: "#/components/schemas/DataMetadata"
-    DataSetColumnMetadata:
+          $ref: "#/components/schemas/SecurableObjectMetadataUpdate"
+    DataSetColumn:
       type: object
       properties:
         id:
@@ -6860,7 +6860,7 @@ components:
         dataType:
           type: string
         metadata:
-          $ref: "#/components/schemas/DataMetadata"
+          $ref: "#/components/schemas/SecurableObjectMetadataUpdate"
         aclKey:
           type: array
           items:
