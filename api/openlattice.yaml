@@ -5124,7 +5124,7 @@ paths:
       summary: Gets dataset metadata object with given data set ID
       operationId: getDataSetMetadata
       tags:
-        - metadata
+        - dataSetMetadata
       parameters:
         - name: dataId
           in: path
@@ -5147,7 +5147,7 @@ paths:
       summary: Gets the dataset metadata objects given data set ids the caller has READ permissions on
       operationId: getDataSetsMetadata
       tags:
-        - metadata
+        - dataSetMetadata
       requestBody:
         content:
           application/json:
@@ -5172,7 +5172,7 @@ paths:
       summary: Gets the dataset column metadata objects using data ID and column ID
       operationId: getDataSetColumnMetadata
       tags:
-        - metadata
+        - dataSetMetadata
       parameters:
         - name: dataId
           in: path
@@ -5201,7 +5201,7 @@ paths:
       summary: Gets all data set column metadata objects that caller has READ on that belong to given data set ids
       operationId: getDataSetColumnsMetadata
       tags:
-        - metadata
+        - dataSetMetadata
       requestBody:
         content:
           application/json:
@@ -5228,7 +5228,7 @@ paths:
       summary: Gets all data set column metadata objects that caller has READ on that belong to given data set ids
       operationId: getOrganizationDataSetsMetadata
       tags:
-        - metadata
+        - dataSetMetadata
       parameters:
         - name: organizationId
           in: path
@@ -5253,7 +5253,7 @@ paths:
       summary: Applies the given metadata updates to the data set given data set id. Must be OWNER of the dataset.
       operationId: updateDataSetMetadata
       tags:
-        - metadata
+        - dataSetMetadata
       parameters:
         - name: dataId
           in: path
@@ -5277,7 +5277,7 @@ paths:
       summary: Applies the given metadata updates to the data set column given dataset and column Ids. Must be OWNER of the column.
       operationId: updateDataSetColumnMetadata
       tags:
-        - metadata
+        - dataSetMetadata
       parameters:
         - name: dataId
           in: path
@@ -6883,8 +6883,8 @@ tags:
     description: API endpoints related to organizations.
   - name: entitySets
     description: API endpoints for dealing with entity sets.
-  - name: metadata
-    description: API endpoints related to metadata
+  - name: dataSetMetadata
+    description: API endpoints related to data set metadata
 externalDocs:
   description: "Find out more about OpenLattice"
   url: "https://openlattice.com/"
