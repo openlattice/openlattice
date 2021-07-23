@@ -355,7 +355,7 @@ class HazelcastPrincipalService(
 
         Preconditions.checkState(
                 nonexistentAclKeys.isEmpty(),
-                "All principals must exist, but principals with aclKeys [$nonexistentAclKeys] do not exist."
+                "All principals must exist, but principals with aclKeys $nonexistentAclKeys do not exist."
         )
     }
 
