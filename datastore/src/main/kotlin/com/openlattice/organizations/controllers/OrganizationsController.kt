@@ -3,8 +3,6 @@ package com.openlattice.organizations.controllers
 import com.auth0.json.mgmt.users.User
 import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Preconditions
-import com.google.common.collect.ImmutableList
-import com.google.common.collect.ImmutableMap
 import com.google.common.collect.ImmutableSet
 import com.google.common.collect.Sets
 import com.openlattice.apps.AppTypeSetting
@@ -28,7 +26,6 @@ import com.openlattice.organizations.Grant
 import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.organizations.Organization
 import com.openlattice.organizations.OrganizationMetadataEntitySetIds
-import com.openlattice.organizations.OrganizationMetadataEntitySetsService
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.commons.lang3.NotImplementedException
@@ -71,9 +68,6 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
 
     @Inject
     private lateinit var appService: AppService
-
-    @Inject
-    private lateinit var organizationMetadataEntitySetsService: OrganizationMetadataEntitySetsService
 
     @Inject
     private lateinit var externalDatabaseManagementService: ExternalDatabaseManagementService
@@ -802,34 +796,7 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
     override fun importMetadata(@PathVariable(OrganizationsApi.ID) organizationId: UUID): Void? {
         ensureAdminAccess()
         ensureOwner(organizationId)
-        val adminRoleAclKey = organizations.getAdminRoleAclKey(organizationId)
-        organizationMetadataEntitySetsService.initializeOrganizationMetadataEntitySets(
-                principalService
-                        .getRole(adminRoleAclKey[0], adminRoleAclKey[1])
-        )
-
-        val orgTables = externalDatabaseManagementService.getExternalDatabaseTables(organizationId)
-        val tableCols = externalDatabaseManagementService.getColumnsForTables(orgTables.keys)
-
-        orgTables.values.groupBy { it.organizationId }.forEach { (orgId, tables) ->
-            val cols = tables.associate { it.id to (tableCols[it.id]?.values ?: listOf()) }
-
-            organizationMetadataEntitySetsService.addDatasetsAndColumns(organizationId, tables, cols)
-        }
-
-        entitySetManager
-                .getEntitySetsForOrganization(organizationId)
-                .forEach { e: UUID ->
-                    val entitySet = checkNotNull(entitySetManager.getEntitySet(e)) {
-                        "Entity set was null when importing metadata"
-                    }
-                    val propertyTypes = edmService.getPropertyTypesOfEntityType(entitySet.entityTypeId)
-                    organizationMetadataEntitySetsService.addDatasetsAndColumns(
-                            ImmutableList.of(entitySet),
-                            ImmutableMap.of(entitySet.id, propertyTypes.values)
-                    )
-                }
-        return null
+        throw NotImplementedException("this endpoint is not implemented")
     }
 
     @Timed
