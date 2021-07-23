@@ -25,7 +25,6 @@ import com.openlattice.organizations.ExternalDatabaseManagementService
 import com.openlattice.organizations.Grant
 import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.organizations.Organization
-import com.openlattice.organizations.OrganizationMetadataEntitySetIds
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.commons.lang3.NotImplementedException
@@ -771,20 +770,6 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
     ): Void? {
         ensureAdminAccess()
         organizations.setConnections(organizationId, connections)
-        return null
-    }
-
-    @Timed
-    @PutMapping(
-            value = [OrganizationsApi.ID_PATH + OrganizationsApi.METADATA_ENTITY_SET_IDS],
-            consumes = [MediaType.APPLICATION_JSON_VALUE]
-    )
-    override fun setMetadataEntitySetIds(
-            @PathVariable(OrganizationsApi.ID) organizationId: UUID,
-            @RequestBody entitySetIds: OrganizationMetadataEntitySetIds
-    ): Void? {
-        ensureOwner(organizationId)
-        organizations.setOrganizationMetadataEntitySetIds(organizationId, entitySetIds)
         return null
     }
 

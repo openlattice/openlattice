@@ -235,8 +235,7 @@ class HazelcastOrganizationService(
                             it.partitions,
                             it.apps,
                             it.connections,
-                            it.grants,
-                            it.organizationMetadataEntitySetIds
+                            it.grants
                     )
                 }
     }
@@ -678,24 +677,6 @@ class HazelcastOrganizationService(
         organizationIds.forEach { removeMembers(it, setOf(principal)) }
 
         logger.info("Removed {} from organizations: {}", principal, organizationIds)
-    }
-
-    fun getOrganizationMetadataEntitySetIds(organizationId: UUID): OrganizationMetadataEntitySetIds {
-        return organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
-            Result(it.organizationMetadataEntitySetIds, false)
-        }) as OrganizationMetadataEntitySetIds? ?: throw ResourceNotFoundException(
-                "Unable able to resolve organization $organizationId"
-        )
-    }
-
-    fun setOrganizationMetadataEntitySetIds(
-            organizationId: UUID,
-            organizationMetadataEntitySetIds: OrganizationMetadataEntitySetIds
-    ) {
-        organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
-            it.organizationMetadataEntitySetIds = organizationMetadataEntitySetIds
-            Result(null, true)
-        })
     }
 
     companion object {

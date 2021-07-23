@@ -21,17 +21,16 @@ import java.util.*
  */
 
 data class Organization @JvmOverloads constructor(
-        var securablePrincipal: OrganizationPrincipal,
-        var adminRoleAclKey: AclKey = AclKey(securablePrincipal.id, UUID.randomUUID()),
-        val emailDomains: MutableSet<String>,
-        val members: MutableSet<Principal>,
-        val roles: MutableSet<Role>,
-        val smsEntitySetInfo: MutableSet<SmsEntitySetInformation>,
-        val partitions: MutableList<Int> = mutableListOf(),
-        val apps: MutableSet<UUID> = mutableSetOf(),
-        val connections: MutableSet<String> = mutableSetOf(),
-        val grants: MutableMap<UUID, MutableMap<GrantType, Grant>> = mutableMapOf(),
-        var organizationMetadataEntitySetIds: OrganizationMetadataEntitySetIds = OrganizationMetadataEntitySetIds()
+    var securablePrincipal: OrganizationPrincipal,
+    var adminRoleAclKey: AclKey = AclKey(securablePrincipal.id, UUID.randomUUID()),
+    val emailDomains: MutableSet<String>,
+    val members: MutableSet<Principal>,
+    val roles: MutableSet<Role>,
+    val smsEntitySetInfo: MutableSet<SmsEntitySetInformation>,
+    val partitions: MutableList<Int> = mutableListOf(),
+    val apps: MutableSet<UUID> = mutableSetOf(),
+    val connections: MutableSet<String> = mutableSetOf(),
+    val grants: MutableMap<UUID, MutableMap<GrantType, Grant>> = mutableMapOf()
 ) {
 
     val id: UUID
@@ -53,39 +52,31 @@ data class Organization @JvmOverloads constructor(
 
     @JsonCreator
     constructor(
-            @JsonProperty(SerializationConstants.ID_FIELD) id: Optional<UUID> = Optional.of(UUID.randomUUID()),
-            @JsonProperty(SerializationConstants.ADMIN_ROLE_ACL_KEY) adminRoleAclKey: Optional<AclKey>,
-            @JsonProperty(SerializationConstants.PRINCIPAL) principal: Principal,
-            @JsonProperty(SerializationConstants.TITLE_FIELD) title: String,
-            @JsonProperty(SerializationConstants.DESCRIPTION_FIELD) description: Optional<String>,
-            @JsonProperty(SerializationConstants.EMAIL_DOMAINS) emailDomains: MutableSet<String> = mutableSetOf(),
-            @JsonProperty(SerializationConstants.MEMBERS_FIELD) members: MutableSet<Principal>,
-            @JsonProperty(SerializationConstants.ROLES) roles: MutableSet<Role>,
-            @JsonProperty(SerializationConstants.APPS) apps: MutableSet<UUID>,
-            @JsonProperty(SerializationConstants.SMS_ENTITY_SET_INFO)
-            smsEntitySetInfo: Optional<MutableSet<SmsEntitySetInformation>>,
-            @JsonProperty(SerializationConstants.PARTITIONS) partitions: Optional<MutableList<Int>>,
-            @JsonProperty(SerializationConstants.CONNECTIONS) connections: MutableSet<String> = mutableSetOf(),
-            @JsonProperty(
-                    SerializationConstants.GRANTS
-            ) grants: MutableMap<UUID, MutableMap<GrantType, Grant>> = mutableMapOf(),
-            @JsonProperty(
-                    SerializationConstants.METADATA_ENTITY_SETS_IDS
-            ) organizationMetadataEntitySetIds: OrganizationMetadataEntitySetIds = OrganizationMetadataEntitySetIds()
+        @JsonProperty(SerializationConstants.ID_FIELD) id: Optional<UUID> = Optional.of(UUID.randomUUID()),
+        @JsonProperty(SerializationConstants.ADMIN_ROLE_ACL_KEY) adminRoleAclKey: Optional<AclKey>,
+        @JsonProperty(SerializationConstants.PRINCIPAL) principal: Principal,
+        @JsonProperty(SerializationConstants.TITLE_FIELD) title: String,
+        @JsonProperty(SerializationConstants.DESCRIPTION_FIELD) description: Optional<String>,
+        @JsonProperty(SerializationConstants.EMAIL_DOMAINS) emailDomains: MutableSet<String> = mutableSetOf(),
+        @JsonProperty(SerializationConstants.MEMBERS_FIELD) members: MutableSet<Principal>,
+        @JsonProperty(SerializationConstants.ROLES) roles: MutableSet<Role>,
+        @JsonProperty(SerializationConstants.APPS) apps: MutableSet<UUID>,
+        @JsonProperty(SerializationConstants.SMS_ENTITY_SET_INFO) smsEntitySetInfo: Optional<MutableSet<SmsEntitySetInformation>>,
+        @JsonProperty(SerializationConstants.PARTITIONS) partitions: Optional<MutableList<Int>>,
+        @JsonProperty(SerializationConstants.CONNECTIONS) connections: MutableSet<String> = mutableSetOf(),
+        @JsonProperty(SerializationConstants.GRANTS) grants: MutableMap<UUID, MutableMap<GrantType, Grant>> = mutableMapOf(),
     ) : this(
-            securablePrincipal = OrganizationPrincipal(id, principal, title, description),
-            adminRoleAclKey = adminRoleAclKey.orElse(AclKey(id.get(), UUID.randomUUID())),
-            emailDomains = emailDomains,
-            members = members,
-            roles = roles,
-            smsEntitySetInfo = smsEntitySetInfo.orElse(mutableSetOf<SmsEntitySetInformation>()),
-            partitions = partitions.orElse(mutableListOf()),
-            apps = apps,
-            connections = connections,
-            grants = grants,
-            organizationMetadataEntitySetIds = organizationMetadataEntitySetIds
+        securablePrincipal = OrganizationPrincipal(id, principal, title, description),
+        adminRoleAclKey = adminRoleAclKey.orElse(AclKey(id.get(), UUID.randomUUID())),
+        emailDomains = emailDomains,
+        members = members,
+        roles = roles,
+        smsEntitySetInfo = smsEntitySetInfo.orElse(mutableSetOf<SmsEntitySetInformation>()),
+        partitions = partitions.orElse(mutableListOf()),
+        apps = apps,
+        connections = connections,
+        grants = grants,
     )
-
 
     init {
         check(securablePrincipal.principalType == PrincipalType.ORGANIZATION) { "Organization principal must be of PrincipalType.ORGANIZATION" }
@@ -95,5 +86,4 @@ data class Organization @JvmOverloads constructor(
     fun getAclKey(): AclKey {
         return securablePrincipal.aclKey
     }
-
 }
