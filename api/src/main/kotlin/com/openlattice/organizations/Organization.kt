@@ -2,6 +2,7 @@ package com.openlattice.organizations
 
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.Principal
@@ -20,6 +21,7 @@ import java.util.*
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 
+@JsonIgnoreProperties(value = ["metadataEntitySetIds"])
 data class Organization @JvmOverloads constructor(
     var securablePrincipal: OrganizationPrincipal,
     var adminRoleAclKey: AclKey = AclKey(securablePrincipal.id, UUID.randomUUID()),
