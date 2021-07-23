@@ -148,6 +148,7 @@ class HazelcastOrganizationService(
         }
 
         initializeOrganizationPrincipal(creatorPrincipal, organization)
+        initializeOrganizationAdminRole(creatorPrincipal, organization.adminRoleAclKey, organization)
         initializeOrganization(organization)
 
         // set up organization database
