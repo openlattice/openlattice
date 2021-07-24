@@ -279,7 +279,7 @@ private fun buildPreparableFiltersClause(
 
     val sql = bindList.joinToString(" AND ") { "(${it.sql})" }
     val bindInfo = bindList.flatMap { it.bindInfo }.toSet()
-    val nextIndex = bindList.map { it.nextIndex }.max() ?: startIndex
+    val nextIndex = bindList.map { it.nextIndex }.maxOrNull() ?: startIndex
     return Triple(sql, bindInfo, nextIndex)
 }
 

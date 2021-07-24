@@ -3,9 +3,12 @@ package com.openlattice.rehearsal.organization
 import com.google.common.collect.ArrayListMultimap
 import com.google.common.collect.ImmutableList
 import com.google.common.collect.ListMultimap
-import com.openlattice.assembler.AssemblerConnectionManager
-import com.openlattice.assembler.PostgresDatabases
-import com.openlattice.authorization.*
+import com.openlattice.authorization.Ace
+import com.openlattice.authorization.Acl
+import com.openlattice.authorization.AclData
+import com.openlattice.authorization.AclKey
+import com.openlattice.authorization.Action
+import com.openlattice.authorization.Permission
 import com.openlattice.data.DataEdgeKey
 import com.openlattice.data.DeleteType
 import com.openlattice.data.EntityDataKey
@@ -20,10 +23,14 @@ import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.organization.OrganizationEntitySetFlag
 import com.openlattice.organizations.Organization
 import com.openlattice.postgres.DataTables.quote
-import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresColumn.ENTITY_KEY_IDS_COL
+import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.ID
 import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.ResultSetAdapters
-import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
+import com.openlattice.postgres.external.ExternalDatabaseType
+import com.openlattice.postgres.external.PostgresDatabaseQueryService.Companion.entitySetNameTableName
+import com.openlattice.postgres.external.Schemas
 import com.openlattice.rehearsal.assertException
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.junit.Assert
@@ -342,7 +349,7 @@ class AssemblerTest : AssemblerTestBase() {
         }
 
         // delete data
-        dataApi.deleteEntities(es.id, ids.toSet(), DeleteType.Hard)
+        dataApi.deleteEntities(es.id, ids.toSet(), DeleteType.Hard, true)
         Assert.assertTrue(
                 organizationsApi.getOrganizationEntitySets(organizationID)[es.id]!!
                         .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)
@@ -900,7 +907,7 @@ class AssemblerTest : AssemblerTestBase() {
             connection.createStatement().use { stmt ->
                 assertException(
                         { stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esSrc.name)) },
-                        "relation ${quote("${AssemblerConnectionManager.OPENLATTICE_SCHEMA}.${esSrc.name}")} does not exist"
+                        "relation ${quote("${Schemas.OPENLATTICE_SCHEMA}.${esSrc.name}")} does not exist"
                 )
             }
         }
@@ -944,7 +951,7 @@ class AssemblerTest : AssemblerTestBase() {
 
         user1OrganizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                stmt.executeQuery("SELECT * FROM ${AssemblerConnectionManager.entitySetNameTableName(es.name)}")
+                stmt.executeQuery("SELECT * FROM ${entitySetNameTableName(es.name)}")
 
                 val exceptionMsg = "permission denied for schema prod"
                 assertException(
@@ -1011,7 +1018,7 @@ class AssemblerTest : AssemblerTestBase() {
             connection.createStatement().use { stmt ->
                 assertException(
                         { stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name)) },
-                        "relation \"${AssemblerConnectionManager.OPENLATTICE_SCHEMA}.${es.name}\" does not exist"
+                        "relation \"${Schemas.OPENLATTICE_SCHEMA}.${es.name}\" does not exist"
                 )
             }
         }
@@ -1064,6 +1071,7 @@ class AssemblerTest : AssemblerTestBase() {
                         Optional.empty(),
                         Optional.of(organization2.id),
                         Optional.empty(),
+                        Optional.empty(),
                         Optional.empty()
                 )
         )
@@ -1073,7 +1081,7 @@ class AssemblerTest : AssemblerTestBase() {
             connection.createStatement().use { stmt ->
                 assertException(
                         { stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name)) },
-                        "relation \"${AssemblerConnectionManager.OPENLATTICE_SCHEMA}.${es.name}\" does not exist"
+                        "relation \"${Schemas.OPENLATTICE_SCHEMA}.${es.name}\" does not exist"
                 )
             }
         }
@@ -1171,7 +1179,7 @@ class AssemblerTest : AssemblerTestBase() {
 
         // integrate data from local db to org openlattice schema
         val organizationUserCredentials = organizationsApi.getOrganizationIntegrationAccount(organization2.id)
-        val organizationDataBaseName = ExternalDatabaseConnectionManager.buildDefaultOrganizationDatabaseName(organization2.id)
+        val organizationDataBaseName = ExternalDatabaseType.ORGANIZATION.generateName(organization2.id)
 
         val sourceDb = "local_db"
         val destinationDb = "${organization2.id}_db"
@@ -1265,7 +1273,7 @@ class AssemblerTest : AssemblerTestBase() {
             connection.createStatement().use { stmt ->
                 assertException(
                         { stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name)) },
-                        "relation \"${AssemblerConnectionManager.OPENLATTICE_SCHEMA}.${es.name}\" does not exist"
+                        "relation \"${Schemas.OPENLATTICE_SCHEMA}.${es.name}\" does not exist"
                 )
             }
         }
@@ -1279,7 +1287,7 @@ class AssemblerTest : AssemblerTestBase() {
             connection.createStatement().use { stmt ->
                 assertException(
                         { stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name)) },
-                        "relation \"${AssemblerConnectionManager.OPENLATTICE_SCHEMA}.${es.name}\" does not exist"
+                        "relation \"${Schemas.OPENLATTICE_SCHEMA}.${es.name}\" does not exist"
                 )
             }
         }
@@ -1399,7 +1407,7 @@ class AssemblerTest : AssemblerTestBase() {
 
                 assertException(
                         { stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es2.name)) },
-                        "relation \"${AssemblerConnectionManager.OPENLATTICE_SCHEMA}.${es2.name}\" does not exist"
+                        "relation \"${Schemas.OPENLATTICE_SCHEMA}.${es2.name}\" does not exist"
                 )
             }
         }
@@ -1441,7 +1449,7 @@ class AssemblerTest : AssemblerTestBase() {
             connection.createStatement().use { stmt ->
                 assertException(
                         { stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es2.name)) },
-                        "relation \"${AssemblerConnectionManager.OPENLATTICE_SCHEMA}.${es2.name}\" does not exist"
+                        "relation \"${Schemas.OPENLATTICE_SCHEMA}.${es2.name}\" does not exist"
                 )
             }
         }

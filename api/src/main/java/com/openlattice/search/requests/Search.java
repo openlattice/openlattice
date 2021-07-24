@@ -46,7 +46,7 @@ public class Search {
             @JsonProperty( SerializationConstants.EXCLUDE_PROPERTY_TYPES ) Optional<Boolean> excludePropertyTypes,
             @JsonProperty( SerializationConstants.START ) int start,
             @JsonProperty( SerializationConstants.MAX_HITS ) int maxHits ) {
-        optionalKeyword = keyword.isPresent() ? Optional.of( keyword.get().trim() ) : Optional.empty();
+        optionalKeyword = keyword.map( String::trim );
         optionalEntityType = entityType;
         optionalPropertyTypes = propertyTypes;
         optionalOrganizationId = organizationId;

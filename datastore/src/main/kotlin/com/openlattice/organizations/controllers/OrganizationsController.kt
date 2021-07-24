@@ -16,13 +16,23 @@ import com.openlattice.authorization.util.getLastAclKeySafely
 import com.openlattice.controllers.exceptions.ForbiddenException
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
-import com.openlattice.organization.*
+import com.openlattice.organization.OrganizationEntitySetFlag
+import com.openlattice.organization.OrganizationIntegrationAccount
+import com.openlattice.organization.OrganizationMember
+import com.openlattice.organization.OrganizationPrincipal
+import com.openlattice.organization.OrganizationsApi
 import com.openlattice.organization.OrganizationsApi.Companion.CONTROLLER
 import com.openlattice.organization.roles.Role
-import com.openlattice.organizations.*
+import com.openlattice.organizations.ExternalDatabaseManagementService
+import com.openlattice.organizations.Grant
+import com.openlattice.organizations.HazelcastOrganizationService
+import com.openlattice.organizations.Organization
+import com.openlattice.organizations.OrganizationMetadataEntitySetIds
+import com.openlattice.organizations.OrganizationMetadataEntitySetsService
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.commons.lang3.NotImplementedException
+import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
@@ -51,9 +61,6 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
     private lateinit var assembler: Assembler
 
     @Inject
-    private lateinit var securableObjectTypes: SecurableObjectResolveTypeService
-
-    @Inject
     private lateinit var principalService: SecurePrincipalsManager
 
     @Inject
@@ -73,6 +80,13 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
 
     @Inject
     private lateinit var edmService: EdmManager
+
+    @Inject
+    private lateinit var dbCCredentialService: DbCredentialService
+
+    companion object {
+        private val logger = LoggerFactory.getLogger(OrganizationsController::class.java)
+    }
 
     @Timed
     @GetMapping(value = ["", "/"], produces = [MediaType.APPLICATION_JSON_VALUE])
@@ -109,15 +123,10 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
     @PostMapping(value = ["", "/"], consumes = [MediaType.APPLICATION_JSON_VALUE])
     override fun createOrganizationIfNotExists(@RequestBody organization: Organization): UUID {
         Preconditions.checkArgument(
-                organization.connections.isEmpty() || isAdmin(),
+                organization.connections.isEmpty() || isAdmin,
                 "Must be admin to specify auto-enrollments"
         )
-        organizations.createOrganization(Principals.getCurrentUser(), organization)
-        securableObjectTypes.createSecurableObjectType(
-                AclKey(organization.id),
-                SecurableObjectType.Organization
-        )
-        return organization.id
+        return organizations.createOrganization(Principals.getCurrentUser(), organization)
     }
 
     @Timed
@@ -145,7 +154,6 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
     override fun destroyOrganization(@PathVariable(OrganizationsApi.ID) organizationId: UUID): Void? {
         ensureOwner(organizationId)
         ensureObjectCanBeDeleted(organizationId)
-        organizations.ensureOrganizationExists(organizationId)
         organizations.destroyOrganization(organizationId)
         edms.deleteOrganizationExternalDatabase(organizationId)
         return null
@@ -162,10 +170,19 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
             @PathVariable(OrganizationsApi.ID) organizationId: UUID,
             @PathVariable(OrganizationsApi.SET_ID) entitySetId: UUID
     ): Void? {
-        organizations.ensureOrganizationExists(organizationId)
-        ensureRead(organizationId)
+        if ( !organizations.organizationExists(organizationId) ) {
+            throw IllegalArgumentException("Organization $organizationId doesn't exist")
+        }
+        if ( !entitySetManager.exists(entitySetId) ) {
+            throw IllegalArgumentException("EntitySet $entitySetId doesn't exist")
+        }
+
+        ensureReadAccess(AclKey(organizationId))
         ensureTransportAccess(AclKey(entitySetId))
-        edms.transportEntitySet(organizationId, entitySetId)
+        val transportFuture = edms.transportEntitySet(organizationId, entitySetId)
+        check( transportFuture.get() ) {
+            logger.error("Error while transporting entityset $entitySetId to organization $organizationId")
+        }
         return null
     }
 
@@ -180,10 +197,9 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
             @PathVariable(OrganizationsApi.ID) organizationId: UUID,
             @PathVariable(OrganizationsApi.SET_ID) entitySetId: UUID
     ): Void? {
-        organizations.ensureOrganizationExists(organizationId)
         ensureRead(organizationId)
         ensureTransportAccess(AclKey(entitySetId))
-        edms.destroyTransportedEntitySet(entitySetId)
+        edms.destroyTransportedEntitySet(organizationId, entitySetId)
         return null
     }
 
@@ -200,6 +216,24 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
     }
 
     @Timed
+    @GetMapping(
+            value = [OrganizationsApi.ID_PATH + OrganizationsApi.INTEGRATION + OrganizationsApi.ROLES],
+            produces = [MediaType.APPLICATION_JSON_VALUE]
+    )
+    override fun getOrganizationAdminRoleDatabaseAccount(
+            @PathVariable(OrganizationsApi.ID) organizationId: UUID
+    ): OrganizationIntegrationAccount {
+        ensureOwner(organizationId)
+        val org = checkNotNull(organizations.getOrganization(organizationId)) {
+            "Organization $organizationId does not exist"
+        }
+        val account = checkNotNull(dbCCredentialService.getDbAccount(org.adminRoleAclKey)) {
+            "No database creds found for admin role of organization $organizationId"
+        }
+        return OrganizationIntegrationAccount(account.username, account.credential)
+    }
+
+    @Timed
     @PatchMapping(
             value = [OrganizationsApi.ID_PATH + OrganizationsApi.INTEGRATION],
             produces = [MediaType.APPLICATION_JSON_VALUE]
@@ -208,7 +242,7 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
             @PathVariable(OrganizationsApi.ID) organizationId: UUID
     ): OrganizationIntegrationAccount {
         ensureOwner(organizationId)
-        val account = assembler.rollIntegrationAccount(AclKey(organizationId), PrincipalType.ORGANIZATION)
+        val account = assembler.rollIntegrationAccount(AclKey(organizationId))
         return OrganizationIntegrationAccount(account.username, account.credential)
     }
 
@@ -485,15 +519,9 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
             value = [OrganizationsApi.PRINCIPALS + OrganizationsApi.MEMBERS + OrganizationsApi.COUNT],
             consumes = [MediaType.APPLICATION_JSON_VALUE], produces = [MediaType.APPLICATION_JSON_VALUE]
     )
-    override fun getMemberCountForOrganizations(organizationIds: Set<UUID>): Map<UUID, Int> {
+    override fun getMemberCountForOrganizations(@RequestBody organizationIds: Set<UUID>): Map<UUID, Int> {
         val readPermissions = EnumSet.of(Permission.READ)
-        accessCheck(
-                organizationIds.stream().collect(
-                        Collectors.toMap(
-                                { uuids: UUID -> AclKey(uuids) },
-                                { readPermissions })
-                )
-        )
+        accessCheck( organizationIds.associate { AclKey(it) to readPermissions } )
         return organizations.getMemberCountsForOrganizations(organizationIds)
     }
 
@@ -502,15 +530,9 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
             value = [OrganizationsApi.PRINCIPALS + OrganizationsApi.ROLES + OrganizationsApi.COUNT],
             consumes = [MediaType.APPLICATION_JSON_VALUE], produces = [MediaType.APPLICATION_JSON_VALUE]
     )
-    override fun getRoleCountForOrganizations(organizationIds: Set<UUID>): Map<UUID, Int> {
+    override fun getRoleCountForOrganizations(@RequestBody organizationIds: Set<UUID>): Map<UUID, Int> {
         val readPermissions = EnumSet.of(Permission.READ)
-        accessCheck(
-                organizationIds.stream().collect(
-                        Collectors.toMap(
-                                { uuids: UUID -> AclKey(uuids) },
-                                { readPermissions })
-                )
-        )
+        accessCheck( organizationIds.associate { AclKey(it) to readPermissions } )
         return organizations.getRoleCountsForOrganizations(organizationIds)
     }
 
@@ -557,12 +579,11 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
             @PathVariable(OrganizationsApi.ID) organizationId: UUID,
             @PathVariable(OrganizationsApi.USER_ID) userId: String
     ): Void? {
-        ensureOwnerAccess(AclKey(organizationId))
-        organizations.removeMembers(
-                organizationId, ImmutableSet.of(
-                Principal(PrincipalType.USER, userId)
-        )
-        )
+        // allow caller to remove themselves from the org
+        if (Principals.getCurrentUser().id != userId) {
+            ensureOwnerAccess(AclKey(organizationId))
+        }
+        organizations.removeMembers(organizationId, ImmutableSet.of(Principal(PrincipalType.USER, userId)))
         edms.revokeAllPrivilegesFromMember(organizationId, userId)
         return null
     }
@@ -571,6 +592,9 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
     @PostMapping(value = [OrganizationsApi.ROLES], consumes = [MediaType.APPLICATION_JSON_VALUE])
     override fun createRole(@RequestBody role: Role): UUID {
         ensureOwner(role.organizationId)
+        require(role.principalType == PrincipalType.ROLE) {
+            "Role principal type must be ROLE"
+        }
         //We only create the role, but do not necessarily assign it to ourselves.
         organizations.createRoleIfNotExists(Principals.getCurrentUser(), role)
         return role.id
@@ -816,6 +840,7 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
     override fun removeConnections(
             @PathVariable(OrganizationsApi.ID) organizationId: UUID, @RequestBody connections: Set<String>
     ): Void? {
+        ensureAdminAccess()
         organizations.removeConnections(organizationId, connections)
         return null
     }
@@ -862,13 +887,13 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
         return authorizations
     }
 
-    private fun ensureOwner(organizationId: UUID): AclKey {
-        val aclKey = AclKey(organizationId)
-        accessCheck(aclKey, EnumSet.of(Permission.OWNER))
-        return aclKey
+    private fun ensureOwner(organizationId: UUID){
+        organizations.ensureOrganizationExists(organizationId)
+        ensureOwnerAccess(AclKey(organizationId))
     }
 
     private fun ensureRead(organizationId: UUID) {
+        organizations.ensureOrganizationExists(organizationId)
         ensureReadAccess(AclKey(organizationId))
     }
 

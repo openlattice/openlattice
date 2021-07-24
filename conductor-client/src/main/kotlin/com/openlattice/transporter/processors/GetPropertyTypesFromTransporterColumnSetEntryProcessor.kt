@@ -4,7 +4,8 @@ import com.hazelcast.core.Offloadable
 import com.openlattice.rhizome.KotlinDelegatedUUIDSet
 import com.openlattice.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
 import com.openlattice.transporter.types.TransporterColumnSet
-import java.util.UUID
+import org.slf4j.LoggerFactory
+import java.util.*
 
 /**
  * @author Drew Bailey &lt;drew@openlattice.com&gt;
@@ -13,8 +14,17 @@ class GetPropertyTypesFromTransporterColumnSetEntryProcessor:
         AbstractReadOnlyRhizomeEntryProcessor<UUID, TransporterColumnSet, Set<UUID>>(),
         Offloadable
 {
-    override fun process(entry: MutableMap.MutableEntry<UUID, TransporterColumnSet>): Set<UUID> {
-        return KotlinDelegatedUUIDSet( entry.value.keys )
+    companion object {
+        private val logger = LoggerFactory.getLogger(GetPropertyTypesFromTransporterColumnSetEntryProcessor::class.java)
+    }
+
+    override fun process(entry: MutableMap.MutableEntry<UUID, TransporterColumnSet?>): Set<UUID> {
+        val cols = entry.value
+        requireNotNull( cols ) {
+            logger.error("No TransporterColumnSet found for entitytype ${entry.key}")
+            "No TransporterColumnSet found for entitytype ${entry.key}"
+        }
+        return KotlinDelegatedUUIDSet( cols.keys )
     }
 
     override fun getExecutorName(): String {

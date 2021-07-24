@@ -7,7 +7,6 @@ import com.openlattice.search.requests.PersistentSearch
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.time.LocalDate
 import java.time.OffsetDateTime
-import java.time.format.DateTimeFormatter
 import java.util.*
 
 private const val FROM_EMAIL = "courier@openlattice.com"

@@ -1,7 +1,5 @@
 package com.openlattice.hazelcast.serializers
 
-import com.auth0.json.mgmt.users.User
-import com.google.common.collect.Sets
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers

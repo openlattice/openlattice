@@ -31,7 +31,6 @@ import com.hazelcast.core.HazelcastInstance;
 import com.kryptnostic.rhizome.configuration.ConfigurationConstants;
 import com.openlattice.assembler.Assembler;
 import com.openlattice.assembler.AssemblerConfiguration;
-import com.openlattice.assembler.AssemblerConnectionManager;
 import com.openlattice.assembler.pods.AssemblerConfigurationPod;
 import com.openlattice.auditing.AuditRecordEntitySetsManager;
 import com.openlattice.auditing.AuditingConfiguration;
@@ -41,6 +40,9 @@ import com.openlattice.auditing.LocalAuditingService;
 import com.openlattice.auditing.S3AuditingService;
 import com.openlattice.auditing.pods.AuditingConfigurationPod;
 import com.openlattice.authorization.*;
+import com.openlattice.collaborations.CollaborationDatabaseManager;
+import com.openlattice.collaborations.CollaborationService;
+import com.openlattice.collaborations.PostgresCollaborationDatabaseService;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.DataDeletionManager;
 import com.openlattice.data.DataGraphManager;
@@ -49,10 +51,12 @@ import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
 import com.openlattice.data.storage.ByteBlobDataManager;
 import com.openlattice.data.storage.DataDeletionService;
+import com.openlattice.data.storage.DataSourceResolver;
 import com.openlattice.data.storage.EntityDatastore;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
 import com.openlattice.data.storage.PostgresEntityDatastore;
 import com.openlattice.data.storage.partitions.PartitionManager;
+import com.openlattice.datasets.DataSetService;
 import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EdmService;
@@ -66,20 +70,24 @@ import com.openlattice.graph.core.GraphService;
 import com.openlattice.ids.HazelcastIdGenerationService;
 import com.openlattice.ids.HazelcastLongIdService;
 import com.openlattice.indexing.configuration.IndexerConfiguration;
+import com.openlattice.jdbc.DataSourceManager;
 import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
 import com.openlattice.notifications.sms.PhoneNumberService;
-import com.openlattice.organizations.ExternalDatabaseManagementService;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.OrganizationExternalDatabaseConfiguration;
 import com.openlattice.organizations.OrganizationMetadataEntitySetsService;
 import com.openlattice.organizations.pods.OrganizationExternalDatabaseConfigurationPod;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
+import com.openlattice.postgres.external.DatabaseQueryManager;
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
+import com.openlattice.postgres.external.ExternalDatabasePermissioner;
+import com.openlattice.postgres.external.ExternalDatabasePermissioningService;
+import com.openlattice.postgres.external.PostgresDatabaseQueryService;
 import com.openlattice.scrunchie.search.ConductorElasticsearchImpl;
-import com.openlattice.transporter.types.TransporterDatastore;
+import com.openlattice.transporter.pods.TransporterPod;
 import com.zaxxer.hikari.HikariDataSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -90,8 +98,14 @@ import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 
 @Configuration
-@Import( { IndexerConfigurationPod.class, AuditingConfigurationPod.class, AssemblerConfigurationPod.class,
-        ByteBlobServicePod.class, OrganizationExternalDatabaseConfigurationPod.class } )
+@Import( {
+        IndexerConfigurationPod.class,
+        AuditingConfigurationPod.class,
+        AssemblerConfigurationPod.class,
+        ByteBlobServicePod.class,
+        OrganizationExternalDatabaseConfigurationPod.class,
+        TransporterPod.class
+} )
 public class IndexerServicesPod {
 
     @Inject
@@ -131,7 +145,7 @@ public class IndexerServicesPod {
     private ExternalDatabaseConnectionManager externalDbConnMan;
 
     @Inject
-    private TransporterDatastore transporterDatastore;
+    private DataSourceManager dataSourceManager;
 
     @Bean
     public ConductorElasticsearchApi elasticsearchApi() {
@@ -154,25 +168,43 @@ public class IndexerServicesPod {
     }
 
     @Bean
-    public SecurePrincipalsManager principalService() {
-        return new HazelcastPrincipalService( hazelcastInstance,
-                aclKeyReservationService(),
-                authorizationManager(),
-                eventBus );
+    public AuthorizationManager authorizationManager() {
+        return new HazelcastAuthorizationService( hazelcastInstance, eventBus, principalsMapManager() );
     }
 
     @Bean
-    public AuthorizationManager authorizationManager() {
-        return new HazelcastAuthorizationService( hazelcastInstance, eventBus );
+    public PrincipalsMapManager principalsMapManager() {
+        return new HazelcastPrincipalsMapManager( hazelcastInstance, aclKeyReservationService() );
+    }
+
+    @Bean
+    public SecurePrincipalsManager securePrincipalsManager() {
+        return new HazelcastPrincipalService(
+                hazelcastInstance,
+                aclKeyReservationService(),
+                authorizationManager(),
+                principalsMapManager(),
+                externalDatabasePermissionsManager()
+        );
+    }
+
+    @Bean
+    public ExternalDatabasePermissioningService externalDatabasePermissionsManager() {
+        return new ExternalDatabasePermissioner(
+                hazelcastInstance,
+                externalDbConnMan,
+                dbcs(),
+                principalsMapManager()
+        );
     }
 
     @Bean
     public Assembler assembler() {
         return new Assembler(
                 dbcs(),
-                hikariDataSource,
                 authorizationManager(),
-                principalService(),
+                securePrincipalsManager(),
+                dbQueryManager(),
                 metricRegistry,
                 hazelcastInstance,
                 eventBus
@@ -180,16 +212,12 @@ public class IndexerServicesPod {
     }
 
     @Bean
-    public AssemblerConnectionManager assemblerConnectionManager() {
-        return new AssemblerConnectionManager(
+    public DatabaseQueryManager dbQueryManager() {
+        return new PostgresDatabaseQueryService(
                 assemblerConfiguration,
                 externalDbConnMan,
-                hikariDataSource,
-                principalService(),
-                organizationsManager(),
-                dbcs(),
-                eventBus,
-                metricRegistry
+                securePrincipalsManager(),
+                dbcs()
         );
     }
 
@@ -204,16 +232,42 @@ public class IndexerServicesPod {
     }
 
     @Bean
+    public CollaborationDatabaseManager collaborationDatabaseManager() {
+        return new PostgresCollaborationDatabaseService(
+                hazelcastInstance,
+                dbQueryManager(),
+                externalDbConnMan,
+                authorizationManager(),
+                externalDatabasePermissionsManager(),
+                securePrincipalsManager(),
+                dbcs(),
+                assemblerConfiguration
+        );
+    }
+
+    @Bean
+    public CollaborationService collaborationService() {
+        return new CollaborationService(
+                hazelcastInstance,
+                aclKeyReservationService(),
+                authorizationManager(),
+                securePrincipalsManager(),
+                collaborationDatabaseManager()
+        );
+    }
+
+    @Bean
     public HazelcastOrganizationService organizationsManager() {
         return new HazelcastOrganizationService(
                 hazelcastInstance,
                 aclKeyReservationService(),
                 authorizationManager(),
-                principalService(),
+                securePrincipalsManager(),
                 phoneNumberService(),
                 partitionManager(),
                 assembler(),
-                organizationMetadataEntitySetsService() );
+                organizationMetadataEntitySetsService(),
+                collaborationService() );
     }
 
     @Bean
@@ -242,13 +296,19 @@ public class IndexerServicesPod {
     }
 
     @Bean
+    public DataSetService dataSetService() {
+        return new DataSetService( hazelcastInstance, elasticsearchApi() );
+    }
+
+    @Bean
     public EdmManager dataModelService() {
         return new EdmService(
                 hazelcastInstance,
                 aclKeyReservationService(),
                 authorizationManager(),
                 entityTypeManager(),
-                schemaManager()
+                schemaManager(),
+                dataSetService()
         );
     }
 
@@ -263,6 +323,7 @@ public class IndexerServicesPod {
                 dataModelService(),
                 hikariDataSource,
                 organizationMetadataEntitySetsService(),
+                dataSetService(),
                 auditingConfiguration
         );
     }
@@ -275,7 +336,7 @@ public class IndexerServicesPod {
     @Bean
     public EntityKeyIdService idService() {
         return new PostgresEntityKeyIdService(
-                hikariDataSource,
+                dataSourceResolver(),
                 idGeneration(),
                 partitionManager() );
     }
@@ -283,8 +344,7 @@ public class IndexerServicesPod {
     @Bean
     public PostgresEntityDataQueryService dataQueryService() {
         return new PostgresEntityDataQueryService(
-                hikariDataSource,
-                hikariDataSource,
+                dataSourceResolver(),
                 byteBlobDataManager,
                 partitionManager()
         );
@@ -305,13 +365,14 @@ public class IndexerServicesPod {
 
     @Bean
     public GraphService graphApi() {
-        return new Graph( hikariDataSource,
-                hikariDataSource,
+        return new Graph(
+                dataSourceResolver(),
                 entitySetManager(),
                 partitionManager(),
                 dataQueryService(),
                 idService(),
-                metricRegistry );
+                metricRegistry
+        );
     }
 
     @Bean
@@ -334,20 +395,6 @@ public class IndexerServicesPod {
         return new DataGraphService( graphApi(), idService(), entityDatastore(), jobService() );
     }
 
-    @Bean
-    public ExternalDatabaseManagementService edms() {
-        return new ExternalDatabaseManagementService(
-                hazelcastInstance,
-                externalDbConnMan,
-                principalService(),
-                aclKeyReservationService(),
-                authorizationManager(),
-                organizationExternalDatabaseConfiguration,
-                transporterDatastore,
-                dbcs(),
-                hikariDataSource );
-    }
-
     @Bean( name = "auditingManager" )
     @Profile( { ConfigurationConstants.Profiles.AWS_CONFIGURATION_PROFILE,
             ConfigurationConstants.Profiles.AWS_TESTING_PROFILE, AuditingProfiles.LOCAL_AWS_AUDITING_PROFILE } )
@@ -364,13 +411,12 @@ public class IndexerServicesPod {
     @Bean
     public DataDeletionManager dataDeletionManager() {
         return new DataDeletionService(
-                dataModelService(),
                 entitySetManager(),
-                dataGraphService(),
                 authorizationManager(),
-                auditRecordEntitySetsManager(),
                 entityDatastore(),
-                graphApi()
+                graphApi(),
+                jobService(),
+                partitionManager()
         );
     }
 
@@ -386,11 +432,21 @@ public class IndexerServicesPod {
 
     @Bean
     public OrganizationMetadataEntitySetsService organizationMetadataEntitySetsService() {
-        return new OrganizationMetadataEntitySetsService( dataModelService(), authorizationManager() );
+        return new OrganizationMetadataEntitySetsService(
+                hazelcastInstance,
+                dataModelService(),
+                principalsMapManager(),
+                authorizationManager()
+        );
+    }
+
+    @Bean
+    public DataSourceResolver dataSourceResolver() {
+        return new DataSourceResolver( hazelcastInstance, dataSourceManager );
     }
 
     @PostConstruct
     void initPrincipals() {
-        Principals.init( principalService(), hazelcastInstance );
+        Principals.init( securePrincipalsManager(), hazelcastInstance );
     }
 }

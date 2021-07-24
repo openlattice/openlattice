@@ -27,11 +27,13 @@ import com.hazelcast.map.IMap
 import com.hazelcast.query.Predicates
 import com.openlattice.assembler.PostgresRoles.Companion.buildExternalPrincipalId
 import com.openlattice.authorization.mapstores.PostgresCredentialMapstore
+import com.openlattice.authorization.processors.GetDbUsernameFromDbCredsEntryProcessor
 import com.openlattice.directory.MaterializedViewAccount
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.ids.HazelcastLongIdService
 import org.slf4j.LoggerFactory
 import java.security.SecureRandom
+import java.util.concurrent.CompletionStage
 import kotlin.math.max
 
 const val USER_PREFIX = "user"
@@ -78,30 +80,59 @@ class DbCredentialService(
 
     fun getDbAccount(aclKey: AclKey): MaterializedViewAccount? = dbCreds[aclKey]
 
+    fun getDbAccounts(aclKeys: Set<AclKey>): Map<AclKey, MaterializedViewAccount> {
+        return dbCreds.getAll(aclKeys)
+    }
+
     fun getDbUsername(user: SecurablePrincipal): String = getDbAccount(user)!!.username
+
+    fun getDbUsernameAsync(user: SecurablePrincipal): CompletionStage<String> = dbCreds.getAsync(user.aclKey).thenApplyAsync { it.username }
 
     fun getDbUsername(aclKey: AclKey): String = getDbAccount(aclKey)!!.username
 
-    fun getOrCreateDbAccount(securablePrincipal: SecurablePrincipal): MaterializedViewAccount {
-        return getOrCreateDbAccount(securablePrincipal.aclKey)
+    fun getDbUsernamesByPrincipals(principals: Set<SecurablePrincipal>): Set<String> {
+        return getDbUsernames(principals.mapTo(mutableSetOf<AclKey>()) { it.aclKey })
     }
 
-    fun getOrCreateDbAccount(principalAclKey: AclKey, isOrganization: Boolean = false): MaterializedViewAccount {
+    fun getDbUsernamesAsMap(aclKeys: Set<AclKey>): Map<AclKey, String> {
+        return dbCreds.executeOnKeys(aclKeys, GetDbUsernameFromDbCredsEntryProcessor())
+    }
+
+    fun getDbUsernames(aclKeys: Set<AclKey>): Set<String> {
+        return getDbUsernamesAsMap(aclKeys).values.toSet()
+    }
+
+    fun getOrCreateRoleAccount(securablePrincipal: SecurablePrincipal): MaterializedViewAccount {
+        return getOrCreateDbAccount(securablePrincipal.aclKey, PrincipalType.ROLE)
+    }
+
+    fun getOrCreateOrganizationAccount(aclKey: AclKey): MaterializedViewAccount {
+        return getOrCreateDbAccount(aclKey, PrincipalType.ORGANIZATION)
+    }
+
+    fun getOrCreateDbAccount(securablePrincipal: SecurablePrincipal): MaterializedViewAccount {
+        return getOrCreateDbAccount(securablePrincipal.aclKey, PrincipalType.USER)
+    }
+
+    private fun getOrCreateDbAccount(principalAclKey: AclKey, principalType: PrincipalType): MaterializedViewAccount {
         getDbAccount(principalAclKey)?.let { return it }
 
-        logger.info("Generating credentials for principal {}", principalAclKey)
+        logger.debug("Generating credentials for principal {}", principalAclKey)
 
-        val username = if (isOrganization) {
-            buildExternalPrincipalId(principalAclKey, PrincipalType.ORGANIZATION)
-        } else {
-            val id = longIdService.getId(scope)
-            val padding = "0".repeat(max(0, MIN_USERNAME_LENGTH - USER_PREFIX.length - id.toString().length))
+        val username = when ( principalType ) {
+            PrincipalType.ORGANIZATION, PrincipalType.ROLE  -> {
+                buildExternalPrincipalId(principalAclKey, principalType)
+            }
+            else -> {
+                val id = longIdService.getId(scope)
+                val padding = "0".repeat(max(0, MIN_USERNAME_LENGTH - USER_PREFIX.length - id.toString().length))
 
-            "$USER_PREFIX$padding$id"
+                "$USER_PREFIX$padding$id"
+            }
         }
         val cred = generateCredential()
 
-        logger.info("Generated credential for principal {} with username {}", principalAclKey, username)
+        logger.debug("Generated credential for principal {} with username {}", principalAclKey, username)
 
         val account = MaterializedViewAccount(username, cred)
         return MoreObjects.firstNonNull(dbCreds.putIfAbsent(principalAclKey, account), account)
@@ -122,6 +153,4 @@ class DbCredentialService(
             it.value.username to it.key
         }
     }
-
 }
-

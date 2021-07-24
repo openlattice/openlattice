@@ -35,21 +35,22 @@ import com.openlattice.directory.pojo.DirectedAclKeys;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
+import com.openlattice.search.Auth0UserSearchFields;
 import com.openlattice.users.Auth0SyncService;
 import com.openlattice.users.Auth0UtilsKt;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.*;
-import retrofit2.http.Body;
-import retrofit2.http.POST;
 
 import javax.inject.Inject;
 import java.util.EnumSet;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -201,31 +202,56 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
             produces = MediaType.APPLICATION_JSON_VALUE )
     public MaterializedViewAccount regenerateCredential() {
         var sp = Principals.getCurrentSecurablePrincipal();
-        return assembler.rollIntegrationAccount( sp.getAclKey(), sp.getPrincipalType() );
+        return assembler.rollIntegrationAccount( sp.getAclKey() );
     }
 
+    @Deprecated
     @Timed
     @Override
     @GetMapping(
             path = USERS + SEARCH + SEARCH_QUERY_PATH,
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Map<String, Auth0UserBasic> searchAllUsers( @PathVariable( SEARCH_QUERY ) String searchQuery ) {
-        String wildcardSearchQuery = searchQuery + "*";
-        return userDirectoryService.searchAllUsers( wildcardSearchQuery );
+        Auth0UserSearchFields fields = new Auth0UserSearchFields( null, searchQuery + "*" );
+        return userDirectoryService.searchAllUsers( fields )
+                .entrySet()
+                .stream()
+                .collect( Collectors.toMap( Map.Entry::getKey, entry -> new Auth0UserBasic(
+                        entry.getValue().getId(),
+                        entry.getValue().getEmail(),
+                        entry.getValue().getNickname(),
+                        entry.getValue().getAppMetadata()
+                ) ) );
     }
 
+    @Deprecated
     @Timed
     @Override
     @GetMapping(
             path = USERS + SEARCH_EMAIL + EMAIL_SEARCH_QUERY_PATH,
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Map<String, Auth0UserBasic> searchAllUsersByEmail( @PathVariable( SEARCH_QUERY ) String emailSearchQuery ) {
+        Auth0UserSearchFields fields = new Auth0UserSearchFields( emailSearchQuery, null );
+        return userDirectoryService.searchAllUsers( fields )
+                .entrySet()
+                .stream()
+                .collect( Collectors.toMap( Map.Entry::getKey, entry -> new Auth0UserBasic(
+                        entry.getValue().getId(),
+                        entry.getValue().getEmail(),
+                        entry.getValue().getNickname(),
+                        entry.getValue().getAppMetadata()
+                ) ) );
+    }
 
-        // to search by an exact email, the search query must be in this format: email.raw:"hristo@openlattice.com"
-        // https://auth0.com/docs/api/management/v2/user-search#search-by-email
-        String exactEmailSearchQuery = "email.raw:\"" + emailSearchQuery + "\"";
-
-        return userDirectoryService.searchAllUsers( exactEmailSearchQuery );
+    @Timed
+    @Override
+    @PostMapping(
+            path = USERS + SEARCH,
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public Map<String, User> searchUsers( @RequestBody Auth0UserSearchFields fields ) {
+        return userDirectoryService.searchAllUsers( fields );
     }
 
     @Override
@@ -268,7 +294,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
 
         //First remove from all organizations
         organizationService.removeMemberFromAllOrganizations( new Principal( PrincipalType.USER, userId ) );
-        SecurablePrincipal securablePrincipal = spm.getPrincipal( userId );
+        SecurablePrincipal securablePrincipal = spm.getSecurablePrincipal( userId );
         spm.deletePrincipal( securablePrincipal.getAclKey() );
 
         //Remove from materialized view account

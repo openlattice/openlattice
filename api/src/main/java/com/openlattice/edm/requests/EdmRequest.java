@@ -18,19 +18,19 @@
 
 package com.openlattice.edm.requests;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.openlattice.client.serialization.SerializationConstants;
+
 import java.util.Set;
 import java.util.UUID;
 
-import com.openlattice.client.serialization.SerializationConstants;
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 public class EdmRequest {
-    public static enum Action {
+    public enum Action {
         ADD,
         REMOVE,
         REPLACE
-    };
+    }
 
     private final Action    action;
     private final Set<UUID> propertyTypes;

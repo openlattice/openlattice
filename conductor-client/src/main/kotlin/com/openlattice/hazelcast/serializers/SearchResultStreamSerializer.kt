@@ -47,7 +47,7 @@ class SearchResultStreamSerializer : SelfRegisteringStreamSerializer<SearchResul
 
     override fun read(input: ObjectDataInput): SearchResult {
         val numHits = input.readLong()
-        val hits = ObjectMappers.getSmileMapper().readValue<List<Map<String, Any>>>(input.readByteArray())
+        val hits = ObjectMappers.getSmileMapper().readValue<List<Map<String, Any>>>(input.readByteArray()!!)
         return SearchResult(numHits, hits)
     }
 }

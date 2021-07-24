@@ -21,7 +21,7 @@
 
 package com.openlattice.assembler.tasks
 
-import com.openlattice.assembler.AssemblerDependencies
+import com.openlattice.assembler.UserRoleSyncTaskDependencies
 import com.openlattice.authorization.initializers.AuthorizationInitializationTask
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.Task
@@ -31,17 +31,12 @@ import java.util.concurrent.TimeUnit
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class UsersAndRolesInitializationTask : HazelcastInitializationTask<AssemblerDependencies> {
-    override fun initialize(dependencies: AssemblerDependencies) {
-        dependencies
-                .assemblerConnectionManager
-                .getAllRoles()
-                .map(dependencies.assemblerConnectionManager::createRole)
-        dependencies
-                .assemblerConnectionManager
-                .getAllUsers()
-                .map(dependencies.assemblerConnectionManager::createUnprivilegedUser)
-
+class UsersAndRolesInitializationTask : HazelcastInitializationTask<UserRoleSyncTaskDependencies> {
+    override fun initialize(dependencies: UserRoleSyncTaskDependencies) {
+        dependencies.securePrincipalsManager.allRoles
+                .map(dependencies.extDbPermissioner::createRole)
+        dependencies.securePrincipalsManager.allUsers
+                .map(dependencies.extDbPermissioner::createUnprivilegedUser)
     }
 
     override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
@@ -60,7 +55,7 @@ class UsersAndRolesInitializationTask : HazelcastInitializationTask<AssemblerDep
         return Task.USERS_AND_ROLES_INITIALIZATON.name
     }
 
-    override fun getDependenciesClass(): Class<out AssemblerDependencies> {
-        return AssemblerDependencies::class.java
+    override fun getDependenciesClass(): Class<out UserRoleSyncTaskDependencies> {
+        return UserRoleSyncTaskDependencies::class.java
     }
 }

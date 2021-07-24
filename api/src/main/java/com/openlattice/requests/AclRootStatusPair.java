@@ -18,13 +18,14 @@
 
 package com.openlattice.requests;
 
-import java.util.EnumSet;
-import java.util.List;
-import java.util.UUID;
-
-import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.openlattice.client.serialization.SerializationConstants;
+
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
 
 public class AclRootStatusPair {
     private List<UUID>             aclRoot;
@@ -48,28 +49,18 @@ public class AclRootStatusPair {
         return status;
     }
 
-    @Override
-    public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + ( ( aclRoot == null ) ? 0 : aclRoot.hashCode() );
-        result = prime * result + ( ( status == null ) ? 0 : status.hashCode() );
-        return result;
+    @Override public boolean equals( Object o ) {
+        if ( this == o )
+            return true;
+        if ( o == null || getClass() != o.getClass() )
+            return false;
+        AclRootStatusPair that = (AclRootStatusPair) o;
+        return Objects.equals( aclRoot, that.aclRoot ) &&
+                Objects.equals( status, that.status );
     }
 
-    @Override
-    public boolean equals( Object obj ) {
-        if ( this == obj ) return true;
-        if ( obj == null ) return false;
-        if ( getClass() != obj.getClass() ) return false;
-        AclRootStatusPair other = (AclRootStatusPair) obj;
-        if ( aclRoot == null ) {
-            if ( other.aclRoot != null ) return false;
-        } else if ( !aclRoot.equals( other.aclRoot ) ) return false;
-        if ( status == null ) {
-            if ( other.status != null ) return false;
-        } else if ( !status.equals( other.status ) ) return false;
-        return true;
+    @Override public int hashCode() {
+        return Objects.hash( aclRoot, status );
     }
 
     @Override

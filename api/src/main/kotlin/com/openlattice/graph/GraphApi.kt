@@ -40,7 +40,6 @@ const val ID_PATH = "/{$ID}"
 const val NEIGHBORS = "/neighbors"
 const val PAGE = "/page"
 const val QUERY = "/query"
-const val RESULT = "/result"
 
 /**
  *

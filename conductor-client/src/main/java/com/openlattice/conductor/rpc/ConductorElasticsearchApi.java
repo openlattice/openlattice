@@ -1,5 +1,3 @@
-
-
 /*
  * Copyright (C) 2018. OpenLattice, Inc.
  *
@@ -25,6 +23,8 @@ package com.openlattice.conductor.rpc;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.data.EntityDataKey;
+import com.openlattice.datasets.DataSet;
+import com.openlattice.datasets.DataSetColumn;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
@@ -32,6 +32,7 @@ import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organizations.Organization;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
+import com.openlattice.search.requests.ConstraintGroup;
 import com.openlattice.search.requests.EntityDataKeySearchResult;
 import com.openlattice.search.requests.SearchConstraints;
 import com.openlattice.search.requests.SearchResult;
@@ -126,6 +127,14 @@ public interface ConductorElasticsearchApi {
     // entity_set_collection_index setup consts
     String ENTITY_SET_COLLECTION_INDEX = "entity_set_collection_index";
     String ENTITY_SET_COLLECTION       = "entity_set_collection";
+
+    // dataset_index setup consts
+    String DATASET_INDEX = "dataset_index";
+    String DATASET       = "dataset";
+
+    // dataset field consts
+    String COLUMNS  = "columns";
+    String METADATA = "metadata";
 
     Set<UUID> getEntityTypesWithIndices();
 
@@ -257,6 +266,25 @@ public interface ConductorElasticsearchApi {
             Set<AclKey> authorizedOrganizationIds,
             int start,
             int maxHits );
+
+    SearchResult searchDataSetMetadata(
+            Set<UUID> dataSetIds,
+            List<ConstraintGroup> constraints,
+            int start,
+            int maxHits
+    );
+
+    //
+    // data set indexing
+    //
+
+    boolean deleteIndexedDataSet( UUID dataSetId );
+
+    boolean indexDataSet( DataSet dataSet, List<DataSetColumn> columns );
+
+    boolean updateIndexedDataSet( DataSet dataSet );
+
+    boolean updateIndexedDataSetColumns( UUID dataSetId, List<DataSetColumn> columns );
 
     /**
      * Re-indexing

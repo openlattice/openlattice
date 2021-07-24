@@ -21,14 +21,18 @@
 package com.openlattice.linking.util;
 
 import com.google.common.collect.Sets;
+import com.openlattice.data.EntityDataKey;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import org.apache.commons.codec.language.DoubleMetaphone;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.similarity.JaroWinklerDistance;
+import org.apache.commons.text.similarity.LevenshteinDistance;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
 
 /**
@@ -82,6 +86,9 @@ public enum PersonMetric {
     private static final Set<PersonMetric> metricsList     = Sets.newHashSet( PersonMetric.values() );
     private static final DoubleMetaphone   doubleMetaphone = new DoubleMetaphone();
 
+    private static final LevenshteinDistance levDistance = LevenshteinDistance.getDefaultInstance();
+    private static final JaroWinklerDistance jwDistance = new JaroWinklerDistance();
+
     private final MetricExtractor metric;
 
     PersonMetric( MetricExtractor metric ) {
@@ -116,6 +123,21 @@ public enum PersonMetric {
                 result[ m.ordinal() ] = m.extract( lhs, rhs, fqnToIdMap )
         );
         return result;
+    }
+
+    public static Map<EntityDataKey, double[]> pDistanceBulk(
+            Map<UUID, DelegatedStringSet> lhs,
+            Map<EntityDataKey, Map<UUID, DelegatedStringSet>> rhs,
+            Map<FullQualifiedName, UUID> fqnToIdMap ) {
+        Map<EntityDataKey, double[]> bulkResults = new ConcurrentHashMap<>(rhs.size());
+        rhs.entrySet().parallelStream().forEach( ent -> {
+            double[] result = new double[ metricsList.size() ];
+            for (PersonMetric m : metricsList) {
+                result[ m.ordinal() ] = m.extract( lhs, ent.getValue(), fqnToIdMap ) * 100.0;
+            }
+            bulkResults.put( ent.getKey(), result );
+        });
+        return bulkResults;
     }
 
     public static MetricExtractor lhs( BiFunction<Map<UUID, DelegatedStringSet>, Map<FullQualifiedName, UUID>, Integer> extractor ) {
@@ -166,7 +188,7 @@ public enum PersonMetric {
             double bestValue = 0;
             for (String dob1 : lhsDob) {
                 for (String dob2 : rhsDob) {
-                    double val = ( 8 - StringUtils.getLevenshteinDistance( dob1, dob2 ) ) / 8.0;
+                    double val = ( 8 - levDistance.apply(  dob1, dob2 ) ) / 8.0;
                     if (val > bestValue) bestValue = val;
                 }
             }
@@ -207,7 +229,7 @@ public enum PersonMetric {
             }
         }
 
-        return StringUtils.getJaroWinklerDistance( lhs, rhs );
+        return jwDistance.apply( lhs, rhs );
     }
 
 }

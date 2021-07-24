@@ -40,8 +40,6 @@ interface OrganizationsApi {
         const val METADATA = "/metadata"
         const val METADATA_ENTITY_SET_IDS = "/metadata-entity-set-ids"
         const val PRINCIPALS = "/principals"
-        const val PRINCIPAL_ID = "pid"
-        const val PRINCIPAL_ID_PATH = "/{$PRINCIPAL_ID}"
         const val PROMOTE = "/promote"
         const val REFRESH = "/refresh"
         const val REFRESH_RATE = "/refresh-rate"
@@ -79,6 +77,11 @@ interface OrganizationsApi {
 
     @GET(BASE + ID_PATH + INTEGRATION)
     fun getOrganizationIntegrationAccount(
+            @Path(ID) organizationId: UUID
+    ): OrganizationIntegrationAccount
+
+    @GET(BASE + ID_PATH + INTEGRATION + ROLES)
+    fun getOrganizationAdminRoleDatabaseAccount(
             @Path(ID) organizationId: UUID
     ): OrganizationIntegrationAccount
 
@@ -273,30 +276,22 @@ interface OrganizationsApi {
     @GET(BASE + ID_PATH + PRINCIPALS + MEMBERS)
     fun getMembers(@Path(ID) organizationId: UUID): Iterable<OrganizationMember>
 
-    @GET(
-            BASE + PRINCIPALS + MEMBERS + COUNT
-    )
+    @GET(BASE + PRINCIPALS + MEMBERS + COUNT)
     fun getMemberCountForOrganizations(@Body organizationIds: Set<UUID>): Map<UUID, Int>
 
     @GET(BASE + PRINCIPALS + ROLES + COUNT)
     fun getRoleCountForOrganizations(@Body organizationIds: Set<UUID>): Map<UUID, Int>
 
-    @PUT(
-            BASE + ID_PATH + PRINCIPALS + MEMBERS + USER_ID_PATH
-    )
+    @PUT(BASE + ID_PATH + PRINCIPALS + MEMBERS + USER_ID_PATH)
     fun addMember(
-            @Path(ID) organizationId: UUID, @Path(
-                    USER_ID
-            ) userId: String
+            @Path(ID) organizationId: UUID,
+            @Path(USER_ID) userId: String
     ): Void?
 
-    @DELETE(
-            BASE + ID_PATH + PRINCIPALS + MEMBERS + USER_ID_PATH
-    )
+    @DELETE(BASE + ID_PATH + PRINCIPALS + MEMBERS + USER_ID_PATH)
     fun removeMember(
-            @Path(ID) organizationId: UUID, @Path(
-                    USER_ID
-            ) userId: String
+            @Path(ID) organizationId: UUID,
+            @Path(USER_ID) userId: String
     ): Void?
 
     // Endpoints about roles
