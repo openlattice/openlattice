@@ -231,45 +231,54 @@ class ExternalDatabasePermissioner(
      * Adds permissions on [EdmConstants.ID_FQN] to each of the above roles
      */
     override fun initializeAssemblyPermissions(
-            orgDatasource: HikariDataSource,
+            organizationId: UUID,
             entitySetId: UUID,
             entitySetName: String,
             propertyTypes: Set<PropertyTypeIdFqn>
     ) {
-        val targets = propertyTypes.mapTo(mutableSetOf()) { (id, _) ->
-            AccessTarget.forPermissionOnTarget(Permission.READ, entitySetId, id)
+        // val targets = propertyTypes.mapTo(mutableSetOf()) { (id, _) ->
+        //     AccessTarget.forPermissionOnTarget(Permission.READ, entitySetId, id)
+        // }
+
+        // PostgresRoles.getOrCreatePermissionRolesAsync(
+        //         externalRoleNames,
+        //         targets,
+        //         setOf(),
+        //         orgDatasource
+        // ).thenApplyAsync { targetsToRoleNames ->
+        //     propertyTypes.map { (id, fqn) ->
+        //         val quotedColumns = listOf(fqn, EdmConstants.ID_FQN).joinToString {
+        //             ApiHelpers.dbQuote(it.toString())
+        //         }
+        //         val permissions = olToPostgres.getValue(Permission.READ)
+        //         val roleNames = targetsToRoleNames[AccessTarget.forPermissionOnTarget(Permission.READ, entitySetId, id)]?.unwrap() ?: setOf()
+        //         grantUsageOnSchemaSql(Schemas.ASSEMBLED_ENTITY_SETS, roleNames) to
+        //                 grantPermissionsOnColumnsOnTableToRoleSql(
+        //                         permissions,
+        //                         quotedColumns,
+        //                         Schemas.ASSEMBLED_ENTITY_SETS.label,
+        //                         entitySetName,
+        //                         roleNames)
+        //     }
+        // }.thenAccept { ptToSqls ->
+        //     orgDatasource.connection.use { conn ->
+        //         conn.createStatement().use { stmt ->
+        //             ptToSqls.forEach { (grantSchemaSql, grantViewSql) ->
+        //                 stmt.execute(grantSchemaSql)
+        //                 stmt.execute(grantViewSql)
+        //             }
+        //         }
+        //     }
+        // }
+        val propertyTypesAclKeyToFqn = propertyTypes.associate { (id, fqn) ->
+            AclKey(entitySetId, id) to fqn.toString()
         }
 
-        PostgresRoles.getOrCreatePermissionRolesAsync(
-                externalRoleNames,
-                targets,
-                setOf(),
-                orgDatasource
-        ).thenApplyAsync { targetsToRoleNames ->
-            propertyTypes.map { (id, fqn) ->
-                val quotedColumns = listOf(fqn, EdmConstants.ID_FQN).joinToString {
-                    ApiHelpers.dbQuote(it.toString())
-                }
-                val permissions = olToPostgres.getValue(Permission.READ)
-                val roleNames = targetsToRoleNames[AccessTarget.forPermissionOnTarget(Permission.READ, entitySetId, id)]?.unwrap() ?: setOf()
-                grantUsageOnSchemaSql(Schemas.ASSEMBLED_ENTITY_SETS, roleNames) to
-                        grantPermissionsOnColumnsOnTableToRoleSql(
-                                permissions,
-                                quotedColumns,
-                                Schemas.ASSEMBLED_ENTITY_SETS.label,
-                                entitySetName,
-                                roleNames)
-            }
-        }.thenAccept { ptToSqls ->
-            orgDatasource.connection.use { conn ->
-                conn.createStatement().use { stmt ->
-                    ptToSqls.forEach { (grantSchemaSql, grantViewSql) ->
-                        stmt.execute(grantSchemaSql)
-                        stmt.execute(grantViewSql)
-                    }
-                }
-            }
-        }
+        initializePermissionSetForExternalTable(
+                hikariDataSource = extDbManager.connectToOrg(organizationId),
+                columnAclKeyToName = propertyTypesAclKeyToFqn,
+                permissions = allViewPermissions
+        )
     }
 
     /**
@@ -291,13 +300,14 @@ class ExternalDatabasePermissioner(
             table: ExternalTable,
             columns: Set<ExternalColumn>
     ) {
+        val columnAclKeyToName = columns.associate { 
+            AclKey(it.tableId, it.id) to it.name
+        }
+
         initializePermissionSetForExternalTable(
                 hikariDataSource = extDbManager.connectToOrg(organizationId),
-                tableSchema = table.schema,
-                tableName = table.name,
-                columns = columns,
+                columnAclKeyToName = columnAclKeyToName,
                 permissions = allTablePermissions
-
         )
     }
 
@@ -310,35 +320,36 @@ class ExternalDatabasePermissioner(
             table: ExternalTable,
             columns: Set<ExternalColumn>
     ) {
+        val columnAclKeyToName = columns.associate { 
+            AclKey(it.tableId, it.id) to it.name
+        }
+
         initializePermissionSetForExternalTable(
                 hikariDataSource = extDbManager.connectToOrg(collaborationId),
-                tableSchema = schema,
-                tableName = table.name,
-                columns = columns,
+                columnAclKeyToName = columnAclKeyToName,
                 permissions = allViewPermissions
         )
     }
 
     private fun initializePermissionSetForExternalTable(
             hikariDataSource: HikariDataSource,
-            tableSchema: String,
-            tableName: String,
-            columns: Set<ExternalColumn>,
+            columnAclKeyToName: Map<AclKey, String>,
             permissions: Set<Permission>
     ) {
         // insert column name into external_permission_roles as role_id, needs more thinking
         // actually, why do we even need external_permission_roles? isn't information_schema.column_privileges enough?
         hikariDataSource.connection.use { conn ->
             conn.createStatement().use { stmt ->
-                columns.forEach { column ->
-                    permissions.forEach { permission ->
+                permissions.forEach { permission ->
+                    columnAclKeyToName.filterNot {
+                        externalRoleNames.containsKey(AccessTarget(it.key, permission))
+                    }.forEach { 
                         olToPostgres.getValue(permission).forEach { privilege -> 
                             stmt.addBatch("""
                                 INSERT INTO ${HazelcastMap.EXTERNAL_PERMISSION_ROLES.name}
-                                VALUES ('{\"${AclKey(column.tableId, column.id)}\"}'::uuid[], \"$privilege\", ${ApiHelpers.dbQuote(column.name)}) ON CONFLICT DO NOTHING
+                                VALUES ('{\"it.key\"}'::uuid[], \"$privilege\", ${ApiHelpers.dbQuote(it.value)}) ON CONFLICT DO NOTHING
                             """.trimIndent())
                         }
-                        
                     }
                 }
                 stmt.executeBatch()

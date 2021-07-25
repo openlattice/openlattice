@@ -47,7 +47,7 @@ interface ExternalDatabasePermissioningService {
      * Initializes permissions on [propertyTypes] for [entitySet] in org database for [organizationId]
      */
     fun initializeAssemblyPermissions(
-            orgDatasource: HikariDataSource,
+            organizationId: UUID,
             entitySetId: UUID,
             entitySetName: String,
             propertyTypes: Set<PropertyTypeIdFqn>
