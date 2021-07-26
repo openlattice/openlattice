@@ -102,7 +102,7 @@ class TransporterDatastore(
 
         // create roles, apply permissions
         applyViewAndEdgePermissions(
-                organizationId,
+                orgHds,
                 es.id,
                 esName,
                 ptIdToFqnColumns,
@@ -280,7 +280,7 @@ class TransporterDatastore(
     }
 
     private fun applyViewAndEdgePermissions(
-            organizationId: UUID,
+            orgDatasource: HikariDataSource,
             entitySetId: UUID,
             entitySetName: String,
             ptIdToFqnColumns: Set<PropertyTypeIdFqn>,
@@ -288,7 +288,7 @@ class TransporterDatastore(
             columnsById: Map<AclKey, TableColumn>
     ) {
         exDbPermMan.initializeAssemblyPermissions(
-                organizationId,
+                orgDatasource,
                 entitySetId,
                 entitySetName,
                 ptIdToFqnColumns.toSet()
