@@ -313,7 +313,7 @@ class ExternalDatabasePermissioner(
                         olToPostgres.getValue(permission).forEach { privilege -> 
                             stmt.addBatch("""
                                 INSERT INTO ${HazelcastMap.EXTERNAL_PERMISSION_ROLES.name}
-                                VALUES ('{\"it.key\"}'::uuid[], \"$privilege\", ${ApiHelpers.dbQuote(it.value)}) ON CONFLICT DO NOTHING
+                                VALUES ('{\"${it.key}\"}'::uuid[], \"$privilege\", ${ApiHelpers.dbQuote(it.value)}) ON CONFLICT DO NOTHING
                             """.trimIndent())
                         }
                     }
