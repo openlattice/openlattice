@@ -17,9 +17,9 @@ import com.openlattice.organization.ExternalTable
 import com.openlattice.organization.roles.Role
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.DataTables.quote
-import com.openlattice.postgres.external.Schemas
 import com.openlattice.postgres.PostgresPrivileges
 import com.openlattice.postgres.TableColumn
+import com.openlattice.postgres.external.Schemas
 import com.openlattice.postgres.mapstores.SecurableObjectTypeMapstore
 import com.openlattice.transporter.grantUsageOnSchemaSql
 import com.zaxxer.hikari.HikariDataSource
