@@ -52,6 +52,6 @@ class ExternalPermissionRolesMapstore(
     }
 
     override fun mapToValue(rs: ResultSet): String {
-        return ResultSetAdapters.roleId(rs)
+        return ResultSetAdapters.columnName(rs)
     }
 }

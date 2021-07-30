@@ -311,9 +311,10 @@ class ExternalDatabasePermissioner(
                         externalRoleNames.containsKey(AccessTarget(it.key, permission))
                     }.forEach { 
                         olToPostgres.getValue(permission).forEach { privilege -> 
+                            val newRoleId = UUID.randomUUID()
                             stmt.addBatch("""
                                 INSERT INTO ${HazelcastMap.EXTERNAL_PERMISSION_ROLES.name}
-                                VALUES ('{\"${it.key}\"}'::uuid[], \"$privilege\", ${ApiHelpers.dbQuote(it.value)}) ON CONFLICT DO NOTHING
+                                VALUES ('{\"${it.key}\"}'::uuid[], \"$privilege\", ${ApiHelpers.dbQuote(it.value)}, \"${newRoleId}\"::uuid) ON CONFLICT DO NOTHING
                             """.trimIndent())
                         }
                     }
