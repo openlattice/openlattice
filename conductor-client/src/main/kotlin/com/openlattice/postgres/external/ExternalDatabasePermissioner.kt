@@ -340,16 +340,18 @@ class ExternalDatabasePermissioner(
         hds.connection.use { conn ->
             conn.createStatement().use { stmt ->
                 tablesToColumnIds.forEach{ (tableId, columnIds) ->
-                    val aclKey = AclKey(tableId, columnId)
-                    val accessTargetToDestroy = AccessTarget(it.key, permission)
-                    try {
-                        stmt.execute("""
-                                DELETE FROM ${HazelcastMap.EXTERNAL_PERMISSION_ROLES.name}
-                                WHERE acl_key = '{\"${aclKey}\"}'::uuid[] AND column_name = ${ApiHelpers.dbQuote(externalRoleNames.getValue(accessTargetToDestroy))}
-                            """.trimIndent())
-                        externalRoleNames.delete(accessTargetToDestroy)
-                    } catch (e: Exception) {
-                        logger.error("Unable to drop permission role {} for AccessTarget {}", permissionRoleName, accessTarget, e)
+                    columnIds.forEach { columnId ->
+                        val aclKey = AclKey(tableId, columnId)
+                        val columnName = externalColumns.getValue(columnId).name
+                        try {
+                            stmt.execute("""
+                                    DELETE FROM ${HazelcastMap.EXTERNAL_PERMISSION_ROLES.name}
+                                    WHERE acl_key = '{\"${aclKey}\"}'::uuid[] AND column_name = ${columnName}
+                                """.trimIndent())
+                            allTablePermissions.map { permission -> externalRoleNames.delete(AccessTarget(aclKey, permission)) }
+                        } catch (e: Exception) {
+                            logger.error("Unable to drop column {} with acl_key {}", columnName, aclKey, e)
+                        }
                     }
                 }
             }
