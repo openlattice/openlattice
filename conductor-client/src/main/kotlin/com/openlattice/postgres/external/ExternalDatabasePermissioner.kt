@@ -336,29 +336,23 @@ class ExternalDatabasePermissioner(
     }
 
     override fun destroyExternalTablePermissions(organizationId: UUID, tablesToColumnIds: Map<UUID, Set<UUID>>) {
-        val accessTargetsToDestroy = tablesToColumnIds.flatMap { (tableId, columnIds) ->
-            columnIds.flatMap { columnId ->
-                val aclKey = AclKey(tableId, columnId)
-                allTablePermissions.map { permission -> AccessTarget(aclKey, permission) }
-            }
-        }.toSet()
-
-        val permissionRoles = externalRoleNames.getAll(accessTargetsToDestroy)
-        extDbManager.connectToOrg(organizationId).connection.use { conn ->
+        val hds = extDbManager.connectToOrg(organizationId)
+        hds.connection.use { conn ->
             conn.createStatement().use { stmt ->
-                permissionRoles.forEach { (accessTarget, permissionRoleName) ->
+                tablesToColumnIds.forEach{ (tableId, columnIds) ->
+                    val aclKey = AclKey(tableId, columnId)
+                    val accessTargetToDestroy = AccessTarget(it.key, permission)
                     try {
-                        stmt.execute("DROP ROLE ${quote(permissionRoleName.toString())}")
+                        stmt.execute("""
+                                DELETE FROM ${HazelcastMap.EXTERNAL_PERMISSION_ROLES.name}
+                                WHERE acl_key = '{\"${aclKey}\"}'::uuid[] AND column_name = ${ApiHelpers.dbQuote(externalRoleNames.getValue(accessTargetToDestroy))}
+                            """.trimIndent())
+                        externalRoleNames.delete(accessTargetToDestroy)
                     } catch (e: Exception) {
                         logger.error("Unable to drop permission role {} for AccessTarget {}", permissionRoleName, accessTarget, e)
                     }
                 }
             }
-        }
-
-
-        accessTargetsToDestroy.forEach {
-            externalRoleNames.delete(it)
         }
     }
 
