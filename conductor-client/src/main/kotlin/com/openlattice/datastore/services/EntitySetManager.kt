@@ -109,8 +109,6 @@ interface EntitySetManager {
 
     fun exists(entitySetId: UUID): Boolean
 
-    fun setupOrganizationMetadataAndAuditEntitySets(entitySet: EntitySet)
-
     //TODO: Move these authorization functions to the right layer.
     fun getAuthorizedNeighborEntitySets(
             principals: Set<Principal>,

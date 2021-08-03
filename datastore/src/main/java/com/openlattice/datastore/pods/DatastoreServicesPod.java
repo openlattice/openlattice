@@ -97,7 +97,6 @@ import com.openlattice.notifications.sms.PhoneNumberService;
 import com.openlattice.organizations.ExternalDatabaseManagementService;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.OrganizationExternalDatabaseConfiguration;
-import com.openlattice.organizations.OrganizationMetadataEntitySetsService;
 import com.openlattice.organizations.pods.OrganizationExternalDatabaseConfigurationPod;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
@@ -323,7 +322,6 @@ public class DatastoreServicesPod {
                 partitionManager(),
                 dataModelService(),
                 hikariDataSource,
-                organizationMetadataEntitySetsService(),
                 dataSetService(),
                 auditingConfiguration
         );
@@ -430,8 +428,8 @@ public class DatastoreServicesPod {
                 phoneNumberService(),
                 partitionManager(),
                 assembler(),
-                organizationMetadataEntitySetsService(),
-                collaborationService() );
+                collaborationService()
+        );
     }
 
     @Bean
@@ -500,16 +498,6 @@ public class DatastoreServicesPod {
     @Bean
     public DataGraphManager dataGraphService() {
         return new DataGraphService( graphApi(), idService(), entityDatastore(), jobService() );
-    }
-
-    @Bean
-    public OrganizationMetadataEntitySetsService organizationMetadataEntitySetsService() {
-        return new OrganizationMetadataEntitySetsService(
-                hazelcastInstance,
-                dataModelService(),
-                principalsMapManager(),
-                authorizationManager()
-        );
     }
 
     @Bean
@@ -728,9 +716,6 @@ public class DatastoreServicesPod {
     @PostConstruct
     void initPrincipals() {
         Principals.init( securePrincipalsManager(), hazelcastInstance );
-
-        OrganizationMetadataEntitySetsService metadataService = organizationMetadataEntitySetsService();
-        metadataService.dataDeletionService = dataDeletionManager();
-        metadataService.dataGraphManager = dataGraphService();
+        dataGraphService();
     }
 }

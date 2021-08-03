@@ -153,7 +153,12 @@ class HazelcastPrincipalService(
     }
 
     override fun getAllRolesInOrganization(organizationId: UUID): Collection<SecurablePrincipal> {
-        return getAllRolesInOrganizations(listOf(organizationId)).getValue(organizationId)
+        val roles = getAllRolesInOrganizations(listOf(organizationId))
+        if (roles.isEmpty() || roles.containsKey(organizationId).not()) {
+            logger.error("no roles exist for organization {}", organizationId)
+            return emptyList()
+        }
+        return roles.getValue(organizationId)
     }
 
     override fun getAllRolesInOrganizations(organizationIds: Collection<UUID>): Map<UUID, Collection<SecurablePrincipal>> {
@@ -355,7 +360,7 @@ class HazelcastPrincipalService(
 
         Preconditions.checkState(
                 nonexistentAclKeys.isEmpty(),
-                "All principals must exist, but principals with aclKeys [$nonexistentAclKeys] do not exist."
+                "All principals must exist, but principals with aclKeys $nonexistentAclKeys do not exist."
         )
     }
 
