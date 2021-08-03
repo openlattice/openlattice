@@ -346,7 +346,7 @@ class ExternalDatabasePermissioner(
                         try {
                             stmt.execute("""
                                     DELETE FROM ${HazelcastMap.EXTERNAL_PERMISSION_ROLES.name}
-                                    WHERE acl_key = '{\"${aclKey}\"}'::uuid[] AND column_name = ${columnName}
+                                    WHERE acl_key = '{\"${aclKey.joinToString("\",\"")}\"}'::uuid[] AND column_name = ${columnName}
                                 """.trimIndent())
                             allTablePermissions.map { permission -> externalRoleNames.delete(AccessTarget(aclKey, permission)) }
                         } catch (e: Exception) {
