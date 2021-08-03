@@ -12,6 +12,7 @@ import org.apache.commons.lang3.RandomStringUtils
 import org.springframework.stereotype.Component
 import java.sql.PreparedStatement
 import java.sql.ResultSet
+import java.util.UUID
 
 /**
  * @author Drew Bailey (drew@openlattice.com)
@@ -35,8 +36,11 @@ class ExternalPermissionRolesMapstore(
 
     override fun bind(ps: PreparedStatement, key: AccessTarget, value: String) {
         var index = bind(ps, key, 1)
+        ps.setObject(index++, UUID.randomUUID())
+
         ps.setString(index++, value)
 
+        // really? Why?
         ps.setString(index++, value)
     }
 
