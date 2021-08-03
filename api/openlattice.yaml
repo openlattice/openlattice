@@ -481,7 +481,7 @@ paths:
       responses:
         "200":
           description: Success
-      
+
 
   # property Types
 
@@ -1469,11 +1469,11 @@ paths:
       responses:
         "200":
           description: Success
-            
+
   ###################
   ## DATA SET APIs ##
   ###################
-  
+
   /datastore/organization-database/{organizationId}/external-database-table:
     get:
       summary: Gets all OrganizationExternalDatabaseTable objects for an organization
@@ -1514,7 +1514,7 @@ paths:
           application/json:
             schema:
               type: array
-              items: 
+              items:
                 type: string
       tags:
         - dataset
@@ -1608,7 +1608,7 @@ paths:
                 $ref: "#/components/schemas/OrganizationExternalDatabaseTableColumnsPair"
   /datastore/organization-database/{organizationId}/{tableName}/{columnName}/external-database-column:
     get:
-      summary: Gets an OrganizationExternalDatabaseColumn object, which represents a column within an organization's table in an external database. 
+      summary: Gets an OrganizationExternalDatabaseColumn object, which represents a column within an organization's table in an external database.
       operationId: getExternalDatabaseColumn
       parameters:
         - name: organizationId
@@ -1638,7 +1638,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/OrganizationExternalDatabaseColumn"      
+                $ref: "#/components/schemas/OrganizationExternalDatabaseColumn"
     patch:
       summary: Updates an OrganizationExternalDatabaseTableColumn object's fields that are included within the given metadata.
       operationId: updateExternalDatabaseColumn
@@ -1704,7 +1704,7 @@ paths:
 
   /datastore/organization-database/{organizationId}/{tableId}/external-database-table:
     get:
-      summary: Gets an OrganizationExternalDatabaseTable object, which represents an organization's table in an external database. 
+      summary: Gets an OrganizationExternalDatabaseTable object, which represents an organization's table in an external database.
       operationId: getExternalDatabaseTable
       parameters:
         - name: organizationId
@@ -1730,7 +1730,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/OrganizationExternalDatabaseTable"      
+                $ref: "#/components/schemas/OrganizationExternalDatabaseTable"
   /datastore/organization-database/{organizationId}/{tableName}/external-database-table:
     patch:
       summary: Updates an OrganizationExternalDatabaseTable object's fields that are included within the given metadata.
@@ -1843,8 +1843,8 @@ paths:
               schema:
                 type: object
                 additionalProperties:
-                  type: object    
-      
+                  type: object
+
 
 
 
@@ -1885,7 +1885,7 @@ paths:
             schema:
               type: object
               description: Set of associations to create. Keys are association entity set ids and values for each keys are the data to be created. AssociationEntityId's are not generated based on the key.
-              properties: 
+              properties:
                 additionalProperties:
                   type: array
                   items:
@@ -1961,7 +1961,7 @@ paths:
           content:
             application/json:
               schema:
-                type: integer              
+                type: integer
   /datastore/data/set/{entitySetId}:
     get:
       summary: Gets an iterable containing the entity data, using property type FQNs as key
@@ -2043,6 +2043,11 @@ paths:
           schema:
             type: string
             enum: [Soft, Hard]
+        - name: block
+          in: query
+          required: false
+          schema:
+            type: boolean
       requestBody:
         required: true
         content:
@@ -2103,7 +2108,7 @@ paths:
           content:
             application/json:
               schema:
-                type: integer              
+                type: integer
     patch:
       summary: Replaces Entity Properties
       operationId: replaceEntityProperties
@@ -2139,7 +2144,7 @@ paths:
           content:
             application/json:
               schema:
-                type: integer      
+                type: integer
   /datastore/data/set/{entitySetId}/neighbors:
     post:
       summary: Deletes the entities matching the given entity ids and all of its neighbor entities provided in the filter.
@@ -2360,6 +2365,11 @@ paths:
           schema:
             type: string
             enum: [Soft, Hard]
+        - name: block
+          in: query
+          required: false
+          schema:
+            type: boolean
       tags:
         - data
       security:
@@ -2739,7 +2749,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SearchResult"  
+                $ref: "#/components/schemas/SearchResult"
     patch:
       summary: Executes a search over the data of a given entity set to find rows that match the search term
       operationId: searchEntitySetData
@@ -2861,7 +2871,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SearchResult"  
+                $ref: "#/components/schemas/SearchResult"
   /datastore/search/entity_types:
     post:
       summary: Executes a search over all entity types to find ones that match the given search term
@@ -2883,7 +2893,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SearchResult"  
+                $ref: "#/components/schemas/SearchResult"
   /datastore/search/association_types:
     post:
       summary: Executes a search over all association types to find ones that match the given search term
@@ -2905,7 +2915,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SearchResult"  
+                $ref: "#/components/schemas/SearchResult"
   /datastore/search/property_types:
     post:
       summary: Executes a search over all property types to find ones that match the given search term
@@ -2927,7 +2937,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SearchResult"  
+                $ref: "#/components/schemas/SearchResult"
   /datastore/search/app:
     post:
       summary: Executes a search over all apps to find ones that match the given search term
@@ -2949,7 +2959,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SearchResult"  
+                $ref: "#/components/schemas/SearchResult"
   /datastore/search/app_types:
     post:
       summary: Executes a search over all app types to find ones that match the given search term
@@ -2971,7 +2981,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SearchResult"  
+                $ref: "#/components/schemas/SearchResult"
   /datastore/search/entity_types/collections:
     post:
       summary: Executes a search over all EntityTypeCollections to find ones that match the given search term
@@ -2993,8 +3003,8 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SearchResult"  
-      
+                $ref: "#/components/schemas/SearchResult"
+
   /datastore/search/entity_sets/collections:
     post:
       summary: Executes a search over all EntitySetCollections to find ones that match the given search term
@@ -3016,7 +3026,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SearchResult"  
+                $ref: "#/components/schemas/SearchResult"
   /datastore/search/property_types/fqn:
     post:
       summary: Executes a search over all property types to find ones that match the given name and namespace, including partial matches
@@ -3038,7 +3048,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SearchResult"  
+                $ref: "#/components/schemas/SearchResult"
   # /datastore/search/edm/index:
   #   get:
   #     summary: Trigger indexing of the EDM
@@ -3048,7 +3058,7 @@ paths:
   #     summary: Trigger indexing of an entity set.
   #     operationId: triggerEntitySetDataIndex
   # /datastore/search/entity_sets/index:
-  #   get: 
+  #   get:
   #     summary: Trigger indexing all entity sets.
   #     operationId: triggerAllEntitySetDataIndex
   # /datastore/search/organizations/index:
@@ -3059,7 +3069,7 @@ paths:
   #   get:
   #     summary: Trigger indexing an organization.
   #     operationId: triggerOrganizationIndex
-  
+
   ####################
   ## DIRECTORY APIs ##
   ####################
@@ -3913,7 +3923,7 @@ paths:
       responses:
         "200":
           description: Success
-  /datastore/organizations/{organizationId}/principals/roles/{roleId}/description: 
+  /datastore/organizations/{organizationId}/principals/roles/{roleId}/description:
     post:
       summary: Update role description for an organization from a roleId
       operationId: updateRoleDescription
@@ -3975,7 +3985,7 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Auth0userBasic"
-  /datastore/organizations/{organizationId}/principals/roles/{roleId}/members/{userId}: 
+  /datastore/organizations/{organizationId}/principals/roles/{roleId}/members/{userId}:
     put:
       summary: Add a role to a user
       operationId: addRoleToUser
@@ -4132,11 +4142,11 @@ paths:
               type: string
       responses:
         "200":
-          description: Success   
+          description: Success
   ##################
   ## LINKING APIs ##
   ##################
-  
+
   /linker/linkingfeedback:
     put:
       summary: Submits feedbacks for a given linking entity set and linking id in a batch format.
@@ -4273,7 +4283,7 @@ paths:
   ################
   ## ADMIN APIs ##
   ################
-  
+
   /indexer/index/reindex:
     get:
       summary: Retrieve the current state of reindexing jobs
@@ -4363,7 +4373,7 @@ paths:
   ######################
   ## COLLECTIONS APIs ##
   ######################
-  
+
   /datastore/collections/entity/type:
     get:
       summary: Returns all EntityTypeCollection objects
@@ -4444,7 +4454,7 @@ paths:
               schema:
                 type: string
                 format: uuid
-    
+
   /datastore/collections/entity/type/{entityTypeCollectionId}:
     get:
       summary: Returns the EntityTypeCollection object for a given id
@@ -4509,7 +4519,7 @@ paths:
         - http_auth: []
       responses:
         "200":
-          description: Success      
+          description: Success
   /datastore/collections/entity/type/{entityTypeCollectionId}/template:
     patch:
       summary: Appends type to template of the specified EntityTypeCollection
@@ -4624,7 +4634,7 @@ paths:
         - http_auth: []
       responses:
         "200":
-          description: Success      
+          description: Success
   /datastore/collections/entity/set/{entitySetCollectionId}/template:
     patch:
       summary: Updates template of the specified EntitySetCollection
@@ -4683,7 +4693,7 @@ paths:
   ##################
   ## SHUTTLE APIs ##
   ##################
-  
+
   /shuttle/integration/definition/{integrationName}:
     get:
       summary: Gets an existing integration definition
@@ -4824,7 +4834,7 @@ paths:
         - http_auth: []
       responses:
         "200":
-          description: Success        
+          description: Success
     get:
       summary: Polls the status of an integration
       operationId: pollIntegration
@@ -4994,7 +5004,7 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/AppRole"
-  
+
       security:
         - openlattice_auth: []
         - http_auth: []
@@ -5007,7 +5017,7 @@ paths:
                 type: string
                 format: uuid
   /datastore/app/update/{appId}/role/{roleId}:
-    delete: 
+    delete:
       summary: Delete an app role
       operationId: deleteRoleFromApp
       tags:
@@ -5074,8 +5084,8 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/UserAppConfig"
-                  
-      
+
+
   # /datastore/app/config/update/{appId}/{organizationId}:
   #   post:
   #     summary: Update the App Configuration Settings
@@ -5105,7 +5115,194 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/HistoricalAppConfig"
-      
+
+  ###################
+  ## METADATA APIs ##
+  ###################
+  /datastore/metadata/datasets/{dataId}:
+    get:
+      summary: Gets dataset metadata object with given data set ID
+      operationId: getDataSetMetadata
+      tags:
+        - dataSetMetadata
+      parameters:
+        - name: dataId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataSet"
+  /datastore/metadata/datasets:
+    post:
+      summary: Gets the dataset metadata objects given data set ids the caller has READ permissions on
+      operationId: getDataSetsMetadata
+      tags:
+        - dataSetMetadata
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: string
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  $ref: "#/components/schemas/DataSet"
+  /datastore/metadata/columns/{dataId}/{columnId}:
+    get:
+      summary: Gets the dataset column metadata objects using data ID and column ID
+      operationId: getDataSetColumnMetadata
+      tags:
+        - dataSetMetadata
+      parameters:
+        - name: dataId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: columnId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataSetColumn"
+  /datastore/metadata/columns:
+    post:
+      summary: Gets all data set column metadata objects that caller has READ on that belong to given data set ids
+      operationId: getDataSetColumnsMetadata
+      tags:
+        - dataSetMetadata
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: string
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/DataSetColumn"
+  /datastore/metadata/datasets/organizations/{organizationId}:
+    get:
+      summary: Gets all data set column metadata objects that caller has READ on that belong to given data set ids
+      operationId: getOrganizationDataSetsMetadata
+      tags:
+        - dataSetMetadata
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  $ref: "#/components/schemas/DataSet"
+  /datastore/metadata/update/{dataId}:
+    patch:
+      summary: Applies the given metadata updates to the data set given data set id. Must be OWNER of the dataset.
+      operationId: updateDataSetMetadata
+      tags:
+        - dataSetMetadata
+      parameters:
+        - name: dataId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SecurableObjectMetadataUpdate"
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+  /datastore/metadata/update/{dataId}/{columnId}:
+    patch:
+      summary: Applies the given metadata updates to the data set column given dataset and column Ids. Must be OWNER of the column.
+      operationId: updateDataSetColumnMetadata
+      tags:
+        - dataSetMetadata
+      parameters:
+        - name: dataId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: columnId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SecurableObjectMetadataUpdate"
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+
 components:
   securitySchemes:
     http_auth:
@@ -5192,8 +5389,8 @@ components:
         indexType:
           type: string
           enum: [BTREE, HASH, GIN, NONE]
-      
-          
+
+
     EntityType:
       title: An entity type
       type: object
@@ -5732,7 +5929,7 @@ components:
             type: array
             items:
               $ref: "#/components/schemas/DataAssociation"
-    
+
     DataAssociation:
       type: object
       properties:
@@ -5741,7 +5938,7 @@ components:
           type: string
           format: uuid
         srcEntityIndex:
-          description: The index of an entity 
+          description: The index of an entity
           type: string
           format: uuid
         srcEntityKeyId:
@@ -5753,7 +5950,7 @@ components:
           type: string
           format: uuid
         dstEntityIndex:
-          description: The index of an entity 
+          description: The index of an entity
           type: string
           format: uuid
         dstEntityKeyId:
@@ -5836,7 +6033,7 @@ components:
           type: array
           items:
             type: integer
-                          
+
     SmsEntitySetInformation:
       type: object
       properties:
@@ -5847,13 +6044,13 @@ components:
           format: uuid
         entitysetIds:
           type: array
-          items: 
+          items:
             type: string
             format: uuid
         tags:
           type: array
           items:
-            type: string          
+            type: string
     EntitySetSelection:
       type: object
       properties:
@@ -5988,7 +6185,7 @@ components:
           type: number
         unit:
           type: string
-          enum: 
+          enum:
             - miles
             - mi
             - yards
@@ -6031,13 +6228,13 @@ components:
           type: string
           format: uuid
         exact:
-          type: boolean 
+          type: boolean
     SearchTerm:
       type: object
       properties:
-        searchTerm: 
+        searchTerm:
           type: string
-        start: 
+        start:
           type: integer
         maxHits:
           type: integer
@@ -6111,7 +6308,7 @@ components:
           items:
             $ref: "#/components/schemas/OrganizationExternalDatabaseColumn"
 
-          
+
     EntityNeighborsFilter:
       type: object
       properties:
@@ -6121,26 +6318,26 @@ components:
             type: string
             format: uuid
         src:
-          type: array         
+          type: array
           items:
             type: string
             format: uuid
         dst:
-          type: array         
+          type: array
           items:
             type: string
             format: uuid
         edge:
-          type: array         
+          type: array
           items:
             type: string
             format: uuid
-          
-                  
+
+
     EntityDataKey:
       type: object
       properties:
-        entitySetId: 
+        entitySetId:
           type: string
           format: uuid
         entityKeyId:
@@ -6167,7 +6364,7 @@ components:
           format: uuid
         second:
           type: string
-          format: uuid  
+          format: uuid
     EntityLinkingFeedback:
       type: object
       properties:
@@ -6197,8 +6394,8 @@ components:
         queue:
           type: array
           items:
-            type: string 
-            format: uuid     
+            type: string
+            format: uuid
         currentEntitySet:
           type: string
           format: uuid
@@ -6269,7 +6466,7 @@ components:
           type: string
         flight:
           $ref: "#/components/schemas/Flight"
-        
+
     FlightPlanParametersUpdate:
       type: object
       properties:
@@ -6316,7 +6513,7 @@ components:
           $ref: "#/components/schemas/FullQualifiedName"
         column:
           type: string
-                  
+
     EntityDefinition:
       type: object
       properties:
@@ -6351,12 +6548,12 @@ components:
           type: string
 
 
-          
-        
+
+
     IntegrationJob:
       type: object
       properties:
-        name: 
+        name:
           type: string
         status:
           type: string
@@ -6393,11 +6590,11 @@ components:
           type: object
           additionalProperties:
             $ref: "#/components/schemas/FlightPlanParametersUpdate"
-      
-          
-          
-        
-        
+
+
+
+
+
     CollectionTemplateType:
       type: object
       properties:
@@ -6479,7 +6676,7 @@ components:
           type: string
           format: uuid
           description: The id of the organization that this entity set collection belongs to.
-        
+
     App:
       type: object
       properties:
@@ -6580,7 +6777,7 @@ components:
     Filter:
       type: object
       properties:
-        "@class": 
+        "@class":
           type: string
         values:
           type: array
@@ -6588,7 +6785,7 @@ components:
             type: string
         lowerbound:
           type: string
-        upperbound: 
+        upperbound:
           type: string
         lowerboundequal:
           type: boolean
@@ -6599,7 +6796,7 @@ components:
       properties:
         pageSize:
           type: number
-        bookmarkId: 
+        bookmarkId:
           type: string
           format: uuid
         propertyTypeId:
@@ -6609,6 +6806,66 @@ components:
           type: object
           additionalProperties:
             $ref: "#/components/schemas/Filter"
+    SecurableObjectMetadataUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        contacts:
+          type: array
+          items:
+            type: string
+        flags:
+          type: array
+          items:
+            type: string
+        metadata:
+          type: array
+          items:
+            type: string
+    DataSet:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        organizationId:
+          type: string
+          format: uuid
+        externalId:
+          type: string
+        dataSetType:
+          type: string
+          enum: [EntitySet, ExternalTable]
+        metadata:
+          $ref: "#/components/schemas/SecurableObjectMetadataUpdate"
+    DataSetColumn:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        dataSetId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        organizationId:
+          type: string
+          format: uuid
+        dataType:
+          type: string
+        metadata:
+          $ref: "#/components/schemas/SecurableObjectMetadataUpdate"
+        aclKey:
+          type: array
+          items:
+            type: string
+            format: uuid
 
 
 tags:
@@ -6626,6 +6883,8 @@ tags:
     description: API endpoints related to organizations.
   - name: entitySets
     description: API endpoints for dealing with entity sets.
+  - name: dataSetMetadata
+    description: API endpoints related to data set metadata
 externalDocs:
   description: "Find out more about OpenLattice"
   url: "https://openlattice.com/"
