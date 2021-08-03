@@ -35,13 +35,13 @@ class ExternalPermissionRolesMapstore(
     }
 
     override fun bind(ps: PreparedStatement, key: AccessTarget, value: String) {
+        val randomUUID = UUID.randomUUID()
         var index = bind(ps, key, 1)
-        ps.setObject(index++, UUID.randomUUID())
+        ps.setString(index++, value)
+        ps.setObject(index++, randomUUID)
 
         ps.setString(index++, value)
-
-        // really? Why?
-        ps.setString(index++, value)
+        ps.setObject(index++, randomUUID)
     }
 
     override fun mapToKey(rs: ResultSet): AccessTarget {
