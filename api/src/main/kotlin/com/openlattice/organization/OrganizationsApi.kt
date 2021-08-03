@@ -4,7 +4,6 @@ import com.auth0.json.mgmt.users.User
 import com.openlattice.organization.roles.Role
 import com.openlattice.organizations.Grant
 import com.openlattice.organizations.Organization
-import com.openlattice.organizations.OrganizationMetadataEntitySetIds
 import retrofit2.http.*
 import java.util.*
 import javax.annotation.Nonnull
@@ -38,7 +37,6 @@ interface OrganizationsApi {
         const val INTEGRATION = "/integration"
         const val MEMBERS = "/members"
         const val METADATA = "/metadata"
-        const val METADATA_ENTITY_SET_IDS = "/metadata-entity-set-ids"
         const val PRINCIPALS = "/principals"
         const val PROMOTE = "/promote"
         const val REFRESH = "/refresh"
@@ -386,12 +384,6 @@ interface OrganizationsApi {
 
     @PUT(BASE + ID_PATH + CONNECTIONS)
     fun setConnections(@Path(ID) organizationId: UUID, @Body connections: Set<String>): Void?
-
-    @PUT(BASE + ID_PATH + METADATA_ENTITY_SET_IDS)
-    fun setMetadataEntitySetIds(
-            @Path(ID) organizationId: UUID,
-            @Body entitySetIds: OrganizationMetadataEntitySetIds
-    ): Void?
 
     @POST(BASE + ID_PATH + METADATA)
     fun importMetadata(@Path(ID) organizationId: UUID): Void?

@@ -55,7 +55,6 @@ import com.openlattice.linking.matching.SocratesMatcher;
 import com.openlattice.linking.util.PersonProperties;
 import com.openlattice.notifications.sms.PhoneNumberService;
 import com.openlattice.organizations.HazelcastOrganizationService;
-import com.openlattice.organizations.OrganizationMetadataEntitySetsService;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.external.DatabaseQueryManager;
@@ -233,8 +232,8 @@ public class LinkerServicesPod {
                 phoneNumberService(),
                 partitionManager(),
                 assembler(),
-                organizationMetadataEntitySetsService(),
-                collaborationService() );
+                collaborationService()
+        );
     }
 
     @Bean
@@ -292,7 +291,6 @@ public class LinkerServicesPod {
                 partitionManager(),
                 dataModelService(),
                 hikariDataSource,
-                organizationMetadataEntitySetsService(),
                 dataSetService(),
                 auditingConfiguration
         );
@@ -317,16 +315,6 @@ public class LinkerServicesPod {
         MultiLayerNetwork model = KerasModelImport.importKerasSequentialModelAndWeights( simpleMlp );
         var fqnToIdMap = dataModelService().getFqnToIdMap( PersonProperties.FQNS );
         return new SocratesMatcher( model, fqnToIdMap, postgresLinkingFeedbackQueryService() );
-    }
-
-    @Bean
-    public OrganizationMetadataEntitySetsService organizationMetadataEntitySetsService() {
-        return new OrganizationMetadataEntitySetsService(
-                hazelcastInstance,
-                dataModelService(),
-                principalsMapManager(),
-                authorizationManager()
-        );
     }
 
     @Bean
