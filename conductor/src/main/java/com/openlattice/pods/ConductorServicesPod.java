@@ -98,7 +98,6 @@ import com.openlattice.mail.MailServiceClient;
 import com.openlattice.mail.config.MailServiceRequirements;
 import com.openlattice.notifications.sms.PhoneNumberService;
 import com.openlattice.organizations.HazelcastOrganizationService;
-import com.openlattice.organizations.OrganizationMetadataEntitySetsService;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.organizations.tasks.OrganizationsInitializationDependencies;
@@ -406,8 +405,8 @@ public class ConductorServicesPod {
                 phoneNumberService(),
                 partitionManager(),
                 assembler(),
-                organizationMetadataEntitySetsService(),
-                collaborationService() );
+                collaborationService()
+        );
     }
 
     @Bean
@@ -544,16 +543,6 @@ public class ConductorServicesPod {
     }
 
     @Bean
-    public OrganizationMetadataEntitySetsService organizationMetadataEntitySetsService() {
-        return new OrganizationMetadataEntitySetsService(
-                hazelcastInstance,
-                dataModelService(),
-                principalsMapManager(),
-                authorizationManager()
-        );
-    }
-
-    @Bean
     public EntitySetManager entitySetManager() {
         return new EntitySetService(
                 hazelcastInstance,
@@ -563,7 +552,6 @@ public class ConductorServicesPod {
                 partitionManager(),
                 dataModelService(),
                 hikariDataSource,
-                organizationMetadataEntitySetsService(),
                 dataSetService(),
                 auditingConfiguration
         );
@@ -752,9 +740,6 @@ public class ConductorServicesPod {
     @PostConstruct
     void initPrincipals() {
         Principals.init( securePrincipalsManager(), hazelcastInstance );
-
-        OrganizationMetadataEntitySetsService metadataService = organizationMetadataEntitySetsService();
-        metadataService.dataDeletionService = dataDeletionService();
-        metadataService.dataGraphManager = dataGraphService();
+        dataGraphService();
     }
 }

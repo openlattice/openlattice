@@ -19,7 +19,6 @@ import com.openlattice.indexing.configuration.IndexerConfiguration
 import com.openlattice.organization.ExternalColumn
 import com.openlattice.organization.ExternalTable
 import com.openlattice.organizations.ExternalDatabaseManagementService
-import com.openlattice.organizations.OrganizationMetadataEntitySetsService
 import com.openlattice.organizations.mapstores.ORGANIZATION_ID_INDEX
 import com.openlattice.postgres.TableColumn
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService
@@ -39,7 +38,6 @@ class BackgroundExternalDatabaseSyncingService(
     private val auditingManager: AuditingManager,
     private val ares: AuditRecordEntitySetsManager,
     private val indexerConfiguration: IndexerConfiguration,
-    private val organizationMetadataEntitySetsService: OrganizationMetadataEntitySetsService,
     private val reservationService: HazelcastAclKeyReservationService,
     private val principalsMapManager: PrincipalsMapManager,
     private val dataSetService: DataSetService
@@ -204,15 +202,9 @@ class BackgroundExternalDatabaseSyncingService(
         return table
     }
 
-    private fun createSecurableTableObject(
-            orgId: UUID,
-            table: ExternalTable
-    ): UUID {
+    private fun createSecurableTableObject(orgId: UUID, table: ExternalTable): UUID {
         val newTableId = edms.createOrganizationExternalDatabaseTable(orgId, table)
-
-        //create audit entity set and audit permissions
         ares.createAuditEntitySetForExternalDBTable(table)
-
         return newTableId
     }
 
@@ -253,7 +245,6 @@ class BackgroundExternalDatabaseSyncingService(
         if (tableIdsToDelete.isNotEmpty()) {
             edms.deleteExternalTableObjects(tableIdsToDelete)
         }
-
 
         // delete missing columns
 
@@ -313,10 +304,8 @@ class BackgroundExternalDatabaseSyncingService(
         return fullExistingColumns
     }
 
-    private fun createSecurableColumnObjects(
-            columns: List<ExternalColumn>,
-            table: ExternalTable
-    ): Int {
+    private fun createSecurableColumnObjects(columns: List<ExternalColumn>, table: ExternalTable): Int {
+
         var totalSynced = 0
 
         columns.forEach { column ->

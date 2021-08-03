@@ -77,7 +77,6 @@ import com.openlattice.linking.graph.PostgresLinkingQueryService;
 import com.openlattice.notifications.sms.PhoneNumberService;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.OrganizationExternalDatabaseConfiguration;
-import com.openlattice.organizations.OrganizationMetadataEntitySetsService;
 import com.openlattice.organizations.pods.OrganizationExternalDatabaseConfigurationPod;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
@@ -266,8 +265,8 @@ public class IndexerServicesPod {
                 phoneNumberService(),
                 partitionManager(),
                 assembler(),
-                organizationMetadataEntitySetsService(),
-                collaborationService() );
+                collaborationService()
+        );
     }
 
     @Bean
@@ -322,7 +321,6 @@ public class IndexerServicesPod {
                 partitionManager(),
                 dataModelService(),
                 hikariDataSource,
-                organizationMetadataEntitySetsService(),
                 dataSetService(),
                 auditingConfiguration
         );
@@ -428,16 +426,6 @@ public class IndexerServicesPod {
     @Bean
     public PostgresLinkingFeedbackService postgresLinkingFeedbackService() {
         return new PostgresLinkingFeedbackService( hikariDataSource, hazelcastInstance );
-    }
-
-    @Bean
-    public OrganizationMetadataEntitySetsService organizationMetadataEntitySetsService() {
-        return new OrganizationMetadataEntitySetsService(
-                hazelcastInstance,
-                dataModelService(),
-                principalsMapManager(),
-                authorizationManager()
-        );
     }
 
     @Bean

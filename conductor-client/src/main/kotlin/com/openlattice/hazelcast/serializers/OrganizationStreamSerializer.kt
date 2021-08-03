@@ -11,7 +11,6 @@ import com.openlattice.hazelcast.serializers.StreamSerializers.Companion.seriali
 import com.openlattice.organizations.Grant
 import com.openlattice.organizations.GrantType
 import com.openlattice.organizations.Organization
-import com.openlattice.organizations.OrganizationMetadataEntitySetIds
 import org.springframework.stereotype.Component
 import java.util.*
 
@@ -41,9 +40,6 @@ class OrganizationStreamSerializer : SelfRegisteringStreamSerializer<Organizatio
                     { key: UUID -> UUIDStreamSerializerUtils.serialize(out, key) },
                     { subKey: GrantType -> GrantTypeStreamSerializer.serialize(out, subKey) },
                     { `val`: Grant -> GrantStreamSerializer.serialize(out, `val`) })
-            UUIDStreamSerializerUtils.serialize(out, obj.organizationMetadataEntitySetIds.organization)
-            UUIDStreamSerializerUtils.serialize(out, obj.organizationMetadataEntitySetIds.datasets)
-            UUIDStreamSerializerUtils.serialize(out, obj.organizationMetadataEntitySetIds.columns)
         }
 
         @JvmStatic
@@ -69,11 +65,6 @@ class OrganizationStreamSerializer : SelfRegisteringStreamSerializer<Organizatio
                     { UUIDStreamSerializerUtils.deserialize(input) },
                     { GrantTypeStreamSerializer.deserialize(input) },
                     { GrantStreamSerializer.deserialize(input) })
-            val organizationMetadataEntitySetIds = OrganizationMetadataEntitySetIds(
-                    UUIDStreamSerializerUtils.deserialize(input),
-                    UUIDStreamSerializerUtils.deserialize(input),
-                    UUIDStreamSerializerUtils.deserialize(input)
-            )
             return Organization(
                     op,
                     adminRoleAclKey,
@@ -84,8 +75,7 @@ class OrganizationStreamSerializer : SelfRegisteringStreamSerializer<Organizatio
                     partitions,
                     apps,
                     connections,
-                    grants,
-                    organizationMetadataEntitySetIds
+                    grants
             )
         }
     }

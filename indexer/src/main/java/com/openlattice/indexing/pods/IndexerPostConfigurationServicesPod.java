@@ -51,7 +51,6 @@ import com.openlattice.indexing.IndexingService;
 import com.openlattice.indexing.configuration.IndexerConfiguration;
 import com.openlattice.organizations.ExternalDatabaseManagementService;
 import com.openlattice.organizations.OrganizationExternalDatabaseConfiguration;
-import com.openlattice.organizations.OrganizationMetadataEntitySetsService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService;
@@ -87,9 +86,6 @@ public class IndexerPostConfigurationServicesPod {
 
     @Inject
     private DataGraphManager dataGraphService;
-
-    @Inject
-    private OrganizationMetadataEntitySetsService organizationMetadataEntitySetsService;
 
     @Inject
     private PostgresEntityDataQueryService dataQueryService;
@@ -236,7 +232,6 @@ public class IndexerPostConfigurationServicesPod {
                 auditingManager,
                 ares,
                 indexerConfiguration,
-                organizationMetadataEntitySetsService,
                 reservationService,
                 principalsMapManager,
                 dataSetService
@@ -266,11 +261,5 @@ public class IndexerPostConfigurationServicesPod {
                 indexingMetadataManager(),
                 dataSetService
         );
-    }
-
-    @PostConstruct
-    void initOrganizationMetadataEntitySetsService() {
-        this.organizationMetadataEntitySetsService.dataDeletionService = dataDeletionManager;
-        this.organizationMetadataEntitySetsService.dataGraphManager = dataGraphService;
     }
 }

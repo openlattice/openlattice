@@ -26,13 +26,11 @@ import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.conductor.rpc.ConductorConfiguration
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datasets.DataSetService
-import com.openlattice.datastore.configuration.DatastoreConfiguration
 import com.openlattice.datastore.services.EdmService
 import com.openlattice.datastore.services.EntitySetService
 import com.openlattice.edm.properties.PostgresTypeManager
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager
 import com.openlattice.mapstores.TestDataFactory
-import com.openlattice.organizations.OrganizationMetadataEntitySetsService
 import com.openlattice.scrunchie.search.ConductorElasticsearchImpl
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.junit.Assert
@@ -66,7 +64,6 @@ class EdmAuthorizationHelperTest : HzAuthzTest() {
                 PartitionManager(hazelcastInstance, hds),
                 edmManager,
                 hds,
-                Mockito.mock(OrganizationMetadataEntitySetsService::class.java),
                 dataSetService,
                 auditingConfig
         )
