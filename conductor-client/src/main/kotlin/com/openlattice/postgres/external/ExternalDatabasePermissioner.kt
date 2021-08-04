@@ -4,7 +4,6 @@ import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.openlattice.ApiHelpers
-import com.openlattice.assembler.PostgresRoles
 import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.edm.EdmConstants
@@ -350,7 +349,7 @@ class ExternalDatabasePermissioner(
                                 """.trimIndent())
                             allTablePermissions.map { permission -> externalRoleNames.delete(AccessTarget(aclKey, permission)) }
                         } catch (e: Exception) {
-                            logger.error("Unable to drop column {} with acl_key {}", columnName, aclKey, e)
+                            logger.error("Unable to drop column {} with acl_key {} for organization {}", columnName, aclKey, organizationId, e)
                         }
                     }
                 }

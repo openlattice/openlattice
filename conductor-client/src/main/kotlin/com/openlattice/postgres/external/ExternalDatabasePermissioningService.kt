@@ -3,7 +3,6 @@ package com.openlattice.postgres.external
 import com.openlattice.authorization.Acl
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.Action
-import com.openlattice.authorization.Principal
 import com.openlattice.authorization.SecurablePrincipal
 import com.openlattice.edm.PropertyTypeIdFqn
 import com.openlattice.organization.ExternalColumn

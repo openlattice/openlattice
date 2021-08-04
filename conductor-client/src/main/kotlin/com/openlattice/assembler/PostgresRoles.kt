@@ -19,47 +19,6 @@ private const val INTERNAL_PREFIX = "ol-internal"
 class PostgresRoles private constructor() {
     companion object {
 
-        @JvmStatic
-        // no longer used anywhere, consider deprecating
-        fun getOrCreatePermissionRolesAsync(
-                permissionRoleNames: IMap<AccessTarget, UUID>,
-                targets: Set<AccessTarget>,
-                orgDataSource: HikariDataSource
-        ): CompletionStage<Map<AccessTarget, UUID>> {
-            val allExistingRoleNames = permissionRoleNames.getAll(targets)
-            val finalRoles = mutableMapOf<AccessTarget, UUID>()
-            finalRoles.putAll(allExistingRoleNames)
-
-            val targetsToNewIds = targets.filterNot {
-                // filter out roles that already exist
-                allExistingRoleNames.containsKey(it)
-            }.associateWith {
-                val newRole = UUID.randomUUID()
-                newRole
-            }
-
-            if (targetsToNewIds.isEmpty()) {
-                return CompletableFuture.supplyAsync {
-                    finalRoles
-                }
-            }
-
-            orgDataSource.connection.use { conn ->
-                conn.createStatement().use { stmt ->
-                    targetsToNewIds.values.forEach { roleName ->
-                        stmt.execute(createExternalDatabaseRoleIfNotExistsSql(roleName.toString()))
-                    }
-                }
-            }
-
-            val roleSetCompletion = permissionRoleNames.putAllAsync(targetsToNewIds)
-            finalRoles.putAll(targetsToNewIds)
-
-            return roleSetCompletion.thenApplyAsync {
-                finalRoles
-            }
-        }
-
         private fun createExternalDatabaseRoleIfNotExistsSql(dbRole: String): String {
             return "DO\n" +
                     "\$do\$\n" +
