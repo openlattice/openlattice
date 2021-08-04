@@ -542,17 +542,18 @@ class ExternalDatabasePermissioner(
             ""
         }
 
-        return "DO\n" +
-                "\$do\$\n" +
-                "BEGIN\n" +
-                "   IF ${action.quantifier} has_column_privilege(${ApiHelpers.dbQuote(roleName)}, ${ApiHelpers.dbQuote(tableName)}, ${ApiHelpers.dbQuote(columnName)}, \"$privilege\") THEN\n" +
-                "\n" +
-                "      ${action.name} $privilege ( ${ApiHelpers.dbQuote(columnName)} )\n" +
-                "      ON $schemaName${ApiHelpers.dbQuote(tableName)}\n" +
-                "      ${action.verb} ${ApiHelpers.dbQuote(roleName)}\n" +
-                "   END IF;\n" +
-                "END\n" +
-                "\$do\$;"
+        return """
+            DO 
+            ${'$'}do${'$'}
+            BEGIN
+                IF ${action.quantifier} has_column_privilege(${ApiHelpers.dbQuote(roleName)}, ${ApiHelpers.dbQuote(tableName)}, ${ApiHelpers.dbQuote(columnName)}, \"$privilege\") THEN
+                    ${action.name} $privilege ( ${ApiHelpers.dbQuote(columnName)} )
+                    ON $schemaName${ApiHelpers.dbQuote(tableName)}
+                    ${action.verb} ${ApiHelpers.dbQuote(roleName)}
+                END IF;
+            END
+            ${'$'}do${'$'};
+        """.trimIndent()
     }
 
     private fun revokeRoleSql(roleName: String, targetRoles: Set<String>): String {
@@ -571,33 +572,37 @@ class ExternalDatabasePermissioner(
     }
 
     internal fun createRoleIfNotExistsSql(dbRole: String): String {
-        return "DO\n" +
-                "\$do\$\n" +
-                "BEGIN\n" +
-                "   IF NOT EXISTS (\n" +
-                "      SELECT\n" +
-                "      FROM   pg_catalog.pg_roles\n" +
-                "      WHERE  rolname = '$dbRole') THEN\n" +
-                "\n" +
-                "      CREATE ROLE ${ApiHelpers.dbQuote(dbRole)} NOSUPERUSER NOCREATEDB NOCREATEROLE INHERIT NOLOGIN;\n" +
-                "   END IF;\n" +
-                "END\n" +
-                "\$do\$;"
+        return """
+            DO 
+            ${'$'}do${'$'}
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT
+                    FROM   pg_catalog.pg_roles
+                    WHERE  rolname = '$dbRole') THEN
+
+                    CREATE ROLE ${ApiHelpers.dbQuote(dbRole)} NOSUPERUSER NOCREATEDB NOCREATEROLE INHERIT NOLOGIN;
+                END IF;
+            END
+            ${'$'}do${'$'};
+        """.trimIndent()
     }
 
     internal fun createUserIfNotExistsSql(dbUser: String, dbUserPassword: String): String {
-        return "DO\n" +
-                "\$do\$\n" +
-                "BEGIN\n" +
-                "   IF NOT EXISTS (\n" +
-                "      SELECT\n" +
-                "      FROM   pg_catalog.pg_roles\n" +
-                "      WHERE  rolname = '$dbUser') THEN\n" +
-                "\n" +
-                "      CREATE ROLE ${ApiHelpers.dbQuote(dbUser)} NOSUPERUSER NOCREATEDB NOCREATEROLE INHERIT LOGIN ENCRYPTED PASSWORD '$dbUserPassword';\n" +
-                "   END IF;\n" +
-                "END\n" +
-                "\$do\$;"
+        return """
+            DO 
+            ${'$'}do${'$'}
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT
+                    FROM   pg_catalog.pg_roles
+                    WHERE  rolname = '$dbUser') THEN
+
+                    CREATE ROLE ${ApiHelpers.dbQuote(dbUser)} NOSUPERUSER NOCREATEDB NOCREATEROLE INHERIT NOLOGIN;
+                END IF;
+            END
+            ${'$'}do${'$'};
+        """.trimIndent()
     }
 
     private enum class PgPermAction(val verb: String, val quantifier: String) {
