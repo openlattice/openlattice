@@ -225,6 +225,10 @@ class ExternalDatabasePermissioner(
         }
     }
 
+    fun toPostgres(aclKey: AclKey): String {
+        return "'{\"" + aclKey.joinToString("\",\"") + "\"}'::uuid[]"
+    }
+
     /**
      * Create all postgres roles to apply to [entitySetId] and [propertyTypes]
      * Adds permissions on [EdmConstants.ID_FQN] to each of the above roles
@@ -313,7 +317,7 @@ class ExternalDatabasePermissioner(
                             val newRoleId = UUID.randomUUID()
                             stmt.addBatch("""
                                 INSERT INTO ${HazelcastMap.EXTERNAL_PERMISSION_ROLES.name}
-                                VALUES ('{\"${it.key}\"}'::uuid[], \"$privilege\", ${ApiHelpers.dbQuote(it.value)}, \"${newRoleId}\"::uuid) ON CONFLICT DO NOTHING
+                                VALUES (${toPostgres(it.key)}, \"$privilege\", ${ApiHelpers.dbQuote(it.value)}, \"${newRoleId}\"::uuid) ON CONFLICT DO NOTHING
                             """.trimIndent())
                         }
                     }
@@ -345,7 +349,7 @@ class ExternalDatabasePermissioner(
                         try {
                             stmt.execute("""
                                     DELETE FROM ${HazelcastMap.EXTERNAL_PERMISSION_ROLES.name}
-                                    WHERE acl_key = '{\"${aclKey.joinToString("\",\"")}\"}'::uuid[] AND column_name = ${columnName}
+                                    WHERE acl_key = ${toPostgres(aclKey)} AND column_name = ${ApiHelpers.dbQuote(columnName)}
                                 """.trimIndent())
                             allTablePermissions.map { permission -> externalRoleNames.delete(AccessTarget(aclKey, permission)) }
                         } catch (e: Exception) {
