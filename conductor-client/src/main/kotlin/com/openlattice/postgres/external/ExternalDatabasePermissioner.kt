@@ -394,8 +394,8 @@ class ExternalDatabasePermissioner(
 
             orgColumnAcls.forEach { columnAcl ->
                 val column = columnsById.getValue(columnAcl.aclKey)
-                val columnName = externalColumns.getValue(column.columnId).name
-                val tableName = externalTables.getValue(column.tableId).name
+                val columnName = externalColumns.getValue(column.columnId)?.name ?: String()
+                val tableName = externalTables.getValue(column.tableId)?.name ?: String()
                 val tableSchema = column.schema
 
                 columnAcl.aces.forEach { ace ->
