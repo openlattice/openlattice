@@ -740,6 +740,7 @@ public class ConductorServicesPod {
     @PostConstruct
     void initPrincipals() {
         Principals.init( securePrincipalsManager(), hazelcastInstance );
+        dataDeletionService();
         dataGraphService();
     }
 }
