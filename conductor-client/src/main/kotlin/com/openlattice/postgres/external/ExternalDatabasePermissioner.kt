@@ -549,7 +549,7 @@ class ExternalDatabasePermissioner(
                 IF ${action.quantifier} has_column_privilege(${ApiHelpers.dbQuote(roleName)}, ${ApiHelpers.dbQuote(tableName)}, ${ApiHelpers.dbQuote(columnName)}, \"$privilege\") THEN
                     ${action.name} $privilege ( ${ApiHelpers.dbQuote(columnName)} )
                     ON $schemaName${ApiHelpers.dbQuote(tableName)}
-                    ${action.verb} ${ApiHelpers.dbQuote(roleName)}
+                    ${action.verb} ${ApiHelpers.dbQuote(roleName)};
                 END IF;
             END
             ${'$'}do${'$'};
