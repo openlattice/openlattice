@@ -10,15 +10,7 @@ import com.hazelcast.query.Predicates
 import com.openlattice.IdConstants
 import com.openlattice.assembler.Assembler
 import com.openlattice.assembler.PostgresDatabases
-import com.openlattice.authorization.Ace
-import com.openlattice.authorization.Acl
-import com.openlattice.authorization.AclKey
-import com.openlattice.authorization.AuthorizationManager
-import com.openlattice.authorization.HazelcastAclKeyReservationService
-import com.openlattice.authorization.Permission
-import com.openlattice.authorization.Principal
-import com.openlattice.authorization.PrincipalType
-import com.openlattice.authorization.SecurablePrincipal
+import com.openlattice.authorization.*
 import com.openlattice.authorization.mapstores.PrincipalMapstore
 import com.openlattice.collaborations.CollaborationService
 import com.openlattice.collections.mapstores.EntitySetCollectionMapstore
@@ -29,11 +21,7 @@ import com.openlattice.notifications.sms.PhoneNumberService
 import com.openlattice.notifications.sms.SmsEntitySetInformation
 import com.openlattice.organization.OrganizationPrincipal
 import com.openlattice.organization.roles.Role
-import com.openlattice.organizations.events.MembersAddedToOrganizationEvent
-import com.openlattice.organizations.events.MembersRemovedFromOrganizationEvent
-import com.openlattice.organizations.events.OrganizationCreatedEvent
-import com.openlattice.organizations.events.OrganizationDeletedEvent
-import com.openlattice.organizations.events.OrganizationUpdatedEvent
+import com.openlattice.organizations.events.*
 import com.openlattice.organizations.mapstores.CONNECTIONS_INDEX
 import com.openlattice.organizations.mapstores.MEMBERS_INDEX
 import com.openlattice.organizations.processors.OrganizationEntryProcessor
@@ -74,19 +62,15 @@ import javax.inject.Inject
  */
 @Service
 class HazelcastOrganizationService(
-        hazelcastInstance: HazelcastInstance,
-        private val reservations: HazelcastAclKeyReservationService,
-        private val authorizations: AuthorizationManager,
-        private val securePrincipalsManager: SecurePrincipalsManager,
-        private val phoneNumbers: PhoneNumberService,
-        private val partitionManager: PartitionManager,
-        private val assembler: Assembler,
-        private val organizationMetadataEntitySetsService: OrganizationMetadataEntitySetsService,
-        private val collaborationService: CollaborationService
+    hazelcastInstance: HazelcastInstance,
+    private val reservations: HazelcastAclKeyReservationService,
+    private val authorizations: AuthorizationManager,
+    private val securePrincipalsManager: SecurePrincipalsManager,
+    private val phoneNumbers: PhoneNumberService,
+    private val partitionManager: PartitionManager,
+    private val assembler: Assembler,
+    private val collaborationService: CollaborationService
 ) {
-    init {
-        organizationMetadataEntitySetsService.organizationService = this
-    }
 
     protected val organizations = HazelcastMap.ORGANIZATIONS.getMap(hazelcastInstance)
     protected val users = HazelcastMap.USERS.getMap(hazelcastInstance)
@@ -164,15 +148,12 @@ class HazelcastOrganizationService(
         }
 
         initializeOrganizationPrincipal(creatorPrincipal, organization)
+        initializeOrganizationAdminRole(creatorPrincipal, organization.adminRoleAclKey, organization)
         initializeOrganization(organization)
 
         // set up organization database
         val orgDb = assembler.createOrganizationAndReturnOid(organization.id)
         organizationDatabases[organization.id] = orgDb
-
-        val adminRole = initializeOrganizationAdminRole(creatorPrincipal, organization.adminRoleAclKey, organization)
-
-        organizationMetadataEntitySetsService.initializeOrganizationMetadataEntitySets(adminRole)
 
         if (creatorPrincipal.type == PrincipalType.USER) {
             val userAclKey = securePrincipalsManager.lookup(creatorPrincipal)
@@ -255,8 +236,7 @@ class HazelcastOrganizationService(
                             it.partitions,
                             it.apps,
                             it.connections,
-                            it.grants,
-                            it.organizationMetadataEntitySetIds
+                            it.grants
                     )
                 }
     }
@@ -698,24 +678,6 @@ class HazelcastOrganizationService(
         organizationIds.forEach { removeMembers(it, setOf(principal)) }
 
         logger.info("Removed {} from organizations: {}", principal, organizationIds)
-    }
-
-    fun getOrganizationMetadataEntitySetIds(organizationId: UUID): OrganizationMetadataEntitySetIds {
-        return organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
-            Result(it.organizationMetadataEntitySetIds, false)
-        }) as OrganizationMetadataEntitySetIds? ?: throw ResourceNotFoundException(
-                "Unable able to resolve organization $organizationId"
-        )
-    }
-
-    fun setOrganizationMetadataEntitySetIds(
-            organizationId: UUID,
-            organizationMetadataEntitySetIds: OrganizationMetadataEntitySetIds
-    ) {
-        organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
-            it.organizationMetadataEntitySetIds = organizationMetadataEntitySetIds
-            Result(null, true)
-        })
     }
 
     companion object {

@@ -66,7 +66,6 @@ import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.processors.AddEntitySetsToLinkingEntitySetProcessor
 import com.openlattice.hazelcast.processors.RemoveDataExpirationPolicyProcessor
 import com.openlattice.hazelcast.processors.RemoveEntitySetsFromLinkingEntitySetProcessor
-import com.openlattice.organizations.OrganizationMetadataEntitySetsService
 import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.PostgresColumn.ACL_KEY
 import com.openlattice.postgres.PostgresColumn.ENTITY_TYPE_ID
@@ -96,13 +95,9 @@ class EntitySetService(
     private val partitionManager: PartitionManager,
     private val edm: EdmManager,
     private val hds: HikariDataSource,
-    private val organizationMetadataEntitySetsService: OrganizationMetadataEntitySetsService,
     private val dataSetService: DataSetService,
     auditingConfiguration: AuditingConfiguration
 ) : EntitySetManager {
-    init {
-        organizationMetadataEntitySetsService.entitySetsManager = this
-    }
 
     private val aresManager = AuditRecordEntitySetsManager(
             AuditingTypes(edm, auditingConfiguration),
@@ -177,7 +172,7 @@ class EntitySetService(
             )
 
             if (!entitySet.isMetadataEntitySet) {
-                setupOrganizationMetadataAndAuditEntitySets(entitySet)
+                aresManager.createAuditEntitySetForEntitySet(entitySet)
             }
 
             val ownablePropertyTypes = propertyTypes.getAll(entityType.properties).values.toList()
@@ -191,14 +186,6 @@ class EntitySetService(
         }
 
         return entitySetId
-    }
-
-    override fun setupOrganizationMetadataAndAuditEntitySets(entitySet: EntitySet) {
-        val propertyTypes = edm.getPropertyTypesOfEntityType(entitySet.entityTypeId)
-        organizationMetadataEntitySetsService.addDatasetsAndColumns(listOf(entitySet), mapOf(entitySet.id to propertyTypes.values))
-
-        aresManager.createAuditEntitySetForEntitySet(entitySet)
-
     }
 
     override fun getTransportedEntitySetsOfType(entityTypeId: UUID): Set<EntitySet> {
