@@ -423,6 +423,14 @@ class ExternalDatabasePermissioner(
                                     requestedPermissions
                                 ))
                         }
+                        Action.DROP -> {
+                            // temp migration action
+                            orgRemoves.addAll(ace.permissions.mapNotNull { 
+                                externalRoleNames[AccessTarget(columnAcl.aclKey, it)] 
+                            }.map {
+                                revokeRoleSql(it.toString(), setOf(userRole))
+                            })
+                        }
                         Action.SET -> {
                             val allColPermissions = allPermissions.flatMap { permission ->
                                 olToPostgres.getValue(permission)

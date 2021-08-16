@@ -134,7 +134,7 @@ public class MapstoresPod {
     }
 
     @Bean
-    public SelfRegisteringMapStore<AccessTarget, String> externalPermissionRoleMapstore() {
+    public SelfRegisteringMapStore<AccessTarget, UUID> externalPermissionRoleMapstore() {
         return new ExternalPermissionRolesMapstore( hikariDataSource );
     }
 
