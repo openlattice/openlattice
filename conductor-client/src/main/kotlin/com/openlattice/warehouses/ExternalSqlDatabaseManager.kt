@@ -5,15 +5,30 @@ import com.openlattice.organization.roles.Role
 import com.openlattice.organizations.external.*
 
 /**
+ * We expect to have thousands of instances of this class. In
+ *
+ * organizations -> warehouses ->
+ *
+ * This class should only be used by synchronization mechanism to retrieve information about the data warehouse. As each
+ * database connection must be established independently for organization database.
+ *
+ * There shouldn't be a bunch of logic in this layer. Just the ability to do basic operations on the underlying data
+ * warehouse.
+ *
+ * The main motivation here is to provide a hosted database service for managing the sharing of sensitive data across
+ * organizational boundaries. Both Snowflake and Databricks provide this functionality at this point. The main thing to
+ * observe here is that really the only thing that they don't provide is the customized access request workflows.
+ *
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 interface ExternalSqlDatabaseManager {
     fun getDriverName() : String
 
-    fun create
+
     //These aren't paged for now, since even if warehouse has a 1M tables with each entry taking 1kb to describe it would
     //only be 1 GB of metadata from API call.
+    fun getDatabaseName() : String
     fun getTables(): Map<TableKey, TableMetadata>
     fun getSchemas(): Map<String, SchemaMetadata>
     fun getViews(): Map<String, ViewMetadata>
