@@ -369,7 +369,7 @@ class ExternalDatabasePermissioner(
     ) {
 
         when (action) {
-            Action.ADD, Action.REMOVE, Action.SET -> {
+            Action.ADD, Action.REMOVE, Action.DROP, Action.SET -> {
             }
             else -> {
                 logger.error("Action $action passed through to updateTablePermissions is unhandled. Doing no operations")
@@ -480,7 +480,7 @@ class ExternalDatabasePermissioner(
                         stmt.executeBatch()
                         conn.commit()
                     } catch (ex: Exception) {
-                        logger.error("Exception occurred during external permissions update, rolling back", ex)
+                        logger.error("Exception occurred during external permissions update for org {}, rolling back", organizationId, ex)
                         conn.rollback()
                     }
                 }
