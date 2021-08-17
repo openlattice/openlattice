@@ -462,6 +462,7 @@ class ExternalDatabasePermissioner(
         }
 
         (adds.keys + removes.keys).forEach { organizationId ->
+            logger.info("Updating permissions for org {}", organizationId)
             val rems = removes.getOrDefault(organizationId, listOf<String>())
             val addz = adds.getOrDefault(organizationId, listOf<String>())
             extDbManager.connectToOrg(organizationId).connection.use { conn ->
