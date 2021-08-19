@@ -301,28 +301,19 @@ class ExternalDatabasePermissioner(
     }
 
     private fun initializePermissionSetForExternalTable(
-            hikariDataSource: HikariDataSource,
+            hikariDataSource: HikariDataSource, 
             columnAclKeyToName: Map<AclKey, String>,
             permissions: Set<Permission>
     ) {
-        // insert column name into external_permission_roles as role_id, needs more thinking
-        // actually, why do we even need external_permission_roles? isn't information_schema.column_privileges enough?
-        hikariDataSource.connection.use { conn ->
-            conn.createStatement().use { stmt ->
-                permissions.forEach { permission ->
-                    columnAclKeyToName.filterNot {
-                        externalRoleNames.containsKey(AccessTarget(it.key, permission))
-                    }.forEach { 
-                        olToPostgres.getValue(permission).forEach { privilege -> 
-                            val newRoleId = UUID.randomUUID()
-                            stmt.addBatch("""
-                                INSERT INTO ${HazelcastMap.EXTERNAL_PERMISSION_ROLES.name}
-                                VALUES (${toPostgres(it.key)}, \"$privilege\", ${ApiHelpers.dbQuote(it.value)}, \"${newRoleId}\"::uuid) ON CONFLICT DO NOTHING
-                            """.trimIndent())
-                        }
-                    }
+        // note: hikariDataSource is not used at all, but this is to keep with previous convention for now
+        permissions.forEach { permission ->
+            columnAclKeyToName.forEach { 
+                val at = AccessTarget(it.key, permission)
+                if (!externalRoleNames.containsKey(at)) {
+                    val newRoleId = UUID.randomUUID()
+                    // insert column name into external_permission_roles as (column_name, role_id)
+                    externalRoleNames.put(at, Pair(it.value,  newRoleId))
                 }
-                stmt.executeBatch()
             }
         }
     }
@@ -339,23 +330,12 @@ class ExternalDatabasePermissioner(
     }
 
     override fun destroyExternalTablePermissions(organizationId: UUID, tablesToColumnIds: Map<UUID, Set<UUID>>) {
-        val hds = extDbManager.connectToOrg(organizationId)
-        hds.connection.use { conn ->
-            conn.createStatement().use { stmt ->
-                tablesToColumnIds.forEach{ (tableId, columnIds) ->
-                    columnIds.forEach { columnId ->
-                        val aclKey = AclKey(tableId, columnId)
-                        val columnName = externalColumns.getValue(columnId).name
-                        try {
-                            stmt.execute("""
-                                    DELETE FROM ${HazelcastMap.EXTERNAL_PERMISSION_ROLES.name}
-                                    WHERE acl_key = ${toPostgres(aclKey)} AND column_name = ${ApiHelpers.dbQuote(columnName)}
-                                """.trimIndent())
-                            allTablePermissions.map { permission -> externalRoleNames.delete(AccessTarget(aclKey, permission)) }
-                        } catch (e: Exception) {
-                            logger.error("Unable to drop column {} with acl_key {} for organization {}", columnName, aclKey, organizationId, e)
-                        }
-                    }
+        // note: organizationId is not used at all, but this is to keep with previous convention for now
+        tablesToColumnIds.forEach { (tableId, columnIds) ->
+            columnIds.forEach { columnId ->
+                val aclKey = AclKey(tableId, columnId)
+                allTablePermissions.map { permission -> 
+                    externalRoleNames.delete(AccessTarget(aclKey, permission))
                 }
             }
         }

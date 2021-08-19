@@ -20,7 +20,7 @@ import java.util.UUID
 @Component
 class ExternalPermissionRolesMapstore(
         hds: HikariDataSource
-) : AbstractBasePostgresMapstore<AccessTarget, UUID>(
+) : AbstractBasePostgresMapstore<AccessTarget, Pair<String, UUID>>(
         HazelcastMap.EXTERNAL_PERMISSION_ROLES, PostgresTable.EXTERNAL_PERMISSION_ROLES, hds
 ) {
     override fun generateTestKey(): AccessTarget {
@@ -30,18 +30,18 @@ class ExternalPermissionRolesMapstore(
         )
     }
 
-    override fun generateTestValue(): UUID {
-        return UUID.randomUUID()
+    override fun generateTestValue(): Pair<String, UUID> {
+        val randomColumn = TestDataFactory.externalColumn()
+        return Pair(randomColumn.name, randomColumn.id)
     }
 
-    override fun bind(ps: PreparedStatement, key: AccessTarget, value: UUID) {
-        val randomName = RandomStringUtils.randomAlphabetic(15)
+    override fun bind(ps: PreparedStatement, key: AccessTarget, value: Pair<String, UUID>) {
         var index = bind(ps, key, 1)
-        ps.setString(index++, randomName)
-        ps.setObject(index++, value)
+        ps.setString(index++, value.first)
+        ps.setObject(index++, value.second)
 
-        ps.setString(index++, randomName)
-        ps.setObject(index++, value)
+        ps.setString(index++, value.first)
+        ps.setObject(index++, value.second)
     }
 
     override fun mapToKey(rs: ResultSet): AccessTarget {
@@ -55,7 +55,7 @@ class ExternalPermissionRolesMapstore(
         return index
     }
 
-    override fun mapToValue(rs: ResultSet): UUID {
-        return ResultSetAdapters.roleId(rs)
+    override fun mapToValue(rs: ResultSet): Pair<String, UUID> {
+        return Pair(ResultSetAdapters.columnName(rs), ResultSetAdapters.roleId(rs))
     }
 }
