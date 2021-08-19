@@ -146,7 +146,6 @@ class BackgroundExternalDatabaseSyncingService(
         var timer = Stopwatch.createStarted()
         // initialize database permissions
         extDbPermsService.initializeExternalTablePermissions(
-                organizationId,
                 table,
                 columns
         )

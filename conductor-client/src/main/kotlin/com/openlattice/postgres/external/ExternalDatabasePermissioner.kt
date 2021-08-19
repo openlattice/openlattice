@@ -234,7 +234,6 @@ class ExternalDatabasePermissioner(
      * Adds permissions on [EdmConstants.ID_FQN] to each of the above roles
      */
     override fun initializeAssemblyPermissions(
-            orgDatasource: HikariDataSource,
             entitySetId: UUID,
             entitySetName: String,
             propertyTypes: Set<PropertyTypeIdFqn>
@@ -244,7 +243,6 @@ class ExternalDatabasePermissioner(
         }
 
         initializePermissionSetForExternalTable(
-                hikariDataSource = orgDatasource,
                 columnAclKeyToName = propertyTypesAclKeyToFqn,
                 permissions = allViewPermissions
         )
@@ -265,7 +263,6 @@ class ExternalDatabasePermissioner(
      * Create all postgres roles to apply to [table] and [columns] in [organizationId] database
      */
     override fun initializeExternalTablePermissions(
-            organizationId: UUID,
             table: ExternalTable,
             columns: Set<ExternalColumn>
     ) {
@@ -274,7 +271,6 @@ class ExternalDatabasePermissioner(
         }
 
         initializePermissionSetForExternalTable(
-                hikariDataSource = extDbManager.connectToOrg(organizationId),
                 columnAclKeyToName = columnAclKeyToName,
                 permissions = allTablePermissions
         )
@@ -284,7 +280,6 @@ class ExternalDatabasePermissioner(
      * Create all postgres roles to apply to [table] and [columns] in [organizationId] database
      */
     override fun initializeProjectedTableViewPermissions(
-            collaborationId: UUID,
             schema: String,
             table: ExternalTable,
             columns: Set<ExternalColumn>
@@ -294,14 +289,12 @@ class ExternalDatabasePermissioner(
         }
 
         initializePermissionSetForExternalTable(
-                hikariDataSource = extDbManager.connectToOrg(collaborationId),
                 columnAclKeyToName = columnAclKeyToName,
                 permissions = allViewPermissions
         )
     }
 
     private fun initializePermissionSetForExternalTable(
-            hikariDataSource: HikariDataSource, 
             columnAclKeyToName: Map<AclKey, String>,
             permissions: Set<Permission>
     ) {
@@ -329,8 +322,9 @@ class ExternalDatabasePermissioner(
         updateTablePermissions(action, columnAcls, columnsById, TableType.TABLE)
     }
 
-    override fun destroyExternalTablePermissions(organizationId: UUID, tablesToColumnIds: Map<UUID, Set<UUID>>) {
-        // note: organizationId is not used at all, but this is to keep with previous convention for now
+    override fun destroyExternalTablePermissions(
+            tablesToColumnIds: Map<UUID, Set<UUID>>
+    ) {
         tablesToColumnIds.forEach { (tableId, columnIds) ->
             columnIds.forEach { columnId ->
                 val aclKey = AclKey(tableId, columnId)
