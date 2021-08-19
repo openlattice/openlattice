@@ -234,10 +234,12 @@ class ExternalDatabasePermissioner(
      * Adds permissions on [EdmConstants.ID_FQN] to each of the above roles
      */
     override fun initializeAssemblyPermissions(
+            orgDatasource: HikariDataSource,
             entitySetId: UUID,
             entitySetName: String,
             propertyTypes: Set<PropertyTypeIdFqn>
     ) {
+        // note: orgDatasource is unused, but left it in to ensure build go green without fiddling with mechanic
         val propertyTypesAclKeyToFqn = propertyTypes.associate { (id, fqn) ->
             AclKey(entitySetId, id) to fqn.toString()
         }
