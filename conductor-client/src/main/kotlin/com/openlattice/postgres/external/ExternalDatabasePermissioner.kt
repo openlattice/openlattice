@@ -300,7 +300,6 @@ class ExternalDatabasePermissioner(
             columnAclKeyToName: Map<AclKey, String>,
             permissions: Set<Permission>
     ) {
-        // note: hikariDataSource is not used at all, but this is to keep with previous convention for now
         permissions.forEach { permission ->
             columnAclKeyToName.forEach { 
                 val at = AccessTarget(it.key, permission)
