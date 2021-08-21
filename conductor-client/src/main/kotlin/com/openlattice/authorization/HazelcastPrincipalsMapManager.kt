@@ -49,6 +49,10 @@ class HazelcastPrincipalsMapManager(
         return principals[aclKey]
     }
 
+    override fun getSecurablePrincipal(principal: Principal): SecurablePrincipal {
+        return getFirstSecurablePrincipal(principals, findPrincipal(principal))
+    }
+
     override fun getSecurablePrincipals(aclKeys: Set<AclKey>): Map<AclKey, SecurablePrincipal> {
         return principals.getAll(aclKeys)
     }
