@@ -226,7 +226,7 @@ class ExternalDatabasePermissioner(
     }
 
     fun toPostgres(aclKey: AclKey): String {
-        return "'{\"" + aclKey.joinToString("\",\"") + "\"}'::uuid[]"
+        return "'{" + aclKey.joinToString() + "}'::uuid[]"
     }
 
     /**
