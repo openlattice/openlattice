@@ -375,7 +375,9 @@ class ExternalDatabasePermissioner(
 
                 columnAcl.aces.forEach { ace ->
                     val userRole = principalToUsername.getValue(ace.principal)
-                    val requestedPermissions = ace.permissions.flatMap { permission ->
+                    val requestedPermissions = ace.permissions.filter {
+                        olToPostgres.containsKey(it)
+                    }.flatMap { permission ->
                         olToPostgres.getValue(permission)
                     }
 
@@ -400,7 +402,9 @@ class ExternalDatabasePermissioner(
                         }
                         Action.DROP -> {
                             // temp migration action
-                            orgRemoves.addAll(ace.permissions.mapNotNull { 
+                            orgRemoves.addAll(ace.permissions.filter {
+                                olToPostgres.containsKey(it)
+                            }.mapNotNull { 
                                 externalRoleNames[AccessTarget(columnAcl.aclKey, it)] 
                             }.map {
                                 revokeRoleSql(it.toString(), setOf(userRole))
