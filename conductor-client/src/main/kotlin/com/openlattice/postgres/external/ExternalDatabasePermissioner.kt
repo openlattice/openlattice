@@ -564,6 +564,7 @@ class ExternalDatabasePermissioner(
                     SELECT
                     FROM   pg_catalog.pg_roles
                     WHERE  rolname = '$dbRole') THEN
+
                     CREATE ROLE ${ApiHelpers.dbQuote(dbRole)} NOSUPERUSER NOCREATEDB NOCREATEROLE INHERIT NOLOGIN;
                 END IF;
             END
@@ -580,6 +581,7 @@ class ExternalDatabasePermissioner(
                     SELECT
                     FROM   pg_catalog.pg_roles
                     WHERE  rolname = '$dbUser') THEN
+
                     CREATE ROLE ${ApiHelpers.dbQuote(dbUser)} NOSUPERUSER NOCREATEDB NOCREATEROLE INHERIT NOLOGIN;
                 END IF;
             END
