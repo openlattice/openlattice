@@ -7,9 +7,11 @@ import com.openlattice.ApiHelpers
 import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.edm.EdmConstants
+import com.openlattice.edm.EntitySet
 import com.openlattice.edm.PropertyTypeIdFqn
 import com.openlattice.edm.processors.GetOrganizationIdFromEntitySetEntryProcessor
 import com.openlattice.edm.processors.GetSchemaFromExternalTableEntryProcessor
+import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organization.ExternalColumn
 import com.openlattice.organization.ExternalTable
@@ -38,8 +40,9 @@ class ExternalDatabasePermissioner(
         private val principalsMapManager: PrincipalsMapManager
 ) : ExternalDatabasePermissioningService {
 
-    private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
     private val securableObjectTypes = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap(hazelcastInstance)
+    private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
+    private val propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap(hazelcastInstance)
     private val externalColumns = HazelcastMap.EXTERNAL_COLUMNS.getMap(hazelcastInstance)
     private val externalTables = HazelcastMap.EXTERNAL_TABLES.getMap(hazelcastInstance)
     private val externalRoleNames = HazelcastMap.EXTERNAL_PERMISSION_ROLES.getMap(hazelcastInstance)
@@ -122,11 +125,11 @@ class ExternalDatabasePermissioner(
             extTableColIds.add(it.aclKey[1])
             it.aclKey[0]
         }
-        val extTablesById = externalTables.submitToKeys(extTableIds, GetSchemaFromExternalTableEntryProcessor()).toCompletableFuture().get().mapValues {
+        val extTablesSchemaById = externalTables.submitToKeys(extTableIds, GetSchemaFromExternalTableEntryProcessor()).toCompletableFuture().get().mapValues {
             Schemas.fromName(it.value)
         }
         val columnsById = externalColumns.getAll(extTableColIds).values.associate {
-            AclKey(it.tableId, it.id) to TableColumn(it.organizationId, it.tableId, it.id, extTablesById[it.tableId])
+            AclKey(it.tableId, it.id) to TableColumn(it.organizationId, it.tableId, it.id, extTablesSchemaById[it.tableId])
         }
         updateExternalTablePermissions(action, externalTableColAcls, columnsById)
     }
@@ -137,7 +140,7 @@ class ExternalDatabasePermissioner(
         }
         val aclKeyToTableCols = entitySets.submitToKeys(esids, GetOrganizationIdFromEntitySetEntryProcessor()).thenApplyAsync { esidToOrgId ->
             assemblyAcls.associate {
-                it.aclKey to TableColumn(esidToOrgId.getValue(it.aclKey[0]), it.aclKey[0], it.aclKey[1])
+                it.aclKey to TableColumn(esidToOrgId.getValue(it.aclKey[0]), it.aclKey[0], it.aclKey[1], Schemas.ASSEMBLED_ENTITY_SETS)
             }
         }
         updateAssemblyPermissions(action, assemblyAcls, aclKeyToTableCols.toCompletableFuture().get())
@@ -237,10 +240,10 @@ class ExternalDatabasePermissioner(
             orgDatasource: HikariDataSource,
             entitySetId: UUID,
             entitySetName: String,
-            propertyTypes: Set<PropertyTypeIdFqn>
+            propertyTypesIdToFqn: Set<PropertyTypeIdFqn>
     ) {
         // note: orgDatasource is unused, but left it in to ensure build go green without fiddling with mechanic
-        val propertyTypesAclKeyToFqn = propertyTypes.associate { (id, fqn) ->
+        val propertyTypesAclKeyToFqn = propertyTypesIdToFqn.associate { (id, fqn) ->
             AclKey(entitySetId, id) to fqn.toString()
         }
 
@@ -258,7 +261,7 @@ class ExternalDatabasePermissioner(
             columnAcls: List<Acl>,
             columnsById: Map<AclKey, TableColumn>
     ) {
-        updateTablePermissions(action, columnAcls, columnsById, TableType.VIEW)
+        updateTablePermissions(action, SecurableObjectType.PropertyTypeInEntitySet, columnAcls, columnsById, TableType.VIEW)
     }
 
     /**
@@ -320,7 +323,7 @@ class ExternalDatabasePermissioner(
             columnAcls: List<Acl>,
             columnsById: Map<AclKey, TableColumn>
     ) {
-        updateTablePermissions(action, columnAcls, columnsById, TableType.TABLE)
+        updateTablePermissions(action, SecurableObjectType.OrganizationExternalDatabaseColumn, columnAcls, columnsById, TableType.TABLE)
     }
 
     override fun destroyExternalTablePermissions(
@@ -338,6 +341,7 @@ class ExternalDatabasePermissioner(
 
     private fun updateTablePermissions(
             action: Action,
+            securableObjectType: SecurableObjectType,
             columnAcls: List<Acl>,
             columnsById: Map<AclKey, TableColumn>,
             tableType: TableType
@@ -348,6 +352,14 @@ class ExternalDatabasePermissioner(
             }
             else -> {
                 logger.error("Action $action passed through to updateTablePermissions is unhandled. Doing no operations")
+                return
+            }
+        }
+        when (securableObjectType) {
+            SecurableObjectType.OrganizationExternalDatabaseColumn, SecurableObjectType.PropertyTypeInEntitySet -> {
+            }
+            else -> {
+                logger.error("SecurableObjectType $securableObjectType passed through to updateTablePermissions is unhandled. Doing no operations")
                 return
             }
         }
@@ -369,8 +381,16 @@ class ExternalDatabasePermissioner(
 
             orgColumnAcls.forEach { columnAcl ->
                 val column = columnsById.getValue(columnAcl.aclKey)
-                val columnName = externalColumns.getValue(column.columnId)?.name ?: String()
-                val tableName = externalTables.getValue(column.tableId)?.name ?: String()
+                val columnName = if (securableObjectType == SecurableObjectType.OrganizationExternalDatabaseColumn) {
+                    externalColumns.getValue(column.tableId)?.name ?: String()
+                } else {
+                    propertyTypes.getValue(column.tableId)?.type.toString() ?: String()
+                }
+                val tableName = if (securableObjectType == SecurableObjectType.OrganizationExternalDatabaseColumn) {
+                    externalTables.getValue(column.columnId)?.name ?: String()
+                } else {
+                    entitySets.getValue(column.columnId)?.name ?: String()
+                }
                 val tableSchema = column.schema
 
                 columnAcl.aces.forEach { ace ->
