@@ -392,10 +392,13 @@ class ExternalDatabasePermissioner(
                 val tableSchema = column.schema
 
                 columnAcl.aces.forEach { ace ->
-                    val userRole = principalToUsername.getValue(ace.principal)
-                    val requestedPermissions = ace.permissions.filter{ 
+                    // filter out permission which doesn't have a key in olToPostgres
+                    val acePermissions = ace.permissions.filter {
                         olToPostgres.containsKey(it)
-                    }.flatMap { permission ->
+                    }
+
+                    val userRole = principalToUsername.getValue(ace.principal)
+                    val requestedPermissions = acePermissions.flatMap { permission ->
                         olToPostgres.getValue(permission)
                     }
 
@@ -420,9 +423,7 @@ class ExternalDatabasePermissioner(
                         }
                         Action.DROP -> {
                             // temp migration action
-                            orgRemoves.addAll(ace.permissions.filter{ 
-                                olToPostgres.containsKey(it)
-                            }.mapNotNull { 
+                            orgRemoves.addAll(acePermissions.mapNotNull { 
                                 externalRoleNames[AccessTarget(columnAcl.aclKey, it)] 
                             }.map {
                                 revokeRoleSql(it.toString(), setOf(userRole))
