@@ -3,7 +3,6 @@ package com.openlattice.postgres.external
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
-import com.openlattice.ApiHelpers.dbQuote
 import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.edm.EdmConstants
@@ -16,6 +15,7 @@ import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organization.ExternalColumn
 import com.openlattice.organization.ExternalTable
 import com.openlattice.organization.roles.Role
+import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresPrivileges
 import com.openlattice.postgres.TableColumn
 import com.openlattice.postgres.external.Schemas
@@ -72,7 +72,7 @@ class ExternalDatabasePermissioner(
                 statement.execute(createRoleIfNotExistsSql(dbRole))
                 //Don't allow users to access public schema which will contain foreign data wrapper tables.
                 logger.debug("Revoking ${Schemas.PUBLIC_SCHEMA} schema right from role: {}", role)
-                statement.execute("REVOKE USAGE ON SCHEMA ${Schemas.PUBLIC_SCHEMA} FROM ${dbQuote(dbRole)}")
+                statement.execute("REVOKE USAGE ON SCHEMA ${Schemas.PUBLIC_SCHEMA} FROM ${quote(dbRole)}")
             }
         }
     }
@@ -97,7 +97,7 @@ class ExternalDatabasePermissioner(
                 statement.execute(createUserIfNotExistsSql(dbUser, dbUserPassword))
                 //Don't allow users to access public schema which will contain foreign data wrapper tables.
                 logger.debug("Revoking ${Schemas.PUBLIC_SCHEMA} schema right from user {}", principal)
-                statement.execute("REVOKE USAGE ON SCHEMA ${Schemas.PUBLIC_SCHEMA} FROM ${dbQuote(dbUser)}")
+                statement.execute("REVOKE USAGE ON SCHEMA ${Schemas.PUBLIC_SCHEMA} FROM ${quote(dbUser)}")
             }
         }
     }
@@ -552,10 +552,10 @@ class ExternalDatabasePermissioner(
             DO 
             ${'$'}do${'$'}
             BEGIN
-                IF ${action.quantifier} has_column_privilege(${dbQuote(roleName)}, ${dbQuote(tableName)}, ${dbQuote(columnName)}, \"$privilege\") THEN
-                    ${action.name} $privilege ( ${dbQuote(columnName)} )
-                    ON $schemaName${dbQuote(tableName)}
-                    ${action.verb} ${dbQuote(roleName)};
+                IF ${action.quantifier} has_column_privilege(${quote(roleName)}, ${quote(tableName)}, ${quote(columnName)}, \"$privilege\") THEN
+                    ${action.name} $privilege ( ${quote(columnName)} )
+                    ON $schemaName${quote(tableName)}
+                    ${action.verb} ${quote(roleName)};
                 END IF;
             END
             ${'$'}do${'$'};
@@ -571,10 +571,8 @@ class ExternalDatabasePermissioner(
     }
 
     private fun applyRoleOperation(roleName: String, targetRoles: Set<String>, action: PgPermAction): String {
-        val targets = targetRoles.joinToString {
-            dbQuote(it)
-        }
-        return "${action.name} ${dbQuote(roleName)} ${action.verb} $targets"
+        val targets = targetRoles.joinToString { quote(it) }
+        return "${action.name} ${quote(roleName)} ${action.verb} $targets"
     }
 
     internal fun createRoleIfNotExistsSql(dbRole: String): String {
@@ -586,7 +584,7 @@ class ExternalDatabasePermissioner(
                     SELECT
                     FROM   pg_catalog.pg_roles
                     WHERE  rolname = '$dbRole') THEN
-                    CREATE ROLE ${dbQuote(dbRole)} NOSUPERUSER NOCREATEDB NOCREATEROLE INHERIT NOLOGIN;
+                    CREATE ROLE ${quote(dbRole)} NOSUPERUSER NOCREATEDB NOCREATEROLE INHERIT NOLOGIN;
                 END IF;
             END
             ${'$'}do${'$'};
@@ -602,7 +600,7 @@ class ExternalDatabasePermissioner(
                     SELECT
                     FROM   pg_catalog.pg_roles
                     WHERE  rolname = '$dbUser') THEN
-                    CREATE ROLE ${dbQuote(dbUser)} NOSUPERUSER NOCREATEDB NOCREATEROLE INHERIT NOLOGIN;
+                    CREATE ROLE ${quote(dbUser)} NOSUPERUSER NOCREATEDB NOCREATEROLE INHERIT NOLOGIN;
                 END IF;
             END
             ${'$'}do${'$'};
