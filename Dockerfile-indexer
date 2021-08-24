@@ -1,0 +1,26 @@
+# FROM openlattice/ol-base:latest
+# FROM openjdk:16-jre-slim
+FROM openjdk:11-jre-slim
+
+RUN useradd -m openlattice && \
+    mkdir -p /opt/openlattice/logging/ && \
+    chown -R openlattice:openlattice /opt/openlattice
+
+VOLUME /opt/openlattice/logging/
+
+EXPOSE 8081
+EXPOSE 8444
+
+WORKDIR /opt/openlattice/
+
+COPY ./indexer/build/distributions/indexer.tgz /opt/openlattice/
+
+RUN tar xzvf indexer.tgz
+
+# ARG JAVA_OPTS
+# ENV JAVA_OPTS="-xmx"
+
+ARG SERVICE_ARGS
+ENV SERVICE_ARGS="kubernetes postgres medialocal auditlocal"
+
+CMD "/opt/openlattice/indexer/bin/indexer", "kubernetes", "postgres", "medialocal" , "auditlocal"
