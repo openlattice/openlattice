@@ -1,0 +1,129 @@
+version: '3.7'
+
+networks:
+  olnet:
+    driver: bridge
+    name: olnet
+
+services:
+  conductor:
+    build: 
+      context: ./
+      dockerfile: Dockerfile-conductor
+    image: openlattice/conductor
+    container_name: conductor
+    ports:
+      - "5701:5701"
+      - "5702:5701"
+      - "5703:5701"
+    volumes:
+      - "./logs/:/opt/openlattice/logging/"
+      - "./secrets/conductor/:/etc/openlattice/"
+      - "./secrets/shared/assembler.yaml:/etc/openlattice/assembler.yaml"
+      - "./secrets/shared/auditing.yaml:/etc/openlattice/auditing.yaml"
+      - "./secrets/shared/datastore.yaml:/etc/openlattice/datastore.yaml"
+      - "./secrets/shared/auth0.yaml:/etc/openlattice/auth0.yaml"
+    networks:
+      - olnet
+    healthcheck:
+      test: ["CMD-SHELL", "curl localhost:5701/hazelcast/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 540s
+    # deploy:
+    #   mode: replicated
+    #   replicas: 3
+    # extra_hosts:
+      # - "192.168.1.124:host.docker.internal"
+      # - "192.168.1.124:host.docker.internal"
+   
+  datastore:
+    build: 
+      context: ./
+      dockerfile: Dockerfile-datastore
+    image: openlattice/datastore
+    container_name: datastore
+    ports:
+      - "8080"
+      - "8443"
+    volumes:
+      - "./logs/:/opt/openlattice/logging/"
+      - "./secrets/datastore/:/etc/openlattice/"
+      - "./secrets/shared/assembler.yaml:/etc/openlattice/assembler.yaml"
+      - "./secrets/shared/auditing.yaml:/etc/openlattice/auditing.yaml"
+      - "./secrets/shared/datastore.yaml:/etc/openlattice/datastore.yaml"
+      - "./secrets/shared/auth0.yaml:/etc/openlattice/auth0.yaml"
+    networks:
+      - olnet
+    # deploy:
+    #   mode: replicated
+    #   replicas: 2
+    healthcheck:
+      test: ["CMD-SHELL", "curl localhost:8080/admin/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      conductor:
+        condition: service_healthy
+
+  indexer:
+    build: 
+      context: ./
+      dockerfile: Dockerfile-indexer
+    image: openlattice/indexer
+    container_name: indexer
+    ports:
+      - "8081"
+      - "8444"
+    volumes:
+      - "./logs/:/opt/openlattice/logging/"
+      - "./secrets/indexer/:/etc/openlattice/"
+      - "./secrets/shared/assembler.yaml:/etc/openlattice/assembler.yaml"
+      - "./secrets/shared/auditing.yaml:/etc/openlattice/auditing.yaml"
+      - "./secrets/shared/datastore.yaml:/etc/openlattice/datastore.yaml"
+      - "./secrets/shared/auth0.yaml:/etc/openlattice/auth0.yaml"
+    networks:
+      - olnet
+    healthcheck:
+      test: ["CMD-SHELL", "curl localhost:8081/admin/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      conductor:
+        condition: service_healthy
+      datastore:
+        condition: service_healthy
+
+  # linker:
+  #   build: 
+  #     context: ./
+  #     dockerfile: Dockerfile-linker
+  #   image: openlattice/linker
+  #   container_name: linker
+  #   ports:
+  #     - "8082"
+  #     - "8445"
+  #   volumes:
+  #     - "./logs/:/opt/openlattice/logging/"
+  #     - "./secrets/linker/:/etc/openlattice/"
+  #     - "./secrets/shared/assembler.yaml:/etc/openlattice/assembler.yaml"
+  #     - "./secrets/shared/auditing.yaml:/etc/openlattice/auditing.yaml"
+  #     - "./secrets/shared/datastore.yaml:/etc/openlattice/datastore.yaml"
+  #     - "./secrets/shared/auth0.yaml:/etc/openlattice/auth0.yaml"
+  #   networks:
+  #     - olnet
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "curl localhost:8082/admin/ping"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #   depends_on:
+  #     indexer:
+  #       condition: service_healthy
+  #     conductor:
+  #       condition: service_healthy
+  #     datastore:
+  #       condition: service_healthy
