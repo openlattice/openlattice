@@ -161,16 +161,13 @@ class Graph(
 
     /* Delete  */
 
+    @Deprecated("Redundant function call." , replaceWith = ReplaceWith("deleteEdges"))
     override fun clearEdges(keys: Iterable<DataEdgeKey>): Int {
         val version = -System.currentTimeMillis()
         return lockAndOperateOnEdges(keys, CLEAR_BY_VERTEX_SQL) { lockStmt, operationStmt, dataEdgeKey ->
 
             addKeyIds(lockStmt, dataEdgeKey)
 
-            clearEdgesAddVersion(operationStmt, version)
-            addKeyIds(operationStmt, dataEdgeKey, 3)
-            clearEdgesAddVersion(operationStmt, version)
-            addKeyIds(operationStmt, dataEdgeKey, 3)
             clearEdgesAddVersion(operationStmt, version)
             addKeyIds(operationStmt, dataEdgeKey, 3)
         }
@@ -185,11 +182,11 @@ class Graph(
         val dstEntitySetEdgeKeys = keys.groupBy { it.dst.entitySetId }
         val edgeEntitySetEdgeKeys = keys.groupBy { it.edge.entitySetId }
 
-        val numUpdate = lockAndOperateOnEdges(srcEntitySetEdgeKeys, statement, statementSupplier)
-        +lockAndOperateOnEdges(dstEntitySetEdgeKeys, statement, statementSupplier)
-        +lockAndOperateOnEdges(edgeEntitySetEdgeKeys, statement, statementSupplier)
+        val numUpdate = lockAndOperateOnEdges(srcEntitySetEdgeKeys, statement, statementSupplier)+
+                lockAndOperateOnEdges(dstEntitySetEdgeKeys, statement, statementSupplier)+
+                lockAndOperateOnEdges(edgeEntitySetEdgeKeys, statement, statementSupplier)
 
-        return Iterables.size(keys)
+        return numUpdate
     }
 
     private fun lockAndOperateOnEdges(
