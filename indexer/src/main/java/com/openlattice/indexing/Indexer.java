@@ -26,18 +26,18 @@ import com.kryptnostic.rhizome.hazelcast.serializers.RhizomeUtils.Pods;
 import com.openlattice.auditing.pods.AuditingConfigurationPod;
 import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.aws.AwsS3Pod;
+import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.hazelcast.pods.HazelcastQueuePod;
 import com.openlattice.hazelcast.pods.MapstoresPod;
 import com.openlattice.hazelcast.pods.SharedStreamSerializersPod;
-import com.openlattice.indexing.pods.GraphProcessorPod;
 import com.openlattice.indexing.pods.IndexerPostConfigurationServicesPod;
 import com.openlattice.indexing.pods.IndexerSecurityPod;
 import com.openlattice.indexing.pods.IndexerServicesPod;
 import com.openlattice.indexing.pods.IndexerServletsPod;
 import com.openlattice.indexing.pods.PlasmaCoupling;
+import com.openlattice.ioc.providers.LateInitProvidersPod;
 import com.openlattice.jdbc.JdbcPod;
 import com.openlattice.postgres.PostgresPod;
-import com.openlattice.postgres.PostgresTablesPod;
 import com.openlattice.postgres.pods.ExternalDatabaseConnectionManagerPod;
 import com.openlattice.transporter.TransporterConfigurationPod;
 import com.openlattice.transporter.pods.TransporterPod;
@@ -47,29 +47,29 @@ import com.openlattice.transporter.pods.TransporterPod;
  */
 public class Indexer extends BaseRhizomeServer {
 
-    private static final Class<?>[] conductorPods = new Class<?>[]{
+    private static final Class<?>[] indexerPods = new Class<?>[]{
             AuditingConfigurationPod.class,
             Auth0Pod.class,
             AwsS3Pod.class,
+            ByteBlobServicePod.class,
             ExternalDatabaseConnectionManagerPod.class,
-            GraphProcessorPod.class,
+            HazelcastQueuePod.class,
             IndexerServicesPod.class,
             IndexerPostConfigurationServicesPod.class,
             JdbcPod.class,
             MapstoresPod.class,
-            HazelcastQueuePod.class,
             PlasmaCoupling.class,
             PostgresPod.class,
-            PostgresTablesPod.class,
             SharedStreamSerializersPod.class,
             TransporterPod.class,
-            TransporterConfigurationPod.class
+            TransporterConfigurationPod.class,
+            LateInitProvidersPod.class
     };
 
     private static final Class<?>[] webPods = new Class<?>[]{ IndexerServletsPod.class, IndexerSecurityPod.class };
 
     public Indexer() {
-        super( Pods.concatenate( RhizomeApplicationServer.DEFAULT_PODS, webPods, conductorPods ) );
+        super( Pods.concatenate( webPods, RhizomeApplicationServer.DEFAULT_PODS, indexerPods ) );
     }
 
     @Override

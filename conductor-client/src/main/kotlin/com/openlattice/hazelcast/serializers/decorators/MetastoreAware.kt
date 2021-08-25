@@ -21,12 +21,12 @@
 
 package com.openlattice.hazelcast.serializers.decorators
 
-import com.zaxxer.hikari.HikariDataSource
+import com.openlattice.data.storage.DataSourceResolver
 
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 interface MetastoreAware {
-    fun setHikariDataSource(hds:HikariDataSource)
+    fun setDataSourceResolver(resolver: DataSourceResolver)
 }

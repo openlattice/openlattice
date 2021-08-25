@@ -1,6 +1,5 @@
 package com.openlattice.search.renderers
 
-import java.util.Optional
 import com.google.common.collect.Lists
 import com.google.common.collect.Maps
 import com.openlattice.data.requests.NeighborEntityDetails
@@ -10,7 +9,6 @@ import jodd.mail.EmailAttachment
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayOutputStream
-import java.io.IOException
 import java.net.URL
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
@@ -93,7 +91,7 @@ class AlprAlertEmailRenderer {
                 ImageIO.write(bufferedImage, fileType, baos)
                 baos.flush()
                 stream = baos
-            } catch (e: IOException) {
+            } catch (e: Exception) {
                 logger.error("Unable to load image for url {}", imageUrlPath, e)
             }
 
@@ -114,17 +112,8 @@ class AlprAlertEmailRenderer {
             val lat = latAndLon[0]
             val lon = latAndLon[1]
 
-            val url = StringBuilder("https://api.mapbox.com/v4/mapbox.streets/pin-l-car+000(")
-                    .append(lon)
-                    .append(",")
-                    .append(lat)
-                    .append(")/")
-                    .append(lon)
-                    .append(",")
-                    .append(lat)
-                    .append(",15/600x600.png?access_token=")
-                    .append(mapboxToken)
-                    .toString()
+            val url = "https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/pin-l-car+000" +
+                    "($lon,$lat)/$lon,$lat,15/600x600?access_token=$mapboxToken"
 
             return getImage(url, PNG)
         }

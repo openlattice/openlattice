@@ -6,8 +6,8 @@ import com.hazelcast.core.HazelcastInstance
 import com.openlattice.auth0.Auth0TokenProvider
 import com.openlattice.client.RetrofitFactory
 import com.openlattice.datastore.services.Auth0ManagementApi
-import com.openlattice.directory.pojo.Auth0UserBasic
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.search.Auth0UserSearchFields
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 
@@ -25,11 +25,15 @@ class Auth0UserDirectoryService(
 
 
     override fun getAllUsers(): Map<String, User> {
-        return ImmutableMap.copyOf(users)
+        return ImmutableMap.copyOf(users as Map<String,User>)
     }
 
     override fun getUser(userId: String): User {
         return users.getValue(userId)
+    }
+
+    override fun getUsers(userIds: Set<String>): Map<String, User> {
+        return users.getAll(userIds)
     }
 
     override fun deleteUser(userId: String) {
@@ -38,32 +42,44 @@ class Auth0UserDirectoryService(
     }
 
     //TODO: Switch over to a Hazelcast map to relieve pressure from Auth0
-    override fun searchAllUsers(searchQuery: String): Map<String, Auth0UserBasic> {
-        logger.info("Searching auth0 users with query: $searchQuery")
+    override fun searchAllUsers(fields: Auth0UserSearchFields): Map<String, User> {
 
-        var page = 0
-        var pageOfUsers = auth0ManagementApi.searchAllUsers(searchQuery, page++,
-                                                            DEFAULT_PAGE_SIZE
-        )
-        val users = mutableSetOf<Auth0UserBasic>()
+        var searchQuery = ""
 
-        while (pageOfUsers != null) {
-            users.addAll(pageOfUsers)
-
-            if (pageOfUsers.size == DEFAULT_PAGE_SIZE) {
-                pageOfUsers = auth0ManagementApi.searchAllUsers(searchQuery, page++,
-                                                                DEFAULT_PAGE_SIZE
-                )
-            } else {
-                break
-            }
+        // https://auth0.com/docs/users/user-search/user-search-query-syntax
+        // TODO - support multiple fields and construct a valid Lucene query string to pass to Auth0
+        // https://jira.openlattice.com/browse/LATTICE-2805
+        if (fields.email != null) {
+            searchQuery = "email:${fields.email}"
+        }
+        else if (fields.name != null) {
+            searchQuery = "name:${fields.name}"
         }
 
+        logger.info("searching auth0 users with query: $searchQuery")
+
+        var page = 0
+        val users = mutableSetOf<User>()
+        var usersPage: Set<User>?
+        do {
+            // Auth0 limits the total number of users you can retrieve to 1000
+            // https://auth0.com/docs/users/user-search/view-search-results-by-page#limitation
+            // if we start regularly hitting this limit, we'll need to switch to Auth0UserListingService
+            // https://auth0.com/docs/users/import-and-export-users
+            usersPage = auth0ManagementApi.searchAllUsers(
+                searchQuery,
+                page++,
+                DEFAULT_PAGE_SIZE,
+                SEARCH_ENGINE_VERSION
+            )
+            users.addAll(usersPage ?: setOf())
+        } while (usersPage?.size == DEFAULT_PAGE_SIZE)
+
         if (users.isEmpty()) {
-            logger.warn("Auth0 did not return any users for this search.")
+            logger.info("auth0 did not return any users for this search query: $searchQuery")
             return mapOf()
         }
 
-        return users.map { it.userId to it }.toMap()
+        return users.associateBy { it.id }
     }
 }

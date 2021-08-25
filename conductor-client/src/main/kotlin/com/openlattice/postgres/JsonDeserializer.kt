@@ -1,7 +1,7 @@
 package com.openlattice.postgres
 
 import com.google.common.base.Preconditions
-import com.openlattice.data.storage.BinaryDataWithContentType
+import com.openlattice.data.storage.BinaryObjectWithMetadata
 import com.openlattice.edm.type.PropertyType
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
@@ -25,7 +25,6 @@ class JsonDeserializer {
         private val logger = LoggerFactory.getLogger(
                 JsonDeserializer::class.java
         )
-        private val decoder = Base64.getDecoder()
         private val geographyPointRegex = Pattern
                 .compile("(-?[0-9]+\\.[0-9]+), *(-?[0-9]+\\.[0-9]+)")
 
@@ -135,20 +134,8 @@ class JsonDeserializer {
                             propertyTypeId,
                             value.javaClass
                     )
-                    val valuePair = value as Map<String, Any>
-                    val contentType = valuePair["content-type"]
-                    val data = valuePair["data"]
-                    Preconditions.checkState(
-                            contentType is String,
-                            "Expected string for content type, received %s",
-                            contentType!!.javaClass
-                    )
-                    Preconditions.checkState(
-                            data is String,
-                            "Expected string for binary data, received %s",
-                            data!!.javaClass
-                    )
-                    return BinaryDataWithContentType((contentType as String?)!!, decoder.decode(data as String?))
+
+                    return BinaryObjectWithMetadata.fromMap(value as Map<String, Any>)
                 }
                 EdmPrimitiveTypeKind.Date -> {
                     Preconditions.checkState(
@@ -230,9 +217,8 @@ class JsonDeserializer {
                         return point["y"].toString() + "," + point["x"]
                     }
                 } else if (value is Point) {
-                    val point = value
-                    if (point.geoType == Geospatial.Type.POINT && point.dimension == Geospatial.Dimension.GEOGRAPHY) {
-                        return point.y.toString() + "," + point.x
+                    if (value.geoType == Geospatial.Type.POINT && value.dimension == Geospatial.Dimension.GEOGRAPHY) {
+                        return value.y.toString() + "," + value.x
                     }
                 } else if (value is String) {
                     val m = geographyPointRegex.matcher(value as String?)

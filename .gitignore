@@ -6,7 +6,13 @@ logging/
 .idea/
 bin/
 build/
+out/
 artifacts/
 .DS_Store
 *.iml
 *.swp
+*.jstack
+conductor/src/main/resources/auth0.yaml
+datastore/src/main/resources/auth0.yaml
+indexer/src/main/resources/auth0.yaml
+linker/src/main/resources/auth0.yaml

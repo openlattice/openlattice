@@ -21,11 +21,11 @@ class RemoveEntitySetsFromLinkingEntitySetProcessorStreamSerializer:
         return RemoveEntitySetsFromLinkingEntitySetProcessor::class.java
     }
 
-    override fun write(out: ObjectDataOutput?, `object`: RemoveEntitySetsFromLinkingEntitySetProcessor?) {
+    override fun write(out: ObjectDataOutput, `object`: RemoveEntitySetsFromLinkingEntitySetProcessor) {
         SetStreamSerializers.fastUUIDSetSerialize( out, `object`!!.entitySetIds )
     }
 
-    override fun read(`in`: ObjectDataInput?): RemoveEntitySetsFromLinkingEntitySetProcessor {
+    override fun read(`in`: ObjectDataInput): RemoveEntitySetsFromLinkingEntitySetProcessor {
         return RemoveEntitySetsFromLinkingEntitySetProcessor( SetStreamSerializers.fastUUIDSetDeserialize( `in` ) )
     }
 

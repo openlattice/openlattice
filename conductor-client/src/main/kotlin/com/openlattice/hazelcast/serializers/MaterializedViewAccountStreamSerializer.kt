@@ -43,8 +43,8 @@ class MaterializedViewAccountStreamSerializer : TestableSelfRegisteringStreamSer
     }
 
     override fun read(input: ObjectDataInput): MaterializedViewAccount {
-        val username = input.readUTF()
-        val credential = input.readUTF()
+        val username = input.readString()!!
+        val credential = input.readString()!!
         return MaterializedViewAccount(username, credential)
     }
 

@@ -18,7 +18,7 @@ class IntegrationJobStreamSerializer : TestableSelfRegisteringStreamSerializer<I
         }
 
         fun deserialize(input: ObjectDataInput): IntegrationJob {
-            val name = input.readUTF()
+            val name = input.readString()!!
             val status = IntegrationStatusStreamSerializer.deserialize(input)
             return IntegrationJob(name, status)
         }

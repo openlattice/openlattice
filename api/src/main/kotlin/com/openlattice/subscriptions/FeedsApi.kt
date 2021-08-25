@@ -32,11 +32,6 @@ interface FeedsApi {
         const val SERVICE = "/datastore"
         const val CONTROLLER = "/feeds"
         const val BASE = SERVICE + CONTROLLER
-
-        const val FEED_ID = "feedId"
-        const val FEED_ID_PATH = "/{$FEED_ID}"
-
-        const val FEED_IDS = "feedIds"
     }
 
     @GET(BASE)

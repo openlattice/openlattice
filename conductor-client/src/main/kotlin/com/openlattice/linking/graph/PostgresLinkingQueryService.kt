@@ -55,6 +55,7 @@ import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.openlattice.postgres.streams.StatementHolder
 import com.openlattice.postgres.streams.StatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
+import org.slf4j.LoggerFactory
 import java.sql.Array
 import java.sql.Connection
 import java.util.*
@@ -69,6 +70,23 @@ class PostgresLinkingQueryService(
         private val hds: HikariDataSource,
         private val partitionManager: PartitionManager
 ) : LinkingQueryService {
+
+    companion object {
+        private val logger = LoggerFactory.getLogger(PostgresLinkingQueryService::class.java)
+
+        fun deleteNeighborhoods(hds: HikariDataSource, entitySetId: UUID, entityKeyIds: Set<UUID>): Int {
+            hds.connection.use { connection ->
+                val arr = PostgresArrays.createUuidArray(connection, entityKeyIds)
+                connection.prepareStatement(DELETE_NEIGHBORHOODS_SQL).use { ps ->
+                    ps.setObject(1, entitySetId)
+                    ps.setArray(2, arr)
+                    ps.setObject(3, entitySetId)
+                    ps.setArray(4, arr)
+                    return ps.executeUpdate()
+                }
+            }
+        }
+    }
 
     override fun lockClustersForUpdates(clusters: Set<UUID>): Connection {
         val connection = hds.connection
@@ -159,6 +177,10 @@ class PostgresLinkingQueryService(
     override fun getClustersForIds(
             dataKeys: Set<EntityDataKey>
     ): Map<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>> {
+        if (dataKeys.isEmpty()) {
+            return mapOf()
+        }
+
         return BasePostgresIterable(StatementHolderSupplier(hds, buildClusterContainingSql(dataKeys))) {
             val linkingId = ResultSetAdapters.linkingId(it)
             val src = ResultSetAdapters.srcEntityDataKey(it)
@@ -212,7 +234,11 @@ class PostgresLinkingQueryService(
         }
     }
 
-    override fun updateLinkingInformation(linkingId: UUID, newMember: EntityDataKey, cluster: Map<UUID, LinkedHashSet<UUID>>) {
+    override fun updateLinkingInformation(
+            linkingId: UUID,
+            newMember: EntityDataKey,
+            cluster: Map<UUID, LinkedHashSet<UUID>>
+    ) {
         val entitySetPartitions = partitionManager.getEntitySetPartitions(newMember.entitySetId).toList()
         val partition = getPartition(newMember.entityKeyId, entitySetPartitions)
         hds.connection.use { connection ->
@@ -305,38 +331,17 @@ class PostgresLinkingQueryService(
 
     override fun deleteNeighborhood(entity: EntityDataKey, positiveFeedbacks: Collection<EntityKeyPair>): Int {
         val deleteNeighborHoodSql = DELETE_NEIGHBORHOOD_SQL +
-                if (positiveFeedbacks.isNotEmpty()) " AND NOT ( ${buildFilterEntityKeyPairs(
-                        positiveFeedbacks
-                )} )" else ""
-        hds.connection.use {
-            it.prepareStatement(deleteNeighborHoodSql).use {
-                it.setObject(1, entity.entitySetId)
-                it.setObject(2, entity.entityKeyId)
-                it.setObject(3, entity.entitySetId)
-                it.setObject(4, entity.entityKeyId)
-                return it.executeUpdate()
-            }
-        }
-    }
-
-    override fun deleteNeighborhoods(entitySetId: UUID, entityKeyIds: Set<UUID>): Int {
-        hds.connection.use { connection ->
-            val arr = PostgresArrays.createUuidArray(connection, entityKeyIds)
-            connection.prepareStatement(DELETE_NEIGHBORHOODS_SQL).use { ps ->
-                ps.setObject(1, entitySetId)
-                ps.setArray(2, arr)
-                ps.setObject(3, entitySetId)
-                ps.setArray(4, arr)
-                return ps.executeUpdate()
-            }
-        }
-    }
-
-    override fun deleteEntitySetNeighborhood(entitySetId: UUID): Int {
-        hds.connection.use { connection ->
-            connection.prepareStatement(DELETE_ENTITY_SET_NEIGHBORHOOD_SQL).use { ps ->
-                ps.setObject(1, entitySetId)
-                ps.setObject(2, entitySetId)
+                if (positiveFeedbacks.isNotEmpty()) " AND NOT ( ${
+                    buildFilterEntityKeyPairs(
+                            positiveFeedbacks
+                    )
+                } )" else ""
+        hds.connection.use { conn ->
+            conn.prepareStatement(deleteNeighborHoodSql).use { ps ->
+                ps.setObject(1, entity.entitySetId)
+                ps.setObject(2, entity.entityKeyId)
+                ps.setObject(3, entity.entitySetId)
+                ps.setObject(4, entity.entityKeyId)
                 return ps.executeUpdate()
             }
         }
@@ -394,19 +399,23 @@ internal fun buildClusterContainingSql(dataKeys: Set<EntityDataKey>): String {
 
 internal fun buildFilterEntityKeyPairs(entityKeyPairs: Collection<EntityKeyPair>): String {
     return entityKeyPairs.joinToString(" OR ") {
-        "( (${SRC_ENTITY_SET_ID.name} = ${uuidString(
-                it.first.entitySetId
-        )} AND ${SRC_ENTITY_KEY_ID.name} = ${uuidString(it.first.entityKeyId)} " +
-                "AND ${DST_ENTITY_SET_ID.name} = ${uuidString(
-                        it.second.entitySetId
-                )} AND ${DST_ENTITY_KEY_ID.name} = ${uuidString(it.second.entityKeyId)})" +
-                " OR " +
-                "(${SRC_ENTITY_SET_ID.name} = ${uuidString(
-                        it.second.entitySetId
-                )} AND ${SRC_ENTITY_KEY_ID.name} = ${uuidString(it.second.entityKeyId)} " +
-                "AND ${DST_ENTITY_SET_ID.name} = ${uuidString(
-                        it.first.entitySetId
-                )} AND ${DST_ENTITY_KEY_ID.name} = ${uuidString(it.first.entityKeyId)}) )"
+        val firstEsidString = uuidString(it.first.entitySetId)
+        val firstEkidString = uuidString(it.first.entityKeyId)
+        val secondEsidString = uuidString(it.second.entitySetId)
+        val secondEkidString = uuidString(it.second.entityKeyId)
+        """
+        ( 
+            (${SRC_ENTITY_SET_ID.name} = $firstEsidString 
+                AND ${SRC_ENTITY_KEY_ID.name} = $firstEkidString
+                AND ${DST_ENTITY_SET_ID.name} = $secondEsidString
+                AND ${DST_ENTITY_KEY_ID.name} = $secondEkidString
+            ) OR (  ${SRC_ENTITY_SET_ID.name} = $secondEsidString
+                AND ${SRC_ENTITY_KEY_ID.name} = $secondEkidString
+                AND ${DST_ENTITY_SET_ID.name} = $firstEsidString
+                AND ${DST_ENTITY_KEY_ID.name} = $firstEkidString
+            ) 
+        )
+        """.trimIndent()
     }
 }
 
@@ -456,15 +465,18 @@ private val UPDATE_LINKED_ENTITIES_SQL = """
         WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ? AND ${PARTITION.name} = ?
 """.trimIndent()
 
-private val ENTITY_KEY_IDS_NEEDING_LINKING = "SELECT ${ENTITY_SET_ID.name},${ID.name} " +
-        "FROM ${IDS.name} " +
-        "WHERE ${PARTITION.name} = ANY(?) " +
-            "AND ${ENTITY_SET_ID.name} = ? " +
-            "AND ${LAST_LINK.name} < ${LAST_WRITE.name} " +
-            "AND ( ${LAST_INDEX.name} >= ${LAST_WRITE.name} ) " +
-            "AND ( ${LAST_INDEX.name} > '-infinity'::timestamptz ) " +
-            "AND ${VERSION.name} > 0 " +
-        "LIMIT ?"
+private val ENTITY_KEY_IDS_NEEDING_LINKING = """
+        SELECT ${ENTITY_SET_ID.name},${ID.name}
+        FROM ${IDS.name}
+        WHERE ${PARTITION.name} = ANY(?)
+            AND ${ENTITY_SET_ID.name} = ?
+            AND ${LAST_LINK.name} < ${LAST_WRITE.name}
+            AND ( ${LAST_INDEX.name} >= ${LAST_WRITE.name} )
+            AND ( ${LAST_INDEX.name} > '-infinity'::timestamptz )
+            AND ${VERSION.name} > 0
+        ORDER BY ${VERSION.name} ASC
+        LIMIT ?
+        """.trimIndent()
 
 private val ENTITY_KEY_IDS_NOT_LINKED = "SELECT ${ENTITY_SET_ID.name},${ID.name} " +
         "FROM ${IDS.name} " +
