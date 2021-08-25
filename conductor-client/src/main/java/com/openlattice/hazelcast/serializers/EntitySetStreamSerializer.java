@@ -30,7 +30,7 @@ import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
 import com.openlattice.data.DataExpiration;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.EntitySetFlag;
-import com.openlattice.entitysets.StorageType;
+import com.openlattice.entitysets.StorageDriver;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.openlattice.mapstores.TestDataFactory;
 import org.springframework.stereotype.Component;
@@ -65,7 +65,7 @@ public class EntitySetStreamSerializer implements TestableSelfRegisteringStreamS
 
         StreamSerializers.serializeIntList( out, object.getPartitions() );
 
-        out.writeUTF( object.getStorageType().name() );
+        out.writeUTF( object.getStorageDriver().name() );
         out.writeUTF( object.getDatastore() );
 
         if ( object.getExpiration() != null ) {
@@ -98,7 +98,7 @@ public class EntitySetStreamSerializer implements TestableSelfRegisteringStreamS
         }
 
         LinkedHashSet<Integer> partitions = (LinkedHashSet<Integer>) StreamSerializers.deserializeIntList( in, Sets.newLinkedHashSet() );
-        StorageType storageType = StorageType.valueOf(in.readString());
+        StorageDriver storageDriver = StorageDriver.valueOf(in.readString());
         String datastore = in.readString();
         DataExpiration expiration;
         boolean hasExpiration = in.readBoolean();
@@ -120,7 +120,7 @@ public class EntitySetStreamSerializer implements TestableSelfRegisteringStreamS
                 flags,
                 partitions,
                 expiration,
-                storageType,
+                storageDriver,
                 datastore );
     }
 

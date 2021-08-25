@@ -58,9 +58,11 @@ private val logger = LoggerFactory.getLogger(DataGraphService::class.java)
 class DataGraphService(
         private val graphService: GraphService,
         private val idService: EntityKeyIdService,
-        private val eds: EntityDatastore,
+        private val datastores: Map<String, EntityDatastore>,
         private val jobService: HazelcastJobService
 ) : DataGraphManager {
+
+    private fun getDatastore( entitySetId: UUID) :
     override fun getEntitiesWithMetadata(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>, authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             metadataOptions: EnumSet<MetadataOption>

@@ -20,20 +20,19 @@
 
 package com.openlattice.authorization.mapstores;
 
+import static com.openlattice.postgres.PostgresArrays.createTextArray;
+import static com.openlattice.postgres.PostgresArrays.createUuidArray;
+
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
 import com.hazelcast.config.EntryListenerConfig;
-import com.hazelcast.config.EvictionConfig;
-import com.hazelcast.config.EvictionPolicy;
 import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.config.IndexConfig;
 import com.hazelcast.config.IndexType;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapStoreConfig;
 import com.hazelcast.config.MapStoreConfig.InitialLoadMode;
-import com.hazelcast.config.MaxSizePolicy;
-import com.hazelcast.config.NearCacheConfig;
 import com.openlattice.authorization.AceKey;
 import com.openlattice.authorization.AceValue;
 import com.openlattice.authorization.AclKey;
@@ -51,8 +50,6 @@ import com.openlattice.postgres.PostgresTableDefinition;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore;
 import com.zaxxer.hikari.HikariDataSource;
-import org.apache.commons.lang3.StringUtils;
-
 import java.sql.Array;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -62,9 +59,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
-
-import static com.openlattice.postgres.PostgresArrays.createTextArray;
-import static com.openlattice.postgres.PostgresArrays.createUuidArray;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;

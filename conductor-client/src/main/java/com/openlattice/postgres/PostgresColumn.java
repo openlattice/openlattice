@@ -536,13 +536,13 @@ public final class PostgresColumn {
     public static final PostgresColumnDefinition STATE                             =
             new PostgresColumnDefinition( "state", TEXT ).notNull();
     public static final String                   STATUS_FIELD                      = "status";
-    public static final PostgresColumnDefinition STATUS                            =
+    public static final PostgresColumnDefinition STATUS               =
             new PostgresColumnDefinition( STATUS_FIELD, TEXT ).notNull();
-    public static final String                   STORAGE_TYPE_FIELD                = "storage_type";
-    public static final PostgresColumnDefinition STORAGE_TYPE                      = new PostgresColumnDefinition(
-            STORAGE_TYPE_FIELD,
+    public static final String                   STORAGE_DRIVER_FIELD = "storage_driver";
+    public static final PostgresColumnDefinition STORAGE_DRIVER       = new PostgresColumnDefinition(
+            STORAGE_DRIVER_FIELD,
             TEXT );
-    public static final String                   TABLE_ID_FIELD                    = "table_id";
+    public static final String                   TABLE_ID_FIELD       = "table_id";
     public static final PostgresColumnDefinition TABLE_ID                          =
             new PostgresColumnDefinition( TABLE_ID_FIELD, UUID ).notNull();
     public static final String                   TAGS_FIELD                        = "tags";

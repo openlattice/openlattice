@@ -148,7 +148,7 @@ import static com.openlattice.postgres.PostgresColumn.SRC_SELECTS;
 import static com.openlattice.postgres.PostgresColumn.START_TIME;
 import static com.openlattice.postgres.PostgresColumn.STATE;
 import static com.openlattice.postgres.PostgresColumn.STATUS;
-import static com.openlattice.postgres.PostgresColumn.STORAGE_TYPE;
+import static com.openlattice.postgres.PostgresColumn.STORAGE_DRIVER;
 import static com.openlattice.postgres.PostgresColumn.TABLE_ID;
 import static com.openlattice.postgres.PostgresColumn.TAGS;
 import static com.openlattice.postgres.PostgresColumn.TEMPLATE;
@@ -247,7 +247,7 @@ public final class PostgresTable {
                             ORGANIZATION_ID,
                             ENTITY_SET_FLAGS,
                             PARTITIONS,
-                            STORAGE_TYPE,
+                            STORAGE_DRIVER,
                             DATASTORE,
                             TIME_TO_EXPIRATION,
                             EXPIRATION_BASE_FLAG,

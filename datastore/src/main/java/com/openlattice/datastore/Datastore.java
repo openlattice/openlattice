@@ -61,7 +61,8 @@ public class Datastore extends BaseRhizomeServer {
             TaskSchedulerPod.class,
             TransporterPod.class,
             TransporterConfigurationPod.class,
-            LateInitProvidersPod.class
+            LateInitProvidersPod.class,
+            NearCachesPod.class,
     };
 
     private static final Class<?>[] webPods       = new Class<?>[] {

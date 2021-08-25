@@ -62,7 +62,7 @@ import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.EntityTypePropertyKey;
 import com.openlattice.edm.type.EntityTypePropertyMetadata;
 import com.openlattice.edm.type.PropertyType;
-import com.openlattice.entitysets.StorageType;
+import com.openlattice.entitysets.StorageDriver;
 import com.openlattice.graph.NeighborhoodQuery;
 import com.openlattice.graph.NeighborhoodSelection;
 import com.openlattice.graph.edge.Edge;
@@ -224,7 +224,7 @@ import static com.openlattice.postgres.PostgresColumn.SRC_ENTITY_SET_ID;
 import static com.openlattice.postgres.PostgresColumn.SRC_ENTITY_SET_ID_FIELD;
 import static com.openlattice.postgres.PostgresColumn.SRC_SELECTS;
 import static com.openlattice.postgres.PostgresColumn.STATUS;
-import static com.openlattice.postgres.PostgresColumn.STORAGE_TYPE_FIELD;
+import static com.openlattice.postgres.PostgresColumn.STORAGE_DRIVER_FIELD;
 import static com.openlattice.postgres.PostgresColumn.TABLE_ID;
 import static com.openlattice.postgres.PostgresColumn.TAGS_FIELD;
 import static com.openlattice.postgres.PostgresColumn.TEMPLATE;
@@ -733,7 +733,7 @@ public final class ResultSetAdapters {
         final var flags = entitySetFlags( rs );
         final var partitions = partitions( rs );
         final var expirationData = dataExpiration( rs );
-        final var storageType = storageType( rs );
+        final var storageType = storageDriver( rs );
         final var datastore = datastore( rs );
         return new EntitySet( id,
                 entityTypeId,
@@ -754,8 +754,8 @@ public final class ResultSetAdapters {
         return rs.getString( DATASTORE_FIELD );
     }
 
-    public static StorageType storageType( ResultSet rs ) throws SQLException {
-        return StorageType.valueOf( rs.getString( STORAGE_TYPE_FIELD ) );
+    public static StorageDriver storageDriver( ResultSet rs ) throws SQLException {
+        return StorageDriver.valueOf( rs.getString( STORAGE_DRIVER_FIELD ) );
     }
 
     public static Integer[] partitions( ResultSet rs ) throws SQLException {

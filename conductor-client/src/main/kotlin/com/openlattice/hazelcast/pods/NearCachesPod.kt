@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
 private const val PERMISSIONS_NEAR_CACHE_TTL = 300
-/**
+/**P
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
