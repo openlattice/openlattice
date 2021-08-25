@@ -20,11 +20,18 @@
  */
 package com.openlattice.assembler
 
-import com.openlattice.analysis.requests.*
+import com.openlattice.analysis.requests.AggregationType
+import com.openlattice.analysis.requests.BaseCalculationTypes
+import com.openlattice.analysis.requests.Calculation
+import com.openlattice.analysis.requests.CalculationType
+import com.openlattice.analysis.requests.Filter
+import com.openlattice.analysis.requests.Orientation
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.PostgresTable
+import com.openlattice.postgres.external.PostgresDatabaseQueryService.Companion.entitySetNameTableName
+import com.openlattice.postgres.external.Schemas.OPENLATTICE_SCHEMA
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.StatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
@@ -142,23 +149,23 @@ class AssemblerQueryService(
         // Filters
         val srcFilterSqls = srcFilters.map {
             val colName = " $SRC_TABLE_ALIAS.${DataTables.quote(it.key)} "
-            it.value.map {
-                it.asSql(colName)
-            }.joinToString(" AND ")
+            it.value.joinToString(" AND ") { filter ->
+                filter.asSql(colName)
+            }
         }
 
         val edgeFilterSqls = edgeFilters.map {
             val colName = " $EDGE_TABLE_ALIAS.${DataTables.quote(it.key)} "
-            it.value.map {
-                it.asSql(colName)
-            }.joinToString(" AND ")
+            it.value.joinToString(" AND ") { filter ->
+                filter.asSql(colName)
+            }
         }
 
         val dstFilterSqls = dstFilters.map {
             val colName = " $DST_TABLE_ALIAS.${DataTables.quote(it.key)} "
-            it.value.map {
-                it.asSql(colName)
-            }.joinToString(" AND ")
+            it.value.joinToString(" AND ") { filter ->
+                filter.asSql(colName)
+            }
         }
 
         val allFilters = (srcFilterSqls + edgeFilterSqls + dstFilterSqls)
@@ -191,10 +198,10 @@ class AssemblerQueryService(
     private fun simpleAggregationJoinSql(srcEntitySetName: String, edgeEntitySetName: String, dstEntitySetName: String,
                                  cols: String, groupingColAliases: String, aggregateCols: String, calculationCols: String,
                                  filtersSql: String): String {
-        return "SELECT $cols, $aggregateCols $calculationCols FROM ${AssemblerConnectionManager.OPENLATTICE_SCHEMA}.${PostgresTable.E.name} " +
-                "INNER JOIN ${AssemblerConnectionManager.entitySetNameTableName(srcEntitySetName)} AS $SRC_TABLE_ALIAS USING( ${PostgresColumn.ID.name} ) " +
-                "INNER JOIN ${AssemblerConnectionManager.entitySetNameTableName(edgeEntitySetName)} AS $EDGE_TABLE_ALIAS ON( $EDGE_TABLE_ALIAS.${PostgresColumn.ID.name} = ${PostgresColumn.EDGE_COMP_2.name} ) " +
-                "INNER JOIN ${AssemblerConnectionManager.entitySetNameTableName(dstEntitySetName)} AS $DST_TABLE_ALIAS ON( $DST_TABLE_ALIAS.${PostgresColumn.ID.name} = ${PostgresColumn.EDGE_COMP_1.name} ) " +
+        return "SELECT $cols, $aggregateCols $calculationCols FROM $OPENLATTICE_SCHEMA.${PostgresTable.E.name} " +
+                "INNER JOIN ${entitySetNameTableName(srcEntitySetName)} AS $SRC_TABLE_ALIAS USING( ${PostgresColumn.ID.name} ) " +
+                "INNER JOIN ${entitySetNameTableName(edgeEntitySetName)} AS $EDGE_TABLE_ALIAS ON( $EDGE_TABLE_ALIAS.${PostgresColumn.ID.name} = ${PostgresColumn.EDGE_COMP_2.name} ) " +
+                "INNER JOIN ${entitySetNameTableName(dstEntitySetName)} AS $DST_TABLE_ALIAS ON( $DST_TABLE_ALIAS.${PostgresColumn.ID.name} = ${PostgresColumn.EDGE_COMP_1.name} ) " +
                 "WHERE ${PostgresColumn.COMPONENT_TYPES.name} = 0 $filtersSql " +
                 "GROUP BY ($groupingColAliases)"
     }

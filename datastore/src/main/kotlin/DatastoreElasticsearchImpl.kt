@@ -12,6 +12,8 @@ import com.openlattice.client.serialization.SerializationConstants
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
 import com.openlattice.conductor.rpc.SearchConfiguration
 import com.openlattice.data.EntityDataKey
+import com.openlattice.datasets.DataSet
+import com.openlattice.datasets.DataSetColumn
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.Analyzer
 import com.openlattice.edm.type.AssociationType
@@ -58,14 +60,14 @@ import java.util.stream.Collectors
 import java.util.stream.Stream
 
 class DatastoreKotlinElasticsearchImpl(
-        val config: SearchConfiguration,
-        val someClient: Optional<Client>
+        config: SearchConfiguration,
+        someClient: Optional<Client>
 ) : ConductorElasticsearchApi {
 
     constructor(config: SearchConfiguration) : this(config, Optional.empty())
 
     companion object {
-        private val MAX_CONCURRENT_SEARCHES = 3
+        private const val MAX_CONCURRENT_SEARCHES = 3
 
         private val DEFAULT_INDICES = arrayOf(
                 ConductorElasticsearchApi.ENTITY_SET_DATA_MODEL,
@@ -75,7 +77,8 @@ class DatastoreKotlinElasticsearchImpl(
                 ConductorElasticsearchApi.PROPERTY_TYPE_INDEX,
                 ConductorElasticsearchApi.APP_INDEX,
                 ConductorElasticsearchApi.ENTITY_TYPE_COLLECTION_INDEX,
-                ConductorElasticsearchApi.ENTITY_SET_COLLECTION_INDEX
+                ConductorElasticsearchApi.ENTITY_SET_COLLECTION_INDEX,
+                ConductorElasticsearchApi.DATASET_INDEX
         )
 
         private val indexNamesByObjectType = mapOf(
@@ -130,6 +133,7 @@ class DatastoreKotlinElasticsearchImpl(
         return when (indexName) {
             ConductorElasticsearchApi.ENTITY_SET_DATA_MODEL -> initializeEntitySetDataModelIndex()
             ConductorElasticsearchApi.ORGANIZATIONS -> initializeOrganizationIndex()
+            ConductorElasticsearchApi.DATASET_INDEX -> initializeDatasetIndex()
             else -> {
                 initializeDefaultIndex(indexName, typeNamesByIndexName[indexName])
             }
@@ -137,7 +141,7 @@ class DatastoreKotlinElasticsearchImpl(
     }
 
     override fun getEntityTypesWithIndices(): Set<UUID>? {
-        return Stream.of(*client!!.admin().indices().prepareGetIndex().setFeatures().get().indices)
+        return Stream.of(*client.admin().indices().prepareGetIndex().setFeatures().get().indices)
                 .filter { s: String -> s.startsWith(ConductorElasticsearchApi.DATA_INDEX_PREFIX) }
                 .map { s: String -> UUID.fromString(s.substring(ConductorElasticsearchApi.DATA_INDEX_PREFIX.length)) }
                 .collect(Collectors.toSet())
@@ -175,7 +179,7 @@ class DatastoreKotlinElasticsearchImpl(
 
     // @formatter:on
     private fun indexExists(indexName: String?): Boolean {
-        return client!!.admin().indices().prepareExists(indexName).execute().actionGet().isExists
+        return client.admin().indices().prepareExists(indexName).execute().actionGet().isExists
     }
 
     private fun initializeEntitySetDataModelIndex(): Boolean {
@@ -222,7 +226,7 @@ class DatastoreKotlinElasticsearchImpl(
                         ImmutableMap.of(ConductorElasticsearchApi.MAPPING_PROPERTIES, properties.build())
                 )
         return try {
-            client!!.admin().indices().prepareCreate(ConductorElasticsearchApi.ENTITY_SET_DATA_MODEL)
+            client.admin().indices().prepareCreate(ConductorElasticsearchApi.ENTITY_SET_DATA_MODEL)
                     .setSettings(getMetaphoneSettings(5))
                     .addMapping(ConductorElasticsearchApi.ENTITY_SET_TYPE, mapping)
                     .execute().actionGet()
@@ -253,7 +257,7 @@ class DatastoreKotlinElasticsearchImpl(
                 ConductorElasticsearchApi.MAPPING_PROPERTIES,
                 properties
         )
-        client!!.admin().indices().prepareCreate(ConductorElasticsearchApi.ORGANIZATIONS)
+        client.admin().indices().prepareCreate(ConductorElasticsearchApi.ORGANIZATIONS)
                 .setSettings(
                         Settings.builder()
                                 .put(ConductorElasticsearchApi.NUM_SHARDS, 5)
@@ -267,6 +271,36 @@ class DatastoreKotlinElasticsearchImpl(
         return true
     }
 
+    private fun initializeDatasetIndex(): Boolean {
+        if (!verifyElasticsearchConnection()) {
+            return false
+        }
+        if (indexExists(ConductorElasticsearchApi.DATASET_INDEX)) {
+            return true
+        }
+
+        // entity_set type mapping
+        val properties = ImmutableMap.builder<String, Any>()
+        properties.put(ConductorElasticsearchApi.COLUMNS, ImmutableMap.of(ConductorElasticsearchApi.TYPE, ConductorElasticsearchApi.NESTED))
+        properties.put(ConductorElasticsearchApi.DATASET, ImmutableMap.of(ConductorElasticsearchApi.TYPE, ConductorElasticsearchApi.OBJECT))
+        val typeTextAnalyzerMetaphoneAnalyzer: Map<String, String> = ImmutableMap
+                .of(ConductorElasticsearchApi.TYPE, ConductorElasticsearchApi.TEXT, ConductorElasticsearchApi.ANALYZER, ConductorElasticsearchApi.METAPHONE_ANALYZER)
+        properties.put(ConductorElasticsearchApi.DATASET + "." + SerializationConstants.TITLE_FIELD, typeTextAnalyzerMetaphoneAnalyzer)
+        properties.put(ConductorElasticsearchApi.DATASET + "." + SerializationConstants.DESCRIPTION_FIELD, typeTextAnalyzerMetaphoneAnalyzer)
+        val mapping: Map<String, Any> = ImmutableMap
+                .of<String, Any>(ConductorElasticsearchApi.DATASET, ImmutableMap.of(ConductorElasticsearchApi.MAPPING_PROPERTIES, properties.build()))
+        return try {
+            client.admin().indices().prepareCreate(ConductorElasticsearchApi.DATASET_INDEX)
+                    .setSettings(getMetaphoneSettings(5))
+                    .addMapping(ConductorElasticsearchApi.DATASET, mapping)
+                    .execute().actionGet()
+            true
+        } catch (e: IOException) {
+            logger.error("Unable to initialize entity set data model index", e)
+            false
+        }
+    }
+
     private fun initializeDefaultIndex(indexName: String?, typeName: String?): Boolean {
         if (!verifyElasticsearchConnection()) {
             return false
@@ -275,7 +309,7 @@ class DatastoreKotlinElasticsearchImpl(
             return true
         }
         val mapping: Map<String?, Any> = ImmutableMap.of<String?, Any>(typeName, ImmutableMap.of<Any, Any>())
-        client!!.admin().indices().prepareCreate(indexName)
+        client.admin().indices().prepareCreate(indexName)
                 .setSettings(
                         Settings.builder()
                                 .put(ConductorElasticsearchApi.NUM_SHARDS, 5)
@@ -322,7 +356,6 @@ class DatastoreKotlinElasticsearchImpl(
                 fieldMapping[ConductorElasticsearchApi.TYPE] = ConductorElasticsearchApi.GEO_POINT
             }
             EdmPrimitiveTypeKind.Guid -> {
-                fieldMapping[ConductorElasticsearchApi.INDEX] = "false"
                 fieldMapping[ConductorElasticsearchApi.TYPE] = ConductorElasticsearchApi.KEYWORD
             }
             else -> {
@@ -352,14 +385,14 @@ class DatastoreKotlinElasticsearchImpl(
         val entityTypeId = entityType.id
         val indexName = getIndexName(entityTypeId)
         val typeName = getTypeName(entityTypeId)
-        val exists = client!!.admin().indices()
+        val exists = client.admin().indices()
                 .prepareExists(indexName).execute().actionGet().isExists
         if (exists) {
             return true
         }
         val entityTypeMapping = prepareEntityTypeDataMappings(typeName, propertyTypes)
         try {
-            client!!.admin().indices().prepareCreate(indexName)
+            client.admin().indices().prepareCreate(indexName)
                     .setSettings(getMetaphoneSettings(entityType.shards))
                     .addMapping(typeName, entityTypeMapping)
                     .execute().actionGet()
@@ -380,7 +413,7 @@ class DatastoreKotlinElasticsearchImpl(
         request.type(typeName)
         request.source(entityTypeDataMapping)
         try {
-            client!!.admin().indices().putMapping(request).actionGet()
+            client.admin().indices().putMapping(request).actionGet()
         } catch (e: IllegalStateException) {
             logger.debug("unable to add mapping to entity type data index for {}", entityType.id)
         }
@@ -436,7 +469,7 @@ class DatastoreKotlinElasticsearchImpl(
         )
         try {
             val s = ObjectMappers.getJsonMapper().writeValueAsString(entitySetDataModel)
-            client!!.prepareIndex(
+            client.prepareIndex(
                     ConductorElasticsearchApi.ENTITY_SET_DATA_MODEL,
                     ConductorElasticsearchApi.ENTITY_SET_TYPE,
                     entitySet.id.toString()
@@ -471,7 +504,7 @@ class DatastoreKotlinElasticsearchImpl(
         if (!verifyElasticsearchConnection()) {
             return false
         }
-        client!!.prepareDelete(
+        client.prepareDelete(
                 ConductorElasticsearchApi.ENTITY_SET_DATA_MODEL,
                 ConductorElasticsearchApi.ENTITY_SET_TYPE,
                 entitySetId.toString()
@@ -551,7 +584,7 @@ class DatastoreKotlinElasticsearchImpl(
         val entityKeyId = edk.entityKeyId
         val data = formatEntity(entitySetId, propertyValues)
         if (data != null) {
-            client!!.prepareIndex(getIndexName(entityTypeId), getTypeName(entityTypeId), entityKeyId.toString())
+            client.prepareIndex(getIndexName(entityTypeId), getTypeName(entityTypeId), entityKeyId.toString())
                     .setSource(data, XContentType.JSON)
                     .execute().actionGet()
         }
@@ -569,12 +602,12 @@ class DatastoreKotlinElasticsearchImpl(
         if (!entitiesById.isEmpty()) {
             val indexName = getIndexName(entityTypeId)
             val indexType = getTypeName(entityTypeId)
-            val requestBuilder = client!!.prepareBulk()
+            val requestBuilder = client.prepareBulk()
             entitiesById.forEach { (entityKeyId: UUID, entityData: Map<UUID, Set<Any?>>) ->
                 val data = formatEntity(entitySetId, entityData)
                 if (data != null) {
                     requestBuilder.add(
-                            client!!.prepareIndex(indexName, indexType, entityKeyId.toString())
+                            client.prepareIndex(indexName, indexType, entityKeyId.toString())
                                     .setSource(data, XContentType.JSON)
                     )
                 }
@@ -600,15 +633,15 @@ class DatastoreKotlinElasticsearchImpl(
         if (!verifyElasticsearchConnection()) {
             return false
         }
-        if (!entitiesByLinkingId.isEmpty()) {
+        if (entitiesByLinkingId.isNotEmpty()) {
             val indexName = getIndexName(entityTypeId)
             val indexType = getTypeName(entityTypeId)
-            val requestBuilder = client!!.prepareBulk()
+            val requestBuilder = client.prepareBulk()
             entitiesByLinkingId.forEach { (linkingId: UUID, entityValues: Map<UUID, Map<UUID, Map<UUID, Set<Any>>>>) ->
                 val data = formatLinkedEntity(entityValues)
                 if (data != null) {
                     requestBuilder.add(
-                            client!!.prepareIndex(indexName, indexType, linkingId.toString())
+                            client.prepareIndex(indexName, indexType, linkingId.toString())
                                     .setSource(data, XContentType.JSON)
                     )
                 }
@@ -633,10 +666,10 @@ class DatastoreKotlinElasticsearchImpl(
         }
         val index = getIndexName(entityTypeId)
         val type = getTypeName(entityTypeId)
-        val request = client!!.prepareBulk()
+        val request = client.prepareBulk()
         entityKeyIds.forEach(Consumer { entityKeyId: UUID ->
             request.add(
-                    client!!.prepareDelete(
+                    client.prepareDelete(
                             index,
                             type,
                             entityKeyId.toString()
@@ -899,7 +932,7 @@ class DatastoreKotlinElasticsearchImpl(
                                     .termQuery(ConductorElasticsearchApi.ENTITY_SET_ID_FIELD, entitySetId.toString())
                     ) // match entity set id
                 }
-                val request = client!!
+                val request = client
                         .prepareSearch(getIndexName(entityTypesByEntitySetId[entitySetId]))
                         .setQuery(query)
                         .setTrackTotalHits(true)
@@ -913,7 +946,7 @@ class DatastoreKotlinElasticsearchImpl(
         if (requests.requests().isEmpty()) {
             return EntityDataKeySearchResult(0, ImmutableList.of())
         }
-        val response = client!!.multiSearch(requests).actionGet()
+        val response = client.multiSearch(requests).actionGet()
         return getEntityDataKeySearchResult(response)
     }
 
@@ -941,7 +974,7 @@ class DatastoreKotlinElasticsearchImpl(
         valuesQuery.minimumShouldMatch(1)
         val query = QueryBuilders.boolQuery().must(valuesQuery)
                 .must(QueryBuilders.existsQuery(ConductorElasticsearchApi.ENTITY_SET_ID_FIELD))
-        return client!!.prepareSearch(getIndexName(entityTypeId))
+        return client.prepareSearch(getIndexName(entityTypeId))
                 .setQuery(query)
                 .setFrom(0)
                 .setSize(size)
@@ -985,7 +1018,7 @@ class DatastoreKotlinElasticsearchImpl(
                     id.toString()
             )
                     .doc(s, XContentType.JSON)
-            client!!.update(updateRequest).actionGet()
+            client.update(updateRequest).actionGet()
             return true
         } catch (e: IOException) {
             logger.debug("error updating organization in elasticsearch")
@@ -1035,12 +1068,64 @@ class DatastoreKotlinElasticsearchImpl(
     ): Boolean {
         if (securableObjectType == SecurableObjectType.EntityType || (securableObjectType
                         == SecurableObjectType.AssociationType)) {
-            client!!.admin().indices()
+            client.admin().indices()
                     .delete(DeleteIndexRequest(getIndexName(objectId)))
         }
         val indexName = indexNamesByObjectType[securableObjectType]
         val typeName = typeNamesByIndexName[indexName]
         return deleteObjectById(indexName, typeName, objectId.toString())
+    }
+
+    override fun searchDataSetMetadata(
+        dataSetIds: Set<UUID>,
+        constraints: List<ConstraintGroup>,
+        start: Int,
+        maxHits: Int
+    ): SearchResult {
+
+        if (!verifyElasticsearchConnection()) {
+            return SearchResult(0, emptyList())
+        }
+
+        val query = BoolQueryBuilder()
+
+        for (group in constraints) {
+            val groupQuery = QueryBuilders.boolQuery().minimumShouldMatch(group.minimumMatches)
+            for (constraint in group.constraints) {
+                when (val searchType = constraint.searchType) {
+                    SearchType.simple -> {
+                        var searchTerm = constraint.searchTerm.get()
+                        if (constraint.fuzzy.orElse(false))
+                            searchTerm = getFormattedFuzzyString(searchTerm)
+                        groupQuery.should(
+                            QueryBuilders.queryStringQuery(searchTerm).lenient(true)
+                        )
+                    }
+                    // TODO: support other search types
+                    else -> {
+                        throw UnsupportedOperationException("\"${searchType}\" search type is not yet supported")
+                    }
+                }
+            }
+            query.must(groupQuery)
+        }
+
+        query.filter(
+            QueryBuilders.idsQuery().addIds(*dataSetIds.map { it.toString() }.toTypedArray())
+        )
+
+        val response = client
+            .prepareSearch(ConductorElasticsearchApi.DATASET_INDEX)
+            .setFetchSource(ConductorElasticsearchApi.DATASET, null)
+            .setQuery(query)
+            .setFrom(start)
+            .setSize(maxHits)
+            .setTrackTotalHits(true)
+            .execute()
+            .actionGet()
+
+        val hits = response.hits.map { it.sourceAsMap[ConductorElasticsearchApi.DATASET] as Map<String, Any> }
+        return SearchResult(response.hits.totalHits.value, hits)
     }
 
     override fun updateEntitySetMetadata(entitySet: EntitySet): Boolean {
@@ -1056,7 +1141,7 @@ class DatastoreKotlinElasticsearchImpl(
                     ConductorElasticsearchApi.ENTITY_SET_TYPE,
                     entitySet.id.toString()
             ).doc(s, XContentType.JSON)
-            client!!.update(updateRequest).actionGet()
+            client.update(updateRequest).actionGet()
             return true
         } catch (e: IOException) {
             logger.debug("error updating entity set metadata in elasticsearch")
@@ -1077,7 +1162,7 @@ class DatastoreKotlinElasticsearchImpl(
                     ConductorElasticsearchApi.ENTITY_SET_TYPE,
                     entitySetId.toString()
             ).doc(s, XContentType.JSON)
-            client!!.update(updateRequest).actionGet()
+            client.update(updateRequest).actionGet()
             return true
         } catch (e: IOException) {
             logger.debug("error updating property types of entity set in elasticsearch")
@@ -1091,7 +1176,7 @@ class DatastoreKotlinElasticsearchImpl(
         }
         try {
             val s = ObjectMappers.getJsonMapper().writeValueAsString(getOrganizationObject(organization))
-            client!!.prepareIndex(
+            client.prepareIndex(
                     ConductorElasticsearchApi.ORGANIZATIONS,
                     ConductorElasticsearchApi.ORGANIZATION_TYPE,
                     organization.id.toString()
@@ -1117,7 +1202,7 @@ class DatastoreKotlinElasticsearchImpl(
         val typeName = typeNamesByIndexName[indexName]
         val query: QueryBuilder = QueryBuilders.queryStringQuery(getFormattedFuzzyString(searchTerm)).fields(fieldsMap)
                 .lenient(true)
-        val response = client!!.prepareSearch(indexName)
+        val response = client.prepareSearch(indexName)
                 .setTypes(typeName)
                 .setQuery(query)
                 .setFrom(start)
@@ -1154,7 +1239,7 @@ class DatastoreKotlinElasticsearchImpl(
                                         ".*$name.*"
                                 )
                 )
-        val response = client!!.prepareSearch(indexName)
+        val response = client.prepareSearch(indexName)
                 .setTypes(typeName)
                 .setQuery(query)
                 .setFrom(start)
@@ -1202,7 +1287,7 @@ class DatastoreKotlinElasticsearchImpl(
                         }.toTypedArray())
         )
 
-        val response = client!!.prepareSearch(ConductorElasticsearchApi.ORGANIZATIONS)
+        val response = client.prepareSearch(ConductorElasticsearchApi.ORGANIZATIONS)
                 .setTypes(ConductorElasticsearchApi.ORGANIZATION_TYPE)
                 .setQuery(query)
                 .setFrom(start)
@@ -1274,7 +1359,7 @@ class DatastoreKotlinElasticsearchImpl(
                         }.toTypedArray())
         )
 
-        val response = client!!.prepareSearch(ConductorElasticsearchApi.ENTITY_SET_DATA_MODEL)
+        val response = client.prepareSearch(ConductorElasticsearchApi.ENTITY_SET_DATA_MODEL)
                 .setTypes(ConductorElasticsearchApi.ENTITY_SET_TYPE)
                 .setQuery(query)
                 .setFetchSource(
@@ -1355,7 +1440,7 @@ class DatastoreKotlinElasticsearchImpl(
 
     //TODO: Seems dangerous and like we should delete?
     fun clearAllData(): Boolean {
-        client!!.admin().indices()
+        client.admin().indices()
                 .delete(DeleteIndexRequest(ConductorElasticsearchApi.DATA_INDEX_PREFIX + "*"))
         DeleteByQueryRequestBuilder(client, DeleteByQueryAction.INSTANCE)
                 .filter(QueryBuilders.matchAllQuery()).source(
@@ -1386,7 +1471,7 @@ class DatastoreKotlinElasticsearchImpl(
         }
         try {
             val s = ObjectMappers.getJsonMapper().writeValueAsString(obj)
-            client!!.prepareIndex(index, type, id)
+            client.prepareIndex(index, type, id)
                     .setSource(s, XContentType.JSON)
                     .execute().actionGet()
             return true
@@ -1400,7 +1485,7 @@ class DatastoreKotlinElasticsearchImpl(
         if (!verifyElasticsearchConnection()) {
             return false
         }
-        client!!.prepareDelete(index, type, id).execute().actionGet()
+        client.prepareDelete(index, type, id).execute().actionGet()
         return true
     }
 
@@ -1545,4 +1630,119 @@ class DatastoreKotlinElasticsearchImpl(
         verifyElasticsearchConnection()
     }
 
+    //
+    // data set indexing
+    //
+
+    override fun deleteIndexedDataSet(dataSetId: UUID): Boolean {
+
+        if (!verifyElasticsearchConnection()) {
+            return false
+        }
+
+        try {
+            client
+                .prepareDelete(
+                    ConductorElasticsearchApi.DATASET_INDEX,
+                    ConductorElasticsearchApi.DATASET,
+                    dataSetId.toString()
+                )
+                .execute()
+                .actionGet()
+            logger.info("successfully deleted data set {} from elasticsearch", dataSetId)
+            return true
+        } catch (e: Exception) {
+            logger.error("error while deleting data set {} from elasticsearch", dataSetId, e)
+        }
+
+        return false
+    }
+
+    override fun indexDataSet(dataSet: DataSet, columns: List<DataSetColumn?>): Boolean {
+
+        if (!verifyElasticsearchConnection()) {
+            return false
+        }
+
+        try {
+            val objectToIndex = ImmutableMap.of(
+                ConductorElasticsearchApi.DATASET, dataSet,
+                ConductorElasticsearchApi.COLUMNS, columns
+            )
+            val objectToIndexAsString = ObjectMappers.getJsonMapper().writeValueAsString(objectToIndex)
+            client
+                .prepareIndex(
+                    ConductorElasticsearchApi.DATASET_INDEX,
+                    ConductorElasticsearchApi.DATASET,
+                    dataSet.id.toString()
+                )
+                .setSource(objectToIndexAsString, XContentType.JSON)
+                .execute()
+                .actionGet()
+            logger.info("successfully indexed data set {} in elasticsearch", dataSet.id)
+            return true
+        } catch (e: Exception) {
+            logger.error("error while indexing data set {} in elasticsearch", dataSet.id, e)
+        }
+
+        return false
+    }
+
+    override fun updateIndexedDataSet(dataSet: DataSet): Boolean {
+
+        if (!verifyElasticsearchConnection()) {
+            return false
+        }
+
+        try {
+            val objectToIndex = ImmutableMap.of(ConductorElasticsearchApi.DATASET, dataSet)
+            val objectToIndexAsString = ObjectMappers.getJsonMapper().writeValueAsString(objectToIndex)
+            client
+                .prepareUpdate(
+                    ConductorElasticsearchApi.DATASET_INDEX,
+                    ConductorElasticsearchApi.DATASET,
+                    dataSet.id.toString()
+                )
+                .setDoc(objectToIndexAsString, XContentType.JSON)
+                .execute()
+                .actionGet()
+            logger.info("successfully updated data set {} in elasticsearch", dataSet.id)
+            return true
+        } catch (e: Exception) {
+            logger.error("error while updating data set {} in elasticsearch", dataSet.id, e)
+        }
+
+        return false
+    }
+
+    override fun updateIndexedDataSetColumns(dataSetId: UUID, columns: List<DataSetColumn?>): Boolean {
+
+        if (!verifyElasticsearchConnection()) {
+            return false
+        }
+
+        try {
+            val objectToIndex = ImmutableMap.of(ConductorElasticsearchApi.COLUMNS, columns)
+            val objectToIndexAsString = ObjectMappers.getJsonMapper().writeValueAsString(objectToIndex)
+            client
+                .prepareUpdate(
+                    ConductorElasticsearchApi.DATASET_INDEX,
+                    ConductorElasticsearchApi.DATASET,
+                    dataSetId.toString()
+                )
+                .setDoc(objectToIndexAsString, XContentType.JSON)
+                .execute()
+                .actionGet()
+            logger.info("successfully updated data set {} columns in elasticsearch", dataSetId)
+            return true
+        } catch (e: Exception) {
+            // NOTE: it is currently expected for elasticsearch to throw DocumentMissingException when a data set
+            // has been deleted because BackgroundExternalDatabaseSyncingService first deletes the table,
+            // which clears the data set document from elasticsearch, and then deletes the columns,
+            // which is when elasticsearch will throw because the data set document no longer exists
+            logger.error("error while updating data set {} columns in elasticsearch", dataSetId, e)
+        }
+
+        return false
+    }
 }

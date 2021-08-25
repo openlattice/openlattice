@@ -21,12 +21,7 @@
 
 package com.openlattice.graph
 
-import com.openlattice.analysis.requests.AggregationType
-import com.openlattice.analysis.requests.DoubleRangeFilter
-import com.openlattice.analysis.requests.WeightedRankingAggregation
 import com.openlattice.serializer.AbstractJacksonSerializationTest
-import org.junit.Test
-import java.util.*
 
 /**
  *

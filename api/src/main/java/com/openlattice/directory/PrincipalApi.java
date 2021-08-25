@@ -25,6 +25,7 @@ import com.openlattice.authorization.SecurablePrincipal;
 import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.directory.pojo.DirectedAclKeys;
 import com.openlattice.organization.roles.Role;
+import com.openlattice.search.Auth0UserSearchFields;
 import retrofit2.http.Body;
 import retrofit2.http.DELETE;
 import retrofit2.http.GET;
@@ -84,6 +85,9 @@ public interface PrincipalApi {
     @GET( BASE + USERS + USER_ID_PATH )
     User getUser( @Path( USER_ID ) String userId );
 
+    @POST( BASE + USERS )
+    Map<String, User> getUsers( @Body Set<String> userIds );
+
     @GET( BASE + DB )
     MaterializedViewAccount getMaterializedViewAccount();
 
@@ -95,6 +99,9 @@ public interface PrincipalApi {
 
     @GET( BASE + USERS + SEARCH_EMAIL + EMAIL_SEARCH_QUERY_PATH )
     Map<String, Auth0UserBasic> searchAllUsersByEmail( @Path( SEARCH_QUERY ) String emailSearchQuery );
+
+    @POST( BASE + USERS + SEARCH )
+    Map<String, User> searchUsers( @Body Auth0UserSearchFields fields );
 
     /**
      * Activates a user in the OpenLattice system. This call must be made once before a user will be available for use

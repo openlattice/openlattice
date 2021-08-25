@@ -21,8 +21,16 @@
 
 package com.openlattice.tasks
 
-import com.openlattice.assembler.AssemblerConnectionManager
-import com.openlattice.assembler.AssemblerConnectionManagerDependent
+import com.openlattice.data.DataGraphService
+import com.openlattice.data.storage.ByteBlobDataManager
+import com.openlattice.data.storage.DataSourceResolver
+import com.openlattice.hazelcast.serializers.decorators.ByteBlobDataManagerAware
+import com.openlattice.hazelcast.serializers.decorators.DataGraphAware
+import com.openlattice.hazelcast.serializers.decorators.MetastoreAware
+import com.openlattice.ids.HazelcastIdGenerationService
+import com.openlattice.ids.IdGenerationServiceDependent
+import com.openlattice.ioc.providers.LateInitAware
+import com.openlattice.ioc.providers.LateInitProvider
 import com.openlattice.transporter.types.TransporterDatastore
 import com.openlattice.transporter.types.TransporterDependent
 import org.slf4j.LoggerFactory
@@ -38,16 +46,40 @@ private val logger = LoggerFactory.getLogger(PostConstructInitializerTaskDepende
 @Component
 class PostConstructInitializerTaskDependencies : HazelcastTaskDependencies {
     @Inject
-    private lateinit var accessConnectionManager: AssemblerConnectionManager
-
-    @Inject
-    private lateinit var acmDependentStreamSerializers: Set<AssemblerConnectionManagerDependent<out Any>>
-
-    @Inject
     private lateinit var transporterDatastore: TransporterDatastore
 
     @Inject
     private lateinit var transporterDependent: Set<TransporterDependent<out Any>>
+
+    @Inject
+    private lateinit var byteBlobDataManager: ByteBlobDataManager
+
+    @Inject
+    private lateinit var idService: HazelcastIdGenerationService
+
+    @Inject
+    private lateinit var byteBlobDataManagerAware: Set<ByteBlobDataManagerAware>
+
+    @Inject
+    private lateinit var idGenerationServiceDependent: Set<IdGenerationServiceDependent>
+
+    @Inject
+    private lateinit var dataGraphAware: Set<DataGraphAware>
+
+    @Inject
+    private lateinit var metastoreAware: Set<MetastoreAware>
+
+    @Inject
+    private lateinit var lateInitAware: Set<LateInitAware>
+
+    @Inject
+    private lateinit var dataGraphService: DataGraphService
+
+    @Inject
+    private lateinit var resolver: DataSourceResolver
+
+    @Inject
+    private lateinit var lateInitProvider: LateInitProvider
 
     @Component
     class PostConstructInitializerTask : HazelcastInitializationTask<PostConstructInitializerTaskDependencies> {
@@ -56,13 +88,34 @@ class PostConstructInitializerTaskDependencies : HazelcastTaskDependencies {
         }
 
         override fun initialize(dependencies: PostConstructInitializerTaskDependencies) {
-            dependencies.acmDependentStreamSerializers.forEach {
-                it.init(dependencies.accessConnectionManager)
-                logger.info("Initialized ${it.javaClass} with ACM")
-            }
             dependencies.transporterDependent.forEach {
                 it.init(dependencies.transporterDatastore)
                 logger.info("Initialized ${it.javaClass} with TransporterDatastore")
+            }
+
+            dependencies.byteBlobDataManagerAware.forEach {
+                it.setByteBlobDataManager(dependencies.byteBlobDataManager)
+                logger.info("Initialized ${it.javaClass} with ByteBlobDataManager")
+            }
+
+            dependencies.idGenerationServiceDependent.forEach {
+                it.init(dependencies.idService)
+                logger.info("Initialized ${it.javaClass} with HazelcastIdGenerationService")
+            }
+
+            dependencies.metastoreAware.forEach {
+                it.setDataSourceResolver(dependencies.resolver)
+                logger.info("Initialized ${it.javaClass} with resolver")
+            }
+
+            dependencies.dataGraphAware.forEach {
+                it.setDataGraphService(dependencies.dataGraphService)
+                logger.info("Initialized ${it.javaClass} with data graph service")
+            }
+
+            dependencies.lateInitAware.forEach {
+                it.setLateInitProvider(dependencies.lateInitProvider)
+                logger.info("Initialized ${it.javaClass} with late init provider")
             }
         }
 

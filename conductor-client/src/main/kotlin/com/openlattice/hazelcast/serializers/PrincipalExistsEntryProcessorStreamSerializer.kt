@@ -11,7 +11,7 @@ class PrincipalExistsEntryProcessorStreamSerializer : NoOpSelfRegisteringStreamS
         return PrincipalExistsEntryProcessor::class.java
     }
 
-    override fun read(`in`: ObjectDataInput?): PrincipalExistsEntryProcessor {
+    override fun read(`in`: ObjectDataInput): PrincipalExistsEntryProcessor {
         return PrincipalExistsEntryProcessor()
     }
 

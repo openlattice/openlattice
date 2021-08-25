@@ -23,9 +23,9 @@ class CollectionTemplateTypeStreamSerializer : SelfRegisteringStreamSerializer<C
 
         fun deserialize(`in`: ObjectDataInput): CollectionTemplateType {
             val id = UUIDStreamSerializerUtils.deserialize(`in`)
-            val name = `in`.readUTF()
-            val title = `in`.readUTF()
-            val description = `in`.readUTF()
+            val name = `in`.readString()!!
+            val title = `in`.readString()!!
+            val description = `in`.readString()!!
             val entityTypeId = UUIDStreamSerializerUtils.deserialize(`in`)
 
             return CollectionTemplateType(id, name, title, Optional.of(description), entityTypeId)

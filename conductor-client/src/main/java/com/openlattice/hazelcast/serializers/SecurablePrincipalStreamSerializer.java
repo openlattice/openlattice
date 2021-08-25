@@ -70,8 +70,8 @@ public class SecurablePrincipalStreamSerializer implements SelfRegisteringStream
     public static SecurablePrincipal deserialize( ObjectDataInput in ) throws IOException {
         Principal principal = PrincipalStreamSerializer.deserialize( in );
         AclKey aclKey = AclKeyStreamSerializer.deserialize( in );
-        String title = in.readUTF();
-        String description = in.readUTF();
+        String title = in.readString();
+        String description = in.readString();
         switch ( principal.getType() ) {
             case ROLE:
                 return new Role( aclKey, principal, title, Optional.of( description ) );
