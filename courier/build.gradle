@@ -1,0 +1,149 @@
+/*
+ * Copyright (C) 2018. OpenLattice, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * You can contact the owner of the copyright at support@openlattice.com
+ *
+ */
+
+plugins {
+    id "java"
+    id 'maven-publish'
+    id 'signing'
+    id "eclipse"
+    id "idea"
+    id "jacoco"
+    id 'com.github.spotbugs' version '4.5.1'
+    id 'org.jetbrains.kotlin.jvm' version '1.3.61'
+    id 'org.jetbrains.kotlin.plugin.spring' version '1.3.61'
+}
+
+description = "Responsible for sending outgoing e-mails from a queue."
+group = "com.openlattice"
+
+ext.projectName = "courier"
+ext.scmUrl = 'scm:git:https://github.com/openlattice/courier.git'
+ext.connectionUrl = 'scm:git:https://github.com/openlattice/courier.git'
+ext.developerConnectionUrl = 'scm:git:https://github.com/openlattice/courier.git'
+
+apply from: "https://raw.githubusercontent.com/openlattice/gradles/master/openlattice.gradle"
+
+sourceCompatibility=JavaVersion.VERSION_11
+targetCompatibility=JavaVersion.VERSION_11
+
+spotbugs {
+    reportLevel = 'high'
+    toolVersion = "${spotbugs_annotations_version}"
+}
+
+jacoco {
+    toolVersion = "0.8.2"
+}
+
+
+spotbugsMain {
+    reports {
+        xml.enabled = false
+        html.enabled = true
+    }
+}
+
+dependencies {
+    spotbugsPlugins "com.h3xstream.findsecbugs:findsecbugs-plugin:${findsecbugs_version}"
+    compileOnly "net.jcip:jcip-annotations:${jcip_version}"
+    compileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugs_annotations_version}"
+    testCompileOnly "net.jcip:jcip-annotations:${jcip_version}"
+    testCompileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugs_annotations_version}"
+
+    compile "com.fasterxml.jackson.dataformat:jackson-dataformat-csv:${jackson_version}"
+    compile "com.esotericsoftware:kryo-shaded:${kryo_shaded_version}"
+    compile "com.esotericsoftware:minlog:${minlog_version}"
+    compile "com.esotericsoftware:reflectasm:${reflectasm_version}"
+    compile "org.objenesis:objenesis:${objenesis_version}"
+
+    compile "javax.mail:javax.mail-api:${javax_mail_api}"
+    compile "com.sun.mail:javax.mail:${sun_javax_mail_version}"
+    compile "com.sun.mail:all:${sun_mail_all_version}"
+
+    if( project.hasProperty('developmentMode') && project.developmentMode ) {
+        logger.quiet(project.name + " using project dependencies.")
+        compile project(":rhizome")
+        compile project(":scribe" )
+        testCompile( project(path: ":rhizome", configuration: "tests"))
+        testCompile( project(path: ":rhizome-client", configuration: "tests"))
+    } else {
+        logger.quiet(project.name + " using jar dependencies.")
+        compile "com.openlattice:scribe:${scribe_version}"
+        compile "com.openlattice:rhizome:${rhizome_version}"
+
+        testCompile "com.openlattice:rhizome:${rhizome_version}:tests"
+        testCompile "com.openlattice:rhizome-client:${rhizome_client_version}:tests"
+    }
+
+    /*
+     * TESTING
+     */
+    testCompile "junit:junit:${junit_version}"
+    testCompile( "org.mockito:mockito-all:${mockito_version}" ) {
+        exclude module : 'hamcrest'
+        exclude module : 'hamcrest-core'
+    }
+
+    /*
+     * GreenMail
+     * http://www.icegreen.com/greenmail/
+     * https://github.com/greenmail-mail-test/greenmail
+     *
+     * A library that provides a simple POP3/IMAP/SMTP mail server, and makes writing unit/integration tests easy for
+     * testing sending/receiving emails against a running mail server.
+     */
+    testCompile "com.icegreen:greenmail:${greenmail_version}"
+
+    testCompile( "org.mockito:mockito-all:${mockito_version}" ) {
+        exclude module : 'hamcrest'
+        exclude module : 'hamcrest-core'
+    }
+
+    /*
+     * JMustache
+     * http://mustache.github.io/
+     * https://github.com/samskivert/jmustache
+     *
+     * Java implementation of Mustache, a logic-less template system.
+     */
+    compile "com.samskivert:jmustache:${jmustache_version}"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+}
+
+install {
+	configuration = configurations.published
+}
+
+eclipse {
+    ext.downloadSources = true
+    ext.downloadJavadoc = true
+    ext.sourceCompatibility=JavaVersion.VERSION_11
+}
+
+compileKotlin {
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+}
+compileTestKotlin {
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+}
