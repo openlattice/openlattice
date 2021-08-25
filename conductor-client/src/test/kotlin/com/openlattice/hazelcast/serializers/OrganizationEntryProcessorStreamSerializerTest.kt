@@ -17,6 +17,7 @@ class OrganizationEntryProcessorStreamSerializerTest : AbstractStreamSerializerT
     private val inputOrganization = TestDataFactory.organization()
     private val outputOrganization = Organization(
             inputOrganization.securablePrincipal,
+            inputOrganization.adminRoleAclKey,
             inputOrganization.emailDomains.toMutableSet(),
             inputOrganization.members.toMutableSet(),
             inputOrganization.roles.toMutableSet(),

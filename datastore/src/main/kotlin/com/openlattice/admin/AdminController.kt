@@ -129,6 +129,7 @@ class AdminController : AdminApi, AuthorizingComponent {
 
     @Timed
     @GetMapping(value = [RELOAD_CACHE])
+    @SuppressFBWarnings("NP_ALWAYS_NULL", justification="Issue with spotbugs handling of Kotlin")
     override fun reloadCache() {
         ensureAdminAccess()
         HazelcastMap.values().forEach {
@@ -243,7 +244,7 @@ class AdminController : AdminApi, AuthorizingComponent {
     ): Map<UUID, AbstractDistributedJob<*, *>> {
         ensureAdminAccess()
         val jobs = setOf(jobId)
-        jobService.updateJob(jobs, update.status)
+        jobService.updateJob(jobId, update.status)
 
         if (update.reload) jobService.reload(jobs, true)
 

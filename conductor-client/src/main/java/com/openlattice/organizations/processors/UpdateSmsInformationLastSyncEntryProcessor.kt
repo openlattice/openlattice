@@ -9,11 +9,7 @@ data class UpdateSmsInformationLastSyncEntryProcessor(
         val lastSync: OffsetDateTime
 ) : AbstractRhizomeEntryProcessor<SmsInformationKey, SmsEntitySetInformation, Boolean>() {
     override fun process(entry: MutableMap.MutableEntry<SmsInformationKey, SmsEntitySetInformation>): Boolean {
-        val value = entry.value
-
-        if (value == null) {
-            return false
-        }
+        val value = entry.value ?: return false
 
         value.lastSync = lastSync
         entry.setValue(value)

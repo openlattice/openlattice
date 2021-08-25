@@ -25,6 +25,10 @@ import org.postgresql.util.PGobject;
 public class EntityTypeMapstore extends AbstractBasePostgresMapstore<UUID, EntityType> {
     public static final String       FULLQUALIFIED_NAME_PREDICATE = "type.fullQualifiedNameAsString";
     public static final String       PROPERTIES_INDEX             = "properties[any]";
+    public static final String       CATEGORY_INDEX               = "category";
+    public static final String       BASE_TYPE_INDEX              = "baseType";
+    public static final String       SCHEMAS_INDEX                = "schemas[any].fullQualifiedNameAsString";
+
     private final       ObjectMapper mapper;
 
     public EntityTypeMapstore( HikariDataSource hds ) {
@@ -101,7 +105,11 @@ public class EntityTypeMapstore extends AbstractBasePostgresMapstore<UUID, Entit
 
     @Override public MapConfig getMapConfig() {
         return super.getMapConfig()
-                .addIndexConfig( new IndexConfig( IndexType.HASH, PROPERTIES_INDEX ) );
+                .addIndexConfig( new IndexConfig( IndexType.HASH, FULLQUALIFIED_NAME_PREDICATE) )
+                .addIndexConfig( new IndexConfig( IndexType.HASH, PROPERTIES_INDEX ) )
+                .addIndexConfig( new IndexConfig( IndexType.HASH, BASE_TYPE_INDEX ) )
+                .addIndexConfig( new IndexConfig( IndexType.HASH, CATEGORY_INDEX ) )
+                .addIndexConfig( new IndexConfig( IndexType.HASH, SCHEMAS_INDEX ) );
     }
 
     @Override public UUID generateTestKey() {

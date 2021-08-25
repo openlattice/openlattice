@@ -64,9 +64,9 @@ public class HazelcastSchemaManager {
     public HazelcastSchemaManager(
             HazelcastInstance hazelcastInstance,
             SchemaQueryService schemaQueryService ) {
-        this.schemas = checkNotNull( HazelcastMap.SCHEMAS.getMap( hazelcastInstance ) );
-        this.propertyTypes = checkNotNull( HazelcastMap.PROPERTY_TYPES.getMap( hazelcastInstance ) );
-        this.entityTypes = checkNotNull( HazelcastMap.ENTITY_TYPES.getMap( hazelcastInstance ) );
+        this.schemas = HazelcastMap.SCHEMAS.getMap( hazelcastInstance );
+        this.propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap( hazelcastInstance );
+        this.entityTypes = HazelcastMap.ENTITY_TYPES.getMap( hazelcastInstance );
         this.schemaQueryService = schemaQueryService;
     }
 

@@ -10,6 +10,7 @@ import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.openlattice.mapstores.TestDataFactory;
 import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -46,6 +47,11 @@ public class MetadataUpdateStreamSerializer implements TestableSelfRegisteringSt
         return MetadataUpdate.class;
     }
 
+    @Override
+    public MetadataUpdate generateTestValue() {
+        return TestDataFactory.metadataUpdate();
+    }
+
     public static void serialize( ObjectDataOutput out, MetadataUpdate object ) throws IOException {
         OptionalStreamSerializers.serialize( out, object.getTitle(), ObjectDataOutput::writeUTF );
         OptionalStreamSerializers.serialize( out, object.getDescription(), ObjectDataOutput::writeUTF );
@@ -79,6 +85,8 @@ public class MetadataUpdateStreamSerializer implements TestableSelfRegisteringSt
         } else {
             out.writeBoolean( false );
         }
+        OptionalStreamSerializers
+                .serialize( out, object.getDataSourceName(), DataOutput::writeUTF );
     }
 
     public static MetadataUpdate deserialize( ObjectDataInput in ) throws IOException {
@@ -110,7 +118,6 @@ public class MetadataUpdateStreamSerializer implements TestableSelfRegisteringSt
                 }
         );
 
-
         Optional<UUID> organizationId = OptionalStreamSerializers
                 .deserialize( in, UUIDStreamSerializerUtils::deserialize );
         Optional<LinkedHashSet<Integer>> partitions = OptionalStreamSerializers
@@ -123,6 +130,8 @@ public class MetadataUpdateStreamSerializer implements TestableSelfRegisteringSt
             dataExpiration = Optional.empty();
         }
 
+        final var dataSourceName = OptionalStreamSerializers.deserialize( in, DataInput::readUTF );
+
         return new MetadataUpdate( title,
                 description,
                 name,
@@ -134,7 +143,8 @@ public class MetadataUpdateStreamSerializer implements TestableSelfRegisteringSt
                 propertyTags,
                 organizationId,
                 partitions,
-                dataExpiration );
+                dataExpiration,
+                dataSourceName );
     }
 
     private static LinkedHashSet<Integer> toLinkedHashSet( int[] array ) {
@@ -143,10 +153,5 @@ public class MetadataUpdateStreamSerializer implements TestableSelfRegisteringSt
             s.add( value );
         }
         return s;
-    }
-
-    @Override
-    public MetadataUpdate generateTestValue() {
-        return TestDataFactory.metadataUpdate();
     }
 }

@@ -50,6 +50,7 @@ public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, Entity
         ps.setArray( index++, flags );
         ps.setArray( index++, partitions );
         ps.setString( index++, value.getStorageType().name() );
+        ps.setString( index++, value.getDatastore());
         if ( value.getExpiration() == null ) {
             ps.setNull( index++, Types.NULL );
             ps.setNull( index++, Types.NULL );
@@ -77,6 +78,7 @@ public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, Entity
         ps.setArray( index++, flags );
         ps.setArray( index++, partitions );
         ps.setString( index++, value.getStorageType().name() );
+        ps.setString( index++, value.getDatastore());
         if ( value.getExpiration() == null ) {
             ps.setNull( index++, Types.NULL );
             ps.setNull( index++, Types.NULL );

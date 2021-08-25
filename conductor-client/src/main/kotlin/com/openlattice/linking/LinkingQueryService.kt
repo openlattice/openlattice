@@ -75,16 +75,12 @@ interface LinkingQueryService {
 
     fun deleteNeighborhood(entity: EntityDataKey, positiveFeedbacks: Collection<EntityKeyPair>): Int
 
-    fun deleteNeighborhoods(entitySetId: UUID, entityKeyIds: Set<UUID>): Int
-
     /**
      * Retrieve several clusters.
      * @param dataKeys The ids for the clusters to load.
      * @return The graph of scores for each cluster requested.
      */
     fun getClustersForIds(dataKeys: Set<EntityDataKey>): Map<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>>
-
-    fun deleteEntitySetNeighborhood(entitySetId: UUID): Int
 
     fun updateIdsTable(clusterId: UUID, newMember: EntityDataKey): Int
 

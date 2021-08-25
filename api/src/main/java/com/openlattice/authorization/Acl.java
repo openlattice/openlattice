@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.UUID;
 
 public class Acl {
-    protected final   List<UUID>    aclKey;
+    protected final   AclKey    aclKey;
     protected final   Iterable<Ace> aces;
     private transient int           h = 0;
 
@@ -35,12 +35,12 @@ public class Acl {
     public Acl(
             @JsonProperty( SerializationConstants.ACL_OBJECT_PATH ) List<UUID> aclKey,
             @JsonProperty( SerializationConstants.ACES ) Iterable<Ace> aces ) {
-        this.aclKey = aclKey;
+        this.aclKey = new AclKey(aclKey);
         this.aces = aces;
     }
 
     @JsonProperty( SerializationConstants.ACL_OBJECT_PATH )
-    public List<UUID> getAclKey() {
+    public AclKey getAclKey() {
         return aclKey;
     }
 

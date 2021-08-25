@@ -18,7 +18,9 @@
 
 package com.openlattice.data;
 
+import com.openlattice.EntityKeyGenerationBundle;
 import com.openlattice.data.integration.S3EntityData;
+import java.util.Map;
 import retrofit2.http.Body;
 import retrofit2.http.POST;
 
@@ -40,6 +42,7 @@ public interface DataIntegrationApi {
     // @formatter:on
 
     String ENTITY_KEY_IDS = "entityKeyIds";
+    String ENTITY_KEYS = "entityKeys";
     /**
      * To discuss paths later; perhaps batch this with EdmApi paths
      */
@@ -52,4 +55,6 @@ public interface DataIntegrationApi {
     @POST( BASE + "/" + ENTITY_KEY_IDS )
     List<UUID> getEntityKeyIds( @Body Set<EntityKey> entityKeys );
 
+    @POST( BASE + "/" + ENTITY_KEYS )
+    Map<UUID,EntityKey> generateEntityKeys( @Body EntityKeyGenerationBundle bundle );
 }

@@ -1,6 +1,5 @@
 package com.openlattice.scheduling
 
-import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.map.IMap
 import com.hazelcast.query.Predicates
 import com.openlattice.hazelcast.HazelcastMap

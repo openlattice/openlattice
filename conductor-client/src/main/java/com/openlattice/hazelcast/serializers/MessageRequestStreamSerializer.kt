@@ -32,9 +32,9 @@ class MessageRequestStreamSerializer : TestableSelfRegisteringStreamSerializer<M
         fun deserialize(`in`: ObjectDataInput): MessageRequest {
             val organizationId = UUIDStreamSerializerUtils.deserialize(`in`)
             val messageEntitySetId = UUIDStreamSerializerUtils.deserialize(`in`)
-            val messageContents = `in`.readUTF()
+            val messageContents = `in`.readString()!!
             val phoneNumbers = SetStreamSerializers.fastStringSetDeserialize(`in`)
-            val senderId = `in`.readUTF()
+            val senderId = `in`.readString()!!
             val attachment: Base64Media? = if (`in`.readBoolean()) Base64MediaStreamSerializer.deserialize(`in`) else null
             val scheduledDateTime = OffsetDateTimeStreamSerializer.deserialize(`in`)
 

@@ -42,10 +42,10 @@ class AppStreamSerializer : SelfRegisteringStreamSerializer<App> {
 
     override fun read(`in`: ObjectDataInput): App {
         val id = Optional.of(UUIDStreamSerializerUtils.deserialize(`in`))
-        val name = `in`.readUTF()
-        val title = `in`.readUTF()
-        val description = Optional.of(`in`.readUTF())
-        val url = `in`.readUTF()
+        val name = `in`.readString()!!
+        val title = `in`.readString()!!
+        val description = Optional.of(`in`.readString()!!)
+        val url = `in`.readString()!!
         val entityTypeCollectionId = UUIDStreamSerializerUtils.deserialize(`in`)
 
         val numRoles = `in`.readInt()

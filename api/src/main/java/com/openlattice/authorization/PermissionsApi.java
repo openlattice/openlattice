@@ -38,6 +38,11 @@ public interface PermissionsApi {
 
     /**
      * Adds, removes, or sets the ace for a particular acl key. Successful only if user is the owner of acl key.
+     * <p>
+     * If the action is ADD, all specified permissions will be merged into any existing sets of permissions for the given users.
+     * If the action is SET, all specified permissions will replace any existing sets of permissions for the given users.
+     * If the action is REMOVE, all specified permissions will be removed from any existing sets of permissions for the given users.
+     * </p>
      *
      * @param req The acl key, the principals, and the aces to set for that particular ace key.
      */
@@ -46,6 +51,11 @@ public interface PermissionsApi {
 
     /**
      * Adds, removes, or sets the ace for a particular set of acl keys. Successful only if user is the owner of all acl keys.
+     * <p>
+     * If the action is ADD, all specified permissions will be merged into any existing sets of permissions for the given users.
+     * If the action is SET, all specified permissions will replace any existing sets of permissions for the given users.
+     * If the action is REMOVE, all specified permissions will be removed from any existing sets of permissions for the given users.
+     * </p>
      *
      * @param req The acl key, the principals, and the aces to set for that particular ace key.
      * @return Void
