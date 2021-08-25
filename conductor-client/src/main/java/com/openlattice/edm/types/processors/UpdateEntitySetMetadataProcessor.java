@@ -47,6 +47,7 @@ public class UpdateEntitySetMetadataProcessor extends AbstractRhizomeEntryProces
             update.getContacts().ifPresent( es::setContacts );
             update.getOrganizationId().ifPresent( es::setOrganizationId );
             update.getDataExpiration().ifPresent( es::setExpiration );
+            update.getDataSourceName().ifPresent( es::setDatastore );
             entry.setValue( es );
         }
         return es;

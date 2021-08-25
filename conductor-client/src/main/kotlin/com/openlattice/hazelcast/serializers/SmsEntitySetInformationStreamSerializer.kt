@@ -44,7 +44,7 @@ class SmsEntitySetInformationStreamSerializer : SelfRegisteringStreamSerializer<
 
         @JvmStatic
         fun deserialize(input: ObjectDataInput): SmsEntitySetInformation {
-            val phoneNumber = input.readUTF()
+            val phoneNumber = input.readString()!!
             val organizationId = UUIDStreamSerializerUtils.deserialize(input)
             val entitySetIds = SetStreamSerializers.fastUUIDSetDeserialize(input)
             val tags = SetStreamSerializers.fastOrderedStringSetDeserializeFromArray(input)

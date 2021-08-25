@@ -6,7 +6,14 @@ import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.Principals
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.PostgresArrays
-import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresColumn.ACL_KEY
+import com.openlattice.postgres.PostgresColumn.ALERT_METADATA
+import com.openlattice.postgres.PostgresColumn.ALERT_TYPE
+import com.openlattice.postgres.PostgresColumn.EMAILS
+import com.openlattice.postgres.PostgresColumn.EXPIRATION_DATE
+import com.openlattice.postgres.PostgresColumn.ID_VALUE
+import com.openlattice.postgres.PostgresColumn.LAST_READ
+import com.openlattice.postgres.PostgresColumn.SEARCH_CONSTRAINTS
 import com.openlattice.postgres.PostgresTable.PERSISTENT_SEARCHES
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.BasePostgresIterable
@@ -16,8 +23,6 @@ import com.openlattice.search.requests.SearchConstraints
 import com.zaxxer.hikari.HikariDataSource
 import java.sql.Array
 import java.sql.Connection
-import java.sql.PreparedStatement
-import java.sql.Statement
 import java.time.OffsetDateTime
 import java.util.*
 
@@ -34,13 +39,13 @@ class PersistentSearchService(private val hds: HikariDataSource, private val spm
     }
 
     fun createPersistentSearch(search: PersistentSearch): UUID {
-        val connection = hds.connection
-        connection.use {
-            val ps: PreparedStatement = connection.prepareStatement(insertSql(connection, search))
-            ps.setString(1, mapper.writeValueAsString(search.searchConstraints))
-            ps.setString(2, mapper.writeValueAsString(search.alertMetadata))
-            ps.setArray(3, PostgresArrays.createTextArray(connection, search.additionalEmailAddresses))
-            ps.execute()
+        hds.connection.use { connection ->
+            connection.prepareStatement(insertSql(connection, search)).use { ps ->
+                ps.setString(1, mapper.writeValueAsString(search.searchConstraints))
+                ps.setString(2, mapper.writeValueAsString(search.alertMetadata))
+                ps.setArray(3, PostgresArrays.createTextArray(connection, search.additionalEmailAddresses))
+                ps.execute()
+            }
         }
         return search.id
     }
@@ -53,37 +58,29 @@ class PersistentSearchService(private val hds: HikariDataSource, private val spm
         }
     }
 
-    fun updatePersistentSearchLastRead(id: UUID, lastRead: OffsetDateTime) {
-        val connection = hds.connection
-        connection.use {
-            val stmt: Statement = connection.createStatement()
-            stmt.execute(updateDateSql(connection, id, false, lastRead))
-        }
-    }
-
     fun updatePersistentSearchAdditionalEmails(id: UUID, additionalEmails: Set<String>) {
-        val connection = hds.connection
-        connection.use {
-            val ps: PreparedStatement = connection.prepareStatement(updateAdditionalEmailsSql(connection, id))
-            ps.setArray(1, PostgresArrays.createTextArray(it, additionalEmails))
-            ps.execute()
+        hds.connection.use { connection ->
+            connection.prepareStatement(updateAdditionalEmailsSql(connection, id)).use { ps ->
+                ps.setArray(1, PostgresArrays.createTextArray(connection, additionalEmails))
+                ps.execute()
+            }
         }
     }
 
     fun updatePersistentSearchExpiration(id: UUID, expiration: OffsetDateTime) {
-        val connection = hds.connection
-        connection.use {
-            val stmt: Statement = connection.createStatement()
-            stmt.execute(updateDateSql(connection, id, true, expiration))
+        hds.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                stmt.execute(updateDateSql(connection, id, true, expiration))
+            }
         }
     }
 
     fun updatePersistentSearchConstraints(id: UUID, constraints: SearchConstraints) {
-        val connection = hds.connection
-        connection.use {
-            val ps: PreparedStatement = connection.prepareStatement(updateSearchConstraintsSql(connection, id))
-            ps.setString(1, mapper.writeValueAsString(constraints))
-            ps.execute()
+        hds.connection.use { connection ->
+            connection.prepareStatement(updateSearchConstraintsSql(connection, id)).use { ps ->
+                ps.setString(1, mapper.writeValueAsString(constraints))
+                ps.execute()
+            }
         }
     }
 

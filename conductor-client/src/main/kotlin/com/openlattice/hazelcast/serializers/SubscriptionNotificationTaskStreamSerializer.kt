@@ -21,11 +21,11 @@ class SubscriptionNotificationTaskStreamSerializer : SelfRegisteringStreamSerial
         return SubscriptionNotificationTask::class.java
     }
 
-    override fun write(out: ObjectDataOutput?, `object`: SubscriptionNotificationTask?) {
+    override fun write(out: ObjectDataOutput, `object`: SubscriptionNotificationTask) {
 
     }
 
-    override fun read(`in`: ObjectDataInput?): SubscriptionNotificationTask {
+    override fun read(`in`: ObjectDataInput): SubscriptionNotificationTask {
         return SubscriptionNotificationTask()
     }
 

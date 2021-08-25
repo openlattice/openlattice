@@ -109,8 +109,8 @@ public class EntityTypeStreamSerializer implements TestableSelfRegisteringStream
     public static EntityType deserialize( ObjectDataInput in ) throws IOException {
         final UUID id = UUIDStreamSerializerUtils.deserialize( in );
         final FullQualifiedName type = FullQualifiedNameStreamSerializer.deserialize( in );
-        final String title = in.readUTF();
-        final Optional<String> description = Optional.of( in.readUTF() );
+        final String title = in.readString();
+        final Optional<String> description = Optional.of( in.readString() );
         final Set<FullQualifiedName> schemas = SetStreamSerializers.deserialize( in,
                 FullQualifiedNameStreamSerializer::deserialize );
         final LinkedHashSet<UUID> keys = SetStreamSerializers.orderedDeserialize(
@@ -132,7 +132,7 @@ public class EntityTypeStreamSerializer implements TestableSelfRegisteringStream
         } else {
             baseType = Optional.empty();
         }
-        final Optional<SecurableObjectType> category = Optional.of( SecurableObjectType.valueOf( in.readUTF() ) );
+        final Optional<SecurableObjectType> category = Optional.of( SecurableObjectType.valueOf( in.readString() ) );
         final Optional<Integer> shards = Optional.of( in.readInt() );
 
         return new EntityType( id,

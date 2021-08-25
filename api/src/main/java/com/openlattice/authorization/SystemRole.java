@@ -38,7 +38,7 @@ public enum SystemRole {
         allRoles = Stream.of( values() ).map( SystemRole::getName ).collect( Collectors.toSet() );
     }
 
-    private SystemRole( String principalId ) {
+    SystemRole( String principalId ) {
         this.principal = new Principal( PrincipalType.ROLE, principalId );
     }
 
@@ -57,4 +57,4 @@ public enum SystemRole {
     public static String[] valuesAsArray() {
         return allRoles.toArray( new String[ 0 ] );
     }
-};
+}

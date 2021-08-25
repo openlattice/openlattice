@@ -1,12 +1,10 @@
 package com.openlattice.indexing
 
+import com.geekbeast.rhizome.jobs.HazelcastJobService
+import com.geekbeast.rhizome.jobs.JobStatus
 import com.google.common.base.Stopwatch
 import com.google.common.collect.ImmutableMap
-import com.google.common.collect.Iterables
-import com.hazelcast.config.IndexType
 import com.hazelcast.core.HazelcastInstance
-import com.hazelcast.query.Predicates
-import com.hazelcast.query.QueryConstants
 import com.openlattice.IdConstants
 import com.openlattice.auditing.AuditEventType
 import com.openlattice.auditing.AuditableEvent
@@ -14,10 +12,9 @@ import com.openlattice.auditing.AuditingManager
 import com.openlattice.authorization.AclKey
 import com.openlattice.data.DataDeletionManager
 import com.openlattice.data.DataGraphManager
-import com.openlattice.data.storage.DataDeletionService.Companion.MAX_BATCH_SIZE
 import com.openlattice.datastore.services.EdmManager
+import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EntitySet
-import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.indexing.configuration.IndexerConfiguration
 import org.slf4j.LoggerFactory
@@ -33,7 +30,6 @@ import javax.inject.Inject
  * and removes expired data from postgres and elasticsearch
  */
 
-const val MAX_DURATION_MILLIS = 60_000L
 const val DATA_DELETION_RATE = 30_000L
 
 class BackgroundExpiredDataDeletionService(
@@ -41,81 +37,73 @@ class BackgroundExpiredDataDeletionService(
         private val indexerConfiguration: IndexerConfiguration,
         private val auditingManager: AuditingManager,
         private val dataGraphService: DataGraphManager,
-        private val deletionManager: DataDeletionManager
+        private val deletionManager: DataDeletionManager,
+        private val entitySetManager: EntitySetManager,
+        private val jobService: HazelcastJobService
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(BackgroundExpiredDataDeletionService::class.java)!!
+        private val NON_BLOCKING_JOB_STATUSES = EnumSet.of(JobStatus.FINISHED, JobStatus.CANCELED, JobStatus.PAUSED)
     }
 
     private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
-    private val expirationLocks = HazelcastMap.EXPIRATION_LOCKS.getMap(hazelcastInstance)
 
     @Inject
     private lateinit var edm: EdmManager
 
-    init {
-        expirationLocks.addIndex(IndexType.SORTED, QueryConstants.THIS_ATTRIBUTE_NAME.value())
-    }
-
     private val taskLock = ReentrantLock()
-
-    @Suppress("UNCHECKED_CAST", "UNUSED")
-    @Scheduled(fixedRate = MAX_DURATION_MILLIS)
-    fun scavengeExpirationLocks() {
-        expirationLocks.removeAll(
-                Predicates.lessThan(
-                        QueryConstants.THIS_ATTRIBUTE_NAME.value(),
-                        System.currentTimeMillis()
-                )
-        )
-    }
 
     @Suppress("UNUSED")
     @Scheduled(fixedRate = DATA_DELETION_RATE)
     fun deleteExpiredDataFromEntitySets() {
-        logger.info("Starting background expired data deletion task.")
+        if (!indexerConfiguration.backgroundExpiredDataDeletionEnabled) {
+            logger.debug("Skipping expired data deletion as it is not enabled.")
+            return
+        }
+
         //Keep number of expired data deletion jobs under control
-        if (taskLock.tryLock()) {
-            try {
-                if (indexerConfiguration.backgroundExpiredDataDeletionEnabled) {
-                    val w = Stopwatch.createStarted()
-                    //We shuffle entity sets to make sure we have a chance to work share and index everything
-                    val lockedEntitySets = entitySets.values
-                            .filter { it.hasExpirationPolicy() }
-                            .filter { tryLockEntitySet(it) }
-                            .shuffled()
+        if (!taskLock.tryLock()) {
+            logger.debug("Not starting new expired data deletion job as an existing one is running.")
+            return
+        }
 
-                    val totalDeleted = lockedEntitySets
-                            .parallelStream()
-                            .filter { !it.isLinking }
-                            .mapToInt {
-                                deleteExpiredData(
-                                        it, edm.getPropertyTypesAsMap(
-                                        edm.getEntityType(it.entityTypeId).properties
-                                )
-                                )
-                            }
-                            .sum()
+        logger.info("Starting background expired data deletion task.")
+        try {
+            val w = Stopwatch.createStarted()
+            //We shuffle entity sets to make sure we have a chance to work share and index everything
+            val totalDeleted = entitySets.values
+                    .filter { it.hasExpirationPolicy() && !it.isLinking }
+                    .shuffled()
+                    .map {
+                        try {
+                            deleteExpiredData(it)
+                        } catch (e: Exception) {
+                            logger.error("An error occurred while trying to delete expired data for entity set {}", it.id, e)
+                            0
+                        }
+                    }
+                    .sum()
 
-                    lockedEntitySets.forEach(this::deleteIndexingLock)
+            logger.info(
+                    "Completed deleting {} expired elements in {} ms.",
+                    totalDeleted,
+                    w.elapsed(TimeUnit.MILLISECONDS)
+            )
 
-                    logger.info(
-                            "Completed deleting {} expired elements in {} ms.",
-                            totalDeleted,
-                            w.elapsed(TimeUnit.MILLISECONDS)
-                    )
-                } else {
-                    logger.info("Skipping expired data deletion as it is not enabled.")
-                }
-            } finally {
-                taskLock.unlock()
-            }
-        } else {
-            logger.info("Not starting new expired data deletion job as an existing one is running.")
+        } finally {
+            taskLock.unlock()
         }
     }
 
-    private fun deleteExpiredData(entitySet: EntitySet, propertyTypes: Map<UUID, PropertyType>): Int {
+    private fun getBatchOfExpiringEkids(entitySet: EntitySet): MutableSet<UUID> {
+        return dataGraphService.getExpiringEntitiesFromEntitySet(
+                entitySet.id,
+                entitySet.expiration!!,
+                OffsetDateTime.now()
+        ).toMutableSet()
+    }
+
+    private fun deleteExpiredData(entitySet: EntitySet): Int {
         logger.info(
                 "Starting deletion of expired data for entity set {} with id {}",
                 entitySet.name,
@@ -123,38 +111,24 @@ class BackgroundExpiredDataDeletionService(
         )
 
         var totalDeletedEntitiesCount = 0
+        var idsBatch = getBatchOfExpiringEkids(entitySet)
 
-        val expirationPT = entitySet.expiration!!.startDateProperty.map { propertyTypes[it]!! }
-        val entityKeyIds = dataGraphService.getExpiringEntitiesFromEntitySet(
-                entitySet.id,
-                entitySet.expiration!!,
-                OffsetDateTime.now(),
-                entitySet.expiration!!.deleteType,
-                expirationPT
-        )
-        while (entityKeyIds.iterator().hasNext()) {
-            val deletedEntityKeyIds: MutableSet<UUID> = mutableSetOf()
+        while (idsBatch.isNotEmpty()) {
+            val deletionJobId = deletionManager.clearOrDeleteEntities(
+                    entitySet.id,
+                    idsBatch,
+                    entitySet.expiration!!.deleteType
+            )
 
-            val chunkedEntityKeyIds = Iterables.partition(entityKeyIds, MAX_BATCH_SIZE)
+            blockUntilJobFinishedOrCanceled(deletionJobId)
 
-            for (idsChunk in chunkedEntityKeyIds) {
-                val ids = idsChunk.toSet()
+            logger.info(
+                    "Completed deleting {} expired elements from entity set {}.",
+                    idsBatch.size,
+                    entitySet.name
+            )
 
-                val writeEvent = deletionManager.clearOrDeleteEntities(
-                        entitySet.id,
-                        ids,
-                        entitySet.expiration!!.deleteType
-                )
-
-                logger.info(
-                        "Completed deleting {} expired elements from entity set {}.",
-                        writeEvent.numUpdates,
-                        entitySet.name
-                )
-
-                totalDeletedEntitiesCount += writeEvent.numUpdates
-                deletedEntityKeyIds.addAll(ids)
-            }
+            totalDeletedEntitiesCount += idsBatch.size
 
             auditingManager.recordEvents(
                     listOf(
@@ -163,23 +137,35 @@ class BackgroundExpiredDataDeletionService(
                                     AclKey(entitySet.id),
                                     AuditEventType.DELETE_EXPIRED_ENTITIES,
                                     "Expired entities deleted through BackgroundExpiredDataDeletionService",
-                                    Optional.of(deletedEntityKeyIds),
+                                    Optional.of(idsBatch),
                                     ImmutableMap.of(),
                                     OffsetDateTime.now(),
                                     Optional.empty()
                             )
                     )
             )
+
+            idsBatch = getBatchOfExpiringEkids(entitySet)
         }
+
         return totalDeletedEntitiesCount
     }
 
-    private fun tryLockEntitySet(entitySet: EntitySet): Boolean {
-        return expirationLocks.putIfAbsent(entitySet.id, System.currentTimeMillis() + MAX_DURATION_MILLIS) == null
-    }
+    private fun blockUntilJobFinishedOrCanceled(jobId: UUID) {
+        var status = jobService.getStatus(jobId)
 
-    private fun deleteIndexingLock(entitySet: EntitySet) {
-        expirationLocks.delete(entitySet.id)
-    }
+        while (!NON_BLOCKING_JOB_STATUSES.contains(status)) {
+            try {
+                Thread.sleep(1000)
+                status = jobService.getStatus(jobId)
+            } catch (e: InterruptedException) {
+                logger.error("Something bad happened while attempting to wait for job {} to complete.", jobId)
+                return
+            }
+        }
 
+        if (status != JobStatus.FINISHED) {
+            logger.info("Terminating blocking for job {} as it is {}", jobId, status)
+        }
+    }
 }

@@ -29,6 +29,7 @@ import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.hazelcast.pods.HazelcastQueuePod;
 import com.openlattice.hazelcast.pods.MapstoresPod;
 import com.openlattice.hazelcast.pods.SharedStreamSerializersPod;
+import com.openlattice.ioc.providers.LateInitProvidersPod;
 import com.openlattice.jdbc.JdbcPod;
 import com.openlattice.mail.pods.MailServicePod;
 import com.openlattice.pods.ConductorEdmSyncPod;
@@ -39,6 +40,7 @@ import com.openlattice.postgres.PostgresTablesPod;
 import com.openlattice.postgres.pods.ExternalDatabaseConnectionManagerPod;
 import com.openlattice.tasks.pods.TaskSchedulerPod;
 import com.openlattice.transporter.TransporterConfigurationPod;
+import com.openlattice.transporter.pods.TransporterInitPod;
 import com.openlattice.transporter.pods.TransporterPod;
 
 /**
@@ -63,7 +65,9 @@ public class Conductor extends RhizomeApplicationServer {
             SharedStreamSerializersPod.class,
             TaskSchedulerPod.class,
             TransporterPod.class,
-            TransporterConfigurationPod.class
+            TransporterInitPod.class,
+            TransporterConfigurationPod.class,
+            LateInitProvidersPod.class
     };
 
     static {

@@ -22,18 +22,12 @@
 package com.openlattice.auditing
 
 import com.codahale.metrics.annotation.Timed
-import com.dataloom.mappers.ObjectMappers
-import org.slf4j.LoggerFactory
-
-private val mapper = ObjectMappers.newJsonMapper()
 
 /**
  *
  * This class makes it easy for other classes to implement auditing by passing a instance of the auditable event class
  * with the appropriate data configured.
  */
-
-private val logger = LoggerFactory.getLogger(AuditingComponent::class.java)
 
 interface AuditingComponent {
 

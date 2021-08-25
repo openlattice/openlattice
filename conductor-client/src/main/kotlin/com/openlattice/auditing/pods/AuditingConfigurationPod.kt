@@ -25,12 +25,9 @@ import com.kryptnostic.rhizome.pods.ConfigurationLoader
 import com.openlattice.ResourceConfigurationLoader
 import com.openlattice.auditing.AuditingConfiguration
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer
-import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import javax.inject.Inject
-
-private val logger = LoggerFactory.getLogger(AuditingConfigurationPod::class.java)
 
 /**
  *

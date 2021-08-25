@@ -31,6 +31,7 @@ import com.openlattice.edm.set.EntitySetPropertyMetadata
 import com.openlattice.edm.type.AssociationType
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
+import com.openlattice.search.requests.EntityNeighborsFilter
 import java.util.*
 
 interface EntitySetManager {
@@ -69,6 +70,8 @@ interface EntitySetManager {
 
     fun getAssociationTypeDetailsByEntitySetIds(entitySetIds: Set<UUID>): Map<UUID, AssociationType>
 
+    fun getTransportedEntitySetsOfType(entityTypeId: UUID): Set<EntitySet>
+
     fun isAssociationEntitySet(entitySetId: UUID): Boolean
 
     @Timed
@@ -82,7 +85,9 @@ interface EntitySetManager {
 
     fun updateEntitySetPropertyMetadata(entitySetId: UUID, propertyTypeId: UUID, update: MetadataUpdate)
 
-    fun updateEntitySetMetadata(entitySetId: UUID, update: MetadataUpdate)
+    fun updateEntitySet(entitySetId: UUID, update: MetadataUpdate)
+
+    fun updateEntitySetMetadata(entitySetId: UUID, update: MetadataUpdate): EntitySet
 
     fun addLinkedEntitySets(entitySetId: UUID, linkedEntitySets: Set<UUID>): Int
 
@@ -100,12 +105,18 @@ interface EntitySetManager {
 
     fun entitySetsContainFlag(entitySetIds: Set<UUID>, flag: EntitySetFlag): Boolean
 
-    fun filterToAuthorizedNormalEntitySets(entitySetIds: Set<UUID>, permissions: EnumSet<Permission>, principals: Set<Principal>): Set<UUID>
-
     fun getPropertyTypesOfEntitySets(entitySetIds: Set<UUID>): Map<UUID, Map<UUID, PropertyType>>
 
     fun exists(entitySetId: UUID): Boolean
 
-    fun setupOrganizationMetadataAndAuditEntitySets(entitySet: EntitySet)
+    //TODO: Move these authorization functions to the right layer.
+    fun getAuthorizedNeighborEntitySets(
+            principals: Set<Principal>,
+            entitySetIds: Set<UUID>,
+            filter: EntityNeighborsFilter
+    ): EntityNeighborsFilter
+
+    fun filterToAuthorizedNormalEntitySets(entitySetIds: Set<UUID>, permissions: EnumSet<Permission>, principals: Set<Principal>): Set<UUID>
+
 
 }

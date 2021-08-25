@@ -74,9 +74,10 @@ class AuditInitializationTask(
 
         if (edmAuditEntitySet == null) {
 
-            val admins = dependencies.spm.getAllUsersWithPrincipal(dependencies.spm.lookup(SystemRole.ADMIN.principal))
-
             if (dependencies.entitySetManager.getAuditRecordEntitySetsManager().auditingTypes.isAuditingInitialized()) {
+
+                val adminRoleAclKey = dependencies.organizationsManager.getAdminRoleAclKey(IdConstants.GLOBAL_ORGANIZATION_ID.id)
+                val adminRolePrincipal = dependencies.spm.getSecurablePrincipal(adminRoleAclKey).principal
 
                 edmAuditEntitySet = EntitySet(
                         entityTypeId = dependencies.entitySetManager.getAuditRecordEntitySetsManager().auditingTypes
@@ -90,7 +91,7 @@ class AuditInitializationTask(
                         partitions = LinkedHashSet(dependencies.partitionManager.getAllPartitions())
                 )
 
-                dependencies.entitySetManager.createEntitySet(admins.first(), edmAuditEntitySet)
+                dependencies.entitySetManager.createEntitySet(adminRolePrincipal, edmAuditEntitySet)
             }
 
             val edmAuditAclKeys = dependencies.entitySetManager.getAuditRecordEntitySetsManager().auditingTypes

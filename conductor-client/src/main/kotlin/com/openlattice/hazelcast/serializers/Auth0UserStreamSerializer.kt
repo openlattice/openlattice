@@ -24,7 +24,7 @@ class Auth0UserStreamSerializer : SelfRegisteringStreamSerializer<User> {
         }
 
         fun deserialize(input: ObjectDataInput): User {
-            return mapper.readValue(input.readByteArray())
+            return mapper.readValue(input.readByteArray()!!)
         }
     }
 

@@ -39,7 +39,7 @@ public interface DataApi {
     String BASE                  = SERVICE + CONTROLLER;
     // @formatter:on
 
-    String ASSOCIATION           = "association";
+    String ASSOCIATION = "association";
 
     int    MAX_BATCH_SIZE        = 10_000;
     String COUNT                 = "count";
@@ -50,12 +50,15 @@ public interface DataApi {
      */
 
     String ALL                   = "all";
+    String BINARY                = "binary";
+    String BLOCK                 = "block";
     String PROPERTIES            = "properties";
     String ENTITY_SET            = "set";
     String ENTITY_SET_ID         = "setId";
     String S3_URL                = "s3Url";
     String S3_URLS               = "s3Urls";
     String FILE_TYPE             = "fileType";
+    String FILTERED              = "filtered";
     String NEIGHBORS             = "neighbors";
     String PARTIAL               = "partial";
     String DETAILED              = "detailed";
@@ -92,6 +95,12 @@ public interface DataApi {
     List<UUID> createEntities(
             @Query( ENTITY_SET_ID ) UUID entitySetId,
             @Body List<Map<UUID, Set<Object>>> entities );
+
+    @POST( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + FILTERED )
+    Iterable<Map<FullQualifiedName, Set<Object>>> loadFilteredEntitySetData(
+            @Path( ENTITY_SET_ID ) UUID entitySetId,
+            @Body FilteredDataPageDefinition filteredDataPageDefinition
+    );
 
     /**
      * Replaces a single entity from an entity set.
@@ -171,13 +180,12 @@ public interface DataApi {
     @POST( BASE )
     DataGraphIds createEntityAndAssociationData( @Body DataGraph data );
 
-
     /**
      * Deletes the entities matching the given entity ids and all of its neighbor entities provided in the filter.
      *
      * @param entitySetId The id of the EntitySet to delete from.
-     * @param filter EntityNeighboursFilter containing which ids of entities to delete and entity set ids of neighbours
-     *               to delete from.
+     * @param filter      EntityNeighboursFilter containing which ids of entities to delete and entity set ids of neighbours
+     *                    to delete from.
      * @param deleteType  The delete type to perform (soft or hard delete).
      */
     @POST( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + NEIGHBORS )
@@ -193,7 +201,7 @@ public interface DataApi {
      * @param deleteType  The delete type to perform (soft or hard delete).
      */
     @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ALL )
-    Integer deleteAllEntitiesFromEntitySet(
+    UUID deleteAllEntitiesFromEntitySet(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Query( TYPE ) DeleteType deleteType );
 
@@ -208,7 +216,8 @@ public interface DataApi {
     Integer deleteEntity(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Path( ENTITY_KEY_ID ) UUID entityKeyId,
-            @Query( TYPE ) DeleteType deleteType );
+            @Query( TYPE ) DeleteType deleteType,
+            @Query( BLOCK ) boolean blockUntilCompletion );
 
     /**
      * Deletes multiple entities from an entity set.
@@ -221,7 +230,8 @@ public interface DataApi {
     Integer deleteEntities(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Body Set<UUID> entityKeyIds,
-            @Query( TYPE ) DeleteType deleteType );
+            @Query( TYPE ) DeleteType deleteType,
+            @Query( BLOCK ) boolean blockUntilCompletion );
 
     /**
      * Deletes properties from an entity.
@@ -287,13 +297,25 @@ public interface DataApi {
      * Loads a linked entity set breakdown with the selected linked entities and properties.
      *
      * @param linkedEntitySetId The id of the linked entity set to load.
-     * @param selection The selection of properties and linking ids to load.
+     * @param selection         The selection of properties and linking ids to load.
      * @return Returns linked entity set data detailed in a Map mapped by linking id, (normal) entity set id, origin id,
      * property type full qualified name and values respectively.
      */
-    @POST( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + DETAILED  )
+    @POST( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + DETAILED )
     Map<UUID, Map<UUID, Map<UUID, Map<FullQualifiedName, Set<Object>>>>> loadLinkedEntitySetBreakdown(
             @Path( ENTITY_SET_ID ) UUID linkedEntitySetId,
             @Body EntitySetSelection selection
     );
+
+    /**
+     * Loads a presigned URL for a particular binary object with the requested content disposition
+     *
+     * @param binaryObjectRequest An object containing information about which binary properties to load from which
+     *                            entity sets, optionally mapping each to a desired content disposition.
+     * @return The same request structure, with the content disposition field replaced by a presigned URL for the
+     * requested binary object, with the specified content disposition
+     */
+    @POST( BASE + "/" + BINARY )
+    BinaryObjectResponse loadBinaryProperties( @Body BinaryObjectRequest binaryObjectRequest );
+
 }

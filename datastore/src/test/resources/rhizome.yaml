@@ -2,7 +2,7 @@
 # Rhizome Bootstrap Configuration
 ##
 
-# Set to false to disable persistence 
+# Set to false to disable persistence
 enable-persistence:  false
 session-clustering-enabled: false
 
@@ -10,7 +10,7 @@ hazelcast:
     server: true
     group: "local"
     password: "trellis"
-    seed-nodes: 
+    seed-nodes:
         - "127.0.0.1"
 
 hikari:
@@ -18,5 +18,4 @@ hikari:
     username: "oltest"
     password: "test"
     maximumPoolSize: 98
-    #20 minutes
-    connectionTimeout: 12000000
+    connectionTimeout: 1200000
