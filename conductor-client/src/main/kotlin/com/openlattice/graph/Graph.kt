@@ -169,10 +169,6 @@ class Graph(
 
             clearEdgesAddVersion(operationStmt, version)
             addKeyIds(operationStmt, dataEdgeKey, 3)
-            clearEdgesAddVersion(operationStmt, version)
-            addKeyIds(operationStmt, dataEdgeKey, 3)
-            clearEdgesAddVersion(operationStmt, version)
-            addKeyIds(operationStmt, dataEdgeKey, 3)
         }
     }
 
@@ -189,7 +185,7 @@ class Graph(
                 lockAndOperateOnEdges(dstEntitySetEdgeKeys, statement, statementSupplier)+
                 lockAndOperateOnEdges(edgeEntitySetEdgeKeys, statement, statementSupplier)
 
-        return Iterables.size(keys)
+        return numUpdate
     }
 
     private fun lockAndOperateOnEdges(
