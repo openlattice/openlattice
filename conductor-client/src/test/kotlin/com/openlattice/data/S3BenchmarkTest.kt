@@ -9,6 +9,7 @@ import com.google.common.util.concurrent.MoreExecutors
 import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration
 import com.kryptnostic.rhizome.configuration.amazon.AwsLaunchConfiguration
 import com.openlattice.ResourceConfigurationLoader
+import com.openlattice.data.storage.BinaryObjectWithMetadata
 import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.data.storage.aws.AwsBlobDataService
 import com.openlattice.datastore.configuration.DatastoreConfiguration
@@ -107,7 +108,7 @@ class S3BenchmarkTest {
         var count = 0
         for (key in keys) {
             val start = Stopwatch.createStarted()
-            byteBlobDataManager.putObject(key, data, "png")
+            byteBlobDataManager.putObject(key, BinaryObjectWithMetadata("image/png", data))
             durations.add(start.elapsed(TimeUnit.MILLISECONDS))
             count++
             if (count % LOG_STEP == 0) {
@@ -139,7 +140,7 @@ class S3BenchmarkTest {
 
     private fun printStats(durations: List<Long>) {
         val mean = durations.average()
-        val max = durations.max()
+        val max = durations.maxOrNull()
         val summation = durations.map { (it - mean).pow(2.0) }.sum()
         val variance = summation / (durations.size - 1)
         val sd = sqrt(variance)

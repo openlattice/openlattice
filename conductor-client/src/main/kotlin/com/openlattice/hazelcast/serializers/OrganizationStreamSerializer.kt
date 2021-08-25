@@ -11,7 +11,6 @@ import com.openlattice.hazelcast.serializers.StreamSerializers.Companion.seriali
 import com.openlattice.organizations.Grant
 import com.openlattice.organizations.GrantType
 import com.openlattice.organizations.Organization
-import com.openlattice.organizations.OrganizationMetadataEntitySetIds
 import org.springframework.stereotype.Component
 import java.util.*
 
@@ -22,6 +21,7 @@ class OrganizationStreamSerializer : SelfRegisteringStreamSerializer<Organizatio
         @JvmStatic
         fun serialize(out: ObjectDataOutput, obj: Organization) {
             OrganizationPrincipalStreamSerializer.serialize(out, obj.securablePrincipal)
+            AclKeyStreamSerializer.serialize(out, obj.adminRoleAclKey)
             SetStreamSerializers.fastStringSetSerialize(out, obj.emailDomains)
             StreamSerializers.serializeSet(out, obj.members) { principal ->
                 PrincipalStreamSerializer.serialize(out, principal)
@@ -37,17 +37,15 @@ class OrganizationStreamSerializer : SelfRegisteringStreamSerializer<Organizatio
             SetStreamSerializers.fastStringSetSerialize(out, obj.connections)
 
             serializeMapMap(out, obj.grants,
-                            { key: UUID -> UUIDStreamSerializerUtils.serialize(out, key) },
-                            { subKey: GrantType -> GrantTypeStreamSerializer.serialize(out, subKey) },
-                            { `val`: Grant -> GrantStreamSerializer.serialize(out, `val`) })
-            UUIDStreamSerializerUtils.serialize(out, obj.organizationMetadataEntitySetIds.organization)
-            UUIDStreamSerializerUtils.serialize(out, obj.organizationMetadataEntitySetIds.datasets)
-            UUIDStreamSerializerUtils.serialize(out, obj.organizationMetadataEntitySetIds.columns)
+                    { key: UUID -> UUIDStreamSerializerUtils.serialize(out, key) },
+                    { subKey: GrantType -> GrantTypeStreamSerializer.serialize(out, subKey) },
+                    { `val`: Grant -> GrantStreamSerializer.serialize(out, `val`) })
         }
 
         @JvmStatic
         fun deserialize(input: ObjectDataInput): Organization {
             val op = OrganizationPrincipalStreamSerializer.deserialize(input)
+            val adminRoleAclKey = AclKeyStreamSerializer.deserialize(input)
             val email = SetStreamSerializers.fastStringSetDeserialize(input)
             val members = StreamSerializers.deserializeSet(input) {
                 PrincipalStreamSerializer.deserialize(input)
@@ -63,17 +61,13 @@ class OrganizationStreamSerializer : SelfRegisteringStreamSerializer<Organizatio
             val connections = SetStreamSerializers.fastStringSetDeserialize(input)
 
             val grants = deserializeMapMap(input,
-                                           mutableMapOf(),
-                                           { UUIDStreamSerializerUtils.deserialize(input) },
-                                           { GrantTypeStreamSerializer.deserialize(input) },
-                                           { GrantStreamSerializer.deserialize(input) })
-            val organizationMetadataEntitySetIds = OrganizationMetadataEntitySetIds(
-                    UUIDStreamSerializerUtils.deserialize(input),
-                    UUIDStreamSerializerUtils.deserialize(input),
-                    UUIDStreamSerializerUtils.deserialize(input)
-            )
+                    mutableMapOf(),
+                    { UUIDStreamSerializerUtils.deserialize(input) },
+                    { GrantTypeStreamSerializer.deserialize(input) },
+                    { GrantStreamSerializer.deserialize(input) })
             return Organization(
                     op,
+                    adminRoleAclKey,
                     email,
                     members,
                     roles,
@@ -81,8 +75,7 @@ class OrganizationStreamSerializer : SelfRegisteringStreamSerializer<Organizatio
                     partitions,
                     apps,
                     connections,
-                    grants,
-                    organizationMetadataEntitySetIds
+                    grants
             )
         }
     }

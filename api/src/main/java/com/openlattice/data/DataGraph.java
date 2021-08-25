@@ -34,9 +34,11 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
+ *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class DataGraph {
+    //entity set id to entities
     private final ListMultimap<UUID, Map<UUID, Set<Object>>> entities;
     private final ListMultimap<UUID, DataAssociation>        associations;
 

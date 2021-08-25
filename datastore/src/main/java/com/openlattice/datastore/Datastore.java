@@ -36,6 +36,7 @@ import com.openlattice.hazelcast.pods.HazelcastQueuePod;
 import com.openlattice.hazelcast.pods.MapstoresPod;
 import com.openlattice.hazelcast.pods.NearCachesPod;
 import com.openlattice.hazelcast.pods.SharedStreamSerializersPod;
+import com.openlattice.ioc.providers.LateInitProvidersPod;
 import com.openlattice.jdbc.JdbcPod;
 import com.openlattice.postgres.PostgresPod;
 import com.openlattice.postgres.pods.ExternalDatabaseConnectionManagerPod;
@@ -59,7 +60,8 @@ public class Datastore extends BaseRhizomeServer {
             SharedStreamSerializersPod.class,
             TaskSchedulerPod.class,
             TransporterPod.class,
-            TransporterConfigurationPod.class
+            TransporterConfigurationPod.class,
+            LateInitProvidersPod.class
     };
 
     private static final Class<?>[] webPods       = new Class<?>[] {

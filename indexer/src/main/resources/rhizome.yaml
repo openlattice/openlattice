@@ -2,7 +2,7 @@
 # Rhizome Bootstrap Configuration
 ##
 
-# Set to false to disable persistence 
+# Set to false to disable persistence
 enable-persistence:  false
 session-clustering-enabled: false
 # Indexer cannot be server as it is unable to deserialize tasks, in particular ones that have external dependencies that
@@ -11,7 +11,7 @@ hazelcast:
     server: false
     group: "local"
     password: "trellis"
-    seed-nodes: 
+    seed-nodes:
         - "localhost"
 
 hazelcast-clients:
@@ -31,8 +31,4 @@ postgres:
         username: "oltest"
         password: "test"
         maximumPoolSize: 20
-        connectionTimeout: 12000000 #20 minutes
-
-#graphite:
-#    host: "jarvis"
-#    global-prefix: "conductor"
+        connectionTimeout: 1200000

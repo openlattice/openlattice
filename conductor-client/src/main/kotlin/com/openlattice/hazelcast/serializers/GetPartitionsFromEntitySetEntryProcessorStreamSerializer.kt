@@ -15,7 +15,7 @@ class GetPartitionsFromEntitySetEntryProcessorStreamSerializer : NoOpSelfRegiste
         return GetPartitionsFromEntitySetEntryProcessor::class.java
     }
 
-    override fun read(`in`: ObjectDataInput?): GetPartitionsFromEntitySetEntryProcessor {
+    override fun read(`in`: ObjectDataInput): GetPartitionsFromEntitySetEntryProcessor {
         return GetPartitionsFromEntitySetEntryProcessor()
     }
 

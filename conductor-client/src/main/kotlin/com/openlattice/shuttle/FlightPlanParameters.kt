@@ -26,8 +26,6 @@ data class FlightPlanParameters(
         check(flight != null || flightFilePath != null) {"Either flight or flightFilePath must not be null"}
         if (flightFilePath != null && flight == null) {
             this.flight = ObjectMappers.getYamlMapper().readValue(URL(flightFilePath), Flight::class.java)
-        } else {
-            this.flight = flight
         }
     }
 }

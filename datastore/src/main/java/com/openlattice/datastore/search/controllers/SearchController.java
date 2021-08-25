@@ -32,6 +32,7 @@ import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.authorization.util.AuthorizationUtilsKt;
 import com.openlattice.data.requests.NeighborEntityDetails;
 import com.openlattice.data.requests.NeighborEntityIds;
+import com.openlattice.datasets.DataSetSearchRequest;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.EntitySetManager;
 import com.openlattice.edm.EntitySet;
@@ -313,6 +314,21 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
         return searchService.executeEntitySetCollectionQuery( searchTerm.getSearchTerm(),
                 searchTerm.getStart(),
                 searchTerm.getMaxHits() );
+    }
+
+    @RequestMapping(
+            path = { DATASETS },
+            method = RequestMethod.POST,
+            produces = { MediaType.APPLICATION_JSON_VALUE } )
+    @Override
+    @Timed
+    public SearchResult searchDataSetMetadata( @RequestBody DataSetSearchRequest searchRequest ) {
+        return searchService.searchDataSetMetadata(
+                searchRequest.getOrganizationIds(),
+                searchRequest.getConstraints(),
+                searchRequest.getStart(),
+                searchRequest.getMaxHits()
+        );
     }
 
     @RequestMapping(
@@ -658,9 +674,10 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     public Void triggerEdmIndex() {
         ensureAdminAccess();
         searchService.triggerEntitySetIndex();
+        searchService.triggerAllDatasetIndex();
         searchService.triggerPropertyTypeIndex( Lists.newArrayList( edm.getPropertyTypes() ) );
         searchService.triggerEntityTypeIndex( Lists.newArrayList( edm.getEntityTypes() ) );
-        searchService.triggerAssociationTypeIndex( Lists.newArrayList( edm.getAssociationTypes() ) );
+        searchService.triggerAssociationTypeIndex( Lists.newArrayList( edm.getAllAssociationTypes() ) );
         searchService.triggerAppIndex( Lists.newArrayList( appService.getApps() ) );
         return null;
     }
