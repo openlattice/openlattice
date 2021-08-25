@@ -161,6 +161,7 @@ class Graph(
 
     /* Delete  */
 
+    @Deprecated("Redundant function call." , replaceWith = ReplaceWith("deleteEdges"))
     override fun clearEdges(keys: Iterable<DataEdgeKey>): Int {
         val version = -System.currentTimeMillis()
         return lockAndOperateOnEdges(keys, CLEAR_BY_VERTEX_SQL) { lockStmt, operationStmt, dataEdgeKey ->
