@@ -21,6 +21,7 @@ package com.openlattice.search;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.data.requests.NeighborEntityDetails;
 import com.openlattice.data.requests.NeighborEntityIds;
+import com.openlattice.datasets.DataSetSearchRequest;
 import com.openlattice.search.requests.*;
 import retrofit2.http.Body;
 import retrofit2.http.GET;
@@ -45,6 +46,7 @@ public interface SearchApi {
      * Normal params
      */
     String ORGANIZATIONS     = "/organizations";
+    String DATASETS          = "/datasets";
     String ENTITY_SETS       = "/entity_sets";
     String ENTITY_TYPES      = "/entity_types";
     String COLLECTIONS       = "/collections";
@@ -225,6 +227,19 @@ public interface SearchApi {
      */
     @POST( BASE + ENTITY_SETS + COLLECTIONS )
     SearchResult executeEntitySetCollectionSearch( @Body SearchTerm searchTerm );
+
+    /**
+     * Executes a search over all authorized Datasets to find ones that match the given search term
+     *
+     * @param searchTerm A JSON object that contains parameters: "start", which specifies the hit number to start
+     *                   returning results on for paging, "maxHits", which specifies the maximum number of hits to return,
+     *                   "searchTerm", which is the search term results will match on, "excludeColumns" which indicates
+     *                   whether to omit columns from the results, and "organizationIds" indicating organization ids to
+     *                   filter results to
+     * @return A search result object, containing the total number of hits for the given query, and the hits themselves
+     */
+    @POST( BASE + DATASETS )
+    SearchResult searchDataSetMetadata( @Body DataSetSearchRequest searchRequest );
 
     /**
      * Executes a search over all entity types to find ones that match the given name and namespace, including partial

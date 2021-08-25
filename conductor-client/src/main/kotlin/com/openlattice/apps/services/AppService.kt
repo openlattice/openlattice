@@ -28,7 +28,12 @@ import com.google.common.eventbus.EventBus
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.map.IMap
 import com.hazelcast.query.Predicates
-import com.openlattice.apps.*
+import com.openlattice.apps.App
+import com.openlattice.apps.AppConfigKey
+import com.openlattice.apps.AppInstallation
+import com.openlattice.apps.AppRole
+import com.openlattice.apps.AppTypeSetting
+import com.openlattice.apps.UserAppConfig
 import com.openlattice.apps.historical.HistoricalAppConfig
 import com.openlattice.apps.historical.HistoricalAppTypeSetting
 import com.openlattice.apps.processors.*
@@ -50,6 +55,7 @@ import com.openlattice.postgres.mapstores.AppConfigMapstore
 import java.util.*
 import javax.inject.Inject
 
+@Suppress("UnstableApiUsage")
 class AppService(
         hazelcast: HazelcastInstance,
         private val edmService: EdmManager,
@@ -69,7 +75,7 @@ class AppService(
     private lateinit var eventBus: EventBus
 
     companion object {
-        fun getAppPrincipalId(appId: UUID, organizationId: UUID): String? {
+        fun getAppPrincipalId(appId: UUID, organizationId: UUID): String {
             return "$appId|$organizationId"
         }
     }
@@ -109,7 +115,7 @@ class AppService(
         return getApp(id)
     }
 
-    fun createNewAppRole(appId: UUID, role: AppRole): UUID? {
+    fun createNewAppRole(appId: UUID, role: AppRole): UUID {
         validateAppAndRoles(appId, role)
         apps.executeOnKey(appId, AddRoleToAppProcessor(role))
         return role.id
@@ -206,10 +212,10 @@ class AppService(
 
         if (entitySetCollectionId == null) {
             entitySetCollectionId = collectionsManager.createEntitySetCollection(EntitySetCollection(
-                    Optional.empty<UUID>(),
+                    Optional.empty(),
                     getNextAvailableName(app.name + "_" + organizationId),
                     appInstallation.prefix + " " + app.title,
-                    Optional.of<String>(app.description),
+                    Optional.of(app.description),
                     app.entityTypeCollectionId,
                     appInstallation.template!!,
                     ImmutableSet.of<String>(),
@@ -462,9 +468,9 @@ class AppService(
     private fun ensureAppRolesExist(app: App, roleIds: Set<UUID>) {
         val missingRoleIds = roleIds - app.appRoles.map { it.id }
         Preconditions.checkState(missingRoleIds.isEmpty(),
-                    "App {} does not contain roles with ids {}.",
-                    app.id,
-                    missingRoleIds)
+                "App {} does not contain roles with ids {}.",
+                app.id,
+                missingRoleIds)
     }
 
 }

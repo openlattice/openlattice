@@ -10,14 +10,14 @@ class BaseGraphHandler<T> {
        var roots = initRoots.toMutableSet()
        val remain = graph.toMutableMap()
 
-       while(!roots.isEmpty()) {
+       while (roots.isNotEmpty()) {
            roots.forEach {
                remain.remove(it)
            }
            roots = getRoots(remain)
        }
 
-       return !remain.isEmpty()
+       return remain.isNotEmpty()
    }
 
    private fun getRoots(graph : MutableMap<T, MutableSet<T>>): MutableSet<T> {

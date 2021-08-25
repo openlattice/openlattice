@@ -22,8 +22,14 @@
 package com.openlattice.data.storage
 
 import com.openlattice.analysis.requests.Filter
-import com.openlattice.postgres.DataTables.*
-import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.DataTables.LAST_WRITE
+import com.openlattice.postgres.DataTables.propertyTableName
+import com.openlattice.postgres.DataTables.quote
+import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.ID
+import com.openlattice.postgres.PostgresColumn.ID_VALUE
+import com.openlattice.postgres.PostgresColumn.LINKING_ID
+import com.openlattice.postgres.PostgresColumn.VERSION
 import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.ResultSetAdapters
 import org.slf4j.LoggerFactory
@@ -115,8 +121,7 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
                     }
                     .joinToString("\n")
 
-    val fullQuery = "$withClause SELECT $dataColumns FROM $entitiesSubquerySql $propertyTableJoins"
-    return fullQuery
+    return "$withClause SELECT $dataColumns FROM $entitiesSubquerySql $propertyTableJoins"
 }
 
 @Deprecated("old query")

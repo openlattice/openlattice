@@ -23,7 +23,7 @@ class CollectionTemplateKeyStreamSerializer : SelfRegisteringStreamSerializer<Co
         UUIDStreamSerializerUtils.serialize(out, `object`.templateTypeId)
     }
 
-    override fun read(`in`: ObjectDataInput?): CollectionTemplateKey {
+    override fun read(`in`: ObjectDataInput): CollectionTemplateKey {
         val entitySetCollectionId = UUIDStreamSerializerUtils.deserialize(`in`)
         val templateTypeId = UUIDStreamSerializerUtils.deserialize(`in`)
 

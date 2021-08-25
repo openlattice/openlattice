@@ -20,11 +20,18 @@
 
 package com.openlattice.indexing.pods;
 
+import com.codahale.metrics.MetricRegistry;
+import com.geekbeast.rhizome.jobs.HazelcastJobService;
+import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
 import com.openlattice.BackgroundExternalDatabaseSyncingService;
 import com.openlattice.auditing.AuditRecordEntitySetsManager;
 import com.openlattice.auditing.AuditingManager;
+import com.openlattice.authorization.AuthorizationManager;
+import com.openlattice.authorization.DbCredentialService;
+import com.openlattice.authorization.HazelcastAclKeyReservationService;
+import com.openlattice.authorization.PrincipalsMapManager;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.DataDeletionManager;
 import com.openlattice.data.DataGraphManager;
@@ -32,22 +39,28 @@ import com.openlattice.data.storage.EntityDatastore;
 import com.openlattice.data.storage.IndexingMetadataManager;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
 import com.openlattice.data.storage.partitions.PartitionManager;
-import com.openlattice.datastore.services.EdmManager;
+import com.openlattice.datasets.DataSetService;
+import com.openlattice.datastore.services.EdmService;
+import com.openlattice.datastore.services.EntitySetManager;
+import com.openlattice.graph.core.GraphService;
 import com.openlattice.indexing.BackgroundExpiredDataDeletionService;
 import com.openlattice.indexing.BackgroundIndexedEntitiesDeletionService;
 import com.openlattice.indexing.BackgroundIndexingService;
 import com.openlattice.indexing.BackgroundLinkingIndexingService;
 import com.openlattice.indexing.IndexingService;
 import com.openlattice.indexing.configuration.IndexerConfiguration;
-import com.openlattice.linking.LinkingQueryService;
-import com.openlattice.linking.PostgresLinkingFeedbackService;
 import com.openlattice.organizations.ExternalDatabaseManagementService;
-import com.openlattice.organizations.OrganizationMetadataEntitySetsService;
+import com.openlattice.organizations.OrganizationExternalDatabaseConfiguration;
+import com.openlattice.organizations.roles.SecurePrincipalsManager;
+import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
+import com.openlattice.postgres.external.ExternalDatabasePermissioningService;
+import com.openlattice.search.SearchService;
+import com.openlattice.transporter.services.TransporterService;
 import com.zaxxer.hikari.HikariDataSource;
-import javax.annotation.PostConstruct;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 
 @Configuration
@@ -75,16 +88,10 @@ public class IndexerPostConfigurationServicesPod {
     private DataGraphManager dataGraphService;
 
     @Inject
-    private OrganizationMetadataEntitySetsService organizationMetadataEntitySetsService;
-
-    @Inject
     private PostgresEntityDataQueryService dataQueryService;
 
     @Inject
     private EntityDatastore entityDatastore;
-
-    @Inject
-    private ExternalDatabaseManagementService edms;
 
     @Inject
     private DataDeletionManager dataDeletionManager;
@@ -93,10 +100,55 @@ public class IndexerPostConfigurationServicesPod {
     private AuditRecordEntitySetsManager ares;
 
     @Inject
-    private LinkingQueryService lqs;
+    private HazelcastAclKeyReservationService aclKeyReservationService;
 
     @Inject
-    private PostgresLinkingFeedbackService postgresLinkingFeedbackService;
+    private ExternalDatabasePermissioningService externalDatabasePermissioningService;
+
+    @Inject
+    private ExternalDatabaseConnectionManager externalDbConnMan;
+
+    @Inject
+    private TransporterService transporterService;
+
+    @Inject
+    private OrganizationExternalDatabaseConfiguration organizationExternalDatabaseConfiguration;
+
+    @Inject
+    private DbCredentialService dbcs;
+
+    @Inject
+    public AuthorizationManager authorizationManager;
+
+    @Inject
+    public PrincipalsMapManager principalsMapManager;
+
+    @Inject
+    public SecurePrincipalsManager securePrincipalsManager;
+
+    @Inject
+    private HazelcastAclKeyReservationService reservationService;
+
+    @Inject
+    private EntitySetManager entitySetManager;
+
+    @Inject
+    private HazelcastJobService jobService;
+
+    @Inject
+    private DataSetService dataSetService;
+
+    @Inject
+    private EventBus eventBus;
+
+    @Inject
+    private MetricRegistry metricRegistry;
+
+    @Inject
+    private EdmService dataModelService;
+
+    @Inject
+    private GraphService graphApi;
 
     @Bean
     public PartitionManager partitionManager() {
@@ -148,20 +200,42 @@ public class IndexerPostConfigurationServicesPod {
                 indexerConfiguration,
                 auditingManager,
                 dataGraphService,
-                dataDeletionManager );
+                dataDeletionManager,
+                entitySetManager,
+                jobService );
     }
 
-
+    @Bean
+    public ExternalDatabaseManagementService edms() {
+        return new ExternalDatabaseManagementService(
+                hazelcastInstance,
+                externalDbConnMan,
+                principalsMapManager,
+                aclKeyReservationService,
+                authorizationManager,
+                organizationExternalDatabaseConfiguration,
+                externalDatabasePermissioningService,
+                transporterService,
+                dbcs,
+                hikariDataSource,
+                dataSetService
+        );
+    }
 
     @Bean
     public BackgroundExternalDatabaseSyncingService backgroundExternalDatabaseUpdatingService() {
         return new BackgroundExternalDatabaseSyncingService(
                 hazelcastInstance,
-                edms,
+                executor,
+                edms(),
+                externalDatabasePermissioningService,
                 auditingManager,
                 ares,
                 indexerConfiguration,
-                organizationMetadataEntitySetsService );
+                reservationService,
+                principalsMapManager,
+                dataSetService
+        );
     }
 
     @Bean
@@ -173,8 +247,19 @@ public class IndexerPostConfigurationServicesPod {
                 hazelcastInstance );
     }
 
-    @PostConstruct
-    void initOrganizationMetadataEntitySetsService() {
-        this.organizationMetadataEntitySetsService.dataGraphManager = dataGraphService;
+    @Bean
+    public SearchService searchService() {
+        return new SearchService(
+                eventBus,
+                metricRegistry,
+                authorizationManager,
+                elasticsearchApi,
+                dataModelService,
+                entitySetManager,
+                graphApi,
+                entityDatastore,
+                indexingMetadataManager(),
+                dataSetService
+        );
     }
 }

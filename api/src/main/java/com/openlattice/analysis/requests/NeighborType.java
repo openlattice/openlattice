@@ -18,10 +18,12 @@
 
 package com.openlattice.analysis.requests;
 
-import com.openlattice.client.serialization.SerializationConstants;
-import com.openlattice.edm.type.EntityType;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.openlattice.client.serialization.SerializationConstants;
+import com.openlattice.edm.type.EntityType;
+
+import java.util.Objects;
 
 public class NeighborType {
 
@@ -60,25 +62,14 @@ public class NeighborType {
             return true;
         if ( o == null || getClass() != o.getClass() )
             return false;
-
         NeighborType that = (NeighborType) o;
-
-        if ( src != that.src )
-            return false;
-        if ( neighborEntityType != null ?
-                !neighborEntityType.equals( that.neighborEntityType ) :
-                that.neighborEntityType != null )
-            return false;
-        return associationEntityType != null ?
-                associationEntityType.equals( that.associationEntityType ) :
-                that.associationEntityType == null;
+        return src == that.src &&
+                Objects.equals( neighborEntityType, that.neighborEntityType ) &&
+                Objects.equals( associationEntityType, that.associationEntityType );
     }
 
     @Override public int hashCode() {
-        int result = neighborEntityType != null ? neighborEntityType.hashCode() : 0;
-        result = 31 * result + ( associationEntityType != null ? associationEntityType.hashCode() : 0 );
-        result = 31 * result + ( src ? 1 : 0 );
-        return result;
+        return Objects.hash( neighborEntityType, associationEntityType, src );
     }
 
     @Override public String toString() {

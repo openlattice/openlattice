@@ -30,6 +30,7 @@ import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import java.io.IOException;
 import java.util.Set;
 
+import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -45,18 +46,19 @@ public class DelegatedStringSetStreamSerializer extends SetStreamSerializer<Dele
     }
 
     @Override
+    @NotNull
     protected DelegatedStringSet newInstanceWithExpectedSize( int size ) {
         return DelegatedStringSet.wrap( Sets.newHashSetWithExpectedSize( size ) );
     }
 
     @Override
     protected String readSingleElement( ObjectDataInput in ) throws IOException {
-        return in.readUTF();
+        return in.readString();
     }
 
     @Override
     protected void writeSingleElement( ObjectDataOutput out, String element ) throws IOException {
-        out.writeUTF( element );
+        out.writeString( element );
     }
 
     @Override

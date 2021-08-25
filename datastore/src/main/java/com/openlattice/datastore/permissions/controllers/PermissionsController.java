@@ -46,7 +46,15 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.inject.Inject;
 import java.time.OffsetDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -110,30 +118,29 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
         }
 
         requestsByActionType.forEach( ( action, acls ) -> {
-
+            AuditEventType eventType;
             switch ( action ) {
                 case ADD:
                     authorizations.addPermissions( acls );
-                    edms.executePrivilegesUpdate( action, getOrganizationExternalDbColumnAcls( acls ) );
-                    recordEvents( createAuditableEvents( acls, AuditEventType.ADD_PERMISSION ) );
+                    eventType = AuditEventType.ADD_PERMISSION;
                     break;
 
                 case REMOVE:
                     authorizations.removePermissions( acls );
-                    edms.executePrivilegesUpdate( action, getOrganizationExternalDbColumnAcls( acls ) );
-                    recordEvents( createAuditableEvents( acls, AuditEventType.REMOVE_PERMISSION ) );
+                    eventType = AuditEventType.REMOVE_PERMISSION;
                     break;
 
                 case SET:
                     authorizations.setPermissions( acls );
-                    edms.executePrivilegesUpdate( action, getOrganizationExternalDbColumnAcls( acls ) );
-                    recordEvents( createAuditableEvents( acls, AuditEventType.SET_PERMISSION ) );
+                    eventType = AuditEventType.SET_PERMISSION;
                     break;
 
                 default:
                     logger.error( "Invalid action {} specified for request.", action );
                     throw new BadRequestException( "Invalid action specified: " + action );
             }
+            edms.executePrivilegesUpdate( action, acls );
+            recordEvents( createAuditableEvents( acls, eventType ) );
         } );
 
         return null;
@@ -147,12 +154,11 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
             consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Acl getAcl( @RequestBody AclKey aclKeys ) {
-        if ( isAuthorized( Permission.OWNER ).test( aclKeys ) ) {
-            return authorizations.getAllSecurableObjectPermissions( aclKeys );
-        } else {
+        if ( !isAuthorized( Permission.OWNER ).test( aclKeys ) ) {
             throw new ForbiddenException( "Only owner of securable object " + aclKeys +
                     " can access other users' access rights." );
         }
+        return authorizations.getAllSecurableObjectPermissions( aclKeys );
     }
 
     @Override
@@ -248,14 +254,6 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
     @Override
     public AuditingManager getAuditingManager() {
         return auditingManager;
-    }
-
-    private List<Acl> getOrganizationExternalDbColumnAcls( List<Acl> acls ) {
-        Set<AclKey> aclKeys = acls.stream().map( acl -> new AclKey( acl.getAclKey() ) ).collect( Collectors.toSet() );
-        Set<AclKey> allOrgExternalDBAclKeys = securableObjectResolveTypeService
-                .getOrganizationExternalDbColumnAclKeys( aclKeys );
-        return acls.stream().filter( acl -> allOrgExternalDBAclKeys.contains( new AclKey( acl.getAclKey() ) ) )
-                .collect( Collectors.toList() );
     }
 
     private List<AuditableEvent> createAuditableEvents( List<Acl> acls, AuditEventType eventType ) {

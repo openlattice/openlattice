@@ -24,8 +24,8 @@ class TransporterColumnStreamSerializer: TestableSelfRegisteringStreamSerializer
 
         @JvmStatic
         fun deserializeColumn(`in`: ObjectDataInput): TransporterColumn {
-            val srcCol = `in`.readUTF()
-            val destColName = `in`.readUTF()
+            val srcCol = `in`.readString()!!
+            val destColName = `in`.readString()!!
             val dataType = AbstractEnumSerializer.deserialize(PostgresDatatype::class.java, `in`)
             return TransporterColumn(srcCol, destColName, dataType)
         }

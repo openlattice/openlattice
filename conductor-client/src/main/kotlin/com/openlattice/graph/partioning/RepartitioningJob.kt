@@ -6,16 +6,33 @@ import com.geekbeast.rhizome.jobs.AbstractDistributedJob
 import com.geekbeast.rhizome.jobs.JobStatus
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.map.IMap
+import com.openlattice.data.storage.DataSourceResolver
 import com.openlattice.data.storage.getDirectPartitioningSelector
 import com.openlattice.data.storage.getPartitioningSelector
 import com.openlattice.edm.EntitySet
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.serializers.decorators.MetastoreAware
-import com.openlattice.postgres.DataTables.*
+import com.openlattice.postgres.DataTables.LAST_INDEX
+import com.openlattice.postgres.DataTables.LAST_LINK
+import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresArrays
-import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.ID
+import com.openlattice.postgres.PostgresColumn.LAST_LINK_INDEX
+import com.openlattice.postgres.PostgresColumn.LAST_MIGRATE
+import com.openlattice.postgres.PostgresColumn.LAST_PROPAGATE
+import com.openlattice.postgres.PostgresColumn.LINKING_ID
+import com.openlattice.postgres.PostgresColumn.ORIGIN_ID
+import com.openlattice.postgres.PostgresColumn.PARTITION
+import com.openlattice.postgres.PostgresColumn.PARTITIONS
+import com.openlattice.postgres.PostgresColumn.SRC_ENTITY_KEY_ID
+import com.openlattice.postgres.PostgresColumn.SRC_ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.VERSION
+import com.openlattice.postgres.PostgresColumn.VERSIONS
 import com.openlattice.postgres.PostgresColumnDefinition
-import com.openlattice.postgres.PostgresTable.*
+import com.openlattice.postgres.PostgresTable.DATA
+import com.openlattice.postgres.PostgresTable.E
+import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.PostgresTableDefinition
 import com.openlattice.postgres.ResultSetAdapters
 import com.zaxxer.hikari.HikariDataSource
@@ -28,28 +45,29 @@ import java.util.*
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
+@Deprecated(message = "Do not run this job except for entity sets in default data store. Will be deleted once we no longer use citus for splitting up data.")
 class RepartitioningJob(
-        state: RepartitioningJobState
+    state: RepartitioningJobState
 ) : AbstractDistributedJob<Long, RepartitioningJobState>(state), MetastoreAware {
     @JsonCreator
     constructor(
-            id: UUID?,
-            taskId: Long?,
-            status: JobStatus,
-            progress: Byte,
-            hasWorkRemaining: Boolean,
-            result: Long?,
-            state: RepartitioningJobState,
-            phase: RepartitioningPhase
+        id: UUID?,
+        taskId: Long?,
+        status: JobStatus,
+        progress: Byte,
+        hasWorkRemaining: Boolean,
+        result: Long?,
+        state: RepartitioningJobState,
+        phase: RepartitioningPhase
     ) : this(state) {
         initialize(id, taskId, status, progress, hasWorkRemaining, result)
         this.phase = phase
     }
 
     constructor(
-            entitySetId: UUID,
-            oldPartitions: List<Int>,
-            newPartitions: Set<Int>
+        entitySetId: UUID,
+        oldPartitions: List<Int>,
+        newPartitions: Set<Int>
     ) : this(RepartitioningJobState(entitySetId, oldPartitions, newPartitions))
 
     override val resumable: Boolean = true
@@ -73,8 +91,8 @@ class RepartitioningJob(
     }
 
     @JsonIgnore
-    override fun setHikariDataSource(hds: HikariDataSource) {
-        this.hds = hds
+    override fun setDataSourceResolver(resolver: DataSourceResolver) {
+        this.hds = resolver.getDefaultDataSource()
     }
 
     override fun initialize() {
@@ -213,7 +231,10 @@ class RepartitioningJob(
         ps.setInt(6, state.newPartitions.size)
     }
 
-    @SuppressFBWarnings(value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"], justification = "Ignore internal kotlin redundant nullchecks")
+    @SuppressFBWarnings(
+        value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"],
+        justification = "Ignore internal kotlin redundant nullchecks"
+    )
     private fun setPartitions(entitySetId: UUID, partitions: Set<Int>) {
         require(entitySets.containsKey(entitySetId)) {
             "Entity set $entitySetId not found"
@@ -256,6 +277,10 @@ fun buildRepartitionColumns(ptd: PostgresTableDefinition): String {
         else -> REPARTITION_SELECTOR
     }
     return ptd.columns.joinToString(",") { if (it == PARTITION) selector else it.name }
+}
+
+fun buildNormalColumns(ptd: PostgresTableDefinition): String {
+    return ptd.columns.joinToString { it.name }
 }
 
 /**
@@ -301,12 +326,13 @@ private val edgesNeedingMigrationCountSql = """
 """.trimIndent()
 
 private fun latestSql(
-        table: PostgresTableDefinition,
-        column: PostgresColumnDefinition,
-        comparison: PostgresColumnDefinition = column,
-        whenExcludedGreater: PostgresColumnDefinition = column,
-        otherwise: PostgresColumnDefinition = column
-): String = "${column.name} = CASE WHEN EXCLUDED.${comparison.name} > ${table.name}.${comparison.name} THEN EXCLUDED.${whenExcludedGreater.name} ELSE ${table.name}.${otherwise.name} END"
+    table: PostgresTableDefinition,
+    column: PostgresColumnDefinition,
+    comparison: PostgresColumnDefinition = column,
+    whenExcludedGreater: PostgresColumnDefinition = column,
+    otherwise: PostgresColumnDefinition = column
+): String =
+    "${column.name} = CASE WHEN EXCLUDED.${comparison.name} > ${table.name}.${comparison.name} THEN EXCLUDED.${whenExcludedGreater.name} ELSE ${table.name}.${otherwise.name} END"
 
 
 val REPARTITION_DATA_COLUMNS = buildRepartitionColumns(DATA)
@@ -325,9 +351,10 @@ val REPARTITION_EDGES_COLUMNS = buildRepartitionColumns(E)
  * NOTE: We set origin_id based on version. This should be fine in 99.999% of cases as the latest version should have
  * the most up to date linkined. See note on  for exceptional case [REPARTITION_IDS_SQL]
  */
+
 private val REPARTITION_DATA_SQL = """
-INSERT INTO ${DATA.name} SELECT $REPARTITION_DATA_COLUMNS
-    FROM ${DATA.name} INNER JOIN (select ? as ${ENTITY_SET_ID.name},? as ${PARTITIONS.name} ) as es 
+INSERT INTO ${DATA.name} (${buildNormalColumns(DATA)}) SELECT $REPARTITION_DATA_COLUMNS
+    FROM ${DATA.name} INNER JOIN (select ? as ${ENTITY_SET_ID.name},? as ${PARTITIONS.name} ) as es
     USING ( ${ENTITY_SET_ID.name} )
     WHERE ${PARTITION.name} = ? AND ${PARTITION.name}!=$REPARTITION_SELECTOR
     ON CONFLICT (${DATA.primaryKey.joinToString(",") { it.name }}) DO UPDATE SET
@@ -348,7 +375,7 @@ INSERT INTO ${DATA.name} SELECT $REPARTITION_DATA_COLUMNS
  * NOTE: Using last_link for LINKING_ID in this query because a link can happen without triggering a version update.
  */
 private val REPARTITION_IDS_SQL = """
-INSERT INTO ${IDS.name} SELECT $REPARTITION_IDS_COLUMNS
+INSERT INTO ${IDS.name} (${buildNormalColumns(IDS)}) SELECT $REPARTITION_IDS_COLUMNS
     FROM ${IDS.name} INNER JOIN (select ? as ${ENTITY_SET_ID.name},? as ${PARTITIONS.name} ) as es 
     USING (${ENTITY_SET_ID.name})
     WHERE ${PARTITION.name} = ? AND ${PARTITION.name}!=$REPARTITION_SELECTOR
@@ -373,7 +400,7 @@ INSERT INTO ${IDS.name} SELECT $REPARTITION_IDS_COLUMNS
  * NOTE: Using last_link for LINKING_ID in this query because a link can happen without triggering a version update.
  */
 private val REPARTITION_EDGES_SQL = """
-INSERT INTO ${E.name} SELECT $REPARTITION_EDGES_COLUMNS
+INSERT INTO ${E.name} (${buildNormalColumns(E)}) SELECT $REPARTITION_EDGES_COLUMNS
     FROM ${E.name} INNER JOIN (select ? as ${SRC_ENTITY_SET_ID.name},? as ${PARTITIONS.name} ) as es
     USING (${SRC_ENTITY_SET_ID.name})
     WHERE ${PARTITION.name} = ? AND ${PARTITION.name}!=$REPARTITION_SELECTOR_E

@@ -1,6 +1,5 @@
 package com.openlattice.analysis.requests
 
-import com.openlattice.analysis.requests.NeighborhoodRankingAggregationResult
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.util.*
 

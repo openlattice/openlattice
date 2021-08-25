@@ -3,7 +3,6 @@ package com.openlattice.hazelcast.serializers;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
-import com.openlattice.edm.types.processors.UpdateEntitySetPropertyMetadataProcessor;
 import com.openlattice.edm.types.processors.UpdateEntityTypePropertyMetadataProcessor;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import org.springframework.stereotype.Component;

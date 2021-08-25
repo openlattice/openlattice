@@ -11,9 +11,10 @@ import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore
 import com.zaxxer.hikari.HikariDataSource
+import org.springframework.stereotype.Component
 import java.sql.PreparedStatement
 import java.sql.ResultSet
-import java.util.*
+import java.util.UUID
 import kotlin.random.Random
 
 const val FIRST_ENTITY_INDEX = "__key.first"
@@ -24,7 +25,8 @@ const val SECOND_ENTITY_SET_INDEX = "__key.secondEntitySetId"
 const val SECOND_ENTITY_KEY_INDEX = "__key.secondEntityKeyId"
 const val FEEDBACK_INDEX = "this"
 
-open class LinkingFeedbackMapstore(
+@Component
+class LinkingFeedbackMapstore(
         hds: HikariDataSource
 ) : AbstractBasePostgresMapstore<EntityKeyPair, Boolean>
     (HazelcastMap.LINKING_FEEDBACK, PostgresTable.LINKING_FEEDBACK, hds) {

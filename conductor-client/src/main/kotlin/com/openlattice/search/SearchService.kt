@@ -21,6 +21,7 @@ import com.openlattice.data.requests.NeighborEntityIds
 import com.openlattice.data.storage.EntityDatastore
 import com.openlattice.data.storage.IndexingMetadataManager
 import com.openlattice.data.storage.MetadataOption
+import com.openlattice.datasets.DataSetService
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EdmConstants
@@ -53,15 +54,16 @@ import kotlin.streams.toList
  */
 @Service
 class SearchService(
-        val eventBus: EventBus,
-        val metricRegistry: MetricRegistry,
-        val authorizations: AuthorizationManager,
-        val elasticsearchApi: ConductorElasticsearchApi,
-        val dataModelService: EdmManager,
-        val entitySetService: EntitySetManager,
-        val graphService: GraphService,
-        val dataManager: EntityDatastore,
-        val indexingMetadataManager: IndexingMetadataManager
+    val eventBus: EventBus,
+    val metricRegistry: MetricRegistry,
+    val authorizations: AuthorizationManager,
+    val elasticsearchApi: ConductorElasticsearchApi,
+    val dataModelService: EdmManager,
+    val entitySetService: EntitySetManager,
+    val graphService: GraphService,
+    val dataManager: EntityDatastore,
+    val indexingMetadataManager: IndexingMetadataManager,
+    val dataSetService: DataSetService
 ) {
 
     companion object {
@@ -158,7 +160,42 @@ class SearchService(
                     maxHits
             )
         }
+    }
 
+    @Timed
+    fun searchDataSetMetadata(
+        organizationIds: Set<UUID>,
+        constraints: List<ConstraintGroup>,
+        start: Int,
+        maxHits: Int
+    ): SearchResult {
+
+        var authorizedDataSetIds = authorizations
+            .getAuthorizedObjectsOfTypes(
+                Principals.getCurrentPrincipals(),
+                listOf(SecurableObjectType.EntitySet, SecurableObjectType.OrganizationExternalDatabaseTable),
+                READ_PERMISSION
+            )
+            .map { it.first() }
+            .collect(Collectors.toSet())
+
+        if (organizationIds.isNotEmpty()) {
+            authorizedDataSetIds = dataSetService.filterDatasetIdsByOrganizations(
+                authorizedDataSetIds,
+                organizationIds
+            )
+        }
+
+        return if (authorizedDataSetIds.size == 0) {
+            SearchResult(0, emptyList())
+        } else {
+            elasticsearchApi.searchDataSetMetadata(
+                authorizedDataSetIds,
+                constraints,
+                start,
+                maxHits
+            )
+        }
     }
 
     @Timed
@@ -497,50 +534,6 @@ class SearchService(
         )
     }
 
-    private fun getAuthorizedFilterEntitySetOptions(
-            entitySetIds: Set<UUID>,
-            filter: EntityNeighborsFilter,
-            principals: Set<Principal>
-    ): Pair<EntityNeighborsFilter, Map<UUID, Map<UUID, PropertyType>>> {
-
-        val srcEntitySetIds = mutableSetOf<UUID>()
-        val dstEntitySetIds = mutableSetOf<UUID>()
-        val associationEntitySetIds = mutableSetOf<UUID>()
-
-        graphService.getNeighborEntitySets(entitySetIds).forEach { neighborSet ->
-            srcEntitySetIds.add(neighborSet.srcEntitySetId)
-            dstEntitySetIds.add(neighborSet.dstEntitySetId)
-            associationEntitySetIds.add(neighborSet.edgeEntitySetId)
-        }
-
-        val authorizedEntitySetIds = authorizations
-                .accessChecksForPrincipals(
-                        (srcEntitySetIds + dstEntitySetIds + associationEntitySetIds).map { esId ->
-                            AccessCheck(AclKey(esId), READ_PERMISSION)
-                        }.toSet(),
-                        principals
-                )
-                .filter { auth -> auth.permissions.getValue(Permission.READ) }
-                .map { auth -> auth.aclKey.first() }
-                .collect(Collectors.toSet())
-
-        val authorizedPropertyTypesByEntitySet = getAuthorizedPropertyTypesOfEntitySets(authorizedEntitySetIds, principals)
-
-        val srcFilteredEntitySetIds = filter.srcEntitySetIds.orElse(srcEntitySetIds)
-                .filter { srcEntitySetIds.contains(it) && authorizedPropertyTypesByEntitySet.contains(it) }.toSet()
-        val dstFilteredEntitySetIds = filter.dstEntitySetIds.orElse(dstEntitySetIds)
-                .filter { dstEntitySetIds.contains(it) && authorizedPropertyTypesByEntitySet.contains(it) }.toSet()
-        val associationFilteredEntitySetIds = filter.associationEntitySetIds.orElse(associationEntitySetIds)
-                .filter { associationEntitySetIds.contains(it) && authorizedPropertyTypesByEntitySet.contains(it) }.toSet()
-
-        return EntityNeighborsFilter(
-                filter.entityKeyIds,
-                Optional.of(srcFilteredEntitySetIds),
-                Optional.of(dstFilteredEntitySetIds),
-                Optional.of(associationFilteredEntitySetIds)
-        ) to authorizedPropertyTypesByEntitySet
-    }
-
     private fun getAuthorizedPropertyTypesOfEntitySets(
             entitySetIds: Set<UUID>,
             principals: Set<Principal>
@@ -663,11 +656,8 @@ class SearchService(
 
         /* Load all possible association/neighbor entity set combos and perform auth checks **/
 
-        val (filter, entitySetsIdsToAuthorizedProps) = getAuthorizedFilterEntitySetOptions(
-                entitySetIds,
-                pagedNeighborRequest.filter,
-                principals
-        )
+        val filter = entitySetService.getAuthorizedNeighborEntitySets(principals, entitySetIds, pagedNeighborRequest.filter)
+
         val authorizedPagedNeighborRequest = PagedNeighborRequest(filter, pagedNeighborRequest.bookmark, pagedNeighborRequest.pageSize)
 
         val allEntitySets = filter.srcEntitySetIds.get() + filter.dstEntitySetIds.get() + filter.associationEntitySetIds.get()
@@ -694,6 +684,8 @@ class SearchService(
         val edges = graphService.getEdgesAndNeighborsForVertices(allBaseEntitySetIds, authorizedPagedNeighborRequest).toList()
 
         val entitySetIdToEntityKeyId = getNeighborEntitySetIdToEntityKeyIdForEdges(edges, entityKeyIds)
+
+        val entitySetsIdsToAuthorizedProps = getAuthorizedPropertyTypesOfEntitySets(entitySetIdToEntityKeyId.keySet(), principals)
 
         val entitiesByEntitySetId = dataManager
                 .getEntitiesAcrossEntitySets(entitySetIdToEntityKeyId, entitySetsIdsToAuthorizedProps)
@@ -832,11 +824,7 @@ class SearchService(
             principals: Set<Principal>
     ): Map<UUID, Map<UUID, SetMultimap<UUID, NeighborEntityIds>>> {
 
-        val (filter, _) = getAuthorizedFilterEntitySetOptions(
-                entitySetIds,
-                requestedFilter,
-                principals
-        )
+        val filter = entitySetService.getAuthorizedNeighborEntitySets(principals, entitySetIds, requestedFilter)
 
         if (filter.associationEntitySetIds.isPresent && filter.associationEntitySetIds.get().isEmpty()) {
             logger.info("Missing association entity set ids. Returning empty result.")
@@ -874,7 +862,7 @@ class SearchService(
             entityKeyIds: Set<UUID>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             linking: Boolean
-    ): List<Map<FullQualifiedName, Set<Any>>> {
+    ): Collection<Map<FullQualifiedName, Set<Any>>> {
         if (entityKeyIds.isEmpty()) {
             return ImmutableList.of()
         }
@@ -890,7 +878,7 @@ class SearchService(
                     linkingIdsByEntitySetIds,
                     authorizedPropertiesOfNormalEntitySets,
                     EnumSet.of(MetadataOption.LAST_WRITE)
-            ).toList()
+            )
         } else {
             return dataManager
                     .getEntitiesWithMetadata(
@@ -909,6 +897,10 @@ class SearchService(
     ): Map<UUID, Set<UUID>> {
         return dataManager.getEntityKeyIdsOfLinkingIds(linkingIds, normalEntitySetIds).toMap()
     }
+
+    //
+    // trigger functions
+    //
 
     fun triggerPropertyTypeIndex(propertyTypes: List<PropertyType>) {
         elasticsearchApi.triggerSecurableObjectIndex(SecurableObjectType.PropertyTypeInEntitySet, propertyTypes)
@@ -951,7 +943,7 @@ class SearchService(
     }
 
     fun triggerAllEntitySetDataIndex() {
-        entitySetService.getEntitySets().forEach { entitySet -> triggerEntitySetDataIndex(entitySet.getId()) }
+        entitySetService.getEntitySets().forEach { entitySet -> triggerEntitySetDataIndex(entitySet.id) }
     }
 
     fun triggerAppIndex(apps: List<App>) {
@@ -966,5 +958,15 @@ class SearchService(
         elasticsearchApi.triggerOrganizationIndex(Lists.newArrayList(organization))
     }
 
+    fun triggerAllDatasetIndex() {
+
+        entitySetService.getEntitySets().forEach {
+            dataSetService.indexDataSet(it.id)
+        }
+
+        dataSetService.getExternalTables().forEach {
+            dataSetService.indexDataSet(it.id)
+        }
+    }
 }
 
