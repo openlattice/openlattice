@@ -19,9 +19,6 @@
 [submodule "datastore"]
 	path = datastore
 	url = git@github.com:openlattice/datastore.git
-[submodule "courier"]
-	path = courier
-	url = git@github.com:openlattice/courier.git
 [submodule "scribe"]
 	path = scribe
 	url = git@github.com:openlattice/scribe.git
