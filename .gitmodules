@@ -1,9 +1,6 @@
 [submodule "socrates"]
 	path = socrates
 	url = git@github.com:openlattice/socrates.git
-[submodule "api"]
-	path = api
-	url = git@github.com:openlattice/api.git
 [submodule "chronicle-api"]
 	path = chronicle-api
 	url = git@github.com:openlattice/chronicle-api.git
