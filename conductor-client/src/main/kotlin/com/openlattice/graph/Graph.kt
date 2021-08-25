@@ -185,9 +185,9 @@ class Graph(
         val dstEntitySetEdgeKeys = keys.groupBy { it.dst.entitySetId }
         val edgeEntitySetEdgeKeys = keys.groupBy { it.edge.entitySetId }
 
-        val numUpdate = lockAndOperateOnEdges(srcEntitySetEdgeKeys, statement, statementSupplier)
-        +lockAndOperateOnEdges(dstEntitySetEdgeKeys, statement, statementSupplier)
-        +lockAndOperateOnEdges(edgeEntitySetEdgeKeys, statement, statementSupplier)
+        val numUpdate = lockAndOperateOnEdges(srcEntitySetEdgeKeys, statement, statementSupplier)+
+                lockAndOperateOnEdges(dstEntitySetEdgeKeys, statement, statementSupplier)+
+                lockAndOperateOnEdges(edgeEntitySetEdgeKeys, statement, statementSupplier)
 
         return Iterables.size(keys)
     }

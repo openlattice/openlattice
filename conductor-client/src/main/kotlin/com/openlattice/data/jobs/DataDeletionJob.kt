@@ -108,7 +108,7 @@ class DataDeletionJob(
 
         var edgeBatch = getBatchOfEdgesForIds(entityDataKeys)
         while (edgeBatch.isNotEmpty()) {
-            logger.info("Deleting edges and entities involving {}", edgeBatch)
+            logger.info("${state.deleteType} deleting edges and entities involving {}", edgeBatch)
             val edgeEdkBatch = edgeBatch.map { it.edge }.toSet()
             deleteEntities(edgeEdkBatch)
             deleteEdges(edgeBatch)
