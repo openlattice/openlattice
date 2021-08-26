@@ -48,10 +48,10 @@ public class RenderableEmailRequestStreamSerializer implements SelfRegisteringSt
     @Override
     public RenderableEmailRequest read( ObjectDataInput in ) throws IOException {
         Optional<String> from = readOptional( in, ObjectDataInput::readUTF );
-        String[] to = in.readUTFArray();
+        String[] to = in.readStringArray();
         Optional<String[]> cc = readOptional( in, ObjectDataInput::readUTFArray );
         Optional<String[]> bcc = readOptional( in, ObjectDataInput::readUTFArray );
-        String templatePath = in.readUTF();
+        String templatePath = in.readString();
         Optional<String> subject = readOptional( in, ObjectDataInput::readUTF );
         Optional<Object> templateObjs = readOptional( in, ObjectDataInput::readObject );
         Optional<String[]> attachmentPaths = readOptional( in, ObjectDataInput::readUTFArray );
@@ -61,9 +61,9 @@ public class RenderableEmailRequestStreamSerializer implements SelfRegisteringSt
             EmailAttachment[] attachments = new EmailAttachment[ size ];
 
             for ( int i = 0; i < size; i++ ) {
-                String contentType = input.readUTF();
-                String contentId = input.readUTF();
-                String name = input.readUTF();
+                String contentType = input.readString();
+                String contentId = input.readString();
+                String name = input.readString();
                 byte[] content = input.readByteArray();
 
                 attachments[ i ] = EmailAttachment.with()

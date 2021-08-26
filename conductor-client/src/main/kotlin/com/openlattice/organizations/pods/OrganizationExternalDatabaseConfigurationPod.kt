@@ -16,6 +16,6 @@ class OrganizationExternalDatabaseConfigurationPod {
 
     @Bean
     fun organizationExternalDatabaseConfiguration(): OrganizationExternalDatabaseConfiguration {
-        return configurationLoader.logAndLoad( "organization external database", OrganizationExternalDatabaseConfiguration::class.java )
+        return configurationLoader.logAndLoad("organization external database", OrganizationExternalDatabaseConfiguration::class.java)
     }
 }

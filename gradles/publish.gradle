@@ -33,25 +33,28 @@ if( branch == null || branch == "" ) {
         commandLine 'git', 'rev-parse', '--abbrev-ref', 'HEAD'
         standardOutput = stdout
     }
-    branch=stdout.toString().trim();
+    branch=stdout.toString().trim()
 }
 
-println "Branch detected as: " + branch;
-println "Version detected as: " + version;
-println "Full version detected as: " + ext.fullVersion;
+println "Branch detected as: " + branch
+println "Version detected as: " + version
+println "Full version detected as: " + ext.fullVersion
 
 task sourcesJar(type : Jar) {
     classifier = 'sources'
+    archiveClassifier.set('sources')
     from sourceSets.main.allSource
 }
 
 task javadocJar(type: Jar, dependsOn: javadoc) {
     classifier = 'javadoc'
+    archiveClassifier.set('javadoc')
     from javadoc.destinationDir
 }
 
 task testJar(type: Jar, dependsOn: testClasses) {
     classifier = 'tests'
+    archiveClassifier.set('tests')
     from sourceSets.test.output
 }
 
@@ -74,8 +77,6 @@ println "Bamboo Username detected as " + bambooUsername
 if ( ( bambooUsername != null)  && ( System.getenv("bamboo_ARTIFACTORY_PASSWORD")!=null ) ) {
     archivesBaseName = jarname
 
-
-    
     ext."signing.keyId" = 'B7944F9C'
     ext."signing.secretKeyRingFile" = "$System.env.bamboo_JAR_SIGNING_KEYRING"
     ext."signing.password" = "$System.env.bamboo_JAR_SIGNING_PASSWORD"
@@ -89,7 +90,7 @@ if ( ( bambooUsername != null)  && ( System.getenv("bamboo_ARTIFACTORY_PASSWORD"
         sign configurations.pom
     }
     
-    if ( branch == "develop" || branch.startsWith("release/") ) {
+    if ( branch == "main" ) {
         publishing {
             repositories {
                 maven {
@@ -153,7 +154,7 @@ if ( ( bambooUsername != null)  && ( System.getenv("bamboo_ARTIFACTORY_PASSWORD"
             sign publishing.publications.mavenJava
         }
     } 
-    else if ( branch == "master" ) {
+    else if ( branch.startsWith("release/") && !version.contains('-SNAPSHOT') ) {
         publishing {
             repositories {
                 // maven {

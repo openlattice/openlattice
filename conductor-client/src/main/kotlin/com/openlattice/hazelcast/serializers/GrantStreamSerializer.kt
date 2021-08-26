@@ -24,7 +24,7 @@ class GrantStreamSerializer : SelfRegisteringStreamSerializer<Grant> {
         fun deserialize(`in`: ObjectDataInput ): Grant {
             val gt = GrantTypeStreamSerializer.deserialize(`in`)
             val mappings = SetStreamSerializers.fastStringSetDeserialize(`in`)
-            val attr = `in`.readUTF()
+            val attr = `in`.readString()!!
             return Grant(gt, mappings, attr )
         }
     }

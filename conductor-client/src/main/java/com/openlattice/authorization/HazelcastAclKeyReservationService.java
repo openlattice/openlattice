@@ -22,9 +22,6 @@
 
 package com.openlattice.authorization;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
-
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableSet;
 import com.hazelcast.core.HazelcastInstance;
@@ -32,15 +29,23 @@ import com.hazelcast.map.IMap;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.AbstractSecurableType;
 import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.controllers.exceptions.UniqueIdConflictException;
 import com.openlattice.controllers.exceptions.TypeExistsException;
+import com.openlattice.controllers.exceptions.UniqueIdConflictException;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.hazelcast.HazelcastMap;
-
-import java.util.*;
-import java.util.function.Supplier;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
+
+import java.util.Collection;
+import java.util.EnumMap;
+import java.util.EnumSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.function.Supplier;
+
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 public class HazelcastAclKeyReservationService {
     public static final  String                               PRIVATE_NAMESPACE     = "_private";
@@ -80,12 +85,12 @@ public class HazelcastAclKeyReservationService {
         return Util.getSafely( aclKeys, name );
     }
 
-    public Collection<UUID> getIds(Set<String> names) {
-        return Util.getSafely( aclKeys, names ).values();
+    public Collection<UUID> getIds( Set<String> names ) {
+        return aclKeys.getAll( names ).values();
     }
 
-    public Map<String, UUID> getIdsByFqn(Set<String> names) {
-        return Util.getSafely( aclKeys, names);
+    public Map<String, UUID> getIdsByFqn( Set<String> names ) {
+        return aclKeys.getAll( names );
     }
 
     public boolean isReserved( String name ) {
@@ -116,7 +121,7 @@ public class HazelcastAclKeyReservationService {
     }
 
     public void renameReservation( UUID id, FullQualifiedName newFqn ) {
-        renameReservation( id, Util.fqnToString( newFqn ) );
+        renameReservation( id, newFqn.getFullQualifiedNameAsString() );
     }
 
     public void renameReservation( UUID id, String newName ) {
@@ -205,7 +210,7 @@ public class HazelcastAclKeyReservationService {
          * Template this call and make wrappers that directly insert into type maps making fqns redundant.
          */
         final String name = names.putIfAbsent( type.getId(),
-                Util.getSafely( RESERVED_NAMES_AS_MAP, type.getCategory() ) );
+                RESERVED_NAMES_AS_MAP.get( type.getCategory() ) );
 
         /*
          * We don't care if FQN matches in this case as it provides us no additional validation information.
@@ -222,7 +227,7 @@ public class HazelcastAclKeyReservationService {
      * @param id The id to release.
      */
     public void release( UUID id ) {
-        String name = Util.removeSafely( names, id );
+        String name = names.remove( id );
 
         /*
          * We always issue the delete, even if sometimes there is no aclKey registered for that FQN.

@@ -103,8 +103,6 @@ public class Constraint {
             case simple:
                 Preconditions.checkArgument( this.searchTerm.isPresent(),
                         "Field searchTerm must be present for searches of type simple" );
-                Preconditions.checkArgument( this.fuzzy.isPresent(),
-                        "Field fuzzy must be present for searches of type simple" );
                 break;
 
             case writeDateTimeFilter:

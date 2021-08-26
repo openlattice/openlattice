@@ -38,9 +38,9 @@ class AppRoleStreamSerializer : SelfRegisteringStreamSerializer<AppRole> {
         fun deserialize(`in`: ObjectDataInput): AppRole {
 
             val id = UUIDStreamSerializerUtils.deserialize(`in`)
-            val name = `in`.readUTF()
-            val title = `in`.readUTF()
-            val description = `in`.readUTF()
+            val name = `in`.readString()!!
+            val title = `in`.readString()!!
+            val description = `in`.readString()!!
 
             val permissionsMapSize = `in`.readInt()
             val permissionsMap = HashMap<Permission, Map<UUID, Optional<Set<UUID>>>>(permissionsMapSize)

@@ -23,13 +23,15 @@ package com.openlattice.datastore.pods;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openlattice.admin.AdminController;
 import com.openlattice.codex.controllers.CodexController;
+import com.openlattice.collaborations.controllers.CollaborationsController;
 import com.openlattice.collection.CollectionsController;
-import com.openlattice.controllers.OrganizationsController;
 import com.openlattice.data.DataApi;
+import com.openlattice.datasets.DataSetMetadataController;
 import com.openlattice.datastore.analysis.controllers.AnalysisController;
 import com.openlattice.datastore.apps.controllers.AppController;
 import com.openlattice.datastore.authorization.controllers.AuthorizationsController;
 import com.openlattice.datastore.data.controllers.DataController;
+import com.openlattice.datastore.data.controllers.DataIntegrationController;
 import com.openlattice.datastore.directory.controllers.PrincipalDirectoryController;
 import com.openlattice.datastore.edm.controllers.EdmController;
 import com.openlattice.datastore.permissions.controllers.PermissionsController;
@@ -40,6 +42,7 @@ import com.openlattice.datastore.util.DataStoreExceptionHandler;
 import com.openlattice.entitysets.controllers.EntitySetsController;
 import com.openlattice.graph.controllers.GraphController;
 import com.openlattice.organizations.controllers.DatasetController;
+import com.openlattice.organizations.controllers.OrganizationsController;
 import com.openlattice.subscriptions.controllers.FeedsController;
 import com.openlattice.subscriptions.controllers.SubscriptionController;
 import com.openlattice.web.converters.CsvHttpMessageConverter;
@@ -73,7 +76,8 @@ import java.util.List;
                 RequestsController.class, AppController.class, GraphController.class,
                 PersistentSearchController.class, AdminController.class,
                 SubscriptionController.class, FeedsController.class, CodexController.class, CollectionsController.class,
-                DatasetController.class, AnalysisController.class
+                DatasetController.class, AnalysisController.class, CollaborationsController.class,
+                DataSetMetadataController.class, DataIntegrationController.class
         },
         includeFilters = @ComponentScan.Filter(
                 value = { org.springframework.stereotype.Controller.class,

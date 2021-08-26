@@ -1,0 +1,103 @@
+entityDefinitions:
+  DTest:
+    fqn: ol.dispatch
+    entitySetName: DTest
+    propertyDefinitions:
+      ol.id:
+        type: ol.id
+        column: Dis_ID
+      criminaljustice.casenumber:
+        type: criminaljustice.casenumber
+        column: Case_Number
+      ol.caseid:
+        type: ol.caseid
+        column: Case_ID
+      ol.masterbusinessnumber:
+        type: ol.masterbusinessnumber
+        column: MBI_No
+      publicsafety.dispatch911callnumber:
+        type: publicsafety.dispatch911callnumber
+        column: CallNumber_911
+      ol.stringnumber:
+        type: ol.stringnumber
+        column: Dis_No
+      ol.howreported:
+        type: ol.howreported
+        column: HowReported
+      ol.receiveddatetime:
+        type: ol.receiveddatetime
+        column: CFS_DateTimeJanet
+        transforms:
+        - !<transforms.DateTimeTransform>
+          pattern: ['yyyy-MM-dd HH:mm:ss','yyyy-MM-dd HH:mm:ss.S']
+      ol.priority:
+        type: ol.priority
+        column: Priority
+      ol.typeclass:
+        type: ol.typeclass
+        column: TYPE_CLASS
+      ol.type:
+        type: ol.type
+        column: TYPE_ID
+      criminaljustice.ncic:
+        type: criminaljustice.ncic
+        column: NCIC_Code
+      ol.level:
+        type: ol.level
+        transforms:
+        - !<transforms.BooleanContainsTransform>
+          column: CFS_EMS
+          string: X
+          transformsIfTrue:
+            - !<transforms.ColumnTransform>
+              column: PROQA_LEVEL
+          transformsIfFalse:
+            - !<transforms.BooleanContainsTransform>
+              column: CFS_Fire
+              string: X
+              transformsIfTrue:
+              - !<transforms.ColumnTransform>
+                column: FireDispatchLevel
+  DZoneTest:
+    fqn: ol.zone
+    entitySetName: DZoneTest
+    propertyDefinitions:
+      ol.id:
+        type: ol.id
+        transforms:
+        - !<transforms.ConcatTransform>
+          columns: [ZONE_ID,SubZone]
+          separator: '_'
+      ol.name:
+        type: ol.name
+        column: Dis_Zone
+      ol.code:
+        type: ol.code
+        column: ZONE_ID
+      ol.subzone:
+        type: ol.subzone
+        column: SubZone
+      ol.type:
+        type: ol.type
+        transforms:
+        - !<transforms.ValueTransform>
+          value: Dispatch Zone
+    conditions:
+    - !<conditions.ConditionalOr> {}
+    - !<conditions.BooleanIsNullCondition>
+      column: ZONE_ID
+      reverse: true
+    - !<conditions.BooleanIsNullCondition>
+      column: Dis_Zone
+      reverse: true
+associationDefinitions:
+  LocatedAtTest:
+    name: LocatedAtTest
+    fqn: ol.locatedat
+    entitySetName: LocatedAtTest
+    propertyDefinitions:
+      general.id:
+        type: general.id
+        column: Dis_ID
+    src: DTest
+    dst: DZoneTest

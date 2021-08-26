@@ -16,7 +16,7 @@ class AuthorizationEntryProcessorStreamSerializer : NoOpSelfRegisteringStreamSer
         return AuthorizationEntryProcessor::class.java
     }
 
-    override fun read(`in`: ObjectDataInput?): AuthorizationEntryProcessor {
+    override fun read(`in`: ObjectDataInput): AuthorizationEntryProcessor {
         return AuthorizationEntryProcessor()
     }
 }

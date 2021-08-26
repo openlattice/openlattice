@@ -4,7 +4,6 @@ import com.geekbeast.hazelcast.HazelcastClientProvider
 import com.openlattice.hazelcast.HazelcastClient
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.ids.processors.LongIdsGeneratingProcessor
-import org.slf4j.LoggerFactory
 
 /**
  * Used for generating scoped long ids.
