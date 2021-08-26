@@ -21,6 +21,7 @@
 
 package com.openlattice.data
 
+import com.codahale.metrics.annotation.Timed
 import com.google.common.collect.ListMultimap
 import com.google.common.collect.SetMultimap
 import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
@@ -53,6 +54,12 @@ interface DataGraphManager {
             linking: Boolean
     ): EntitySetData<FullQualifiedName>
 
+    fun getFilteredEntitySetData(
+            entitySetId: UUID,
+            filteredDataPageDefinition: FilteredDataPageDefinition,
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
+    ): List<Map<FullQualifiedName, Set<Any>>>
+
     /*
      * CRUD methods for entity
      */
@@ -78,26 +85,6 @@ interface DataGraphManager {
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             metadataOptions: EnumSet<MetadataOption>
     ): Iterable<MutableMap<FullQualifiedName, MutableSet<Any>>>
-
-    /**
-     * Clears property data, id, edges of association entities of the provided DataEdgeKeys in batches.
-     * Note: it only clears edge, not src or dst entities.
-     */
-    fun clearAssociationsBatch(
-            entitySetId: UUID,
-            associationsEdgeKeys: Iterable<DataEdgeKey>,
-            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
-    ): List<WriteEvent>
-
-    /**
-     * Deletes property data, id, edges of association entities of the provided DataEdgeKeys in batches.
-     * Note: it only deletes edge, not src or dst entities.
-     */
-    fun deleteAssociationsBatch(
-            entitySetId: UUID,
-            associationsEdgeKeys: Iterable<DataEdgeKey>,
-            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
-    ): List<WriteEvent>
 
     /*
      * Bulk endpoints for entities/associations
@@ -163,12 +150,6 @@ interface DataGraphManager {
     fun getNeighborEntitySetIds(entitySetIds: Set<UUID>): Set<UUID>
 
     /**
-     * Returns all [DataEdgeKey]s where either src, dst and/or edge entity set ids are equal the requested entitySetId.
-     * If includeClearedEdges is set to true, it will also return cleared (version < 0) entities.
-     */
-    fun getEdgeKeysOfEntitySet(entitySetId: UUID, includeClearedEdges: Boolean): BasePostgresIterable<DataEdgeKey>
-
-    /**
      * Returns all [DataEdgeKey]s that include requested entityKeyIds either as src, dst and/or edge with the requested
      * entity set id.
      * If includeClearedEdges is set to true, it will also return cleared (version < 0) entities.
@@ -180,13 +161,10 @@ interface DataGraphManager {
     fun getExpiringEntitiesFromEntitySet(
             entitySetId: UUID,
             expirationPolicy: DataExpiration,
-            dateTime: OffsetDateTime,
-            deleteType: DeleteType,
-            expirationPropertyType: Optional<PropertyType>
+            currentDateTime: OffsetDateTime
     ): BasePostgresIterable<UUID>
 
     fun getEdgeEntitySetsConnectedToEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): Set<UUID>
-    fun getEdgeEntitySetsConnectedToEntitySet(entitySetId: UUID): Set<UUID>
 
     /**
      * Re-partitions the data for an entity set.
@@ -203,4 +181,11 @@ interface DataGraphManager {
             oldPartitions: Set<Int>,
             newPartitions: Set<Int>
     ): UUID
+
+    /**
+     * Deletes a set of edges from the graph.
+     * @param associations Associations to delete
+     */
+    @Timed
+    fun deleteAssociations(associations: Set<DataEdgeKey>, deleteType:DeleteType): WriteEvent
 }

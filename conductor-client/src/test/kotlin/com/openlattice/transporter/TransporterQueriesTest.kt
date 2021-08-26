@@ -11,6 +11,8 @@ import com.openlattice.postgres.IndexType
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresTableManager
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
+import com.openlattice.postgres.external.ExternalDatabasePermissioningService
+import com.openlattice.postgres.external.Schemas
 import com.openlattice.transporter.processors.TransporterSynchronizeTableDefinitionEntryProcessor
 import com.openlattice.transporter.types.TransporterColumn
 import com.openlattice.transporter.types.TransporterColumnSet
@@ -48,12 +50,13 @@ class TransporterQueriesTest {
             val rhizome = context.getBean(RhizomeConfiguration::class.java)
             context.getBean(PostgresTableManager::class.java)
             val extDbConMan = context.getBean(ExternalDatabaseConnectionManager::class.java)
+            val extDbPermsMan = context.getBean(ExternalDatabasePermissioningService::class.java)
 
-            data = TransporterDatastore(config, rhizome, extDbConMan)
+            data = TransporterDatastore(config, rhizome, extDbConMan, extDbPermsMan)
             transporter = data.datastore()
             val fdwTables = transporter.connection.use { conn ->
                 conn.createStatement()
-                        .executeQuery("select count(*) from information_schema.foreign_tables where foreign_table_schema = '${TransporterDatastore.ENTERPRISE_FDW_SCHEMA}'").use { rs ->
+                        .executeQuery("select count(*) from information_schema.foreign_tables where foreign_table_schema = '${Schemas.ENTERPRISE_FDW_SCHEMA}'").use { rs ->
                             rs.next()
                             rs.getInt(1)
                         }
@@ -73,7 +76,7 @@ class TransporterQueriesTest {
         val mockMap = mutableMapOf(type to TransporterColumnSet(emptyMap()))
         val ep = TransporterSynchronizeTableDefinitionEntryProcessor(props).init(data)
         ep.process(mockMap.entries.first())
-        testTables.add(tableName(type))
+        testTables.add(quotedEtTableName(type))
     }
 
     @After
@@ -112,9 +115,9 @@ class TransporterQueriesTest {
         val entityType = TestDataFactory.entityType(prop)
         val es = TestDataFactory.entitySetWithType(entityType.id)
         val entitySetId = es.id
-        val table = tableName(entityType.id)
+        val table = quotedEtTableName(entityType.id)
         sync(entityType.id, listOf(prop))
-        val query = updatePrimaryKeyForEntitySets(table)
+        val query = updateEntityTypeTableEntries(table)
         transporter.connection.use {conn ->
             conn.prepareStatement(query).use {ps ->
                 ps.setArray(1, PostgresArrays.createIntArray(conn, listOf(1)))
@@ -134,7 +137,7 @@ class TransporterQueriesTest {
         val entityType = TestDataFactory.entityType(prop)
         val es = TestDataFactory.entitySetWithType(entityType.id)
         val entitySetId = es.id
-        val table = tableName(entityType.id)
+        val table = quotedEtTableName(entityType.id)
         sync(entityType.id, listOf(prop))
         val propCol = TransporterColumn(prop)
         val query = updateRowsForPropertyType(table, prop.id, propCol)

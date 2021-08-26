@@ -65,7 +65,7 @@ public class PrincipalStreamSerializer implements SelfRegisteringStreamSerialize
 
     public static Principal deserialize( ObjectDataInput in ) throws IOException {
         PrincipalType type = PrincipalTypeStreamSerializer.deserialize( in );
-        String id = in.readUTF();
+        String id = in.readString();
         return new Principal( type, id );
     }
 

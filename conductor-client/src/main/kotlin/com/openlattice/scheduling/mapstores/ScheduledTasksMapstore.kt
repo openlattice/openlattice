@@ -21,6 +21,7 @@
 package com.openlattice.scheduling.mapstores
 
 import com.dataloom.mappers.ObjectMappers
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.hazelcast.config.InMemoryFormat
 import com.hazelcast.config.IndexConfig
 import com.hazelcast.config.IndexType
@@ -50,7 +51,7 @@ open class ScheduledTasksMapstore(
         @JvmStatic
         val SCHEDULED_DATE_TIME_INDEX = "scheduledDateTime"
 
-        val mapper = ObjectMappers.getJsonMapper()
+        val mapper: ObjectMapper = ObjectMappers.getJsonMapper()
 
     }
 

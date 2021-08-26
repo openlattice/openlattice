@@ -61,7 +61,7 @@ public class WrappedAuth0Authentication implements Authentication {
             String principalId = authentication.getPrincipal().toString();
             principal = new Principal( PrincipalType.USER, principalId.toString() );
 
-            SecurablePrincipal sp = spm.getPrincipal( principal.getId() );
+            SecurablePrincipal sp = spm.getSecurablePrincipal( principal.getId() );
             Collection<SecurablePrincipal> securablePrincipals = spm.getAllPrincipals( sp );
 
             principals = new TreeSet<>();

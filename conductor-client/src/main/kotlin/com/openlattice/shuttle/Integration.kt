@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.openlattice.IdConstants
 import com.openlattice.client.RetrofitFactory
 import com.openlattice.client.serialization.SerializationConstants
-import com.openlattice.mapstores.TestDataFactory
 import java.util.*
 
 /**

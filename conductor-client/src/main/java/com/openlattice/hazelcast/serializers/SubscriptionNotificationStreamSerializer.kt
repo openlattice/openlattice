@@ -24,8 +24,8 @@ class SubscriptionNotificationStreamSerializer() : TestableSelfRegisteringStream
     }
 
     override fun read(`in`: ObjectDataInput): SubscriptionNotification {
-        val messageContents = `in`.readUTF()
-        val phoneNumber = `in`.readUTF()
+        val messageContents = `in`.readString()!!
+        val phoneNumber = `in`.readString()!!
 
         return SubscriptionNotification(messageContents, phoneNumber)
     }

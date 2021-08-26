@@ -23,13 +23,13 @@ class OrganizationDatabaseStreamSerializer : TestableSelfRegisteringStreamSerial
     }
 
     override fun write(out: ObjectDataOutput, `object`: OrganizationDatabase) {
-        out.writeInt(`object`.oid)
+        out.writeLong(`object`.oid)
         out.writeUTF(`object`.name)
     }
 
     override fun read(`in`: ObjectDataInput): OrganizationDatabase {
-        val oid = `in`.readInt()
-        val name = `in`.readUTF()
+        val oid = `in`.readLong()
+        val name = `in`.readString()!!
         return OrganizationDatabase(oid, name)
     }
 }

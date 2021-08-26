@@ -33,7 +33,7 @@ class SecurablePrincipalAccumulatorStreamSerializer : TestableSelfRegisteringStr
         obj.v?.forEach { SecurablePrincipalStreamSerializer.serialize(out, it) }
     }
 
-    override fun read(input: ObjectDataInput): SecurablePrincipalAccumulator? {
+    override fun read(input: ObjectDataInput): SecurablePrincipalAccumulator {
         val size = input.readInt()
         return if (size == 0) {
             SecurablePrincipalAccumulator()

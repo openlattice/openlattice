@@ -85,6 +85,7 @@ public final class SerializationConstants {
     public static final String DATA                             = "data";
     public static final String DATABASE                         = "database";
     public static final String DATASOURCE_IDS                   = "datasourceIds";
+    public static final String DATASTORE                        = "datastore";
     public static final String DATATYPE_FIELD                   = "datatype";
     public static final String DATA_ID                          = "dataId";
     public static final String DEFAULT_SHOW                     = "defaultShow";
@@ -94,6 +95,7 @@ public final class SerializationConstants {
     public static final String DESCRIPTION_FIELD                = "description";
     public static final String DETAILS_FIELD                    = "details";
     public static final String DIFF                             = "diff";
+    public static final String DRIVER                           = "driver";
     public static final String DST                              = "dst";
     public static final String DST_ENTITY_INDEX                 = "dstEntityIndex";
     public static final String DST_ENTITY_KEY_ID                = "dstEntityKeyId";
@@ -187,7 +189,6 @@ public final class SerializationConstants {
     public static final String MEMBERS_FIELD                    = "members";
     public static final String MESSAGE                          = "message";
     public static final String MESSAGE_ENTITY_SET               = "messageEntitySet";
-    public static final String METADATA_ENTITY_SETS_IDS         = "metadataEntitySetIds";
     public static final String MIN                              = "min";
     public static final String MISSING                          = "missing";
     public static final String MULTI_VALUED                     = "multiValued";
@@ -213,6 +214,7 @@ public final class SerializationConstants {
     public static final String PAGING_TOKEN                     = "pagingToken";
     public static final String PARENT_TYPE_FIELD                = "parentType";
     public static final String PARTITIONS                       = "partitions";
+    public static final String PASSWORD                         = "password";
     public static final String PATH                             = "path";
     public static final String PERMISSIONS                      = "permissions";
     public static final String PERMISSIONS_MAP                  = "permissionsMap";

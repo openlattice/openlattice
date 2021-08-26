@@ -22,13 +22,15 @@ package com.openlattice.rehearsal.organization
 
 import com.kryptnostic.rhizome.pods.ConfigurationLoaderPod
 import com.openlattice.assembler.AssemblerConfiguration
-import com.openlattice.assembler.AssemblerConnectionManager
-import com.openlattice.assembler.PostgresDatabases
 import com.openlattice.assembler.pods.AssemblerConfigurationPod
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.PostgresTable
+import com.openlattice.postgres.external.ExternalDatabaseType
+import com.openlattice.postgres.external.PostgresDatabaseQueryService.Companion.entitySetNameTableName
+import com.openlattice.postgres.external.Schemas
 import com.openlattice.rehearsal.application.TestServer
+import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import java.sql.ResultSet
 import java.util.*
@@ -36,7 +38,7 @@ import java.util.*
 class TestAssemblerConnectionManager {
 
     companion object {
-        private var assemblerConfiguration: AssemblerConfiguration
+        private val assemblerConfiguration: AssemblerConfiguration
 
         // TODO change tests for this after transporter is ready
         const val PRODUCTION_FOREIGN_SCHEMA = "prod"
@@ -49,10 +51,23 @@ class TestAssemblerConnectionManager {
 
         @JvmStatic
         fun connect(organizationId: UUID, config: Optional<Properties> = Optional.empty()): HikariDataSource {
-            val dbName = PostgresDatabases.buildDefaultOrganizationDatabaseName(organizationId)
+            val dbName = ExternalDatabaseType.ORGANIZATION.generateName(organizationId)
             val connectionConfig = config.orElse(assemblerConfiguration.server.clone() as Properties)
 
-            return AssemblerConnectionManager.createDataSource(dbName, connectionConfig, assemblerConfiguration.ssl)
+            return createDataSource(dbName, connectionConfig, assemblerConfiguration.ssl)
+        }
+
+        fun createDataSource(dbName: String, config: Properties, useSsl: Boolean): HikariDataSource {
+            val jdbcUrl = config.getProperty("jdbcUrl")
+                    ?: throw Exception("No JDBC URL specified in configuration $config")
+
+            val newProps = config.clone() as Properties
+            newProps["jdbcUrl"] = "${jdbcUrl.removeSuffix("/")}/$dbName" + if (useSsl) {
+                "?sslmode=require"
+            } else {
+                ""
+            }
+            return HikariDataSource(HikariConfig(newProps))
         }
 
         /**
@@ -66,7 +81,7 @@ class TestAssemblerConnectionManager {
             } else {
                 properties.joinToString(",") { DataTables.quote(it) }
             }
-            return "SELECT $columnsToSelect FROM ${AssemblerConnectionManager.entitySetNameTableName(entitySetName)}"
+            return "SELECT $columnsToSelect FROM ${entitySetNameTableName(entitySetName)}"
         }
 
         /**
@@ -79,7 +94,7 @@ class TestAssemblerConnectionManager {
                 edgeEntitySetId: Optional<UUID> = Optional.empty(),
                 dstEntitySetId: Optional<UUID> = Optional.empty()
         ): String {
-            return "SELECT * FROM ${AssemblerConnectionManager.OPENLATTICE_SCHEMA}.${PostgresTable.E.name} " +
+            return "SELECT * FROM ${Schemas.OPENLATTICE_SCHEMA}.${PostgresTable.E.name} " +
                     if (!srcEntitySetId.isPresent && !edgeEntitySetId.isPresent && !dstEntitySetId.isPresent) {
                         ""
                     } else {

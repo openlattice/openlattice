@@ -35,11 +35,16 @@ import com.openlattice.authorization.securable.AbstractSecurableType;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.codex.Base64Media;
 import com.openlattice.codex.MessageRequest;
+import com.openlattice.collaborations.Collaboration;
+import com.openlattice.collaborations.ProjectedTableKey;
+import com.openlattice.collaborations.ProjectedTableMetadata;
 import com.openlattice.collections.CollectionTemplateType;
 import com.openlattice.collections.EntitySetCollection;
 import com.openlattice.collections.EntityTypeCollection;
 import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.EntityKey;
+import com.openlattice.datasets.SecurableObjectMetadata;
+import com.openlattice.datasets.SecurableObjectMetadataUpdate;
 import com.openlattice.edm.EdmDetails;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.requests.MetadataUpdate;
@@ -50,15 +55,14 @@ import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.EntityTypePropertyMetadata;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.notifications.sms.SmsEntitySetInformation;
-import com.openlattice.organization.OrganizationExternalDatabaseColumn;
-import com.openlattice.organization.OrganizationExternalDatabaseTable;
+import com.openlattice.organization.ExternalColumn;
+import com.openlattice.organization.ExternalTable;
 import com.openlattice.organization.OrganizationPrincipal;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.Grant;
 import com.openlattice.organizations.GrantType;
 import com.openlattice.organizations.Organization;
 import com.openlattice.organizations.OrganizationDatabase;
-import com.openlattice.organizations.OrganizationMetadataEntitySetIds;
 import com.openlattice.postgres.IndexType;
 import com.openlattice.postgres.PostgresAuthenticationRecord;
 import com.openlattice.postgres.PostgresConnectionType;
@@ -250,7 +254,7 @@ public final class TestDataFactory {
             SecurableObjectType category,
             PropertyType... keys ) {
         LinkedHashSet<UUID> k = keys.length > 0
-                ? Arrays.asList( keys ).stream().map( PropertyType::getId )
+                ? Arrays.stream( keys ).map( PropertyType::getId )
                 .collect( Collectors.toCollection( Sets::newLinkedHashSet ) )
                 : Sets.newLinkedHashSet( Arrays.asList( UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID() ) );
         var propertyTags = new LinkedHashMap<UUID, LinkedHashSet<String>>( k.size() );
@@ -437,8 +441,7 @@ public final class TestDataFactory {
                 Sets.newHashSet( randomAlphanumeric( 5 ), randomAlphanumeric( 5 ) ),
                 Maps.newHashMap( ImmutableMap
                         .of( UUID.randomUUID(), ImmutableMap.of( grant.getGrantType(), grant() ) )
-                ),
-                new OrganizationMetadataEntitySetIds()
+                )
         );
     }
 
@@ -472,7 +475,6 @@ public final class TestDataFactory {
         );
     }
 
-
     public static Role role() {
         return new Role(
                 Optional.of( UUID.randomUUID() ),
@@ -496,8 +498,7 @@ public final class TestDataFactory {
     }
 
     public static EnumSet<Permission> permissions() {
-        return Arrays.asList( permissions )
-                .stream()
+        return Arrays.stream( permissions )
                 .filter( elem -> r.nextBoolean() )
                 .collect( Collectors.toCollection( () -> EnumSet.noneOf( Permission.class ) ) );
     }
@@ -785,9 +786,9 @@ public final class TestDataFactory {
                 app().getDefaultSettings() );
     }
 
-    public static OrganizationExternalDatabaseColumn organizationExternalDatabaseColumn() {
-        OrganizationExternalDatabaseTable table = organizationExternalDatabaseTable();
-        return new OrganizationExternalDatabaseColumn(
+    public static ExternalColumn externalColumn() {
+        ExternalTable table = externalTable();
+        return new ExternalColumn(
                 UUID.randomUUID(),
                 randomAlphanumeric( 5 ),
                 randomAlphanumeric( 5 ),
@@ -800,14 +801,15 @@ public final class TestDataFactory {
         );
     }
 
-    public static OrganizationExternalDatabaseTable organizationExternalDatabaseTable() {
-        return new OrganizationExternalDatabaseTable(
+    public static ExternalTable externalTable() {
+        return new ExternalTable(
                 UUID.randomUUID(),
                 randomAlphanumeric( 5 ),
                 randomAlphanumeric( 5 ),
                 Optional.of( randomAlphanumeric( 5 ) ),
                 UUID.randomUUID(),
-                r.nextInt()
+                r.nextInt(),
+                randomAlphabetic( 5 )
         );
     }
 
@@ -856,6 +858,54 @@ public final class TestDataFactory {
 
     public static OrganizationDatabase organizationDatabase() {
         return new OrganizationDatabase( r.nextInt(), randomAlphanumeric( 10 ) );
+    }
+
+    public static Collaboration collaboration() {
+        return new Collaboration(
+                UUID.randomUUID(),
+                randomAlphanumeric( 10 ),
+                randomAlphanumeric( 10 ),
+                randomAlphanumeric( 10 ),
+                Sets.newHashSet( UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID() )
+        );
+    }
+
+    public static ProjectedTableKey projectedTableKey() {
+        return new ProjectedTableKey( UUID.randomUUID(), UUID.randomUUID() );
+    }
+
+    public static ProjectedTableMetadata projectedTableMetadata() {
+        return new ProjectedTableMetadata( UUID.randomUUID(), randomAlphanumeric( 10 ) );
+    }
+
+    private static Map<String, Object> randomMetadataMap() {
+        Map<String, Object> metadata = Maps.newHashMap();
+        for ( int i = 0; i < 5; i++ ) {
+            metadata.put( randomAlphanumeric( 5 ), randomAlphanumeric( 10 ) );
+        }
+
+        return metadata;
+    }
+
+    public static SecurableObjectMetadata securableObjectMetadata() {
+        return new SecurableObjectMetadata(
+                randomAlphanumeric( 10 ),
+                randomAlphanumeric( 20 ),
+                Sets.newHashSet( randomAlphanumeric( 10 ) ),
+                Sets.newHashSet( randomAlphanumeric( 10 ) ),
+                randomMetadataMap()
+        );
+    }
+
+    public static SecurableObjectMetadataUpdate securableObjectMetadataUpdate() {
+        String title = r.nextBoolean() ? randomAlphanumeric( 10 ) : null;
+        String description = r.nextBoolean() ? randomAlphanumeric( 20 ) : null;
+        Set<String> contacts = r.nextBoolean() ? Sets.newHashSet( randomAlphanumeric( 10 ) ) : null;
+        Set<String> flags = r.nextBoolean() ? Sets.newHashSet( randomAlphanumeric( 10 ) ) : null;
+        Map<String, Object> metadata = r.nextBoolean() ? randomMetadataMap() : null;
+
+        return new SecurableObjectMetadataUpdate( title, description, contacts, flags, metadata );
+
     }
 
 }

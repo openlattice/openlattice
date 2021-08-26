@@ -4,7 +4,6 @@ import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
-import com.openlattice.edm.set.EntitySetPropertyKey;
 import com.openlattice.edm.type.EntityTypePropertyKey;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import org.springframework.stereotype.Component;

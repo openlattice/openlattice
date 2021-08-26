@@ -21,12 +21,10 @@
 
 package com.openlattice.ids
 
-import com.openlattice.assembler.AssemblerConnectionManager
-
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-interface IdGenerationServiceDependent<T> {
-    fun init(idService: HazelcastIdGenerationService) : T
+interface IdGenerationServiceDependent {
+    fun init(idService: HazelcastIdGenerationService)
 }

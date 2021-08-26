@@ -24,14 +24,18 @@ import com.google.common.eventbus.EventBus
 import com.hazelcast.core.HazelcastInstance
 import com.kryptnostic.rhizome.configuration.ConfigurationConstants
 import com.kryptnostic.rhizome.core.RhizomeApplicationServer
+import com.kryptnostic.rhizome.pods.ConfigurationLoaderPod
 import com.openlattice.assembler.pods.AssemblerConfigurationPod
 import com.openlattice.auditing.pods.AuditingConfigurationPod
 import com.openlattice.auth0.Auth0Pod
+import com.openlattice.data.storage.DataSourceResolver
 import com.openlattice.datastore.constants.DatastoreProfiles
 import com.openlattice.edm.PostgresEdmManager
+import com.openlattice.test.DataSourceResolverPodForTests
 import com.openlattice.hazelcast.pods.MapstoresPod
 import com.openlattice.hazelcast.pods.SharedStreamSerializersPod
 import com.openlattice.hazelcast.pods.TestPod
+import com.openlattice.ioc.providers.LateInitProvidersPod
 import com.openlattice.jdbc.JdbcPod
 import com.openlattice.postgres.PostgresPod
 import com.openlattice.postgres.PostgresTablesPod
@@ -43,16 +47,19 @@ open class TestServer {
 
         @JvmField
         val testServer = RhizomeApplicationServer(
-                Auth0Pod::class.java,
-                AssemblerConfigurationPod::class.java,
-                MapstoresPod::class.java,
-                JdbcPod::class.java,
-                PostgresPod::class.java,
-                SharedStreamSerializersPod::class.java,
-                PostgresTablesPod::class.java,
-                AuditingConfigurationPod::class.java,
-                ExternalDatabaseConnectionManagerPod::class.java,
-                TestPod::class.java
+            Auth0Pod::class.java,
+            AssemblerConfigurationPod::class.java,
+            MapstoresPod::class.java,
+            JdbcPod::class.java,
+            PostgresPod::class.java,
+            SharedStreamSerializersPod::class.java,
+            PostgresTablesPod::class.java,
+            AuditingConfigurationPod::class.java,
+            ExternalDatabaseConnectionManagerPod::class.java,
+            DataSourceResolverPodForTests::class.java,
+            LateInitProvidersPod::class.java,
+            TestPod::class.java,
+            ConfigurationLoaderPod::class.java
         )
 
         @JvmField
@@ -61,12 +68,18 @@ open class TestServer {
         @JvmField
         val hds: HikariDataSource
 
+        @JvmField
+        val dsr: DataSourceResolver
+
         init {
             testServer.sprout(ConfigurationConstants.Profiles.LOCAL_CONFIGURATION_PROFILE, PostgresPod.PROFILE,
                     DatastoreProfiles.MEDIA_LOCAL_PROFILE)
 
             hazelcastInstance = testServer.context.getBean(HazelcastInstance::class.java)
+            //This should work as tests aren't sharded all will all share the default datasource
             hds = testServer.context.getBean(HikariDataSource::class.java)
+            dsr = testServer.context.getBean(DataSourceResolver::class.java)
+
             val edm = PostgresEdmManager(hds)
 
             testServer.context.getBean(EventBus::class.java)

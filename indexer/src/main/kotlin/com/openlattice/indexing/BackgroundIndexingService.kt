@@ -23,20 +23,27 @@ package com.openlattice.indexing
 
 import com.google.common.base.Stopwatch
 import com.hazelcast.core.HazelcastInstance
+import com.hazelcast.query.Predicates
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
 import com.openlattice.data.storage.IndexingMetadataManager
 import com.openlattice.data.storage.MetadataOption
 import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.edm.EntitySet
+import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.indexer.IndexerEntitySetMetadata
 import com.openlattice.indexing.configuration.IndexerConfiguration
 import com.openlattice.postgres.DataTables.LAST_INDEX
 import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresArrays
-import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.ID
+import com.openlattice.postgres.PostgresColumn.PARTITION
+import com.openlattice.postgres.PostgresColumn.VERSION
 import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.ResultSetAdapters
+import com.openlattice.postgres.mapstores.EntitySetMapstore
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
@@ -95,18 +102,20 @@ class BackgroundIndexingService(
             }
             val w = Stopwatch.createStarted()
             //We shuffle entity sets to make sure we have a chance to work share and index everything
-            val lockedEntitySets = entitySets.values
-                    .filter { !it.isLinking }
-                    .filter { it.name != "OpenLattice Audit Entity Set" } //TODO: Clean out audit entity set from prod
+
+            val lockedEntitySets = entitySets.values(
+                    Predicates.notEqual<UUID, EntitySet>(EntitySetMapstore.FLAGS_INDEX, EntitySetFlag.LINKING)
+            )
+                    .filter { !it.isAudit }
                     .filter { tryLockEntitySet(it.id) == null }
                     .shuffled()
 
             val totalIndexed = lockedEntitySets
                     .parallelStream()
-                    .mapToInt { indexEntitySet(it) }
+                    .mapToInt { indexEntitySet(IndexerEntitySetMetadata.fromEntitySet(it)) }
                     .sum()
 
-            lockedEntitySets.forEach(this::deleteIndexingLock)
+            lockedEntitySets.forEach { deleteIndexingLock(it.id) }
 
             logger.info(
                     "Completed indexing {} elements in {} ms",
@@ -158,14 +167,14 @@ class BackgroundIndexingService(
     }
 
     private fun getEntityDataKeys(
-            entitySet: EntitySet,
+            entitySet: IndexerEntitySetMetadata,
             reindexAll: Boolean = false,
             getTombstoned: Boolean = false
     ): BasePostgresIterable<Pair<UUID, OffsetDateTime>> {
         return BasePostgresIterable(
                 PreparedStatementHolderSupplier(hds, getEntityDataKeysQuery(reindexAll, getTombstoned), FETCH_SIZE) {
                     it.setObject(1, entitySet.id)
-                    it.setArray(2, PostgresArrays.createIntArray(it.connection, entitySet.partitions))
+                    it.setArray(2, PostgresArrays.createIntArray(it.connection, *entitySet.partitions))
                 }
         ) { ResultSetAdapters.id(it) to ResultSetAdapters.lastWriteTyped(it) }
     }
@@ -184,7 +193,7 @@ class BackgroundIndexingService(
      * @param reindexAll Indicator whether it should re-index all entities found in the entity set or just the ones,
      * which are not yet indexed.
      */
-    private fun indexEntitySet(entitySet: EntitySet, reindexAll: Boolean = false): Int {
+    private fun indexEntitySet(entitySet: IndexerEntitySetMetadata, reindexAll: Boolean = false): Int {
 
         val upsertedEntityCount = indexEntitiesInEntitySet(entitySet, reindexAll, indexTombstoned = false)
         val tombstonedEntityCount = indexEntitiesInEntitySet(entitySet, reindexAll, indexTombstoned = true)
@@ -202,11 +211,11 @@ class BackgroundIndexingService(
      * entities or index still active ones ([VERSION] > 0).
      */
     private fun indexEntitiesInEntitySet(
-            entitySet: EntitySet,
+            entitySet: IndexerEntitySetMetadata,
             reindexAll: Boolean = false,
             indexTombstoned: Boolean = false
     ): Int {
-        logger.info(
+        logger.debug(
                 "Starting indexing for entity set {} with id {}",
                 entitySet.name,
                 entitySet.id
@@ -229,7 +238,7 @@ class BackgroundIndexingService(
                     }
                 }
 
-        logger.info(
+        logger.debug(
                 "Finished indexing {} elements from entity set {} in {} ms",
                 indexCount,
                 entitySet.name,
@@ -240,7 +249,7 @@ class BackgroundIndexingService(
     }
 
     internal fun indexEntities(
-            entitySet: EntitySet,
+            entitySet: IndexerEntitySetMetadata,
             batchToIndex: Map<UUID, OffsetDateTime>,
             propertyTypeMap: Map<UUID, PropertyType>,
             markAsIndexed: Boolean = true
@@ -253,7 +262,7 @@ class BackgroundIndexingService(
                 EnumSet.of(MetadataOption.LAST_WRITE)
         ).toMap()
 
-        logger.info("Loading data for indexEntities took {} ms", esb.elapsed(TimeUnit.MILLISECONDS))
+        logger.debug("Loading data for indexEntities took {} ms", esb.elapsed(TimeUnit.MILLISECONDS))
 
         if (entitiesById.size != batchToIndex.size) {
             logger.error(
@@ -265,7 +274,8 @@ class BackgroundIndexingService(
 
         if (entitiesById.isEmpty()
                 || !elasticsearchApi.createBulkEntityData(entitySet.entityTypeId, entitySet.id, entitiesById)) {
-            logger.error("Failed to index elements with entitiesById: {}", entitiesById)
+            logger.error("Failed to index {} elements.", entitiesById.size)
+            logger.debug("Failed to index elements with entitiesById: {}", entitiesById)
             return 0
         }
 
@@ -275,7 +285,7 @@ class BackgroundIndexingService(
             batchToIndex.size
         }
 
-        logger.info(
+        logger.debug(
                 "Indexed batch of {} elements for {} ({}) in {} ms",
                 indexCount,
                 entitySet.name,
@@ -288,7 +298,7 @@ class BackgroundIndexingService(
     }
 
     private fun unindexEntities(
-            entitySet: EntitySet,
+            entitySet: IndexerEntitySetMetadata,
             batchToIndex: Map<UUID, OffsetDateTime>,
             markAsIndexed: Boolean = true
     ): Int {
@@ -304,7 +314,7 @@ class BackgroundIndexingService(
                 batchToIndex.size
             }
 
-            logger.info(
+            logger.debug(
                     "Un-indexed batch of {} elements for {} ({}) in {} ms",
                     indexCount,
                     entitySet.name,
@@ -313,7 +323,8 @@ class BackgroundIndexingService(
             )
         } else {
             indexCount = 0
-            logger.error(
+            logger.error("Failed to un-index {} elements of entity set {}", batchToIndex.size, entitySet.id)
+            logger.debug(
                     "Failed to un-index elements of entity set {} with entity key ids: {}",
                     entitySet.id,
                     batchToIndex.keys
@@ -342,12 +353,12 @@ class BackgroundIndexingService(
         )
     }
 
-    private fun deleteIndexingLock(entitySet: EntitySet) {
+    private fun deleteIndexingLock(esId: UUID) {
         try {
-            indexingLocks.lock(entitySet.id)
-            indexingLocks.delete(entitySet.id)
+            indexingLocks.lock(esId)
+            indexingLocks.delete(esId)
         } finally {
-            indexingLocks.unlock(entitySet.id)
+            indexingLocks.unlock(esId)
         }
     }
 }

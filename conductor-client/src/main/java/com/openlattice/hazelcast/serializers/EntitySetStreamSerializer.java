@@ -30,6 +30,7 @@ import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
 import com.openlattice.data.DataExpiration;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.EntitySetFlag;
+import com.openlattice.entitysets.StorageType;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.openlattice.mapstores.TestDataFactory;
 import org.springframework.stereotype.Component;
@@ -64,6 +65,9 @@ public class EntitySetStreamSerializer implements TestableSelfRegisteringStreamS
 
         StreamSerializers.serializeIntList( out, object.getPartitions() );
 
+        out.writeUTF( object.getStorageType().name() );
+        out.writeUTF( object.getDatastore() );
+
         if ( object.getExpiration() != null ) {
             out.writeBoolean( true );
             DataExpirationStreamSerializer.serialize( out, object.getExpiration() );
@@ -80,9 +84,9 @@ public class EntitySetStreamSerializer implements TestableSelfRegisteringStreamS
     public static EntitySet deserialize( ObjectDataInput in ) throws IOException {
         UUID id = UUIDStreamSerializerUtils.deserialize( in );
         UUID entityTypeId = UUIDStreamSerializerUtils.deserialize( in );
-        String name = in.readUTF();
-        String title = in.readUTF();
-        String description = in.readUTF();
+        String name = in.readString();
+        String title = in.readString();
+        String description = in.readString();
         Set<String> contacts = SetStreamSerializers.fastStringSetDeserialize( in );
         Set<UUID> linkedEntitySets = SetStreamSerializers.fastUUIDSetDeserialize( in );
         UUID organizationId = UUIDStreamSerializerUtils.deserialize( in );
@@ -94,7 +98,8 @@ public class EntitySetStreamSerializer implements TestableSelfRegisteringStreamS
         }
 
         LinkedHashSet<Integer> partitions = (LinkedHashSet<Integer>) StreamSerializers.deserializeIntList( in, Sets.newLinkedHashSet() );
-
+        StorageType storageType = StorageType.valueOf(in.readString());
+        String datastore = in.readString();
         DataExpiration expiration;
         boolean hasExpiration = in.readBoolean();
         if ( hasExpiration ) {
@@ -114,7 +119,9 @@ public class EntitySetStreamSerializer implements TestableSelfRegisteringStreamS
                 organizationId,
                 flags,
                 partitions,
-                expiration );
+                expiration,
+                storageType,
+                datastore );
     }
 
     @Override
