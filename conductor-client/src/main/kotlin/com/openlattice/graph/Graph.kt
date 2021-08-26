@@ -158,20 +158,6 @@ class Graph(
         ps.addBatch()
     }
 
-    /* Delete  */
-
-    @Deprecated("Redundant function call." , replaceWith = ReplaceWith("deleteEdges"))
-    override fun clearEdges(keys: Iterable<DataEdgeKey>): Int {
-        val version = -System.currentTimeMillis()
-        return lockAndOperateOnEdges(keys, CLEAR_BY_VERTEX_SQL) { lockStmt, operationStmt, dataEdgeKey ->
-
-            addKeyIds(lockStmt, dataEdgeKey)
-
-            clearEdgesAddVersion(operationStmt, version)
-            addKeyIds(operationStmt, dataEdgeKey, 3)
-        }
-    }
-
     private fun lockAndOperateOnEdges(
             keys: Iterable<DataEdgeKey>,
             statement: String,
@@ -216,6 +202,18 @@ class Graph(
         ps.setLong(2, version)
     }
 
+    /* Delete  */
+
+    @Deprecated("Redundant function call." , replaceWith = ReplaceWith("deleteEdges"))
+    override fun clearEdges(keys: Iterable<DataEdgeKey>): Int {
+        val version = -System.currentTimeMillis()
+        return lockAndOperateOnEdges(keys, CLEAR_BY_VERTEX_SQL) { lockStmt, operationStmt, dataEdgeKey ->
+            addKeyIds(lockStmt, dataEdgeKey)
+            clearEdgesAddVersion(operationStmt, version)
+            addKeyIds(operationStmt, dataEdgeKey, 3)
+        }
+    }
+
     override fun deleteEdges(keys: Iterable<DataEdgeKey>, deleteType: DeleteType): WriteEvent {
         val sql = when(deleteType) {
           DeleteType.Hard -> HARD_DELETE_EDGES_SQL
@@ -227,7 +225,7 @@ class Graph(
             //For soft deletes we have to bind version twice
             if( deleteType == DeleteType.Soft) {
                 operationStmt.setLong(opIndex++, version)
-                operationStmt.setLong(opIndex, version)
+                operationStmt.setLong(opIndex++, version)
             }
 
             addKeyIds(lockStmt, dataEdgeKey)
@@ -1516,7 +1514,6 @@ private val SOFT_DELETE_EDGES_SQL = """
               ${SRC_ENTITY_KEY_ID.name} = ? AND
               ${DST_ENTITY_KEY_ID.name} = ? AND
               ${EDGE_ENTITY_KEY_ID.name} = ? 
-            
         """.trimIndent()
 
 /**

@@ -39,7 +39,7 @@ interface GraphService {
 
     fun clearEdges(keys: Iterable<DataEdgeKey>): Int
 
-    fun deleteEdges(keys: Iterable<DataEdgeKey>, deleteType: DeleteType): WriteEvent
+    fun deleteEdges(keys: Iterable<DataEdgeKey>, deleteType: DeleteType  = DeleteType.Soft ): WriteEvent
 
     /**
      * Returns all [DataEdgeKey]s that include requested entityKeyIds either as src, dst and/or edge.
