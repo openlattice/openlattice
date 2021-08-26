@@ -106,6 +106,7 @@ class DataDeletionJob(
             return
         }
 
+        logger.info("Processing data keys: {}", entityDataKeys)
         var edgeBatch = getBatchOfEdgesForIds(entityDataKeys)
         while (edgeBatch.isNotEmpty()) {
             logger.info("${state.deleteType} deleting edges and entities involving {}", edgeBatch)
