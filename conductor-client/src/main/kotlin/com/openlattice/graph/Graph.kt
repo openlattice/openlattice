@@ -27,7 +27,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import com.geekbeast.metrics.time
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.collect.ImmutableList
-import com.google.common.collect.Iterables
 import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
 import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
@@ -182,11 +181,9 @@ class Graph(
         val dstEntitySetEdgeKeys = keys.groupBy { it.dst.entitySetId }
         val edgeEntitySetEdgeKeys = keys.groupBy { it.edge.entitySetId }
 
-        val numUpdate = lockAndOperateOnEdges(srcEntitySetEdgeKeys, statement, statementSupplier)+
-                lockAndOperateOnEdges(dstEntitySetEdgeKeys, statement, statementSupplier)+
+        return lockAndOperateOnEdges(srcEntitySetEdgeKeys, statement, statementSupplier) +
+                lockAndOperateOnEdges(dstEntitySetEdgeKeys, statement, statementSupplier) +
                 lockAndOperateOnEdges(edgeEntitySetEdgeKeys, statement, statementSupplier)
-
-        return numUpdate
     }
 
     private fun lockAndOperateOnEdges(
@@ -230,7 +227,7 @@ class Graph(
             //For soft deletes we have to bind version twice
             if( deleteType == DeleteType.Soft) {
                 operationStmt.setLong(opIndex++, version)
-                operationStmt.setLong(opIndex++, version)
+                operationStmt.setLong(opIndex, version)
             }
 
             addKeyIds(lockStmt, dataEdgeKey)
