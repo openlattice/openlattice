@@ -151,6 +151,7 @@ class Graph(
         val edk = dataEdgeKey.src
         val partitions = partitionManager.getEntitySetPartitions(edk.entitySetId)
         val partition = getPartition(edk.entityKeyId, partitions.toList())
+        logger.info("Using partition {} for data edge key {}", partition, dataEdgeKey )
         ps.setObject(startIndex, partition)
         ps.setObject(startIndex + 1, dataEdgeKey.src.entityKeyId)
         ps.setObject(startIndex + 2, dataEdgeKey.dst.entityKeyId)
