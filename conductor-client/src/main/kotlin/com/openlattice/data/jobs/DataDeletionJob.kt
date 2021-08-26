@@ -117,7 +117,7 @@ class DataDeletionJob(
         }
 
         val deletedEntities = deleteEntities(entityDataKeys)
-        logger.info("Deleted $deletedEntities from batch {}", deletedEntities)
+        logger.info("Deleted $deletedEntities from batch {}", entityDataKeys)
         state.numDeletes += deletedEntities
         cleanUpBatch(entityDataKeys)
         publishJobState()
