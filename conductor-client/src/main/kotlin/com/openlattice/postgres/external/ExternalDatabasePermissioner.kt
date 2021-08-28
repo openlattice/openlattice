@@ -12,6 +12,7 @@ import com.openlattice.edm.processors.GetOrganizationIdFromEntitySetEntryProcess
 import com.openlattice.edm.processors.GetSchemaFromExternalTableEntryProcessor
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.IdConstants
 import com.openlattice.organization.ExternalColumn
 import com.openlattice.organization.ExternalTable
 import com.openlattice.organization.roles.Role
@@ -259,7 +260,30 @@ class ExternalDatabasePermissioner(
             columnAcls: List<Acl>,
             columnsById: Map<AclKey, TableColumn>
     ) {
-        updateTablePermissions(action, SecurableObjectType.PropertyTypeInEntitySet, columnAcls, columnsById, TableType.VIEW)
+        // add acl/TableColumn associated to EdmConstants.ID_FQN (with uuid IdConstants.ID_ID.id)
+        val completedColumnAcls = columnAcls.toMutableList()
+        val completedColumnsById = columnsById.toMutableMap()
+        columnAcls.forEach { 
+            val idFqnAclKey = AclKey(it.aclKey[0], IdConstants.ID_ID.id)
+            val org_id = columnsById.getValue(it.aclKey).organizationId
+            val readAces = it.aces.map { ace ->
+                Ace(ace.principal, EnumSet.of(Permission.READ))
+            }
+            
+            completedColumnsById.put(
+                idFqnAclKey, 
+                TableColumn(
+                    org_id, 
+                    it.aclKey[0], 
+                    IdConstants.ID_ID.id, 
+                    Schemas.ASSEMBLED_ENTITY_SETS
+                )
+            )
+            completedColumnAcls.add(Acl(idFqnAclKey, readAces))
+        }
+
+
+        updateTablePermissions(action, SecurableObjectType.PropertyTypeInEntitySet, completedColumnAcls, completedColumnsById, TableType.VIEW)
     }
 
     /**
@@ -392,12 +416,12 @@ class ExternalDatabasePermissioner(
                 val tableSchema = column.schema
 
                 columnAcl.aces.forEach { ace ->
-                    // filter out permission which doesn't have a key in olToPostgres
-                    val acePermissions = ace.permissions.filter {
-                        olToPostgres.containsKey(it)
-                    }
-
                     val userRole = principalToUsername.getValue(ace.principal)
+
+                    // filter out permission which doesn't have a key in olToPostgres and not in allPermissions
+                    val acePermissions = ace.permissions.filter {
+                        olToPostgres.containsKey(it) && allPermissions.contains(it)
+                    }
                     val requestedPermissions = acePermissions.flatMap { permission ->
                         olToPostgres.getValue(permission)
                     }
