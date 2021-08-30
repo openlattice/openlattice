@@ -219,21 +219,12 @@ class BackgroundIndexingService(
 
         val propertyTypes = getPropertyTypeForEntityType(entitySet.entityTypeId)
 
-        val timer = Stopwatch.createStarted()
-
         val entityKeyIdsWithLastWrite = getEntityDataKeys(entitySet, reindexAll, indexTombstoned)
-        logger.info(
-            "getEntityDataKeys() took {} ms - entity set {}",
-            timer.elapsed(TimeUnit.MILLISECONDS),
-            entitySet.id
-        )
-
         if (Iterables.size(entityKeyIdsWithLastWrite) == 0) {
-            logger.info("no entities to index - entity set {}", entitySet.id)
             return 0
         }
 
-        timer.reset().start()
+        val timer = Stopwatch.createStarted()
         logger.info("starting to index entity set {}", entitySet.id)
 
         val indexCount = StreamSupport
