@@ -268,6 +268,7 @@ class BackgroundIndexingService(
         ).toMap()
 
         logger.info("getting batch entities took {} ms", timer.elapsed(TimeUnit.MILLISECONDS))
+        timer.reset().start()
 
         if (entitiesById.size != batchToIndex.size) {
             logger.error(
