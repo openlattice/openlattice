@@ -22,6 +22,7 @@
 package com.openlattice.indexing
 
 import com.google.common.base.Stopwatch
+import com.google.common.collect.Iterables
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicates
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
@@ -211,29 +212,42 @@ class BackgroundIndexingService(
      * entities or index still active ones ([VERSION] > 0).
      */
     private fun indexEntitiesInEntitySet(
-            entitySet: IndexerEntitySetMetadata,
-            reindexAll: Boolean = false,
-            indexTombstoned: Boolean = false
+        entitySet: IndexerEntitySetMetadata,
+        reindexAll: Boolean = false,
+        indexTombstoned: Boolean = false
     ): Int {
-
-        val timer = Stopwatch.createStarted()
-        logger.info("starting to index entity set {}", entitySet.id)
 
         val propertyTypes = getPropertyTypeForEntityType(entitySet.entityTypeId)
 
-        val entityKeyIdsWithLastWrite = getEntityDataKeys(entitySet, reindexAll, indexTombstoned)
+        val timer = Stopwatch.createStarted()
 
-        val indexCount = StreamSupport.stream( entityKeyIdsWithLastWrite.spliterator(), false )
-                .asSequence()
-                .chunked(INDEX_SIZE)
-                .sumBy {
-                    refreshExpiration( entitySet.id )
-                    if ( indexTombstoned ) {
-                        unindexEntities(entitySet, it.toMap(), !reindexAll)
-                    } else {
-                        indexEntities(entitySet, it.toMap(), propertyTypes, !reindexAll)
-                    }
+        val entityKeyIdsWithLastWrite = getEntityDataKeys(entitySet, reindexAll, indexTombstoned)
+        logger.info(
+            "getEntityDataKeys() took {} ms - entity set {}",
+            timer.elapsed(TimeUnit.MILLISECONDS),
+            entitySet.id
+        )
+
+        if (Iterables.size(entityKeyIdsWithLastWrite) == 0) {
+            logger.info("no entities to index - entity set {}", entitySet.id)
+            return 0
+        }
+
+        timer.reset().start()
+        logger.info("starting to index entity set {}", entitySet.id)
+
+        val indexCount = StreamSupport
+            .stream( entityKeyIdsWithLastWrite.spliterator(), false )
+            .asSequence()
+            .chunked(INDEX_SIZE)
+            .sumBy {
+                refreshExpiration( entitySet.id )
+                if ( indexTombstoned ) {
+                    unindexEntities(entitySet, it.toMap(), !reindexAll)
+                } else {
+                    indexEntities(entitySet, it.toMap(), propertyTypes, !reindexAll)
                 }
+            }
 
         logger.info(
             "indexing entity set took {} ms - entity set {} index count {}",
