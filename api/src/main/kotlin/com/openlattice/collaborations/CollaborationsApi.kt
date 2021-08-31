@@ -14,6 +14,7 @@ interface CollaborationsApi {
         const val CONTROLLER = "/collaborations"
         const val BASE = SERVICE + CONTROLLER
 
+        const val ALL_PATH = "/all"
         const val DATABASE_PATH = "/database"
         const val DATA_SETS_PATH = "/datasets"
         const val ORGANIZATIONS_PATH = "/organizations"
@@ -23,6 +24,7 @@ interface CollaborationsApi {
         const val COLLABORATION_ID_PATH = "/{$COLLABORATION_ID_PARAM}"
         const val DATA_SET_ID_PARAM = "dataSetId"
         const val DATA_SET_ID_PATH = "/{$DATA_SET_ID_PARAM}"
+        const val ID_PARAM = "id"
         const val ORGANIZATION_ID_PARAM = "organizationId"
         const val ORGANIZATION_ID_PATH = "/{$ORGANIZATION_ID_PARAM}"
     }
@@ -32,8 +34,16 @@ interface CollaborationsApi {
      *
      * @return a list of [Collaboration] objects
      */
-    @GET(BASE)
+    @GET(BASE + ALL_PATH)
     fun getCollaborations(): Iterable<Collaboration>
+
+    /**
+     * Gets [Collaboration] objects the caller has [Permission.READ] on with the provided ids.
+     *
+     * @return a list of [Collaboration] objects
+     */
+    @GET(BASE)
+    fun getCollaborationsWithId(@Query(ID_PARAM) ids: Set<UUID>): Map<UUID, Collaboration>
 
     /**
      * Gets the [Collaboration] object with the given collaboration id. The caller must have [Permission.READ] on the
