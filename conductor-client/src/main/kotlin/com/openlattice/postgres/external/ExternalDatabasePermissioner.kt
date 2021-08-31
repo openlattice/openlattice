@@ -404,7 +404,7 @@ class ExternalDatabasePermissioner(
             orgColumnAcls.forEach { columnAcl ->
                 val column = columnsById.getValue(columnAcl.aclKey)
                 val columnName = if (securableObjectType == SecurableObjectType.OrganizationExternalDatabaseColumn) {
-                    externalColumns.getValue(column.tableId)?.name ?: String()
+                    externalColumns.getValue(column.columnId)?.name ?: String()
                 } else {
                     propertyTypes.getValue(column.tableId)?.type.toString() ?: String()
                 }
