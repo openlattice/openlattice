@@ -273,7 +273,7 @@ class ExternalDatabasePermissioner(
             completedColumnsById.put(
                 idFqnAclKey, 
                 TableColumn(
-                    org_id, 
+                    orgId, 
                     it.aclKey[0], 
                     IdConstants.ID_ID.id, 
                     Schemas.ASSEMBLED_ENTITY_SETS
