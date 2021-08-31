@@ -411,7 +411,7 @@ class ExternalDatabasePermissioner(
                 val tableName = if (securableObjectType == SecurableObjectType.OrganizationExternalDatabaseColumn) {
                     externalTables.getValue(column.tableId)?.name ?: String()
                 } else {
-                    entitySets.getValue(column.columnId)?.name ?: String()
+                    entitySets.getValue(column.tableId)?.name ?: String()
                 }
                 val tableSchema = column.schema
 
