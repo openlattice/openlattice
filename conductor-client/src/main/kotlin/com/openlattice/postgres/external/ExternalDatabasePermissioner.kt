@@ -264,14 +264,14 @@ class ExternalDatabasePermissioner(
         val completedColumnAcls = columnAcls.toMutableList()
         val completedColumnsById = columnsById.toMutableMap()
         columnAcls.forEach { 
-            val idFqnAclKey = AclKey(it.aclKey[0], IdConstants.ID_ID.id)
+            val internalIdAclKey = AclKey(it.aclKey[0], IdConstants.ID_ID.id)
             val orgId = columnsById.getValue(it.aclKey).organizationId
             val readAces = it.aces.map { ace ->
                 Ace(ace.principal, EnumSet.of(Permission.READ))
             }
             
             completedColumnsById.put(
-                idFqnAclKey, 
+                internalIdAclKey, 
                 TableColumn(
                     orgId, 
                     it.aclKey[0], 
@@ -279,7 +279,7 @@ class ExternalDatabasePermissioner(
                     Schemas.ASSEMBLED_ENTITY_SETS
                 )
             )
-            completedColumnAcls.add(Acl(idFqnAclKey, readAces))
+            completedColumnAcls.add(Acl(internalIdAclKey, readAces))
         }
 
 
