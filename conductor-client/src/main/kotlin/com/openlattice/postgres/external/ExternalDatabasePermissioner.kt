@@ -265,7 +265,7 @@ class ExternalDatabasePermissioner(
         val completedColumnsById = columnsById.toMutableMap()
         columnAcls.forEach { 
             val idFqnAclKey = AclKey(it.aclKey[0], IdConstants.ID_ID.id)
-            val org_id = columnsById.getValue(it.aclKey).organizationId
+            val orgId = columnsById.getValue(it.aclKey).organizationId
             val readAces = it.aces.map { ace ->
                 Ace(ace.principal, EnumSet.of(Permission.READ))
             }
