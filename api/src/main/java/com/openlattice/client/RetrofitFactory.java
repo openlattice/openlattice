@@ -34,12 +34,12 @@ import retrofit2.CallAdapter;
 import retrofit2.Retrofit;
 
 public final class RetrofitFactory {
-    private static final String BASE_URL                = "https://api.openlattice.com/";
-    private static final String CHILDCARE_URL           = "https://api.childcare.openlattice.com";
-    private static final String INTEGRATION_URL         = "https://integration.openlattice.com/";
+    private static final String BASE_URL                = "https://api.ca.openlattice.com/";
+    private static final String CHILDCARE_URL           = "https://api.childcare.ca.openlattice.com";
+    private static final String INTEGRATION_URL         = "https://integration.ca.openlattice.com/";
     private static final String LOCAL_BASE_URL          = "http://localhost:8080/";
-    private static final String STAGING_BASE_URL        = "https://api.staging.openlattice.com/";
-    private static final String STAGING_INTEGRATION_URL = "https://integration.staging.openlattice.com/";
+    private static final String STAGING_BASE_URL        = "https://api.staging.ca.openlattice.com/";
+    private static final String STAGING_INTEGRATION_URL = "https://integration.staging.ca.openlattice.com/";
     private static final String TESTING_BASE_URL        = "http://localhost:8080/";
     private static final String TESTING_INDEXER_URL     = "http://localhost:8081/";
     private static final String TESTING_LINKER_URL      = "http://localhost:8082/";
