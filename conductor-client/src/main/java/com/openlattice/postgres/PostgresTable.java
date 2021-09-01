@@ -43,6 +43,7 @@ import static com.openlattice.postgres.PostgresColumn.CATEGORY;
 import static com.openlattice.postgres.PostgresColumn.CLASS_NAME;
 import static com.openlattice.postgres.PostgresColumn.CLASS_PROPERTIES;
 import static com.openlattice.postgres.PostgresColumn.COLLABORATION_ID;
+import static com.openlattice.postgres.PostgresColumn.COLUMN_NAME;
 import static com.openlattice.postgres.PostgresColumn.CONFIG_ID;
 import static com.openlattice.postgres.PostgresColumn.CONNECTION_TYPE;
 import static com.openlattice.postgres.PostgresColumn.CONTACTS;
@@ -316,7 +317,7 @@ public final class PostgresTable {
                             INDEX_TYPE );
     public static final PostgresTableDefinition EXTERNAL_PERMISSION_ROLES     =
             new PostgresTableDefinition( "external_permission_roles" )
-                    .addColumns( ACL_KEY, PERMISSION, ROLE_ID )
+                    .addColumns( ACL_KEY, PERMISSION, COLUMN_NAME, ROLE_ID  )
                     .primaryKey( ACL_KEY, PERMISSION );
 
     public static final PostgresTableDefinition GRAPH_QUERIES              =
