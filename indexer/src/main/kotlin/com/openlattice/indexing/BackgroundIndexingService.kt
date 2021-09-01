@@ -22,6 +22,7 @@
 package com.openlattice.indexing
 
 import com.google.common.base.Stopwatch
+import com.google.common.collect.Iterables
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicates
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
@@ -211,50 +212,54 @@ class BackgroundIndexingService(
      * entities or index still active ones ([VERSION] > 0).
      */
     private fun indexEntitiesInEntitySet(
-            entitySet: IndexerEntitySetMetadata,
-            reindexAll: Boolean = false,
-            indexTombstoned: Boolean = false
+        entitySet: IndexerEntitySetMetadata,
+        reindexAll: Boolean = false,
+        indexTombstoned: Boolean = false
     ): Int {
-        logger.debug(
-                "Starting indexing for entity set {} with id {}",
-                entitySet.name,
-                entitySet.id
-        )
 
-        val esw = Stopwatch.createStarted()
         val propertyTypes = getPropertyTypeForEntityType(entitySet.entityTypeId)
 
         val entityKeyIdsWithLastWrite = getEntityDataKeys(entitySet, reindexAll, indexTombstoned)
+        if (Iterables.size(entityKeyIdsWithLastWrite) == 0) {
+            return 0
+        }
 
-        val indexCount = StreamSupport.stream( entityKeyIdsWithLastWrite.spliterator(), false )
-                .asSequence()
-                .chunked(INDEX_SIZE)
-                .sumBy {
-                    refreshExpiration( entitySet.id )
-                    if ( indexTombstoned ) {
-                        unindexEntities(entitySet, it.toMap(), !reindexAll)
-                    } else {
-                        indexEntities(entitySet, it.toMap(), propertyTypes, !reindexAll)
-                    }
+        val timer = Stopwatch.createStarted()
+        logger.info("starting to index entity set {}", entitySet.id)
+
+        val indexCount = StreamSupport
+            .stream( entityKeyIdsWithLastWrite.spliterator(), false )
+            .asSequence()
+            .chunked(INDEX_SIZE)
+            .sumBy {
+                refreshExpiration( entitySet.id )
+                if ( indexTombstoned ) {
+                    unindexEntities(entitySet, it.toMap(), !reindexAll)
+                } else {
+                    indexEntities(entitySet, it.toMap(), propertyTypes, !reindexAll)
                 }
+            }
 
-        logger.debug(
-                "Finished indexing {} elements from entity set {} in {} ms",
-                indexCount,
-                entitySet.name,
-                esw.elapsed(TimeUnit.MILLISECONDS)
+        logger.info(
+            "indexing entity set took {} ms - entity set {} index count {}",
+            timer.elapsed(TimeUnit.MILLISECONDS),
+            entitySet.id,
+            indexCount
         )
 
         return indexCount
     }
 
     internal fun indexEntities(
-            entitySet: IndexerEntitySetMetadata,
-            batchToIndex: Map<UUID, OffsetDateTime>,
-            propertyTypeMap: Map<UUID, PropertyType>,
-            markAsIndexed: Boolean = true
+        entitySet: IndexerEntitySetMetadata,
+        batchToIndex: Map<UUID, OffsetDateTime>,
+        propertyTypeMap: Map<UUID, PropertyType>,
+        markAsIndexed: Boolean = true
     ): Int {
-        val esb = Stopwatch.createStarted()
+
+        val timer = Stopwatch.createStarted()
+        logger.info("starting to index batch - entity set {} batch size {}", entitySet.id, batchToIndex.size)
+
         val entitiesById = dataQueryService.getEntitiesWithPropertyTypeIds(
                 mapOf(entitySet.id to Optional.of(batchToIndex.keys)),
                 mapOf(entitySet.id to propertyTypeMap),
@@ -262,20 +267,22 @@ class BackgroundIndexingService(
                 EnumSet.of(MetadataOption.LAST_WRITE)
         ).toMap()
 
-        logger.debug("Loading data for indexEntities took {} ms", esb.elapsed(TimeUnit.MILLISECONDS))
+        logger.info("getting batch entities took {} ms", timer.elapsed(TimeUnit.MILLISECONDS))
+        timer.reset().start()
 
         if (entitiesById.size != batchToIndex.size) {
             logger.error(
-                    "Expected {} items to index but received {}. Marking as indexed to prevent infinite loop.",
-                    batchToIndex.size,
-                    entitiesById.size
+                "expected {} but got {} entities - marking as indexed to prevent infinite loop",
+                batchToIndex.size,
+                entitiesById.size
             )
         }
 
-        if (entitiesById.isEmpty()
-                || !elasticsearchApi.createBulkEntityData(entitySet.entityTypeId, entitySet.id, entitiesById)) {
-            logger.error("Failed to index {} elements.", entitiesById.size)
-            logger.debug("Failed to index elements with entitiesById: {}", entitiesById)
+        if (
+            entitiesById.isEmpty()
+            || !elasticsearchApi.createBulkEntityData(entitySet.entityTypeId, entitySet.id, entitiesById)
+        ) {
+            logger.error("error indexing batch - entity set {} batch size {}", entitySet.id, batchToIndex.size)
             return 0
         }
 
@@ -285,12 +292,11 @@ class BackgroundIndexingService(
             batchToIndex.size
         }
 
-        logger.debug(
-                "Indexed batch of {} elements for {} ({}) in {} ms",
-                indexCount,
-                entitySet.name,
-                entitySet.id,
-                esb.elapsed(TimeUnit.MILLISECONDS)
+        logger.info(
+            "indexing batch took {} ms - entity set {} batch count {}",
+            timer.elapsed(TimeUnit.MILLISECONDS),
+            entitySet.id,
+            indexCount
         )
 
         return indexCount
@@ -298,39 +304,37 @@ class BackgroundIndexingService(
     }
 
     private fun unindexEntities(
-            entitySet: IndexerEntitySetMetadata,
-            batchToIndex: Map<UUID, OffsetDateTime>,
-            markAsIndexed: Boolean = true
+        entitySet: IndexerEntitySetMetadata,
+        batchToIndex: Map<UUID, OffsetDateTime>,
+        markAsIndexed: Boolean = true
     ): Int {
-        val esb = Stopwatch.createStarted()
+
+        val timer = Stopwatch.createStarted()
+        logger.info("starting to unindex batch - entity set {} batch size {}", entitySet.id, batchToIndex.size)
 
         val indexCount: Int
 
-        if (batchToIndex.isNotEmpty()
-                && elasticsearchApi.deleteEntityDataBulk(entitySet.entityTypeId, batchToIndex.keys)) {
+        if (
+            batchToIndex.isNotEmpty()
+            && elasticsearchApi.deleteEntityDataBulk(entitySet.entityTypeId, batchToIndex.keys)
+        ) {
             indexCount = if (markAsIndexed) {
                 dataManager.markAsIndexed(mapOf(entitySet.id to batchToIndex))
             } else {
                 batchToIndex.size
             }
 
-            logger.debug(
-                    "Un-indexed batch of {} elements for {} ({}) in {} ms",
-                    indexCount,
-                    entitySet.name,
-                    entitySet.id,
-                    esb.elapsed(TimeUnit.MILLISECONDS)
+            logger.info(
+                "unindexing batch took {} ms - entity set {} batch count {}",
+                timer.elapsed(TimeUnit.MILLISECONDS),
+                entitySet.id,
+                indexCount
             )
         } else {
             indexCount = 0
-            logger.error("Failed to un-index {} elements of entity set {}", batchToIndex.size, entitySet.id)
-            logger.debug(
-                    "Failed to un-index elements of entity set {} with entity key ids: {}",
-                    entitySet.id,
-                    batchToIndex.keys
-            )
-
+            logger.error("error unindexing batch - entity set {} batch size {}", entitySet.id, batchToIndex.size)
         }
+
         return indexCount
     }
 

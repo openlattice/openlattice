@@ -151,25 +151,12 @@ class Graph(
         val edk = dataEdgeKey.src
         val partitions = partitionManager.getEntitySetPartitions(edk.entitySetId)
         val partition = getPartition(edk.entityKeyId, partitions.toList())
+        logger.info("Using partition {} for data edge key {}", partition, dataEdgeKey )
         ps.setObject(startIndex, partition)
         ps.setObject(startIndex + 1, dataEdgeKey.src.entityKeyId)
         ps.setObject(startIndex + 2, dataEdgeKey.dst.entityKeyId)
         ps.setObject(startIndex + 3, dataEdgeKey.edge.entityKeyId)
         ps.addBatch()
-    }
-
-    /* Delete  */
-
-    @Deprecated("Redundant function call." , replaceWith = ReplaceWith("deleteEdges"))
-    override fun clearEdges(keys: Iterable<DataEdgeKey>): Int {
-        val version = -System.currentTimeMillis()
-        return lockAndOperateOnEdges(keys, CLEAR_BY_VERTEX_SQL) { lockStmt, operationStmt, dataEdgeKey ->
-
-            addKeyIds(lockStmt, dataEdgeKey)
-
-            clearEdgesAddVersion(operationStmt, version)
-            addKeyIds(operationStmt, dataEdgeKey, 3)
-        }
     }
 
     private fun lockAndOperateOnEdges(
@@ -216,6 +203,18 @@ class Graph(
         ps.setLong(2, version)
     }
 
+    /* Delete  */
+
+    @Deprecated("Redundant function call." , replaceWith = ReplaceWith("deleteEdges"))
+    override fun clearEdges(keys: Iterable<DataEdgeKey>): Int {
+        val version = -System.currentTimeMillis()
+        return lockAndOperateOnEdges(keys, CLEAR_BY_VERTEX_SQL) { lockStmt, operationStmt, dataEdgeKey ->
+            addKeyIds(lockStmt, dataEdgeKey)
+            clearEdgesAddVersion(operationStmt, version)
+            addKeyIds(operationStmt, dataEdgeKey, 3)
+        }
+    }
+
     override fun deleteEdges(keys: Iterable<DataEdgeKey>, deleteType: DeleteType): WriteEvent {
         val sql = when(deleteType) {
           DeleteType.Hard -> HARD_DELETE_EDGES_SQL
@@ -227,7 +226,7 @@ class Graph(
             //For soft deletes we have to bind version twice
             if( deleteType == DeleteType.Soft) {
                 operationStmt.setLong(opIndex++, version)
-                operationStmt.setLong(opIndex, version)
+                operationStmt.setLong(opIndex++, version)
             }
 
             addKeyIds(lockStmt, dataEdgeKey)
@@ -1516,7 +1515,6 @@ private val SOFT_DELETE_EDGES_SQL = """
               ${SRC_ENTITY_KEY_ID.name} = ? AND
               ${DST_ENTITY_KEY_ID.name} = ? AND
               ${EDGE_ENTITY_KEY_ID.name} = ? 
-            
         """.trimIndent()
 
 /**
