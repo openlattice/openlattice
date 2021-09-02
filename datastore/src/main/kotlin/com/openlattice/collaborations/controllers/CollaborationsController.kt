@@ -238,12 +238,10 @@ class CollaborationsController : AuthorizingComponent, CollaborationsApi {
     override fun getCollaborationsWithDataSets(@RequestBody dataSetIds: Set<UUID>): Map<UUID, List<Collaboration>> {
         val authorizedDataSetIds = filterToAuthorizedIds(dataSetIds)
         val authorizedCollaborationIds = getAllAuthorizedCollaborationIds()
-        val test = collaborationService.getCollaborationIdsWithProjectionsForTables(
+        return collaborationService.getCollaborationIdsWithProjectionsForTables(
             authorizedDataSetIds,
             authorizedCollaborationIds
-        )
-        return test.mapValues { collaborationService.getCollaborations(it.value.toSet()).values.toList() }
-
+        ).mapValues { collaborationService.getCollaborations(it.value.toSet()).values.toList() }
     }
 
     private fun getAllAuthorizedCollaborationIds(): Set<UUID> {
