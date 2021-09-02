@@ -450,7 +450,7 @@ class ExternalDatabasePermissioner(
                             orgRemoves.addAll(acePermissions.mapNotNull { 
                                 externalRoleNames[AccessTarget(columnAcl.aclKey, it)] 
                             }.map {
-                                revokeRoleSql(it.toString(), setOf(userRole))
+                                revokeRoleSql(it.second.toString(), setOf(userRole))
                             })
                         }
                         Action.SET -> {
