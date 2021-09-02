@@ -14,7 +14,7 @@ import com.openlattice.collaborations.CollaborationsApi.Companion.DATABASE_PATH
 import com.openlattice.collaborations.CollaborationsApi.Companion.DATA_SETS_PATH
 import com.openlattice.collaborations.CollaborationsApi.Companion.DATA_SET_ID_PARAM
 import com.openlattice.collaborations.CollaborationsApi.Companion.DATA_SET_ID_PATH
-import com.openlattice.collaborations.CollaborationsApi.Companion.ID_PARAM
+import com.openlattice.collaborations.CollaborationsApi.Companion.IDS_PARAM
 import com.openlattice.collaborations.CollaborationsApi.Companion.ORGANIZATIONS_PATH
 import com.openlattice.collaborations.CollaborationsApi.Companion.ORGANIZATION_ID_PARAM
 import com.openlattice.collaborations.CollaborationsApi.Companion.ORGANIZATION_ID_PATH
@@ -56,7 +56,7 @@ class CollaborationsController : AuthorizingComponent, CollaborationsApi {
             value = ["", "/"],
             produces = [MediaType.APPLICATION_JSON_VALUE]
     )
-    override fun getCollaborations(@RequestParam( ID_PARAM ) ids: Set<UUID>): Map<UUID, Collaboration> {
+    override fun getCollaborations(@RequestParam( IDS_PARAM ) ids: Set<UUID>): Map<UUID, Collaboration> {
         val authorizedCollaborationIds = getAllAuthorizedCollaborationIds().intersect(ids)
         return collaborationService.getCollaborations(authorizedCollaborationIds)
     }
