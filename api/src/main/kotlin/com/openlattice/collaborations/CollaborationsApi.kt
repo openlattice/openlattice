@@ -40,7 +40,7 @@ interface CollaborationsApi {
     /**
      * Gets [Collaboration] objects the caller has [Permission.READ] on with the provided ids.
      *
-     * @return a Map<K, V> where K is a collaboration id and V a [Collaboration] object
+     * @return a list of [Collaboration] objects
      */
     @GET(BASE)
     fun getCollaborations(@Query(ID_PARAM) ids: Set<UUID>): Map<UUID, Collaboration>
