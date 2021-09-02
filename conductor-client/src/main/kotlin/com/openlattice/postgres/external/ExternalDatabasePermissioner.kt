@@ -577,7 +577,7 @@ class ExternalDatabasePermissioner(
             DO 
             ${'$'}do${'$'}
             BEGIN
-                IF ${action.quantifier} has_column_privilege(${quote(roleName)}, ${quote(tableName)}, ${quote(columnName)}, \"$privilege\") THEN
+                IF ${action.quantifier} has_column_privilege('$roleName', '$schemaName${quote(tableName)}', '$columnName', '$privilege') THEN
                     ${action.name} $privilege ( ${quote(columnName)} )
                     ON $schemaName${quote(tableName)}
                     ${action.verb} ${quote(roleName)};
