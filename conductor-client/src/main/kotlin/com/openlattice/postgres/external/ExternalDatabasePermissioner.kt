@@ -5,7 +5,6 @@ import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
-import com.openlattice.edm.EdmConstants
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.PropertyTypeIdFqn
 import com.openlattice.edm.processors.GetOrganizationIdFromEntitySetEntryProcessor
@@ -281,7 +280,6 @@ class ExternalDatabasePermissioner(
             )
             completedColumnAcls.add(Acl(internalIdAclKey, readAces))
         }
-
 
         updateTablePermissions(action, SecurableObjectType.PropertyTypeInEntitySet, completedColumnAcls, completedColumnsById, TableType.VIEW)
     }
