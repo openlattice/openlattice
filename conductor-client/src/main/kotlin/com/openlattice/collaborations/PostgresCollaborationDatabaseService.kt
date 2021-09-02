@@ -181,7 +181,6 @@ class PostgresCollaborationDatabaseService(
         )
 
         externalDbPermissioner.initializeProjectedTableViewPermissions(
-                collaborationId,
                 viewSchema,
                 table,
                 columns
