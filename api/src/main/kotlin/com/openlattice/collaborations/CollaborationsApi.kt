@@ -40,7 +40,7 @@ interface CollaborationsApi {
     /**
      * Gets [Collaboration] objects the caller has [Permission.READ] on with the provided ids.
      *
-     * @return a list of [Collaboration] objects
+     * @return a Map<K, V> where K is a collaboration id and V a [Collaboration] object
      */
     @GET(BASE)
     fun getCollaborations(@Query(ID_PARAM) ids: Set<UUID>): Map<UUID, Collaboration>
@@ -192,7 +192,7 @@ interface CollaborationsApi {
      * the caller has [Permission.READ] on.
      *
      * @param dataSetIds a set of data set ids
-     * @return Map<K, V> where K is a data set id and V is a list of [Collaboration] ids
+     * @return Map<K, V> where K is a data set id and V is a list of [Collaboration] objects
      */
     @POST(BASE + DATA_SETS_PATH)
     fun getCollaborationsWithDataSets(@Body dataSetIds: Set<UUID>): Map<UUID, List<Collaboration>>
