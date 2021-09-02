@@ -27,7 +27,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import com.geekbeast.metrics.time
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.collect.ImmutableList
-import com.google.common.collect.Iterables
 import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
 import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
@@ -152,28 +151,12 @@ class Graph(
         val edk = dataEdgeKey.src
         val partitions = partitionManager.getEntitySetPartitions(edk.entitySetId)
         val partition = getPartition(edk.entityKeyId, partitions.toList())
+        logger.info("Using partition {} for data edge key {}", partition, dataEdgeKey )
         ps.setObject(startIndex, partition)
         ps.setObject(startIndex + 1, dataEdgeKey.src.entityKeyId)
         ps.setObject(startIndex + 2, dataEdgeKey.dst.entityKeyId)
         ps.setObject(startIndex + 3, dataEdgeKey.edge.entityKeyId)
         ps.addBatch()
-    }
-
-    /* Delete  */
-
-    override fun clearEdges(keys: Iterable<DataEdgeKey>): Int {
-        val version = -System.currentTimeMillis()
-        return lockAndOperateOnEdges(keys, CLEAR_BY_VERTEX_SQL) { lockStmt, operationStmt, dataEdgeKey ->
-
-            addKeyIds(lockStmt, dataEdgeKey)
-
-            clearEdgesAddVersion(operationStmt, version)
-            addKeyIds(operationStmt, dataEdgeKey, 3)
-            clearEdgesAddVersion(operationStmt, version)
-            addKeyIds(operationStmt, dataEdgeKey, 3)
-            clearEdgesAddVersion(operationStmt, version)
-            addKeyIds(operationStmt, dataEdgeKey, 3)
-        }
     }
 
     private fun lockAndOperateOnEdges(
@@ -185,11 +168,9 @@ class Graph(
         val dstEntitySetEdgeKeys = keys.groupBy { it.dst.entitySetId }
         val edgeEntitySetEdgeKeys = keys.groupBy { it.edge.entitySetId }
 
-        val numUpdate = lockAndOperateOnEdges(srcEntitySetEdgeKeys, statement, statementSupplier)
-        +lockAndOperateOnEdges(dstEntitySetEdgeKeys, statement, statementSupplier)
-        +lockAndOperateOnEdges(edgeEntitySetEdgeKeys, statement, statementSupplier)
-
-        return Iterables.size(keys)
+        return lockAndOperateOnEdges(srcEntitySetEdgeKeys, statement, statementSupplier) +
+                lockAndOperateOnEdges(dstEntitySetEdgeKeys, statement, statementSupplier) +
+                lockAndOperateOnEdges(edgeEntitySetEdgeKeys, statement, statementSupplier)
     }
 
     private fun lockAndOperateOnEdges(
@@ -220,6 +201,18 @@ class Graph(
     private fun clearEdgesAddVersion(ps: PreparedStatement, version: Long) {
         ps.setLong(1, version)
         ps.setLong(2, version)
+    }
+
+    /* Delete  */
+
+    @Deprecated("Redundant function call." , replaceWith = ReplaceWith("deleteEdges"))
+    override fun clearEdges(keys: Iterable<DataEdgeKey>): Int {
+        val version = -System.currentTimeMillis()
+        return lockAndOperateOnEdges(keys, CLEAR_BY_VERTEX_SQL) { lockStmt, operationStmt, dataEdgeKey ->
+            addKeyIds(lockStmt, dataEdgeKey)
+            clearEdgesAddVersion(operationStmt, version)
+            addKeyIds(operationStmt, dataEdgeKey, 3)
+        }
     }
 
     override fun deleteEdges(keys: Iterable<DataEdgeKey>, deleteType: DeleteType): WriteEvent {
@@ -1522,7 +1515,6 @@ private val SOFT_DELETE_EDGES_SQL = """
               ${SRC_ENTITY_KEY_ID.name} = ? AND
               ${DST_ENTITY_KEY_ID.name} = ? AND
               ${EDGE_ENTITY_KEY_ID.name} = ? 
-            
         """.trimIndent()
 
 /**

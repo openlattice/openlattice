@@ -106,16 +106,20 @@ class DataDeletionJob(
             return
         }
 
+        logger.info("Processing data keys: {}", entityDataKeys)
         var edgeBatch = getBatchOfEdgesForIds(entityDataKeys)
         while (edgeBatch.isNotEmpty()) {
-            logger.info("Deleting edges and entities involving {}", edgeBatch)
+            logger.info("${state.deleteType} deleting edges and entities involving {}", edgeBatch)
             val edgeEdkBatch = edgeBatch.map { it.edge }.toSet()
-            deleteEntities(edgeEdkBatch)
-            deleteEdges(edgeBatch)
+            val deletedEntities = deleteEntities(edgeEdkBatch)
+            val deletedEdges = deleteEdges(edgeBatch).numUpdates
+            logger.info("Deleted $deletedEntities edge entities and $deletedEdges edges.")
             edgeBatch = getBatchOfEdgesForIds(entityDataKeys)
         }
 
-        state.numDeletes += deleteEntities(entityDataKeys)
+        val deletedEntities = deleteEntities(entityDataKeys)
+        logger.info("Deleted $deletedEntities from batch {}", entityDataKeys)
+        state.numDeletes += deletedEntities
         cleanUpBatch(entityDataKeys)
         publishJobState()
     }
@@ -316,9 +320,10 @@ class DataDeletionJob(
         ps.addBatch()
     }
 
-    private fun deleteEdges(edgeBatch: Set<DataEdgeKey>) {
-        lateInitProvider.dataGraphService.deleteAssociations(edgeBatch, state.deleteType)
-    }
+    private fun deleteEdges(edgeBatch: Set<DataEdgeKey>) : WriteEvent = lateInitProvider.dataGraphService.deleteAssociations(
+            edgeBatch,
+            state.deleteType
+    )
 
     private fun bindEdgeDelete(ps: PreparedStatement, edk: EntityDataKey, version: Long) {
         var index = 1
