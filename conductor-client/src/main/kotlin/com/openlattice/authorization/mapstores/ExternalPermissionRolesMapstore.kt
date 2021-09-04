@@ -8,6 +8,7 @@ import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore
 import com.zaxxer.hikari.HikariDataSource
+import org.apache.commons.lang3.RandomStringUtils
 import org.springframework.stereotype.Component
 import java.sql.PreparedStatement
 import java.sql.ResultSet
@@ -19,7 +20,7 @@ import java.util.UUID
 @Component
 class ExternalPermissionRolesMapstore(
         hds: HikariDataSource
-) : AbstractBasePostgresMapstore<AccessTarget, UUID>(
+) : AbstractBasePostgresMapstore<AccessTarget, Pair<String, UUID>>(
         HazelcastMap.EXTERNAL_PERMISSION_ROLES, PostgresTable.EXTERNAL_PERMISSION_ROLES, hds
 ) {
     override fun generateTestKey(): AccessTarget {
@@ -29,15 +30,18 @@ class ExternalPermissionRolesMapstore(
         )
     }
 
-    override fun generateTestValue(): UUID {
-        return UUID.randomUUID()
+    override fun generateTestValue(): Pair<String, UUID> {
+        val randomColumn = TestDataFactory.externalColumn()
+        return Pair(randomColumn.name, randomColumn.id)
     }
 
-    override fun bind(ps: PreparedStatement, key: AccessTarget, value: UUID) {
+    override fun bind(ps: PreparedStatement, key: AccessTarget, value: Pair<String, UUID>) {
         var index = bind(ps, key, 1)
-        ps.setObject(index++, value)
+        ps.setString(index++, value.first)
+        ps.setObject(index++, value.second)
 
-        ps.setObject(index++, value)
+        ps.setString(index++, value.first)
+        ps.setObject(index++, value.second)
     }
 
     override fun mapToKey(rs: ResultSet): AccessTarget {
@@ -51,7 +55,7 @@ class ExternalPermissionRolesMapstore(
         return index
     }
 
-    override fun mapToValue(rs: ResultSet): UUID {
-        return ResultSetAdapters.roleId(rs)
+    override fun mapToValue(rs: ResultSet): Pair<String, UUID> {
+        return Pair(ResultSetAdapters.columnName(rs), ResultSetAdapters.roleId(rs))
     }
 }
