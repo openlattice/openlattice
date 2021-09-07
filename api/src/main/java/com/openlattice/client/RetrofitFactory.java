@@ -54,7 +54,9 @@ public final class RetrofitFactory {
 
     public enum Environment {
         PROD_INTEGRATION( INTEGRATION_URL ),
+        PROD_CA_INTEGRATION( INTEGRATION_CA_URL ),
         PRODUCTION( BASE_URL ),
+        PRODUCTION_CA( BASE_CA_URL ),
         STAGING_INTEGRATION( STAGING_INTEGRATION_URL ),
         STAGING( STAGING_BASE_URL ),
         LOCAL( LOCAL_BASE_URL ),
