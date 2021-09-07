@@ -6,6 +6,7 @@ import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.collaborations.Collaboration
 import com.openlattice.collaborations.CollaborationService
 import com.openlattice.collaborations.CollaborationsApi
+import com.openlattice.collaborations.CollaborationsApi.Companion.ALL_PATH
 import com.openlattice.collaborations.CollaborationsApi.Companion.COLLABORATION_ID_PARAM
 import com.openlattice.collaborations.CollaborationsApi.Companion.COLLABORATION_ID_PATH
 import com.openlattice.collaborations.CollaborationsApi.Companion.CONTROLLER
@@ -13,6 +14,7 @@ import com.openlattice.collaborations.CollaborationsApi.Companion.DATABASE_PATH
 import com.openlattice.collaborations.CollaborationsApi.Companion.DATA_SETS_PATH
 import com.openlattice.collaborations.CollaborationsApi.Companion.DATA_SET_ID_PARAM
 import com.openlattice.collaborations.CollaborationsApi.Companion.DATA_SET_ID_PATH
+import com.openlattice.collaborations.CollaborationsApi.Companion.IDS_PARAM
 import com.openlattice.collaborations.CollaborationsApi.Companion.ORGANIZATIONS_PATH
 import com.openlattice.collaborations.CollaborationsApi.Companion.ORGANIZATION_ID_PARAM
 import com.openlattice.collaborations.CollaborationsApi.Companion.ORGANIZATION_ID_PATH
@@ -41,12 +43,22 @@ class CollaborationsController : AuthorizingComponent, CollaborationsApi {
 
     @Timed
     @GetMapping(
-        value = ["", "/"],
+        value = [ALL_PATH],
         produces = [MediaType.APPLICATION_JSON_VALUE]
     )
-    override fun getCollaborations(): Iterable<Collaboration> {
+    override fun getAllCollaborations(): Iterable<Collaboration> {
         val authorizedCollaborationIds = getAllAuthorizedCollaborationIds()
         return collaborationService.getCollaborations(authorizedCollaborationIds).values
+    }
+
+    @Timed
+    @GetMapping(
+            value = ["", "/"],
+            produces = [MediaType.APPLICATION_JSON_VALUE]
+    )
+    override fun getCollaborations(@RequestParam( IDS_PARAM ) ids: Set<UUID>): Map<UUID, Collaboration> {
+        val authorizedCollaborationIds = getAllAuthorizedCollaborationIds().intersect(ids)
+        return collaborationService.getCollaborations(authorizedCollaborationIds)
     }
 
     @Timed
@@ -223,13 +235,13 @@ class CollaborationsController : AuthorizingComponent, CollaborationsApi {
         consumes = [MediaType.APPLICATION_JSON_VALUE],
         produces = [MediaType.APPLICATION_JSON_VALUE]
     )
-    override fun getCollaborationsWithDataSets(@RequestBody dataSetIds: Set<UUID>): Map<UUID, List<UUID>> {
+    override fun getCollaborationsWithDataSets(@RequestBody dataSetIds: Set<UUID>): Map<UUID, List<Collaboration>> {
         val authorizedDataSetIds = filterToAuthorizedIds(dataSetIds)
         val authorizedCollaborationIds = getAllAuthorizedCollaborationIds()
         return collaborationService.getCollaborationIdsWithProjectionsForTables(
             authorizedDataSetIds,
             authorizedCollaborationIds
-        )
+        ).mapValues { collaborationService.getCollaborations(it.value.toSet()).values.toList() }
     }
 
     private fun getAllAuthorizedCollaborationIds(): Set<UUID> {
