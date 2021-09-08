@@ -571,11 +571,20 @@ class ExternalDatabasePermissioner(
             ""
         }
 
+        val privilegeCheckString = if (privilege == PostgresPrivileges.ALL) {
+            "has_column_privilege('$roleName', '$schemaName${quote(tableName)}', '$columnName', 'SELECT') AND " +
+            "has_column_privilege('$roleName', '$schemaName${quote(tableName)}', '$columnName', 'INSERT') AND " +
+            "has_column_privilege('$roleName', '$schemaName${quote(tableName)}', '$columnName', 'UPDATE') AND " +
+            "has_column_privilege('$roleName', '$schemaName${quote(tableName)}', '$columnName', 'REFERENCES')"
+        } else {
+            "has_column_privilege('$roleName', '$schemaName${quote(tableName)}', '$columnName', '$privilege')"
+        }
+
         return """
             DO 
             ${'$'}do${'$'}
             BEGIN
-                IF ${action.quantifier} has_column_privilege('$roleName', '$schemaName${quote(tableName)}', '$columnName', '$privilege') THEN
+                IF ${action.quantifier} $privilegeCheckString THEN
                     ${action.name} $privilege ( ${quote(columnName)} )
                     ON $schemaName${quote(tableName)}
                     ${action.verb} ${quote(roleName)};
