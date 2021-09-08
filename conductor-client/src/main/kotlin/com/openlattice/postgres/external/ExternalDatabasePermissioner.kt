@@ -3,18 +3,18 @@ package com.openlattice.postgres.external
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
-import com.openlattice.ApiHelpers
 import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
-import com.openlattice.edm.EdmConstants
+import com.openlattice.edm.EntitySet
 import com.openlattice.edm.PropertyTypeIdFqn
 import com.openlattice.edm.processors.GetOrganizationIdFromEntitySetEntryProcessor
 import com.openlattice.edm.processors.GetSchemaFromExternalTableEntryProcessor
+import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.IdConstants
 import com.openlattice.organization.ExternalColumn
 import com.openlattice.organization.ExternalTable
 import com.openlattice.organization.roles.Role
-import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresPrivileges
 import com.openlattice.postgres.TableColumn
@@ -38,8 +38,9 @@ class ExternalDatabasePermissioner(
         private val principalsMapManager: PrincipalsMapManager
 ) : ExternalDatabasePermissioningService {
 
-    private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
     private val securableObjectTypes = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap(hazelcastInstance)
+    private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
+    private val propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap(hazelcastInstance)
     private val externalColumns = HazelcastMap.EXTERNAL_COLUMNS.getMap(hazelcastInstance)
     private val externalTables = HazelcastMap.EXTERNAL_TABLES.getMap(hazelcastInstance)
     private val externalRoleNames = HazelcastMap.EXTERNAL_PERMISSION_ROLES.getMap(hazelcastInstance)
@@ -71,7 +72,7 @@ class ExternalDatabasePermissioner(
                 statement.execute(createRoleIfNotExistsSql(dbRole))
                 //Don't allow users to access public schema which will contain foreign data wrapper tables.
                 logger.debug("Revoking ${Schemas.PUBLIC_SCHEMA} schema right from role: {}", role)
-                statement.execute("REVOKE USAGE ON SCHEMA ${Schemas.PUBLIC_SCHEMA} FROM ${DataTables.quote(dbRole)}")
+                statement.execute("REVOKE USAGE ON SCHEMA ${Schemas.PUBLIC_SCHEMA} FROM ${quote(dbRole)}")
             }
         }
     }
@@ -96,7 +97,7 @@ class ExternalDatabasePermissioner(
                 statement.execute(createUserIfNotExistsSql(dbUser, dbUserPassword))
                 //Don't allow users to access public schema which will contain foreign data wrapper tables.
                 logger.debug("Revoking ${Schemas.PUBLIC_SCHEMA} schema right from user {}", principal)
-                statement.execute("REVOKE USAGE ON SCHEMA ${Schemas.PUBLIC_SCHEMA} FROM ${DataTables.quote(dbUser)}")
+                statement.execute("REVOKE USAGE ON SCHEMA ${Schemas.PUBLIC_SCHEMA} FROM ${quote(dbUser)}")
             }
         }
     }
@@ -122,11 +123,11 @@ class ExternalDatabasePermissioner(
             extTableColIds.add(it.aclKey[1])
             it.aclKey[0]
         }
-        val extTablesById = externalTables.submitToKeys(extTableIds, GetSchemaFromExternalTableEntryProcessor()).toCompletableFuture().get().mapValues {
+        val extTablesSchemaById = externalTables.submitToKeys(extTableIds, GetSchemaFromExternalTableEntryProcessor()).toCompletableFuture().get().mapValues {
             Schemas.fromName(it.value)
         }
         val columnsById = externalColumns.getAll(extTableColIds).values.associate {
-            AclKey(it.tableId, it.id) to TableColumn(it.organizationId, it.tableId, it.id, extTablesById[it.tableId])
+            AclKey(it.tableId, it.id) to TableColumn(it.organizationId, it.tableId, it.id, extTablesSchemaById[it.tableId])
         }
         updateExternalTablePermissions(action, externalTableColAcls, columnsById)
     }
@@ -137,7 +138,7 @@ class ExternalDatabasePermissioner(
         }
         val aclKeyToTableCols = entitySets.submitToKeys(esids, GetOrganizationIdFromEntitySetEntryProcessor()).thenApplyAsync { esidToOrgId ->
             assemblyAcls.associate {
-                it.aclKey to TableColumn(esidToOrgId.getValue(it.aclKey[0]), it.aclKey[0], it.aclKey[1])
+                it.aclKey to TableColumn(esidToOrgId.getValue(it.aclKey[0]), it.aclKey[0], it.aclKey[1], Schemas.ASSEMBLED_ENTITY_SETS)
             }
         }
         updateAssemblyPermissions(action, assemblyAcls, aclKeyToTableCols.toCompletableFuture().get())
@@ -237,10 +238,10 @@ class ExternalDatabasePermissioner(
             orgDatasource: HikariDataSource,
             entitySetId: UUID,
             entitySetName: String,
-            propertyTypes: Set<PropertyTypeIdFqn>
+            propertyTypesIdToFqn: Set<PropertyTypeIdFqn>
     ) {
         // note: orgDatasource is unused, but left it in to ensure build go green without fiddling with mechanic
-        val propertyTypesAclKeyToFqn = propertyTypes.associate { (id, fqn) ->
+        val propertyTypesAclKeyToFqn = propertyTypesIdToFqn.associate { (id, fqn) ->
             AclKey(entitySetId, id) to fqn.toString()
         }
 
@@ -258,7 +259,29 @@ class ExternalDatabasePermissioner(
             columnAcls: List<Acl>,
             columnsById: Map<AclKey, TableColumn>
     ) {
-        updateTablePermissions(action, columnAcls, columnsById, TableType.VIEW)
+        // add acl/TableColumn associated to EdmConstants.ID_FQN (with uuid IdConstants.ID_ID.id)
+        val completedColumnAcls = columnAcls.toMutableList()
+        val completedColumnsById = columnsById.toMutableMap()
+        columnAcls.forEach { 
+            val internalIdAclKey = AclKey(it.aclKey[0], IdConstants.ID_ID.id)
+            val orgId = columnsById.getValue(it.aclKey).organizationId
+            val readAces = it.aces.map { ace ->
+                Ace(ace.principal, EnumSet.of(Permission.READ))
+            }
+            
+            completedColumnsById.put(
+                internalIdAclKey, 
+                TableColumn(
+                    orgId, 
+                    it.aclKey[0], 
+                    IdConstants.ID_ID.id, 
+                    Schemas.ASSEMBLED_ENTITY_SETS
+                )
+            )
+            completedColumnAcls.add(Acl(internalIdAclKey, readAces))
+        }
+
+        updateTablePermissions(action, SecurableObjectType.PropertyTypeInEntitySet, completedColumnAcls, completedColumnsById, TableType.VIEW)
     }
 
     /**
@@ -320,7 +343,7 @@ class ExternalDatabasePermissioner(
             columnAcls: List<Acl>,
             columnsById: Map<AclKey, TableColumn>
     ) {
-        updateTablePermissions(action, columnAcls, columnsById, TableType.TABLE)
+        updateTablePermissions(action, SecurableObjectType.OrganizationExternalDatabaseColumn, columnAcls, columnsById, TableType.TABLE)
     }
 
     override fun destroyExternalTablePermissions(
@@ -338,6 +361,7 @@ class ExternalDatabasePermissioner(
 
     private fun updateTablePermissions(
             action: Action,
+            securableObjectType: SecurableObjectType,
             columnAcls: List<Acl>,
             columnsById: Map<AclKey, TableColumn>,
             tableType: TableType
@@ -348,6 +372,14 @@ class ExternalDatabasePermissioner(
             }
             else -> {
                 logger.error("Action $action passed through to updateTablePermissions is unhandled. Doing no operations")
+                return
+            }
+        }
+        when (securableObjectType) {
+            SecurableObjectType.OrganizationExternalDatabaseColumn, SecurableObjectType.PropertyTypeInEntitySet -> {
+            }
+            else -> {
+                logger.error("SecurableObjectType $securableObjectType passed through to updateTablePermissions is unhandled. Doing no operations")
                 return
             }
         }
@@ -369,13 +401,26 @@ class ExternalDatabasePermissioner(
 
             orgColumnAcls.forEach { columnAcl ->
                 val column = columnsById.getValue(columnAcl.aclKey)
-                val columnName = externalColumns.getValue(column.columnId)?.name ?: String()
-                val tableName = externalTables.getValue(column.tableId)?.name ?: String()
+                val columnName = if (securableObjectType == SecurableObjectType.OrganizationExternalDatabaseColumn) {
+                    externalColumns.getValue(column.columnId)?.name ?: String()
+                } else {
+                    propertyTypes.getValue(column.columnId)?.type.toString() ?: String()
+                }
+                val tableName = if (securableObjectType == SecurableObjectType.OrganizationExternalDatabaseColumn) {
+                    externalTables.getValue(column.tableId)?.name ?: String()
+                } else {
+                    entitySets.getValue(column.tableId)?.name ?: String()
+                }
                 val tableSchema = column.schema
 
                 columnAcl.aces.forEach { ace ->
                     val userRole = principalToUsername.getValue(ace.principal)
-                    val requestedPermissions = ace.permissions.flatMap { permission ->
+
+                    // filter out permission which doesn't have a key in olToPostgres and not in allPermissions
+                    val acePermissions = ace.permissions.filter {
+                        olToPostgres.containsKey(it) && allPermissions.contains(it)
+                    }
+                    val requestedPermissions = acePermissions.flatMap { permission ->
                         olToPostgres.getValue(permission)
                     }
 
@@ -400,10 +445,10 @@ class ExternalDatabasePermissioner(
                         }
                         Action.DROP -> {
                             // temp migration action
-                            orgRemoves.addAll(ace.permissions.mapNotNull { 
+                            orgRemoves.addAll(acePermissions.mapNotNull { 
                                 externalRoleNames[AccessTarget(columnAcl.aclKey, it)] 
                             }.map {
-                                revokeRoleSql(it.toString(), setOf(userRole))
+                                revokeRoleSql(it.second.toString(), setOf(userRole))
                             })
                         }
                         Action.SET -> {
@@ -526,14 +571,23 @@ class ExternalDatabasePermissioner(
             ""
         }
 
+        val privilegeCheckString = if (privilege == PostgresPrivileges.ALL) {
+            "has_column_privilege('$roleName', '$schemaName${quote(tableName)}', '$columnName', 'SELECT') AND " +
+            "has_column_privilege('$roleName', '$schemaName${quote(tableName)}', '$columnName', 'INSERT') AND " +
+            "has_column_privilege('$roleName', '$schemaName${quote(tableName)}', '$columnName', 'UPDATE') AND " +
+            "has_column_privilege('$roleName', '$schemaName${quote(tableName)}', '$columnName', 'REFERENCES')"
+        } else {
+            "has_column_privilege('$roleName', '$schemaName${quote(tableName)}', '$columnName', '$privilege')"
+        }
+
         return """
             DO 
             ${'$'}do${'$'}
             BEGIN
-                IF ${action.quantifier} has_column_privilege(${ApiHelpers.dbQuote(roleName)}, ${ApiHelpers.dbQuote(tableName)}, ${ApiHelpers.dbQuote(columnName)}, \"$privilege\") THEN
-                    ${action.name} $privilege ( ${ApiHelpers.dbQuote(columnName)} )
-                    ON $schemaName${ApiHelpers.dbQuote(tableName)}
-                    ${action.verb} ${ApiHelpers.dbQuote(roleName)};
+                IF ${action.quantifier} $privilegeCheckString THEN
+                    ${action.name} $privilege ( ${quote(columnName)} )
+                    ON $schemaName${quote(tableName)}
+                    ${action.verb} ${quote(roleName)};
                 END IF;
             END
             ${'$'}do${'$'};
@@ -549,10 +603,8 @@ class ExternalDatabasePermissioner(
     }
 
     private fun applyRoleOperation(roleName: String, targetRoles: Set<String>, action: PgPermAction): String {
-        val targets = targetRoles.joinToString {
-            ApiHelpers.dbQuote(it)
-        }
-        return "${action.name} ${ApiHelpers.dbQuote(roleName)} ${action.verb} $targets"
+        val targets = targetRoles.joinToString { quote(it) }
+        return "${action.name} ${quote(roleName)} ${action.verb} $targets"
     }
 
     internal fun createRoleIfNotExistsSql(dbRole: String): String {
@@ -564,7 +616,7 @@ class ExternalDatabasePermissioner(
                     SELECT
                     FROM   pg_catalog.pg_roles
                     WHERE  rolname = '$dbRole') THEN
-                    CREATE ROLE ${ApiHelpers.dbQuote(dbRole)} NOSUPERUSER NOCREATEDB NOCREATEROLE INHERIT NOLOGIN;
+                    CREATE ROLE ${quote(dbRole)} NOSUPERUSER NOCREATEDB NOCREATEROLE INHERIT NOLOGIN;
                 END IF;
             END
             ${'$'}do${'$'};
@@ -580,7 +632,7 @@ class ExternalDatabasePermissioner(
                     SELECT
                     FROM   pg_catalog.pg_roles
                     WHERE  rolname = '$dbUser') THEN
-                    CREATE ROLE ${ApiHelpers.dbQuote(dbUser)} NOSUPERUSER NOCREATEDB NOCREATEROLE INHERIT NOLOGIN;
+                    CREATE ROLE ${quote(dbUser)} NOSUPERUSER NOCREATEDB NOCREATEROLE INHERIT NOLOGIN;
                 END IF;
             END
             ${'$'}do${'$'};
