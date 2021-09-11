@@ -49,7 +49,7 @@ interface ExternalDatabasePermissioningService {
             orgDatasource: HikariDataSource,
             entitySetId: UUID,
             entitySetName: String,
-            propertyTypes: Set<PropertyTypeIdFqn>
+            propertyTypesIdToFqn: Set<PropertyTypeIdFqn>
     )
 
     /**
