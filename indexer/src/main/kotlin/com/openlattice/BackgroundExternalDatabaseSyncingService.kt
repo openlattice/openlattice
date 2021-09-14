@@ -143,9 +143,12 @@ class BackgroundExternalDatabaseSyncingService(
         columns: Set<ExternalColumn>,
         adminRolePrincipal: Principal
     ) {
-
         var timer = Stopwatch.createStarted()
-        extDbPermsService.initializeExternalTablePermissions(organizationId, table, columns)
+        // initialize database permissions
+        extDbPermsService.initializeExternalTablePermissions(
+                table,
+                columns
+        )
         logger.info(
             "initializing external table permissions took {} ms - org {} table {}",
             timer.elapsed(TimeUnit.MILLISECONDS),

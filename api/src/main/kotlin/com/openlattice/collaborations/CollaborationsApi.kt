@@ -14,6 +14,7 @@ interface CollaborationsApi {
         const val CONTROLLER = "/collaborations"
         const val BASE = SERVICE + CONTROLLER
 
+        const val ALL_PATH = "/all"
         const val DATABASE_PATH = "/database"
         const val DATA_SETS_PATH = "/datasets"
         const val ORGANIZATIONS_PATH = "/organizations"
@@ -23,6 +24,7 @@ interface CollaborationsApi {
         const val COLLABORATION_ID_PATH = "/{$COLLABORATION_ID_PARAM}"
         const val DATA_SET_ID_PARAM = "dataSetId"
         const val DATA_SET_ID_PATH = "/{$DATA_SET_ID_PARAM}"
+        const val IDS_PARAM = "ids"
         const val ORGANIZATION_ID_PARAM = "organizationId"
         const val ORGANIZATION_ID_PATH = "/{$ORGANIZATION_ID_PARAM}"
     }
@@ -32,8 +34,16 @@ interface CollaborationsApi {
      *
      * @return a list of [Collaboration] objects
      */
+    @GET(BASE + ALL_PATH)
+    fun getAllCollaborations(): Iterable<Collaboration>
+
+    /**
+     * Gets [Collaboration] objects the caller has [Permission.READ] on with the provided ids.
+     *
+     * @return a Map<K, V> where K is a collaboration id and V a [Collaboration] object
+     */
     @GET(BASE)
-    fun getCollaborations(): Iterable<Collaboration>
+    fun getCollaborations(@Query(IDS_PARAM) ids: Set<UUID>): Map<UUID, Collaboration>
 
     /**
      * Gets the [Collaboration] object with the given collaboration id. The caller must have [Permission.READ] on the
@@ -182,8 +192,8 @@ interface CollaborationsApi {
      * the caller has [Permission.READ] on.
      *
      * @param dataSetIds a set of data set ids
-     * @return Map<K, V> where K is a data set id and V is a list of [Collaboration] ids
+     * @return Map<K, V> where K is a data set id and V is a list of [Collaboration] objects
      */
     @POST(BASE + DATA_SETS_PATH)
-    fun getCollaborationsWithDataSets(@Body dataSetIds: Set<UUID>): Map<UUID, List<UUID>>
+    fun getCollaborationsWithDataSets(@Body dataSetIds: Set<UUID>): Map<UUID, List<Collaboration>>
 }
