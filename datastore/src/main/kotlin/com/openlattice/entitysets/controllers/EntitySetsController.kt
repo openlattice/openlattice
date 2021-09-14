@@ -362,7 +362,7 @@ constructor(
                 )
         )
         logger.info(
-            "recordEvent(AuditableEvent) took {} ms - entity set {}",
+            "recording audit event DELETE_ENTITY_SET took {} ms - entity set {}",
             timer.elapsed(TimeUnit.MILLISECONDS),
             entitySetId
         )
