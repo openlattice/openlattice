@@ -1,0 +1,33 @@
+##
+# Rhizome Bootstrap Configuration
+##
+
+# Set to false to disable persistence 
+enable-persistence:  false
+session-clustering-enabled: false
+
+hazelcast:
+    server: true
+    group: "local"
+    password: "trellis"
+    seed-nodes: 
+        - "localhost"
+    cp-member-count: 0
+    durable-executors:
+      - name: "_rhizome_job_service_"
+        pool-size: 2
+        capacity: 128
+        durability: 1
+    scheduled-executors:
+      - name: "hazelcast_scheduled_tasks"
+        pool-size: 2
+        capacity: 128
+        durability: 1
+
+postgres:
+    hikari:
+        jdbcUrl: jdbc:postgresql://localhost:5432/openlattice
+        username: "oltest"
+        password: "test"
+        maximumPoolSize: 10
+        connectionTimeout: 12000000 #20 minutes

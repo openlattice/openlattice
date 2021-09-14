@@ -1,0 +1,10 @@
+domain: "openlattice.auth0.com"
+clientId: "KTzgyxs6KBcJHB872eSMe2cpTHzhxS99"
+clientSecret: "MK4CrccqOqI6WVkOiSJX6n2h3MLgGri0"
+configurations:
+  - issuer: "https://openlattice.auth0.com/"
+    audience: "https://tests.openlattice.com"
+    secret: "MK4CrccqOqI6WVkOiSJX6n2h3MLgGri0"
+    signingAlgorithm: "HS256"
+    base64EncodedSecret: false
+managementApiUrl: "https://openlattice.auth0.com/api/v2/"
