@@ -22,13 +22,12 @@
 package com.openlattice.edm;
 
 import com.openlattice.authorization.HzAuthzTest;
-import com.openlattice.edm.type.PropertyType;
 import com.openlattice.mapstores.TestDataFactory;
-import com.openlattice.postgres.DataTables;
 import com.openlattice.postgres.PostgresTableManager;
-import java.sql.SQLException;
 import org.junit.Ignore;
 import org.junit.Test;
+
+import java.sql.SQLException;
 
 @Ignore
 public class PostgresEdmTests extends HzAuthzTest {

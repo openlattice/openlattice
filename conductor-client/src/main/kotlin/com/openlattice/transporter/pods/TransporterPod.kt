@@ -7,7 +7,6 @@ import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.transporter.services.TransporterService
-import com.openlattice.transporter.tasks.TransporterInitializeServiceTask
 import com.openlattice.transporter.tasks.TransporterRunSyncTask
 import com.openlattice.transporter.tasks.TransporterRunSyncTaskDependencies
 import com.openlattice.transporter.types.TransporterDatastore
@@ -36,7 +35,7 @@ class TransporterPod {
 
     @Bean
     fun transporterService(): TransporterService {
-        LoggerFactory.getLogger(TransporterPod::class.java).info("Constructing DataTransporterService")
+        LoggerFactory.getLogger(TransporterPod::class.java).info("Constructing TransporterService")
         return TransporterService(
                 eventBus,
                 dataModelService,
@@ -49,20 +48,14 @@ class TransporterPod {
     }
 
     @Bean
-    fun transporterInitializeServiceTask(): TransporterInitializeServiceTask {
-        LoggerFactory.getLogger(TransporterPod::class.java).info("Constructing TransporterInitializeServiceTask")
-        return TransporterInitializeServiceTask()
+    fun transporterRunSyncTask(): TransporterRunSyncTask {
+        LoggerFactory.getLogger(TransporterPod::class.java).info("Constructing TransporterRunSyncTask")
+        return TransporterRunSyncTask()
     }
 
     @Bean
     fun transporterRunSyncTaskDependencies(): TransporterRunSyncTaskDependencies {
         LoggerFactory.getLogger(TransporterPod::class.java).info("Constructing TransporterRunSyncTaskDependencies")
         return TransporterRunSyncTaskDependencies(transporterService())
-    }
-
-    @Bean
-    fun transporterRunSyncTask(): TransporterRunSyncTask {
-        LoggerFactory.getLogger(TransporterPod::class.java).info("Constructing TransporterRunSyncTask")
-        return TransporterRunSyncTask()
     }
 }

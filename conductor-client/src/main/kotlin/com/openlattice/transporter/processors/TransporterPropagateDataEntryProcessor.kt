@@ -8,10 +8,16 @@ import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.openlattice.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
-import com.openlattice.transporter.*
+import com.openlattice.transporter.hasModifiedData
+import com.openlattice.transporter.quotedEtTableName
+import com.openlattice.transporter.transporterNamespace
 import com.openlattice.transporter.types.TransporterColumnSet
 import com.openlattice.transporter.types.TransporterDatastore
 import com.openlattice.transporter.types.TransporterDependent
+import com.openlattice.transporter.updateEntityTypeTableEntries
+import com.openlattice.transporter.updateLastWriteForId
+import com.openlattice.transporter.updateRowsForEdges
+import com.openlattice.transporter.updateRowsForPropertyType
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import io.prometheus.client.Counter
 import org.slf4j.LoggerFactory
@@ -62,7 +68,7 @@ class TransporterPropagateDataEntryProcessor(
     }
 
     private fun transport(entry: Map.Entry<UUID, TransporterColumnSet>) {
-        val tableName = tableName(entry.key)
+        val tableName = quotedEtTableName(entry.key)
         entitySets.filter { it.isLinking }.forEach {
             // should be a noop because it's always filtered out but just in case...
             logger.error("Skipping linking entity set {} ({})", it.name, it.id)
@@ -85,7 +91,7 @@ class TransporterPropagateDataEntryProcessor(
                 val partitions = PostgresArrays.createIntArray(conn, entitySetPartitions)
                 val entitySetArray = PostgresArrays.createUuidArray(conn, entitySetIds)
 
-                lastSql = updatePrimaryKeyForEntitySets(tableName)
+                lastSql = updateEntityTypeTableEntries(tableName)
                 val idsToVersions = BasePostgresIterable(PreparedStatementHolderSupplier(transporter, lastSql ) {
                     it.setArray(1, partitions)
                     it.setArray(2, entitySetArray)

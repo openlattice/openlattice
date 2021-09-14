@@ -36,8 +36,8 @@ class PropagationGraphProcessor(private val edm: EdmManager) {
             val inputEntityTypeId = edm.getEntityType(it.key).id
 
             it.value
-                    .map { edm.getPropertyTypeId(it) } // List<PropertyType UUID>
-                    .map { Propagation(inputEntityTypeId, it) }
+                    .map { ptId -> edm.getPropertyTypeId(ptId) } // List<PropertyType UUID>
+                    .map { pt -> Propagation(inputEntityTypeId, pt) }
                     .toSet()
         }.forEach {
             val outputProp = Propagation(

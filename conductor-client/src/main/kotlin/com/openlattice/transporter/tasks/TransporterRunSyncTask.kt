@@ -11,7 +11,7 @@ class TransporterRunSyncTaskDependencies(
 ): HazelcastTaskDependencies
 
 class TransporterRunSyncTask : HazelcastFixedRateTask<TransporterRunSyncTaskDependencies> {
-    val interval = 30L
+    private val interval = 30L
     override fun getInitialDelay(): Long {
         return 0L
     }

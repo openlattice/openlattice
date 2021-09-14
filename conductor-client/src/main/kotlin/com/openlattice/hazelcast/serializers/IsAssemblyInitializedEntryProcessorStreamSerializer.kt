@@ -15,7 +15,7 @@ class IsAssemblyInitializedEntryProcessorStreamSerializer : NoOpSelfRegisteringS
         return IsAssemblyInitializedEntryProcessor::class.java
     }
 
-    override fun read(`in`: ObjectDataInput?): IsAssemblyInitializedEntryProcessor {
+    override fun read(`in`: ObjectDataInput): IsAssemblyInitializedEntryProcessor {
         return IsAssemblyInitializedEntryProcessor()
     }
 }

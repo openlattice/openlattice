@@ -1,0 +1,34 @@
+##
+# Rhizome Bootstrap Configuration
+##
+
+# Set to false to disable persistence
+enable-persistence:  false
+session-clustering-enabled: false
+# Indexer cannot be server as it is unable to deserialize tasks, in particular ones that have external dependencies that
+# that are static and should be initialized by spring startup.
+hazelcast:
+    server: false
+    group: "local"
+    password: "trellis"
+    seed-nodes:
+        - "localhost"
+
+hazelcast-clients:
+    IDS:
+        server: false
+        group: "local"
+        password: "trellis"
+        cp-member-count: 0
+        seed-nodes:
+            - "localhost"
+
+postgres:
+    citus: false
+    initialize-indices: false
+    hikari:
+        jdbcUrl: jdbc:postgresql://localhost:5432/openlattice
+        username: "oltest"
+        password: "test"
+        maximumPoolSize: 20
+        connectionTimeout: 1200000

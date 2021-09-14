@@ -2,10 +2,7 @@ package com.openlattice.organizations.processors
 
 import com.openlattice.organizations.Organization
 import com.openlattice.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
-import org.slf4j.LoggerFactory
 import java.util.*
-
-private val logger = LoggerFactory.getLogger(OrganizationEntryProcessor::class.java)
 
 /**
  *

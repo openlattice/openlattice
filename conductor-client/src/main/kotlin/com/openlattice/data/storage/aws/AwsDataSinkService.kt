@@ -3,6 +3,7 @@ package com.openlattice.data.storage.aws
 import com.amazonaws.HttpMethod
 import com.openlattice.data.integration.S3EntityData
 import com.openlattice.data.storage.ByteBlobDataManager
+import com.openlattice.data.storage.DataSourceResolver
 import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.edm.type.PropertyType
@@ -12,10 +13,10 @@ import java.util.*
 class AwsDataSinkService(
         partitionManager: PartitionManager,
         private val byteBlobDataManager: ByteBlobDataManager,
-        hds: HikariDataSource,
+        resolver: DataSourceResolver,
         reader: HikariDataSource
 ) {
-    private val dqs = PostgresEntityDataQueryService(hds, reader, byteBlobDataManager, partitionManager)
+    private val dqs = PostgresEntityDataQueryService(resolver, byteBlobDataManager, partitionManager)
 
     fun generatePresignedUrls(
             entities: List<S3EntityData>,
@@ -29,7 +30,7 @@ class AwsDataSinkService(
         entities.forEach {
             val key = "${it.entitySetId}/${it.entityKeyId}/${it.propertyTypeId}/${it.propertyHash}"
             val url = byteBlobDataManager
-                    .getPresignedUrl(key, expirationTime, HttpMethod.PUT, Optional.empty())
+                    .getPresignedUrl(key, expirationTime, HttpMethod.PUT)
                     .toString()
 
             data
