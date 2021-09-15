@@ -589,6 +589,26 @@ class ExternalDatabaseManagementService(
         return aclGrants
     }
 
+    fun syncAtlasPermissions(
+        orgId: UUID,
+        columns: Set<ExternalColumn>
+    ) {
+        val columnAclKeys = columns.map {
+            it.getAclKey()
+        }
+        val acls = permissions.entrySet(
+            Predicates.`in`(
+                PermissionMapstore.ACL_KEY_INDEX,
+                columnAclKeys
+            )
+        ).groupBy({ it.key.aclKey }, { (aceKey, aceVal) ->
+            Ace(aceKey.principal, aceVal.permissions, aceVal.expirationDate)
+        })
+        .map { (aclKey, aces) -> Acl(aclKey, aces) }
+
+        extDbPermsManager.executePrivilegesUpdate(Action.SET, acls)
+    }
+
     /*PRIVATE FUNCTIONS*/
     private fun getNameFromFqnString(fqnString: String): String {
         return FullQualifiedName(fqnString).name
