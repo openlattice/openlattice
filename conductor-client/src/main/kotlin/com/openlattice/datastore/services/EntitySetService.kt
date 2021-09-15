@@ -390,7 +390,6 @@ class EntitySetService(
             WHERE ${PostgresColumn.ENTITY_SET_ID.name} = ?
     """.trimIndent()
 
-    @Timed
     override fun getEntitySetSize(entitySetId: UUID): Long {
         return hds.connection.use { connection ->
             connection.prepareStatement(GET_ENTITY_SET_COUNT).use { ps ->
@@ -406,12 +405,10 @@ class EntitySetService(
         }
     }
 
-    @Timed
     override fun getEntitySet(entitySetId: UUID): EntitySet? {
         return Util.getSafely(entitySets, entitySetId)
     }
 
-    @Timed
     override fun getEntitySet(entitySetName: String): EntitySet? {
         val id = Util.getSafely(aclKeys, entitySetName)
         return if (id == null) {
@@ -421,32 +418,26 @@ class EntitySetService(
         }
     }
 
-    @Timed
     override fun getEntitySetsAsMap(entitySetIds: Set<UUID>): Map<UUID, EntitySet> {
         return entitySets.getAll(entitySetIds)
     }
 
-    @Timed
     override fun getEntitySets(): Iterable<EntitySet> {
         return entitySets.values
     }
 
-    @Timed
     override fun getEntitySetsOfType(entityTypeIds: Set<UUID>): Collection<EntitySet> {
         return entitySets.values(Predicates.`in`(EntitySetMapstore.ENTITY_TYPE_ID_INDEX, *entityTypeIds.toTypedArray()))
     }
 
-    @Timed
     override fun getEntitySetsOfType(entityTypeId: UUID): Collection<EntitySet> {
         return entitySets.values(Predicates.equal(EntitySetMapstore.ENTITY_TYPE_ID_INDEX, entityTypeId))
     }
 
-    @Timed
     override fun getEntitySetIdsOfType(entityTypeId: UUID): Collection<UUID> {
         return entitySets.keySet(Predicates.equal(EntitySetMapstore.ENTITY_TYPE_ID_INDEX, entityTypeId))
     }
 
-    @Timed
     @Suppress("UNCHECKED_CAST")
     override fun getEntitySetIdsWithFlags(entitySetIds: Set<UUID>, filteringFlags: Set<EntitySetFlag>): Set<UUID> {
         return entitySets.aggregate(
@@ -473,25 +464,21 @@ class EntitySetService(
         )
     }
 
-    @Timed
     override fun getEntityTypeByEntitySetId(entitySetId: UUID): EntityType {
         val entityTypeId = getEntitySet(entitySetId)!!.entityTypeId
         return edm.getEntityType(entityTypeId)
     }
 
-    @Timed
     @Suppress("UNCHECKED_CAST")
     override fun getEntityTypeIdsByEntitySetIds(entitySetIds: Set<UUID>): Map<UUID, UUID> {
         return entitySets.executeOnKeys(entitySetIds, GetEntityTypeFromEntitySetEntryProcessor()) as Map<UUID, UUID>
     }
 
-    @Timed
     override fun getAssociationTypeByEntitySetId(entitySetId: UUID): AssociationType {
         val entityTypeId = getEntitySet(entitySetId)!!.entityTypeId
         return edm.getAssociationType(entityTypeId)
     }
 
-    @Timed
     override fun getAssociationTypeDetailsByEntitySetIds(entitySetIds: Set<UUID>): Map<UUID, AssociationType> {
         val entityTypeIdsByEntitySetId = getEntityTypeIdsByEntitySetIds(entitySetIds)
 
@@ -504,17 +491,14 @@ class EntitySetService(
         }
     }
 
-    @Timed
     override fun isAssociationEntitySet(entitySetId: UUID): Boolean {
         return containsFlag(entitySetId, EntitySetFlag.ASSOCIATION)
     }
 
-    @Timed
     override fun containsFlag(entitySetId: UUID, flag: EntitySetFlag): Boolean {
         return entitySets.executeOnKey(entitySetId, EntitySetContainsFlagEntryProcessor(flag)) as Boolean
     }
 
-    @Timed
     override fun entitySetsContainFlag(entitySetIds: Set<UUID>, flag: EntitySetFlag): Boolean {
         return entitySets.executeOnKeys(
                 entitySetIds,
@@ -771,7 +755,6 @@ class EntitySetService(
         return entitySets.getAll(linkedEntitySetIds).values.toSet()
     }
 
-    @Timed
     override fun getLinkedEntitySetIds(entitySetId: UUID): Set<UUID> {
         return entitySets.executeOnKey(entitySetId) {
             DelegatedUUIDSet.wrap(
@@ -780,12 +763,10 @@ class EntitySetService(
         }
     }
 
-    @Timed
     override fun removeDataExpirationPolicy(entitySetId: UUID) {
         entitySets.executeOnKey(entitySetId, RemoveDataExpirationPolicyProcessor())
     }
 
-    @Timed
     override fun getAuditRecordEntitySetsManager(): AuditRecordEntitySetsManager {
         return aresManager
     }
