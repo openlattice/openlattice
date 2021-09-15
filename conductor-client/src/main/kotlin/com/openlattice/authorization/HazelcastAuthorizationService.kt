@@ -104,13 +104,11 @@ class HazelcastAuthorizationService(
 
     /** Set Securable Object Type **/
 
-    @Timed
     override fun setSecurableObjectTypes(aclKeys: Set<AclKey>, objectType: SecurableObjectType) {
         securableObjectTypes.putAll(aclKeys.associateWith { objectType })
         aces.executeOnEntries(SecurableObjectTypeUpdater(objectType), hasAnyAclKeys(aclKeys))
     }
 
-    @Timed
     override fun setSecurableObjectType(aclKey: AclKey, objectType: SecurableObjectType) {
         securableObjectTypes[aclKey] = objectType
         aces.executeOnEntries(SecurableObjectTypeUpdater(objectType), hasAclKey(aclKey))
@@ -118,12 +116,10 @@ class HazelcastAuthorizationService(
 
     /** Add Permissions **/
 
-    @Timed
     override fun addPermission(key: AclKey, principal: Principal, permissions: EnumSet<Permission>) {
         addPermission(key, principal, permissions, OffsetDateTime.MAX)
     }
 
-    @Timed
     override fun addPermission(
             key: AclKey,
             principal: Principal,
@@ -136,7 +132,6 @@ class HazelcastAuthorizationService(
         addPermission(key, principal, permissions, securableObjectType, expirationDate)
     }
 
-    @Timed
     override fun addPermission(
             key: AclKey,
             principal: Principal,
@@ -150,7 +145,6 @@ class HazelcastAuthorizationService(
         signalMaterializationPermissionChange(key, principal, permissions, securableObjectType)
     }
 
-    @Timed
     override fun addPermissions(
             keys: Set<AclKey>,
             principal: Principal,
@@ -160,7 +154,6 @@ class HazelcastAuthorizationService(
         addPermissions(keys, principal, permissions, securableObjectType, OffsetDateTime.MAX)
     }
 
-    @Timed
     override fun addPermissions(
             keys: Set<AclKey>,
             principal: Principal,
@@ -173,7 +166,6 @@ class HazelcastAuthorizationService(
         aces.executeOnKeys(aceKeys, PermissionMerger(permissions, securableObjectType, expirationDate))
     }
 
-    @Timed
     override fun addPermissions(acls: List<Acl>) {
         ensureAclPrincipalsExist(acls)
         val updates = getAceValueToAceKeyMap(acls)
@@ -185,7 +177,6 @@ class HazelcastAuthorizationService(
 
     /** Remove Permissions **/
 
-    @Timed
     override fun removePermissions(acls: List<Acl>) {
         acls.map {
             AclKey(it.aclKey) to it.aces
@@ -203,7 +194,6 @@ class HazelcastAuthorizationService(
         }
     }
 
-    @Timed
     override fun removePermission(
             key: AclKey,
             principal: Principal,
@@ -220,13 +210,11 @@ class HazelcastAuthorizationService(
         aces.executeOnKey(AceKey(key, principal), PermissionRemover(permissions))
     }
 
-    @Timed
     override fun deletePermissions(aclKey: AclKey) {
         securableObjectTypes.delete(aclKey)
         aces.removeAll(hasAclKey(aclKey))
     }
 
-    @Timed
     override fun deletePrincipalPermissions(principal: Principal) {
         aces.removeAll(hasPrincipal(principal))
     }
@@ -255,7 +243,6 @@ class HazelcastAuthorizationService(
         aces.putAll(updates)
     }
 
-    @Timed
     override fun setPermission(
             key: AclKey,
             principal: Principal,
