@@ -221,7 +221,6 @@ class HazelcastAuthorizationService(
 
     /** Set Permissions **/
 
-    @Timed
     override fun setPermissions(acls: List<Acl>) {
         ensureAclPrincipalsExist(acls)
         val types = getSecurableObjectTypeMapForAcls(acls)
@@ -251,7 +250,6 @@ class HazelcastAuthorizationService(
         setPermission(key, principal, permissions, OffsetDateTime.MAX)
     }
 
-    @Timed
     override fun setPermission(
             key: AclKey,
             principal: Principal,
@@ -269,7 +267,6 @@ class HazelcastAuthorizationService(
         aces[AceKey(key, principal)] = AceValue(permissions, securableObjectType, expirationDate)
     }
 
-    @Timed
     override fun setPermission(aclKeys: Set<AclKey>, principals: Set<Principal>, permissions: EnumSet<Permission>) {
         //This should be a rare call to overwrite all permissions, so it's okay to do a read before write.
         ensurePrincipalsExist(principals)
@@ -293,7 +290,6 @@ class HazelcastAuthorizationService(
         aces.putAll(newPermissions)
     }
 
-    @Timed
     override fun setPermissions(permissions: Map<AceKey, EnumSet<Permission>>) {
         ensurePrincipalsExist(permissions.keys.mapTo(mutableSetOf()) { it.principal })
 
