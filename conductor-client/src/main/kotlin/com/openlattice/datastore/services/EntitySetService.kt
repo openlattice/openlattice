@@ -120,6 +120,7 @@ class EntitySetService(
 
     private val aclKeys = HazelcastMap.ACL_KEYS.getMap(hazelcastInstance)
 
+    @Timed
     override fun createEntitySet(principal: Principal, entitySet: EntitySet): UUID {
         ensureValidEntitySet(entitySet)
         when {
@@ -188,6 +189,7 @@ class EntitySetService(
         return entitySetId
     }
 
+    @Timed
     override fun getTransportedEntitySetsOfType(entityTypeId: UUID): Set<EntitySet> {
         return entitySets.values(
                 Predicates.and(
@@ -198,6 +200,7 @@ class EntitySetService(
         ).toSet()
     }
 
+    @Timed
     override fun getAuthorizedNeighborEntitySets(
             principals: Set<Principal>,
             entitySetIds: Set<UUID>,
@@ -333,6 +336,7 @@ class EntitySetService(
         }
     }
 
+    @Timed
     override fun deleteEntitySet(entitySet: EntitySet) {
         // If this entity set is linked to a linking entity set, we need to collect all the linking ids of the entity
         // set first in order to be able to reindex those, before entity data is unavailable
@@ -386,6 +390,7 @@ class EntitySetService(
             WHERE ${PostgresColumn.ENTITY_SET_ID.name} = ?
     """.trimIndent()
 
+    @Timed
     override fun getEntitySetSize(entitySetId: UUID): Long {
         return hds.connection.use { connection ->
             connection.prepareStatement(GET_ENTITY_SET_COUNT).use { ps ->
@@ -401,10 +406,12 @@ class EntitySetService(
         }
     }
 
+    @Timed
     override fun getEntitySet(entitySetId: UUID): EntitySet? {
         return Util.getSafely(entitySets, entitySetId)
     }
 
+    @Timed
     override fun getEntitySet(entitySetName: String): EntitySet? {
         val id = Util.getSafely(aclKeys, entitySetName)
         return if (id == null) {
@@ -414,26 +421,32 @@ class EntitySetService(
         }
     }
 
+    @Timed
     override fun getEntitySetsAsMap(entitySetIds: Set<UUID>): Map<UUID, EntitySet> {
         return entitySets.getAll(entitySetIds)
     }
 
+    @Timed
     override fun getEntitySets(): Iterable<EntitySet> {
         return entitySets.values
     }
 
+    @Timed
     override fun getEntitySetsOfType(entityTypeIds: Set<UUID>): Collection<EntitySet> {
         return entitySets.values(Predicates.`in`(EntitySetMapstore.ENTITY_TYPE_ID_INDEX, *entityTypeIds.toTypedArray()))
     }
 
+    @Timed
     override fun getEntitySetsOfType(entityTypeId: UUID): Collection<EntitySet> {
         return entitySets.values(Predicates.equal(EntitySetMapstore.ENTITY_TYPE_ID_INDEX, entityTypeId))
     }
 
+    @Timed
     override fun getEntitySetIdsOfType(entityTypeId: UUID): Collection<UUID> {
         return entitySets.keySet(Predicates.equal(EntitySetMapstore.ENTITY_TYPE_ID_INDEX, entityTypeId))
     }
 
+    @Timed
     @Suppress("UNCHECKED_CAST")
     override fun getEntitySetIdsWithFlags(entitySetIds: Set<UUID>, filteringFlags: Set<EntitySetFlag>): Set<UUID> {
         return entitySets.aggregate(
@@ -445,10 +458,12 @@ class EntitySetService(
         )
     }
 
+    @Timed
     override fun getEntitySetsForOrganization(organizationId: UUID): Set<UUID> {
         return entitySets.keySet(Predicates.equal(EntitySetMapstore.ORGANIZATION_INDEX, organizationId))
     }
 
+    @Timed
     override fun filterEntitySetsForOrganization(organizationId: UUID, entitySetIds: Collection<UUID>): Set<UUID> {
         return entitySets.keySet(
                 Predicates.and(
@@ -458,21 +473,25 @@ class EntitySetService(
         )
     }
 
+    @Timed
     override fun getEntityTypeByEntitySetId(entitySetId: UUID): EntityType {
         val entityTypeId = getEntitySet(entitySetId)!!.entityTypeId
         return edm.getEntityType(entityTypeId)
     }
 
+    @Timed
     @Suppress("UNCHECKED_CAST")
     override fun getEntityTypeIdsByEntitySetIds(entitySetIds: Set<UUID>): Map<UUID, UUID> {
         return entitySets.executeOnKeys(entitySetIds, GetEntityTypeFromEntitySetEntryProcessor()) as Map<UUID, UUID>
     }
 
+    @Timed
     override fun getAssociationTypeByEntitySetId(entitySetId: UUID): AssociationType {
         val entityTypeId = getEntitySet(entitySetId)!!.entityTypeId
         return edm.getAssociationType(entityTypeId)
     }
 
+    @Timed
     override fun getAssociationTypeDetailsByEntitySetIds(entitySetIds: Set<UUID>): Map<UUID, AssociationType> {
         val entityTypeIdsByEntitySetId = getEntityTypeIdsByEntitySetIds(entitySetIds)
 
@@ -485,14 +504,17 @@ class EntitySetService(
         }
     }
 
+    @Timed
     override fun isAssociationEntitySet(entitySetId: UUID): Boolean {
         return containsFlag(entitySetId, EntitySetFlag.ASSOCIATION)
     }
 
+    @Timed
     override fun containsFlag(entitySetId: UUID, flag: EntitySetFlag): Boolean {
         return entitySets.executeOnKey(entitySetId, EntitySetContainsFlagEntryProcessor(flag)) as Boolean
     }
 
+    @Timed
     override fun entitySetsContainFlag(entitySetIds: Set<UUID>, flag: EntitySetFlag): Boolean {
         return entitySets.executeOnKeys(
                 entitySetIds,
@@ -552,6 +574,7 @@ class EntitySetService(
         }
     }
 
+    @Timed
     override fun exists(entitySetId: UUID): Boolean = entitySets.containsKey(entitySetId)
 
     @Timed
@@ -568,6 +591,7 @@ class EntitySetService(
         return propertyTypes.getAll(maybeEtProps)
     }
 
+    @Timed
     override fun getEntitySetPropertyMetadata(entitySetId: UUID, propertyTypeId: UUID): EntitySetPropertyMetadata {
         val aclKey = AclKey(entitySetId, propertyTypeId)
 
@@ -587,12 +611,14 @@ class EntitySetService(
         )
     }
 
+    @Timed
     override fun getAllEntitySetPropertyMetadata(entitySetId: UUID): Map<UUID, EntitySetPropertyMetadata> {
         return getEntityTypeByEntitySetId(entitySetId).properties.associateWith {
             getEntitySetPropertyMetadata(entitySetId, it)
         }
     }
 
+    @Timed
     @Suppress("UNCHECKED_CAST")
     override fun getAllEntitySetPropertyMetadataForIds(
             entitySetIds: Set<UUID>
@@ -642,11 +668,13 @@ class EntitySetService(
                 }
     }
 
+    @Timed
     override fun updateEntitySetPropertyMetadata(entitySetId: UUID, propertyTypeId: UUID, update: MetadataUpdate) {
         val key = AclKey(entitySetId, propertyTypeId)
         dataSetService.updateObjectMetadata(key, SecurableObjectMetadataUpdate.fromMetadataUpdate(update))
     }
 
+    @Timed
     override fun updateEntitySet(entitySetId: UUID, update: MetadataUpdate) {
         if (update.name.isPresent || update.organizationId.isPresent) {
             val oldEntitySet = getEntitySet(entitySetId)!!
@@ -698,10 +726,12 @@ class EntitySetService(
         eventBus.post(EntitySetMetadataUpdatedEvent(newEntitySet))
     }
 
+    @Timed
     override fun updateEntitySetMetadata(entitySetId: UUID, update: MetadataUpdate): EntitySet {
         return entitySets.executeOnKey(entitySetId, UpdateEntitySetMetadataProcessor(update))
     }
 
+    @Timed
     override fun addLinkedEntitySets(entitySetId: UUID, linkedEntitySets: Set<UUID>): Int {
         val linkingEntitySet = Util.getSafely(entitySets, entitySetId)
         val startSize = linkingEntitySet.linkedEntitySets.size
@@ -716,6 +746,7 @@ class EntitySetService(
         return updatedLinkingEntitySet.linkedEntitySets.size - startSize
     }
 
+    @Timed
     override fun removeLinkedEntitySets(entitySetId: UUID, linkedEntitySets: Set<UUID>): Int {
         val linkingEntitySet = Util.getSafely(entitySets, entitySetId)
         val startSize = linkingEntitySet.linkedEntitySets.size
@@ -734,11 +765,13 @@ class EntitySetService(
         eventBus.post(MaterializedEntitySetEdmChangeEvent(entitySetId))
     }
 
+    @Timed
     override fun getLinkedEntitySets(entitySetId: UUID): Set<EntitySet> {
         val linkedEntitySetIds = getEntitySet(entitySetId)!!.linkedEntitySets
         return entitySets.getAll(linkedEntitySetIds).values.toSet()
     }
 
+    @Timed
     override fun getLinkedEntitySetIds(entitySetId: UUID): Set<UUID> {
         return entitySets.executeOnKey(entitySetId) {
             DelegatedUUIDSet.wrap(
@@ -747,10 +780,12 @@ class EntitySetService(
         }
     }
 
+    @Timed
     override fun removeDataExpirationPolicy(entitySetId: UUID) {
         entitySets.executeOnKey(entitySetId, RemoveDataExpirationPolicyProcessor())
     }
 
+    @Timed
     override fun getAuditRecordEntitySetsManager(): AuditRecordEntitySetsManager {
         return aresManager
     }
