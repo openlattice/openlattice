@@ -173,7 +173,7 @@ class BackgroundExternalDatabaseSyncingService(
         )
 
         timer = Stopwatch.createStarted()
-        edms.syncAtlasPermissions(orgId, columns)
+        edms.syncAtlasPermissions(organizationId, columns)
         val acls = edms.syncPermissions(adminRolePrincipal, table, columns)
         logger.info(
             "syncing permissions took {} ms - org {} table {}",
