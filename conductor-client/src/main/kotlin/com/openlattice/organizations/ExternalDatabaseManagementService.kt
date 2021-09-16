@@ -599,7 +599,7 @@ class ExternalDatabaseManagementService(
         val acls = permissions.entrySet(
             Predicates.`in`(
                 PermissionMapstore.ACL_KEY_INDEX,
-                columnAclKeys
+                *columnAclKeys.toTypedArray()
             )
         ).groupBy({ it.key.aclKey }, { (aceKey, aceVal) ->
             Ace(aceKey.principal, aceVal.permissions, aceVal.expirationDate)
