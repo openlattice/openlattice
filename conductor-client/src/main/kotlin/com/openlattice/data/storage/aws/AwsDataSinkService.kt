@@ -1,6 +1,7 @@
 package com.openlattice.data.storage.aws
 
 import com.amazonaws.HttpMethod
+import com.openlattice.data.PropertyUpdateType
 import com.openlattice.data.integration.S3EntityData
 import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.data.storage.DataSourceResolver
@@ -13,14 +14,14 @@ import java.util.*
 class AwsDataSinkService(
         partitionManager: PartitionManager,
         private val byteBlobDataManager: ByteBlobDataManager,
-        resolver: DataSourceResolver,
-        reader: HikariDataSource
+        resolver: DataSourceResolver
 ) {
     private val dqs = PostgresEntityDataQueryService(resolver, byteBlobDataManager, partitionManager)
 
     fun generatePresignedUrls(
             entities: List<S3EntityData>,
-            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
+            propertyUpdateType: PropertyUpdateType
     ): List<String> {
         val data = mutableMapOf<UUID, MutableMap<UUID, MutableMap<UUID, MutableSet<Any>>>>()
         val urls = ArrayList<String>(entities.size)
@@ -44,7 +45,11 @@ class AwsDataSinkService(
         //write s3Keys to postgres
         data.forEach { (entitySetId, entityData) ->
             dqs.upsertEntities(
-                    entitySetId, entityData, authorizedPropertyTypes.getValue(entitySetId), true
+                    entitySetId,
+                    entityData,
+                    authorizedPropertyTypes.getValue(entitySetId),
+                    awsPassthrough = true,
+                    propertyUpdateType = propertyUpdateType
             )
         }
 

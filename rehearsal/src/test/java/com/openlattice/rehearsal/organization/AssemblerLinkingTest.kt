@@ -22,10 +22,7 @@ package com.openlattice.rehearsal.organization
 
 import com.google.common.collect.ImmutableList
 import com.openlattice.authorization.*
-import com.openlattice.data.DataEdgeKey
-import com.openlattice.data.DeleteType
-import com.openlattice.data.EntityDataKey
-import com.openlattice.data.UpdateType
+import com.openlattice.data.*
 import com.openlattice.data.requests.EntitySetSelection
 import com.openlattice.data.requests.FileType
 import com.openlattice.edm.EdmConstants
@@ -464,8 +461,8 @@ class AssemblerLinkingTest : AssemblerTestBase() {
         }
         val newTestDataWithIds1 = ids1.zip(newGivenNames).toMap()
         val newTestDataWithIds2 = ids2.zip(newGivenNames).toMap()
-        dataApi.updateEntitiesInEntitySet(esId1, newTestDataWithIds1, UpdateType.Replace)
-        dataApi.updateEntitiesInEntitySet(esId2, newTestDataWithIds2, UpdateType.Replace)
+        dataApi.updateEntitiesInEntitySet(esId1, newTestDataWithIds1, UpdateType.Replace, PropertyUpdateType.Versioned)
+        dataApi.updateEntitiesInEntitySet(esId2, newTestDataWithIds2, UpdateType.Replace, PropertyUpdateType.Versioned)
 
         Assert.assertTrue(
                 organizationsApi.getOrganizationEntitySets(organizationID)[esLinking.id]!!

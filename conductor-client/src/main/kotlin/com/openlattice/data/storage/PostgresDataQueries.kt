@@ -5,6 +5,7 @@ import com.openlattice.IdConstants
 import com.openlattice.analysis.SqlBindInfo
 import com.openlattice.analysis.requests.Filter
 import com.openlattice.data.FilteredDataPageDefinition
+import com.openlattice.data.PropertyUpdateType
 import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.edm.PostgresEdmTypeConverter
 import com.openlattice.edm.type.PropertyType
@@ -837,8 +838,8 @@ fun upsertPropertyValueSql(propertyType: PropertyType, updateType: PropertyUpdat
     ).joinToString(",") { it.name }
 
     val whereClause = when(updateType) {
-        PropertyUpdateType.VERSIONED -> ""
-        PropertyUpdateType.UNVERSIONED -> """
+        PropertyUpdateType.Versioned -> ""
+        PropertyUpdateType.Unversioned -> """
             WHERE ${DATA.name}.${VERSION.name} < 0 
         """.trimIndent()
     }

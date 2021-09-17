@@ -1,10 +1,7 @@
 package com.openlattice.data.storage
 
 import com.google.common.collect.SetMultimap
-import com.openlattice.data.DataExpiration
-import com.openlattice.data.EntitySetData
-import com.openlattice.data.FilteredDataPageDefinition
-import com.openlattice.data.WriteEvent
+import com.openlattice.data.*
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.streams.BasePostgresIterable
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -83,7 +80,8 @@ interface EntityDatastore {
     fun createOrUpdateEntities(
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
+            authorizedPropertyTypes: Map<UUID, PropertyType>,
+            propertyUpdateType: PropertyUpdateType
     ): WriteEvent
 
     /**
@@ -93,7 +91,8 @@ interface EntityDatastore {
     fun replaceEntities(
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
+            authorizedPropertyTypes: Map<UUID, PropertyType>,
+            propertyUpdateType: PropertyUpdateType
     ): WriteEvent
 
     /**
@@ -102,7 +101,8 @@ interface EntityDatastore {
     fun partialReplaceEntities(
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
+            authorizedPropertyTypes: Map<UUID, PropertyType>,
+            propertyUpdateType: PropertyUpdateType
     ): WriteEvent
 
     /**
@@ -111,7 +111,8 @@ interface EntityDatastore {
     fun replacePropertiesInEntities(
             entitySetId: UUID,
             replacementProperties: Map<UUID, Map<UUID, Set<Map<ByteBuffer, Any>>>>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
+            authorizedPropertyTypes: Map<UUID, PropertyType>,
+            propertyUpdateType: PropertyUpdateType
     ): WriteEvent
 
     /**
