@@ -63,6 +63,7 @@ import com.openlattice.organizations.Grant;
 import com.openlattice.organizations.GrantType;
 import com.openlattice.organizations.Organization;
 import com.openlattice.organizations.OrganizationDatabase;
+import com.openlattice.organizations.JdbcConnectionParameters;
 import com.openlattice.postgres.IndexType;
 import com.openlattice.postgres.PostgresAuthenticationRecord;
 import com.openlattice.postgres.PostgresConnectionType;
@@ -86,6 +87,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.time.OffsetDateTime;
 import java.util.*;
+import java.util.Properties;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -867,6 +869,20 @@ public final class TestDataFactory {
                 randomAlphanumeric( 10 ),
                 randomAlphanumeric( 10 ),
                 Sets.newHashSet( UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID() )
+        );
+    }
+
+    public static JdbcConnectionParameters warehouse() {
+        return new JdbcConnectionParameters(
+                UUID.randomUUID(),
+                randomAlphanumeric( 10 ),
+                randomAlphanumeric( 10 ),
+                randomAlphanumeric( 10 ),
+                randomAlphanumeric( 10 ),
+                randomAlphanumeric( 10 ),
+                randomAlphanumeric( 10 ),
+                new Properties(),
+                Optional.empty()
         );
     }
 

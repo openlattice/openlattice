@@ -37,5 +37,6 @@ public enum SecurableObjectType {
     Unknown,
     OrganizationExternalDatabaseTable,
     OrganizationExternalDatabaseColumn,
-    Collaboration
+    Collaboration,
+    JdbcConnectionParameters
 }

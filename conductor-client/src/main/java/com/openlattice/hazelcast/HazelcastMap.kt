@@ -71,6 +71,7 @@ import com.openlattice.scheduling.ScheduledTask
 import com.openlattice.shuttle.Integration
 import com.openlattice.shuttle.IntegrationJob
 import com.openlattice.transporter.types.TransporterColumnSet
+import com.openlattice.organizations.JdbcConnectionParameters
 import java.util.*
 
 class HazelcastMap<K, V> internal constructor(val name: String) : TypedMapIdentifier<K, V> {
@@ -160,6 +161,7 @@ class HazelcastMap<K, V> internal constructor(val name: String) : TypedMapIdenti
         @JvmField val SMS_INFORMATION = HazelcastMap<SmsInformationKey, SmsEntitySetInformation>("SMS_INFORMATION")
         @JvmField val TRANSPORTER_DB_COLUMNS = HazelcastMap<UUID, TransporterColumnSet>("TRANSPORTER_DB_COLUMNS")
         @JvmField val USERS = HazelcastMap<String, User>("USERS")
+        @JvmField val WAREHOUSES = HazelcastMap<UUID, JdbcConnectionParameters>("WAREHOUSES")
 
         // @formatter:on
 

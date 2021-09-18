@@ -164,6 +164,9 @@ public final class PostgresColumn {
     public static final String                   DESCRIPTION_FIELD                 = "description";
     public static final PostgresColumnDefinition DESCRIPTION                       =
             new PostgresColumnDefinition( DESCRIPTION_FIELD, TEXT );
+    public static final String                   DRIVER_FIELD                      = "driver";
+    public static final PostgresColumnDefinition DRIVER                            =
+            new PostgresColumnDefinition( DRIVER_FIELD, TEXT );
     public static final String                   DST_ENTITY_KEY_ID_FIELD           = "dst_entity_key_id";
     public static final PostgresColumnDefinition DST_ENTITY_KEY_ID                 =
             new PostgresColumnDefinition( DST_ENTITY_KEY_ID_FIELD, UUID );

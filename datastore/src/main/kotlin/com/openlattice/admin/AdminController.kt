@@ -7,6 +7,9 @@ import com.geekbeast.rhizome.jobs.HazelcastJobService
 import com.geekbeast.rhizome.jobs.JobStatus
 import com.google.common.collect.Iterables
 import com.hazelcast.core.HazelcastInstance
+import com.openlattice.admin.AdminApi
+import com.openlattice.authorization.*
+import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
 import com.openlattice.authorization.Principal
@@ -23,6 +26,8 @@ import com.openlattice.jobs.JobUpdate
 import com.openlattice.notifications.sms.SmsEntitySetInformation
 import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.organizations.Organization
+import com.openlattice.organizations.JdbcConnectionParameters
+import com.openlattice.organizations.WarehouseService
 import com.openlattice.postgres.DataTables.quote
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
@@ -30,6 +35,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
 import java.util.*
+import java.util.stream.Collectors
 import javax.inject.Inject
 
 @SuppressFBWarnings(
@@ -72,6 +78,9 @@ class AdminController : AdminApi, AuthorizingComponent {
 
     @Inject
     private lateinit var jobService: HazelcastJobService
+
+    @Inject
+    private lateinit var warehouseService: WarehouseService
 
     @GetMapping(value = [SQL + ID_PATH], produces = [MediaType.APPLICATION_JSON_VALUE])
     override fun getEntitySetSql(
@@ -250,6 +259,89 @@ class AdminController : AdminApi, AuthorizingComponent {
 
         return jobService.getJobs(jobs)
 
+    }
+
+    @Timed
+    @GetMapping(
+        path = [WAREHOUSES],
+        produces = [MediaType.APPLICATION_JSON_VALUE]
+    )
+    override fun getWarehouses(): Iterable<JdbcConnectionParameters> {
+
+        // TODO
+        val authorizedWarehouseIds = getAllAuthorizedWarehouseIds()
+        return warehouseService.getWarehouses(authorizedWarehouseIds).values
+
+        val jdbc = JdbcConnectionParameters(
+            _title = "test_title",
+            url = "test_url",
+            driver = "test_driver",
+            database = "test_dbname",
+            username = "test_user",
+            password = "test_pass"
+        )
+
+        return listOf(jdbc)
+    }
+
+    @Timed
+    @PatchMapping(
+        path =      [WAREHOUSES + ID_PATH],
+        consumes =  [MediaType.APPLICATION_JSON_VALUE],
+        produces =  [MediaType.APPLICATION_JSON_VALUE]
+    )
+    override fun updateWarehouse(@PathVariable(ID) WarehouseId: UUID, @RequestBody JdbcParameterUpdate: JdbcConnectionParameters): Int {
+        // TODO
+        return 0
+    }
+
+    @Timed
+    @DeleteMapping(
+        value = [WAREHOUSES + ID_PATH],
+        produces = [MediaType.APPLICATION_JSON_VALUE]
+    )
+    override fun deleteWarehouse(@PathVariable(ID) WarehouseId: UUID): UUID {
+        // TODO
+        val unassignedId = UUID(0, 0)
+        return unassignedId
+    }
+
+    @Timed
+    @PostMapping(
+        value = [WAREHOUSES],
+        consumes = [MediaType.APPLICATION_JSON_VALUE],
+        produces = [MediaType.APPLICATION_JSON_VALUE]
+    )
+    override fun createWarehouse(
+        @RequestBody jdbc: JdbcConnectionParameters
+    ): UUID {
+        return warehouseService.createWarehouse(jdbc, Principals.getCurrentUser())
+    }
+
+    @Timed
+    @GetMapping(
+        value = [WAREHOUSES + ID_PATH],
+        produces = [MediaType.APPLICATION_JSON_VALUE]
+    )
+    override fun getWarehouseDetails(WarehouseId: UUID): JdbcConnectionParameters {
+        //TODO
+        val jdbc = JdbcConnectionParameters(
+            _title = "test_title",
+            url = "test_url",
+            driver = "test_driver",
+            database = "test_dbname",
+            username = "test_user",
+            password = "test_pass"
+        )
+        return jdbc
+    }
+
+    private fun getAllAuthorizedWarehouseIds(): Set<UUID> {
+        return authorizationManager.getAuthorizedObjectsOfType(
+            Principals.getCurrentPrincipals(),
+            SecurableObjectType.JdbcConnectionParameters,
+            EnumSet.of(Permission.READ)
+        ).map { it.first() }.collect(Collectors.toSet())
     }
 
     override fun getAuthorizationManager(): AuthorizationManager {

@@ -54,6 +54,7 @@ import static com.openlattice.postgres.PostgresColumn.DATABASE;
 import static com.openlattice.postgres.PostgresColumn.DATASTORE;
 import static com.openlattice.postgres.PostgresColumn.DATATYPE;
 import static com.openlattice.postgres.PostgresColumn.DESCRIPTION;
+import static com.openlattice.postgres.PostgresColumn.DRIVER;
 import static com.openlattice.postgres.PostgresColumn.DST;
 import static com.openlattice.postgres.PostgresColumn.DST_ENTITY_KEY_ID;
 import static com.openlattice.postgres.PostgresColumn.DST_ENTITY_SET_ID;
@@ -562,7 +563,19 @@ public final class PostgresTable {
                     .addColumns( USER_ID, USER_DATA, EXPIRATION )
                     .primaryKey( USER_ID )
                     .overwriteOnConflict();
-
+    public static final PostgresTableDefinition WAREHOUSES =
+            new PostgresTableDefinition("warehouses")
+                    .addColumns(
+                            ID,
+                            TITLE,
+                            URL,
+                            DRIVER,
+                            DATABASE,
+                            USERNAME,
+                            CREDENTIAL,
+                            PROPERTIES,
+                            DESCRIPTION
+                    );
     static {
         PRINCIPAL_TREES.addIndexes(
                 new PostgresColumnsIndexDefinition( PRINCIPAL_TREES, ACL_KEY )
