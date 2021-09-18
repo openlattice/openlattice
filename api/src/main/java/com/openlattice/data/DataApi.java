@@ -119,7 +119,7 @@ public interface DataApi {
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Path( ENTITY_KEY_ID ) UUID entityKeyId,
             @Body Map<UUID, Set<Object>> entity,
-            @Path( PROPERTY_UPDATE_TYPE ) PropertyUpdateType propertyUpdateType );
+            @Query( PROPERTY_UPDATE_TYPE ) PropertyUpdateType propertyUpdateType );
 
     /**
      * Replaces a single entity from an entity set.
