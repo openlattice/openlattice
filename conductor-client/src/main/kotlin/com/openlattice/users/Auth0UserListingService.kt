@@ -24,6 +24,8 @@ package com.openlattice.users
 import com.auth0.client.mgmt.ManagementAPI
 import com.auth0.json.mgmt.users.User
 import com.dataloom.mappers.ObjectMappers
+import com.geekbeast.util.ExponentialBackoff
+import com.geekbeast.util.attempt
 import com.openlattice.users.export.Auth0ApiExtension
 import com.openlattice.users.export.JobStatus
 import com.openlattice.users.export.UserExportJobRequest
@@ -36,6 +38,8 @@ import java.util.stream.Collectors
 import java.util.zip.GZIPInputStream
 
 private const val DEFAULT_PAGE_SIZE = 100
+private const val MAX_DELAY = 8L * 60L * 1000L // 8 min
+const val MAX_RETRY_COUNT = 22
 
 /**
  *
@@ -75,9 +79,9 @@ class Auth0UserListingService(
             exportJobResult = exportEntity.getJob(job.id)
         }
 
-        Thread.sleep(1000) // TODO actually fix
-
-        return readUsersFromLocation(exportJobResult)
+        return attempt(ExponentialBackoff(MAX_DELAY), MAX_RETRY_COUNT) {
+            readUsersFromLocation(exportJobResult)
+        }
     }
 
     private fun readUsersFromLocation(exportJobResult: UserExportJobResult): List<User> {
