@@ -32,12 +32,10 @@ constructor(
     @JsonProperty(SerializationConstants.DATABASE) val database: String = "",
     @JsonProperty(SerializationConstants.USERNAME) val username: String = "",
     @JsonProperty(SerializationConstants.PASSWORD) val password: String = "",
-//    @JsonProperty(SerializationConstants.ROLE_MANAGEMENT_ENABLED) val roleManagementEnabled: Boolean = false,
+//    @JsonProperty(SerializationConstants.ROLE_MANAGEMENT_ENABLED) val roleManagementEnabled: Boolean = false, TODO Is this necessary?
     @JsonProperty(SerializationConstants.PROPERTIES_FIELD) val properties: Properties = Properties(),
     @JsonProperty(SerializationConstants.DESCRIPTION_FIELD) description: Optional<String> = Optional.empty()
 ) : AbstractSecurableObject(_id, _title, description) {
-
-//    constructor() : this(UUID.randomUUID(), "test", "test", "test")
 
     init {
         require(properties.keys.all { it is String }) { "All properties must have string keys." }

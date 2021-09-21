@@ -10,7 +10,6 @@ import com.openlattice.mapstores.TestDataFactory
 import org.springframework.stereotype.Component
 import java.util.Properties;
 import java.util.Optional;
-import java.io.StringReader;
 
 /**
  * @author Andrew Carter andrew@openlattice.com
@@ -33,42 +32,40 @@ class WarehouseStreamSerializer : TestableSelfRegisteringStreamSerializer<JdbcCo
 
     override fun write(out: ObjectDataOutput, obj: JdbcConnectionParameters) {
         UUIDStreamSerializerUtils.serialize(out, obj._id)
-        out.writeUTF(obj._title)
-        out.writeUTF(obj.url)
-        out.writeUTF(obj.driver)
-        out.writeUTF(obj.database)
-        out.writeUTF(obj.username)
-        out.writeUTF(obj.password)
+        out.writeString(obj._title)
+        out.writeString(obj.url)
+        out.writeString(obj.driver)
+        out.writeString(obj.database)
+        out.writeString(obj.username)
+        out.writeString(obj.password)
         out.writeObject(obj.properties)
-        out.writeUTF(obj.description)
+        out.writeString(obj.description)
     }
 
     override fun read(input: ObjectDataInput): JdbcConnectionParameters {
-//        val id = UUIDStreamSerializerUtils.deserialize(input)
-//        val title = input.readString()!!
-//        val url = input.readString()!!
-//        val driver = input.readString()!!
-//        val database = input.readString()
-//        val username = input.readString()
-//        val password = input.readString()
-//        val properties = Properties()
-//        val PropertpropertyString = input.readObject()
-//        if (propertyString != null) properties.load(StringReader(propertyString))
-//        val description = Optional.ofNullable(input.readString())
+        val id = UUIDStreamSerializerUtils.deserialize(input)
+        val title = input.readString()!!
+        val url = input.readString()!!
+        val driver = input.readString()!!
+        val database = input.readString()!!
+        val username = input.readString()!!
+        val password = input.readString()!!
+        var properties: Properties = input.readObject()!!
+        if( properties == null ) {   // set as empty property object if properties not supplied
+            properties = Properties()
+        }
+        val description = Optional.ofNullable(input.readString())!!
 
-
-        return input.readObject(JdbcConnectionParameters::class.java)!!
-
-//        return JdbcConnectionParameters(
-//            id,
-//            title,
-//            url,
-//            driver,
-//            database,
-//            username,
-//            password,
-//            properties,
-//            description
-//        )
+        return JdbcConnectionParameters(
+            id,
+            title,
+            url,
+            driver,
+            database,
+            username,
+            password,
+            properties,
+            description
+        )
     }
 }

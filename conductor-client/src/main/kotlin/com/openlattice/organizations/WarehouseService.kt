@@ -23,17 +23,34 @@ class WarehouseService(
         return warehouses.getAll(ids)
     }
 
+    fun getWarehouse(id: UUID): JdbcConnectionParameters {
+        return warehouses.getValue(id)
+    }
+
     fun createWarehouse(jdbc: JdbcConnectionParameters, ownerPrincipal: Principal): UUID {
-        ensureValidWarehouse(jdbc)
 
         val aclKey = reserveWarehouseIfNotExists(jdbc)
 
         authorizationManager.setSecurableObjectType(aclKey, SecurableObjectType.JdbcConnectionParameters)
-        authorizationManager.addPermission(aclKey, ownerPrincipal, EnumSet.allOf(Permission::class.java))
+        authorizationManager.addPermission(aclKey, ownerPrincipal, EnumSet.allOf(Permission::class.java)) // TODO Is this necessary
 
         warehouses.set(jdbc.id, jdbc)
 
         return jdbc.id
+    }
+
+    fun deleteWarehouse(id: UUID) {
+        ensureValidWarehouseId(id)
+
+        authorizationManager.deletePermissions(AclKey(id))
+        warehouses.delete(id)
+        aclKeyReservationService.release(id)
+    }
+
+    fun updateWarehouse(jdbc: JdbcConnectionParameters) {
+        ensureValidWarehouseId(jdbc.id)
+
+        warehouses.set(jdbc.id, jdbc)
     }
 
     private fun reserveWarehouseIfNotExists(jdbc: JdbcConnectionParameters): AclKey {
@@ -43,9 +60,7 @@ class WarehouseService(
         return AclKey(jdbc.id)
     }
 
-    private fun ensureValidWarehouse(jdbc: JdbcConnectionParameters): Boolean {
-        //TODO
-        return true
+    private fun ensureValidWarehouseId(id: UUID) {
+        check(warehouses.containsKey(id)) {"No collaboration exists with id $id"}
     }
-
 }

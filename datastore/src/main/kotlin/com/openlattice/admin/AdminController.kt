@@ -267,43 +267,30 @@ class AdminController : AdminApi, AuthorizingComponent {
         produces = [MediaType.APPLICATION_JSON_VALUE]
     )
     override fun getWarehouses(): Iterable<JdbcConnectionParameters> {
-
-        // TODO
-        val authorizedWarehouseIds = getAllAuthorizedWarehouseIds()
+        ensureAdminAccess()
+        val authorizedWarehouseIds = getAllAuthorizedWarehouseIds() // TODO Is this necessary?
         return warehouseService.getWarehouses(authorizedWarehouseIds).values
-
-        val jdbc = JdbcConnectionParameters(
-            _title = "test_title",
-            url = "test_url",
-            driver = "test_driver",
-            database = "test_dbname",
-            username = "test_user",
-            password = "test_pass"
-        )
-
-        return listOf(jdbc)
     }
 
     @Timed
-    @PatchMapping(
-        path =      [WAREHOUSES + ID_PATH],
-        consumes =  [MediaType.APPLICATION_JSON_VALUE],
-        produces =  [MediaType.APPLICATION_JSON_VALUE]
+    @GetMapping(
+        value = [WAREHOUSES + WAREHOUSE_ID_PATH],
+        produces = [MediaType.APPLICATION_JSON_VALUE]
     )
-    override fun updateWarehouse(@PathVariable(ID) WarehouseId: UUID, @RequestBody JdbcParameterUpdate: JdbcConnectionParameters): Int {
-        // TODO
-        return 0
+    override fun getWarehouse(@PathVariable(WAREHOUSE_ID_PARAM) WarehouseId: UUID): JdbcConnectionParameters {
+        ensureAdminAccess()
+        return warehouseService.getWarehouse(WarehouseId)
     }
 
     @Timed
     @DeleteMapping(
-        value = [WAREHOUSES + ID_PATH],
+        value = [WAREHOUSES + WAREHOUSE_ID_PATH],
         produces = [MediaType.APPLICATION_JSON_VALUE]
     )
-    override fun deleteWarehouse(@PathVariable(ID) WarehouseId: UUID): UUID {
-        // TODO
-        val unassignedId = UUID(0, 0)
-        return unassignedId
+    override fun deleteWarehouse(@PathVariable(WAREHOUSE_ID_PARAM) WarehouseId: UUID) {
+        ensureAdminAccess()
+        ensureOwnerAccess(AclKey(WarehouseId)) // TODO Is this necessary?
+        warehouseService.deleteWarehouse(WarehouseId)
     }
 
     @Timed
@@ -319,21 +306,13 @@ class AdminController : AdminApi, AuthorizingComponent {
     }
 
     @Timed
-    @GetMapping(
-        value = [WAREHOUSES + ID_PATH],
-        produces = [MediaType.APPLICATION_JSON_VALUE]
+    @PatchMapping(
+        path =      [WAREHOUSES],
+        consumes =  [MediaType.APPLICATION_JSON_VALUE],
     )
-    override fun getWarehouseDetails(WarehouseId: UUID): JdbcConnectionParameters {
-        //TODO
-        val jdbc = JdbcConnectionParameters(
-            _title = "test_title",
-            url = "test_url",
-            driver = "test_driver",
-            database = "test_dbname",
-            username = "test_user",
-            password = "test_pass"
-        )
-        return jdbc
+    override fun updateWarehouse(@RequestBody jdbc: JdbcConnectionParameters) {
+        ensureAdminAccess()
+        warehouseService.updateWarehouse(jdbc)
     }
 
     private fun getAllAuthorizedWarehouseIds(): Set<UUID> {

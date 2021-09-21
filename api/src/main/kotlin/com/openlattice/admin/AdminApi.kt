@@ -38,6 +38,8 @@ const val ID = "id"
 const val ID_PATH = "/{$ID}"
 const val NAME = "name"
 const val NAME_PATH = "/{$NAME}"
+const val WAREHOUSE_ID_PARAM = "WarehouseId"
+const val WAREHOUSE_ID_PATH = "/{${WAREHOUSE_ID_PARAM}}"
 
 const val JOBS = "/jobs"
 
@@ -45,6 +47,9 @@ const val WAREHOUSES = "/warehouses"
 
 interface AdminApi {
 
+    companion object {
+
+    }
 
     /**
      * Reload the all the in memory caches.
@@ -123,8 +128,8 @@ interface AdminApi {
      *   - Fields: Title, Url, Driver, Database, Username, Password
      *
      */
-    @GET(BASE + WAREHOUSES + ID_PATH)
-    fun getWarehouseDetails(@Path(NAME) WarehouseId: UUID): JdbcConnectionParameters
+    @GET(BASE + WAREHOUSES + WAREHOUSE_ID_PATH)
+    fun getWarehouse(@Path(WAREHOUSE_ID_PARAM) WarehouseId: UUID): JdbcConnectionParameters
 
     /**
      *  Creates a warehouse by providing the application JDBC details needed
@@ -143,8 +148,8 @@ interface AdminApi {
      *  @param WarehouseID The ID of the warehouse to be deleted.
      *  @return UUID of the deletion job
      */
-    @DELETE(BASE + WAREHOUSES + ID_PATH)
-    fun deleteWarehouse(@Path(ID) WarehouseId: UUID): UUID
+    @DELETE(BASE + WAREHOUSES + WAREHOUSE_ID_PATH)
+    fun deleteWarehouse(@Path(WAREHOUSE_ID_PARAM) WarehouseId: UUID)
 
     /**
      * Update the connection details for a warehouse JDBC connection.
@@ -152,6 +157,6 @@ interface AdminApi {
      *  @param WarehouseId The ID of the warehouse to update.
      *  @param JdbcParameterUpdate JDBC Connection Parameters to replace existing parameters for the given WarehouseId
      */
-    @PATCH(BASE + WAREHOUSES + ID_PATH)
-    fun updateWarehouse(@Path(ID) WarehouseId: UUID, @Body JdbcParameterUpdate: JdbcConnectionParameters): Int
+    @PATCH(BASE + WAREHOUSES)
+    fun updateWarehouse(@Body JdbcParameterUpdate: JdbcConnectionParameters)
 }
