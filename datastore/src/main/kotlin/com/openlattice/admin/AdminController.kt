@@ -268,8 +268,7 @@ class AdminController : AdminApi, AuthorizingComponent {
     )
     override fun getWarehouses(): Iterable<JdbcConnectionParameters> {
         ensureAdminAccess()
-        val authorizedWarehouseIds = getAllAuthorizedWarehouseIds() // TODO Is this necessary?
-        return warehouseService.getWarehouses(authorizedWarehouseIds).values
+        return warehouseService.getWarehouses()
     }
 
     @Timed
@@ -289,7 +288,6 @@ class AdminController : AdminApi, AuthorizingComponent {
     )
     override fun deleteWarehouse(@PathVariable(WAREHOUSE_ID_PARAM) WarehouseId: UUID) {
         ensureAdminAccess()
-        ensureOwnerAccess(AclKey(WarehouseId)) // TODO Is this necessary?
         warehouseService.deleteWarehouse(WarehouseId)
     }
 
@@ -302,7 +300,8 @@ class AdminController : AdminApi, AuthorizingComponent {
     override fun createWarehouse(
         @RequestBody jdbc: JdbcConnectionParameters
     ): UUID {
-        return warehouseService.createWarehouse(jdbc, Principals.getCurrentUser())
+        ensureAdminAccess()
+        return warehouseService.createWarehouse(jdbc)
     }
 
     @Timed
@@ -313,14 +312,6 @@ class AdminController : AdminApi, AuthorizingComponent {
     override fun updateWarehouse(@RequestBody jdbc: JdbcConnectionParameters) {
         ensureAdminAccess()
         warehouseService.updateWarehouse(jdbc)
-    }
-
-    private fun getAllAuthorizedWarehouseIds(): Set<UUID> {
-        return authorizationManager.getAuthorizedObjectsOfType(
-            Principals.getCurrentPrincipals(),
-            SecurableObjectType.JdbcConnectionParameters,
-            EnumSet.of(Permission.READ)
-        ).map { it.first() }.collect(Collectors.toSet())
     }
 
     override fun getAuthorizationManager(): AuthorizationManager {

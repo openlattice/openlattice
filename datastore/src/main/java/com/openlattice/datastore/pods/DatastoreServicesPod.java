@@ -704,9 +704,7 @@ public class DatastoreServicesPod {
     @Bean
     public WarehouseService warehouseService() {
         return new WarehouseService(
-                hazelcastInstance,
-                aclKeyReservationService(),
-                authorizationManager()
+                hazelcastInstance
         );
     }
 
