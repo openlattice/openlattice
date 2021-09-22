@@ -21,7 +21,15 @@ class JdbcConnectionParameters
 /**
  * Creates an instance of a jdbc connection. All class properties must be serializable or marked as transient.
  *
- * @param roleManagementEnabled Flags whether this connection be used for managing users and roles in the database.
+ * @param _title Title of the connection.
+ * @param url Url of the server hosting the database.
+ * @param driver Name of the driver used to connect.
+ * @param database Name of the database to connect to.
+ * @param username Username used to log onto the database.
+ * @param password Password used to log onto the database.
+ * @param properties Object containing properties of the connection.
+ * @param description Description of the database.
+ *
  */
 @JvmOverloads
 constructor(
@@ -32,7 +40,6 @@ constructor(
     @JsonProperty(SerializationConstants.DATABASE) val database: String = "",
     @JsonProperty(SerializationConstants.USERNAME) val username: String = "",
     @JsonProperty(SerializationConstants.PASSWORD) val password: String = "",
-//    @JsonProperty(SerializationConstants.ROLE_MANAGEMENT_ENABLED) val roleManagementEnabled: Boolean = false, TODO Is this necessary?
     @JsonProperty(SerializationConstants.PROPERTIES_FIELD) val properties: Properties = Properties(),
     @JsonProperty(SerializationConstants.DESCRIPTION_FIELD) description: Optional<String> = Optional.empty()
 ) : AbstractSecurableObject(_id, _title, description) {
