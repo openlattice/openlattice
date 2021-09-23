@@ -13,8 +13,11 @@ import java.util.*
  */
 
 class WarehouseService(
-        hazelcast: HazelcastInstance
+        hazelcast: HazelcastInstance,
+        private val authorizationManager: AuthorizationManager,
+        private val aclKeyReservationService: HazelcastAclKeyReservationService
 ) {
+
     private val warehouses = HazelcastMap.WAREHOUSES.getMap(hazelcast)
 
     fun getWarehouses(): Iterable<JdbcConnectionParameters> {
@@ -26,7 +29,9 @@ class WarehouseService(
     }
 
     fun createWarehouse(jdbc: JdbcConnectionParameters): UUID {
-        warehouses.set(jdbc.id, jdbc)
+        val aclKey = reserveWarehouseIfNotExists(jdbc)
+        authorizationManager.setSecurableObjectType(aclKey, SecurableObjectType.JdbcConnectionParameters)
+//        warehouses.set(jdbc.id, jdbc)
         return jdbc.id
     }
 
@@ -38,6 +43,13 @@ class WarehouseService(
     fun updateWarehouse(jdbc: JdbcConnectionParameters) {
         ensureValidWarehouseId(jdbc.id)
         warehouses.set(jdbc.id, jdbc)
+    }
+
+    private fun reserveWarehouseIfNotExists(jdbc: JdbcConnectionParameters): AclKey {
+        aclKeyReservationService.reserveIdAndValidateType(jdbc) { jdbc._title }
+
+        Preconditions.checkState(warehouses.putIfAbsent(jdbc.id, jdbc) == null, "Warehouse already exists.")
+        return AclKey(jdbc.id)
     }
 
     private fun ensureValidWarehouseId(id: UUID) {

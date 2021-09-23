@@ -41,7 +41,7 @@ constructor(
     @JsonProperty(SerializationConstants.USERNAME) val username: String = "",
     @JsonProperty(SerializationConstants.PASSWORD) val password: String = "",
     @JsonProperty(SerializationConstants.PROPERTIES_FIELD) val properties: Properties = Properties(),
-    @JsonProperty(SerializationConstants.DESCRIPTION_FIELD) description: Optional<String> = Optional.empty()
+    @JsonProperty(SerializationConstants.DESCRIPTION_FIELD) val description: Optional<String> = Optional.empty()
 ) : AbstractSecurableObject(_id, _title, description) {
 
     init {

@@ -39,7 +39,7 @@ class WarehouseStreamSerializer : TestableSelfRegisteringStreamSerializer<JdbcCo
         out.writeString(obj.username)
         out.writeString(obj.password)
         out.writeObject(obj.properties)
-        out.writeString(obj.description)
+        out.writeObject(obj.description)
     }
 
     override fun read(input: ObjectDataInput): JdbcConnectionParameters {
@@ -54,7 +54,7 @@ class WarehouseStreamSerializer : TestableSelfRegisteringStreamSerializer<JdbcCo
         if( properties == null ) {   // set as empty property object if properties not supplied
             properties = Properties()
         }
-        val description = Optional.ofNullable(input.readString())!!
+        val description = input.readObject<Optional<String>>()!!
 
         return JdbcConnectionParameters(
             id,

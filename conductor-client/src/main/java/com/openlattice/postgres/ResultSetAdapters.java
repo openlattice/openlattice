@@ -75,6 +75,7 @@ import com.openlattice.organization.ExternalColumn;
 import com.openlattice.organization.ExternalTable;
 import com.openlattice.organization.OrganizationEntitySetFlag;
 import com.openlattice.organization.roles.Role;
+import com.openlattice.organizations.JdbcConnectionParameters;
 import com.openlattice.organizations.OrganizationDatabase;
 import com.openlattice.requests.Request;
 import com.openlattice.requests.RequestStatus;
@@ -101,6 +102,8 @@ import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.Properties;
+import java.util.Optional;
 
 import static com.openlattice.postgres.DataTables.LAST_INDEX;
 import static com.openlattice.postgres.DataTables.LAST_LINK;
@@ -130,10 +133,12 @@ import static com.openlattice.postgres.PostgresColumn.CONSTRAINT_TYPE;
 import static com.openlattice.postgres.PostgresColumn.CONTACTS;
 import static com.openlattice.postgres.PostgresColumn.CONTACT_INFO;
 import static com.openlattice.postgres.PostgresColumn.COUNT;
+import static com.openlattice.postgres.PostgresColumn.CREDENTIAL;
 import static com.openlattice.postgres.PostgresColumn.DATABASE;
 import static com.openlattice.postgres.PostgresColumn.DATASTORE_FIELD;
 import static com.openlattice.postgres.PostgresColumn.DATATYPE;
 import static com.openlattice.postgres.PostgresColumn.DESCRIPTION;
+import static com.openlattice.postgres.PostgresColumn.DRIVER;
 import static com.openlattice.postgres.PostgresColumn.DST;
 import static com.openlattice.postgres.PostgresColumn.DST_ENTITY_KEY_ID;
 import static com.openlattice.postgres.PostgresColumn.DST_ENTITY_KEY_ID_FIELD;
@@ -1257,6 +1262,37 @@ public final class ResultSetAdapters {
     @NotNull public static SecurableObjectMetadata securableObjectMetadata( @NotNull ResultSet rs )
             throws SQLException, IOException {
         return mapper.readValue( rs.getString( METADATA.getName() ), SecurableObjectMetadata.class );
+    }
+
+    public static String driver( ResultSet rs ) throws SQLException {
+        return rs.getString( DRIVER.getName() );
+    }
+
+    public static String database( ResultSet rs ) throws SQLException {
+        return rs.getString( DATABASE.getName() );
+    }
+
+    public static String credential ( ResultSet rs ) throws SQLException {
+        return rs.getString( CREDENTIAL.getName() );
+    }
+
+    public static Properties propertiesObj ( ResultSet rs ) throws SQLException {
+        return rs.getObject(PROPERTIES.getName(), Properties.class);
+    }
+
+
+    public static JdbcConnectionParameters warehouses(ResultSet rs ) throws SQLException {
+        UUID id = id( rs );
+        String title = title( rs );
+        String url = url( rs );
+        String driver = driver( rs );
+        String database = database( rs );
+        String username = username( rs );
+        String password = credential( rs );
+        Properties properties =  propertiesObj( rs );
+        Optional<String> description = Optional.ofNullable(description( rs ));
+
+        return new JdbcConnectionParameters( id, title, url, driver, database, username, password, properties, description );
     }
 
 }
