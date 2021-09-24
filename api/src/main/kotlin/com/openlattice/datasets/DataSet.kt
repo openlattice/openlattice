@@ -10,7 +10,8 @@ data class DataSet(
     val organizationId: UUID,
     val externalId: String,
     val dataSetType: DataSetType,
-    val metadata: SecurableObjectMetadata
+    val metadata: SecurableObjectMetadata,
+    val entityTypeId: UUID? = null,
 ) {
 
     companion object {
@@ -22,7 +23,8 @@ data class DataSet(
                 entitySet.organizationId,
                 entitySet.id.toString(),
                 DataSetType.EntitySet,
-                metadata
+                metadata,
+                entitySet.entityTypeId
             )
         }
 
