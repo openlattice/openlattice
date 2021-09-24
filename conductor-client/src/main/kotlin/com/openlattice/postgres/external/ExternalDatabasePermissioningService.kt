@@ -33,11 +33,6 @@ interface ExternalDatabasePermissioningService {
     fun executePrivilegesUpdate(action: Action, acls: List<Acl>)
 
     /**
-     * Exposing this temporarily for migration
-     */
-     fun executePrivilegesUpdateOnOrgExternalDbColumns(action: Action, acls: List<Acl>)
-
-    /**
      * Adds [sourcePrincipalAclKey] to [targetPrincipalAclKeys]
      */
     fun addPrincipalToPrincipals(sourcePrincipalAclKey: AclKey, targetPrincipalAclKeys: Set<AclKey>)

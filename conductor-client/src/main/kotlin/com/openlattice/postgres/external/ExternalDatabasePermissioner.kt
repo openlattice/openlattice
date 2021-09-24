@@ -114,7 +114,7 @@ class ExternalDatabasePermissioner(
         executePrivilegesUpdateOnOrgExternalDbColumns(action, externalTableColAcls)
     }
 
-    override fun executePrivilegesUpdateOnOrgExternalDbColumns(
+    fun executePrivilegesUpdateOnOrgExternalDbColumns(
             action: Action,
             externalTableColAcls: List<Acl>
     ) {
