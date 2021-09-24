@@ -1276,7 +1276,7 @@ public final class ResultSetAdapters {
         return rs.getString( CREDENTIAL.getName() );
     }
 
-    public static Properties propertiesObj ( ResultSet rs ) throws SQLException {
+    public static Properties classProperties ( ResultSet rs ) throws SQLException {
         return rs.getObject(CLASS_PROPERTIES.getName(), Properties.class);
     }
 
@@ -1289,7 +1289,7 @@ public final class ResultSetAdapters {
         String database = database( rs );
         String username = username( rs );
         String password = credential( rs );
-        Properties properties =  propertiesObj( rs );
+        Properties properties =  classProperties( rs );
         Optional<String> description = Optional.ofNullable(description( rs ));
 
         return new JdbcConnectionParameters( id, title, url, driver, database, username, password, properties, description );
