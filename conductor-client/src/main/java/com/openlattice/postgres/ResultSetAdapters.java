@@ -1277,7 +1277,7 @@ public final class ResultSetAdapters {
     }
 
     public static Properties propertiesObj ( ResultSet rs ) throws SQLException {
-        return rs.getObject(PROPERTIES.getName(), Properties.class);
+        return rs.getObject(CLASS_PROPERTIES.getName(), Properties.class);
     }
 
 

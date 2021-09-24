@@ -10,10 +10,14 @@ import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.ResultSetAdapters.id
 import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore
 import com.zaxxer.hikari.HikariDataSource
+import org.postgresql.util.PGobject
 import java.sql.PreparedStatement
 import java.sql.ResultSet
-import java.util.Properties
-import java.util.UUID
+import java.sql.SQLException
+import java.util.*
+import com.fasterxml.jackson.core.JsonProcessingException
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.dataloom.mappers.ObjectMappers
 
 /**
  * @author Andrew Carter andrew@openlattice.com
@@ -22,6 +26,8 @@ import java.util.UUID
 open class WarehousesMapstore(hds: HikariDataSource) : AbstractBasePostgresMapstore<UUID, JdbcConnectionParameters>(
     HazelcastMap.WAREHOUSES, WAREHOUSES, hds
 ) {
+    private val mapper: ObjectMapper = ObjectMappers.newJsonMapper()
+
     override fun generateTestKey(): UUID {
         return UUID.randomUUID()
     }
@@ -31,12 +37,18 @@ open class WarehousesMapstore(hds: HikariDataSource) : AbstractBasePostgresMapst
     }
 
     override fun bind(ps: PreparedStatement, key: UUID, value: JdbcConnectionParameters) {
-        val props = if (value.properties != null) value.properties else Properties()
 
         var index = bind(ps, key, 1)
 
-        logger.info("Insert value: {}", value)
-        logger.info("Insert ps: {}", ps)
+        val propertyTags = PGobject()
+        try {
+            propertyTags.setType("jsonb")
+            propertyTags.setValue(mapper.writeValueAsString(value.properties))
+        } catch (e: JsonProcessingException) {
+            throw SQLException("Unable to serialize property tags to JSON.", e)
+        }
+
+        val descValue = if( value.description.isEmpty() ) "" else value.description.get()
 
         // insert
         ps.setString(index++, value._title)
@@ -45,8 +57,8 @@ open class WarehousesMapstore(hds: HikariDataSource) : AbstractBasePostgresMapst
         ps.setString(index++, value.database)
         ps.setString(index++, value.username)
         ps.setString(index++, value.password)
-        ps.setObject(index++, props)
-        ps.setObject(index++, value.description)
+        ps.setObject(index++, propertyTags)
+        ps.setObject(index++, descValue)
 
         // update
         ps.setString(index++, value._title)
@@ -55,8 +67,8 @@ open class WarehousesMapstore(hds: HikariDataSource) : AbstractBasePostgresMapst
         ps.setString(index++, value.database)
         ps.setString(index++, value.username)
         ps.setString(index++, value.password)
-        ps.setObject(index++, props)
-        ps.setObject(index, value.description)
+        ps.setObject(index++, propertyTags)
+        ps.setObject(index, descValue)
 
         logger.info("Complete ps: {}", ps)
     }

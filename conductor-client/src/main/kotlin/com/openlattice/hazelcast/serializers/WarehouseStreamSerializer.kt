@@ -50,10 +50,7 @@ class WarehouseStreamSerializer : TestableSelfRegisteringStreamSerializer<JdbcCo
         val database = input.readString()!!
         val username = input.readString()!!
         val password = input.readString()!!
-        var properties: Properties = input.readObject()!!
-        if( properties == null ) {   // set as empty property object if properties not supplied
-            properties = Properties()
-        }
+        val properties: Properties = input.readObject<Properties>()!!
         val description = input.readObject<Optional<String>>()!!
 
         return JdbcConnectionParameters(

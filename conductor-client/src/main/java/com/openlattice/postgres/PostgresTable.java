@@ -573,7 +573,7 @@ public final class PostgresTable {
                             DATABASE,
                             USERNAME,
                             CREDENTIAL,
-                            PROPERTIES,
+                            CLASS_PROPERTIES,
                             DESCRIPTION
                     );
     static {
