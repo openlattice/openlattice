@@ -31,7 +31,6 @@ class WarehouseService(
     fun createWarehouse(jdbc: JdbcConnectionParameters): UUID {
         val aclKey = reserveWarehouseIfNotExists(jdbc)
         authorizationManager.setSecurableObjectType(aclKey, SecurableObjectType.JdbcConnectionParameters)
-//        warehouses.set(jdbc.id, jdbc)
         return jdbc.id
     }
 
