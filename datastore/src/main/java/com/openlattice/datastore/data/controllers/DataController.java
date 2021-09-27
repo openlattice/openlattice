@@ -30,12 +30,7 @@ import com.openlattice.auditing.AuditEventType;
 import com.openlattice.auditing.AuditableEvent;
 import com.openlattice.auditing.AuditingComponent;
 import com.openlattice.auditing.AuditingManager;
-import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.AuthorizationManager;
-import com.openlattice.authorization.AuthorizingComponent;
-import com.openlattice.authorization.EdmAuthorizationHelper;
-import com.openlattice.authorization.Permission;
-import com.openlattice.authorization.Principals;
+import com.openlattice.authorization.*;
 import com.openlattice.controllers.exceptions.BadRequestException;
 import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.data.*;
@@ -780,10 +775,10 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     }
 
     @Timed
-    @RequestMapping(
-            path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + NEIGHBORS },
-            method = RequestMethod.POST )
-    public Long deleteEntitiesAndNeighbors(
+    @Override
+    @DeleteMapping(
+            path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + NEIGHBORS } )
+    public UUID deleteEntitiesAndNeighbors(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @RequestBody EntityNeighborsFilter filter,
             @RequestParam( value = TYPE ) DeleteType deleteType ) {
@@ -791,24 +786,46 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         // (along with associations connected to all of them), not associations.
         // If called with an association entity set, it will simplify down to a basic delete call.
 
-        ensureEntitySetCanBeWritten( entitySetId );
+        Set<UUID> dstEntitySetIds = filter.getDstEntitySetIds().orElse( Set.of() );
+        Set<UUID> srcEntitySetIds = filter.getSrcEntitySetIds().orElse( Set.of() );
+        Set<UUID> allEntitySetIds = Sets.union( srcEntitySetIds, dstEntitySetIds );
+        allEntitySetIds = Sets.union( allEntitySetIds, Set.of( entitySetId ) );
+        
+        ensureEntitySetsCanBeWritten( allEntitySetIds );
 
-        WriteEvent writeEvent = new WriteEvent( 0, 0 );
+        Map<UUID, Set<UUID>> entitySetIdEntityKeyIds = Maps.newHashMap();
+        entitySetIdEntityKeyIds.put( entitySetId, filter.getEntityKeyIds() );
+
+        // verify permission to delete
+        entitySetIdEntityKeyIds.forEach( ( key, val ) -> {
+            deletionManager.authCheckForEntitySetAndItsNeighbors(
+                    key,
+                    deleteType,
+                    Principals.getCurrentPrincipals(),
+                    val
+            );
+        } );
+
+        UUID deletionJobId = deletionManager.clearOrDeleteEntitiesAndNeighbors(
+                entitySetIdEntityKeyIds,
+                entitySetId,
+                allEntitySetIds,
+                filter,
+                deleteType );
 
         recordEvent( new AuditableEvent(
                 spm.getCurrentUserId(),
                 new AclKey( entitySetId ),
                 AuditEventType.DELETE_ENTITY_AND_NEIGHBORHOOD,
-                "Entities and all neighbors deleted using delete type " + deleteType.toString() +
+                "Entities and neighbors deleted using delete type " + deleteType.toString() +
                         " through DataApi.clearEntityAndNeighborEntities",
                 Optional.of( filter.getEntityKeyIds() ),
                 ImmutableMap.of(),
-                getDateTimeFromLong( writeEvent.getVersion() ),
+                OffsetDateTime.now(),
                 Optional.empty()
         ) );
 
-        return (long) writeEvent.getNumUpdates();
-
+        return deletionJobId;
     }
 
     @Timed

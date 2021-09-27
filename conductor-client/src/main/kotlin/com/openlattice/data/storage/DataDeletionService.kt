@@ -1,17 +1,15 @@
 package com.openlattice.data.storage
 
 import com.geekbeast.rhizome.jobs.HazelcastJobService
-import com.openlattice.authorization.AccessCheck
-import com.openlattice.authorization.AclKey
-import com.openlattice.authorization.AuthorizationManager
-import com.openlattice.authorization.Permission
-import com.openlattice.authorization.Principal
+import com.openlattice.authorization.*
 import com.openlattice.controllers.exceptions.ForbiddenException
 import com.openlattice.data.DataDeletionManager
 import com.openlattice.data.DeleteType
 import com.openlattice.data.WriteEvent
 import com.openlattice.data.jobs.DataDeletionJob
 import com.openlattice.data.jobs.DataDeletionJobState
+import com.openlattice.data.jobs.EntitiesAndNeighborsDeletionJob
+import com.openlattice.data.jobs.EntitiesAndNeighborsDeletionJobState
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.set.EntitySetFlag
@@ -143,5 +141,24 @@ class DataDeletionService(
             throw ForbiddenException("Unable to perform delete on entity set $entitySetId -- delete would have required permissions on unauthorized edge entity sets.")
         }
 
+    }
+
+    override fun clearOrDeleteEntitiesAndNeighbors(
+            entitySetIdEntityKeyIds: Map<UUID, Set<UUID>>,
+            entitySetId: UUID,
+            allEntitySetIds: Set<UUID>,
+            filter: EntityNeighborsFilter,
+            deleteType: DeleteType): UUID {
+
+        val partitions = partitionManager.getPartitionsByEntitySetId(allEntitySetIds)
+
+        return jobService.submitJob(EntitiesAndNeighborsDeletionJob(EntitiesAndNeighborsDeletionJobState(
+                entitySetIdEntityKeyIds.toMutableMap(),
+                entitySetId,
+                filter,
+                deleteType,
+                partitions,
+                mutableSetOf()
+        )))
     }
 }

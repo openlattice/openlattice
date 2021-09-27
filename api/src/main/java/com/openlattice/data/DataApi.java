@@ -188,8 +188,8 @@ public interface DataApi {
      *                    to delete from.
      * @param deleteType  The delete type to perform (soft or hard delete).
      */
-    @POST( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + NEIGHBORS )
-    Long deleteEntitiesAndNeighbors(
+    @HTTP( method = "DELETE", path = BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + NEIGHBORS, hasBody = true )
+    UUID deleteEntitiesAndNeighbors(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Body EntityNeighborsFilter filter,
             @Query( TYPE ) DeleteType deleteType );
