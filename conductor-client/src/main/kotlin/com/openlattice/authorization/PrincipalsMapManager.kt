@@ -33,6 +33,8 @@ interface PrincipalsMapManager {
     fun getSecurablePrincipal(principalId: String): SecurablePrincipal
 
     fun getSecurablePrincipal(aclKey: AclKey): SecurablePrincipal?
+    
+    fun getSecurablePrincipal(principal: Principal): SecurablePrincipal
 
     fun getSecurablePrincipals(aclKeys: Set<AclKey>): Map<AclKey, SecurablePrincipal>
 

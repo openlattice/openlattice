@@ -49,7 +49,7 @@ interface ExternalDatabasePermissioningService {
             orgDatasource: HikariDataSource,
             entitySetId: UUID,
             entitySetName: String,
-            propertyTypes: Set<PropertyTypeIdFqn>
+            propertyTypesIdToFqn: Set<PropertyTypeIdFqn>
     )
 
     /**
@@ -65,7 +65,6 @@ interface ExternalDatabasePermissioningService {
      * Initializes permissions on [columns] for [table] in org database for [organizationId]
      */
     fun initializeExternalTablePermissions(
-            organizationId: UUID,
             table: ExternalTable,
             columns: Set<ExternalColumn>
     )
@@ -74,7 +73,6 @@ interface ExternalDatabasePermissioningService {
      * Initializes permissions on [columns] for [table] view in collaboration database for [collaborationId]
      */
     fun initializeProjectedTableViewPermissions(
-            collaborationId: UUID,
             schema: String,
             table: ExternalTable,
             columns: Set<ExternalColumn>
@@ -93,7 +91,6 @@ interface ExternalDatabasePermissioningService {
      * Drops permission roles on tables and columns [tablesToColumnIds] in org database for [organizationId]
      */
     fun destroyExternalTablePermissions(
-            organizationId: UUID,
             tablesToColumnIds: Map<UUID, Set<UUID>>
     )
 }

@@ -1,0 +1,19 @@
+.gradle/
+bin/
+build/
+artifacts/
+src/main/webapp/auth/
+out/
+
+# IDE generated files
+.classpath
+.project
+.idea/
+.settings/
+*.iml
+*.ipr
+*.iws
+
+# source maps
+*.css.map
+*.js.map
