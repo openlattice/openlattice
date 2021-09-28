@@ -8,10 +8,8 @@ import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.authorization.HazelcastAclKeyReservationService
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organizations.JdbcConnectionParameters
-import com.openlattice.organizations.processors.OrganizationEntryProcessor
-import com.openlattice.organizations.processors.OrganizationEntryProcessor.Result
 import org.springframework.stereotype.Service
-import java.util.*
+import java.util.UUID
 
 /**
  * @author Andrew Carter andrew@openlattice.com

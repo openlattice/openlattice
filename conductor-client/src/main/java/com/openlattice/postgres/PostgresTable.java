@@ -563,11 +563,13 @@ public final class PostgresTable {
                     .addColumns( USER_ID, USER_DATA, EXPIRATION )
                     .primaryKey( USER_ID )
                     .overwriteOnConflict();
+
     public static final PostgresTableDefinition WAREHOUSES =
             new PostgresTableDefinition("warehouses")
                     .addColumns(
                             ID,
                             WAREHOUSE);
+
     static {
         PRINCIPAL_TREES.addIndexes(
                 new PostgresColumnsIndexDefinition( PRINCIPAL_TREES, ACL_KEY )

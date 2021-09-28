@@ -8,8 +8,6 @@ import com.geekbeast.rhizome.jobs.JobStatus
 import com.google.common.collect.Iterables
 import com.hazelcast.core.HazelcastInstance
 import com.openlattice.admin.AdminApi
-import com.openlattice.authorization.*
-import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
 import com.openlattice.authorization.Principal
@@ -34,8 +32,9 @@ import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
-import java.util.*
-import java.util.stream.Collectors
+import java.util.UUID
+import java.util.Optional
+import java.util.EnumSet
 import javax.inject.Inject
 
 @SuppressFBWarnings(
@@ -267,7 +266,7 @@ class AdminController : AdminApi, AuthorizingComponent {
         produces = [MediaType.APPLICATION_JSON_VALUE]
     )
     override fun getWarehouses(): Iterable<JdbcConnectionParameters> {
-//        ensureAdminAccess()
+        ensureAdminAccess()
         return warehouseService.getWarehouses()
     }
 
