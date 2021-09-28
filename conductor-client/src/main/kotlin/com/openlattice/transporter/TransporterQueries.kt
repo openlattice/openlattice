@@ -337,6 +337,13 @@ internal fun grantUsageOnSchemaSql(schema: Schemas, orgUserId: String): String {
     return "GRANT USAGE ON SCHEMA $schema TO ${ApiHelpers.dbQuote(orgUserId)}"
 }
 
+internal fun grantUsageOnSchemaSql(schema: Schemas, orgUserIds: Set<String>): String {
+    val targets = orgUserIds.joinToString {
+            ApiHelpers.dbQuote(it)
+        }
+    return "GRANT USAGE ON SCHEMA $schema TO $targets"
+}
+
 internal fun removePreviouslyTransportedEntities(schema: Schemas, entitySetId: UUID, entityTypeId: UUID): String {
     return "DELETE FROM $schema.${quotedEtTableName(entityTypeId)} " +
             "WHERE ${ENTITY_SET_ID.name} = '$entitySetId'"

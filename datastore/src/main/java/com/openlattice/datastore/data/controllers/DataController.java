@@ -25,6 +25,7 @@ import com.codahale.metrics.annotation.Timed;
 import com.geekbeast.rhizome.jobs.HazelcastJobService;
 import com.geekbeast.rhizome.jobs.JobStatus;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.*;
 import com.openlattice.auditing.AuditEventType;
 import com.openlattice.auditing.AuditableEvent;
@@ -54,6 +55,8 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.tuple.Triple;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.Authentication;
@@ -68,6 +71,7 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -85,6 +89,8 @@ import static com.openlattice.authorization.EdmAuthorizationHelper.aclKeysForAcc
 @RestController
 @RequestMapping( DataApi.CONTROLLER )
 public class DataController implements DataApi, AuthorizingComponent, AuditingComponent {
+
+    private static final Logger logger = LoggerFactory.getLogger( DataController.class );
 
     @Inject
     private EntitySetManager entitySetService;
@@ -702,13 +708,48 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             @RequestParam( value = TYPE ) DeleteType deleteType,
             @RequestParam( value = BLOCK, defaultValue = "true" ) boolean blockUntilCompletion ) {
 
+        logger.info(
+                "attempting to delete {} entities - entity set {} entities {} block {}",
+                entityKeyIds.size(),
+                entitySetId,
+                entityKeyIds,
+                blockUntilCompletion
+        );
+
+        Stopwatch funTimer = Stopwatch.createStarted();
+        Stopwatch timer = Stopwatch.createStarted();
+
         ensureEntitySetCanBeWritten( entitySetId );
-        deletionManager.authCheckForEntitySetAndItsNeighbors( entitySetId,
+        logger.info(
+                "ensureEntitySetCanBeWritten took {} ms - entity set {} entities {}",
+                timer.elapsed( TimeUnit.MILLISECONDS),
+                entitySetId,
+                entityKeyIds.size()
+        );
+        timer.reset().start();
+
+        deletionManager.authCheckForEntitySetAndItsNeighbors(
+                entitySetId,
                 deleteType,
                 Principals.getCurrentPrincipals(),
-                entityKeyIds );
+                entityKeyIds
+        );
+        logger.info(
+                "deletionManager.authCheckForEntitySetAndItsNeighbors took {} ms - entity set {} entities {}",
+                timer.elapsed( TimeUnit.MILLISECONDS),
+                entitySetId,
+                entityKeyIds.size()
+        );
+        timer.reset().start();
 
         UUID deletionJobId = deletionManager.clearOrDeleteEntities( entitySetId, entityKeyIds, deleteType );
+        logger.info(
+                "deletionManager.clearOrDeleteEntities took {} ms - entity set {} entities {}",
+                timer.elapsed( TimeUnit.MILLISECONDS),
+                entitySetId,
+                entityKeyIds.size()
+        );
+        timer.reset().start();
 
         recordEvent( new AuditableEvent(
                 spm.getCurrentUserId(),
@@ -720,8 +761,35 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                 OffsetDateTime.now(),
                 Optional.empty()
         ) );
+        logger.info(
+                "recording audit event DELETE_ENTITIES took {} ms - entity set {} entities {}",
+                timer.elapsed(TimeUnit.MILLISECONDS),
+                entitySetId,
+                entityKeyIds.size()
+        );
 
-        return blockOnDeletionJobGettingNumUpdates( deletionJobId, blockUntilCompletion );
+        int deletedEntitiesCount = blockOnDeletionJobGettingNumUpdates( deletionJobId, blockUntilCompletion );
+
+        if (deletedEntitiesCount != entityKeyIds.size()) {
+            logger.warn(
+                    "deleted entities count mismatch - entity set {} given {} reported {} block {}",
+                    entitySetId,
+                    entityKeyIds.size(),
+                    deletedEntitiesCount,
+                    blockUntilCompletion
+            );
+        }
+
+        logger.info(
+                "deleting {} entities took {} ms - entity set {} entities {} block {}",
+                entityKeyIds.size(),
+                funTimer.elapsed(TimeUnit.MILLISECONDS),
+                entitySetId,
+                entityKeyIds,
+                blockUntilCompletion
+        );
+
+        return deletedEntitiesCount;
     }
 
     @Timed
