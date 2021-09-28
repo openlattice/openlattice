@@ -54,7 +54,6 @@ import static com.openlattice.postgres.PostgresColumn.DATABASE;
 import static com.openlattice.postgres.PostgresColumn.DATASTORE;
 import static com.openlattice.postgres.PostgresColumn.DATATYPE;
 import static com.openlattice.postgres.PostgresColumn.DESCRIPTION;
-import static com.openlattice.postgres.PostgresColumn.DRIVER;
 import static com.openlattice.postgres.PostgresColumn.DST;
 import static com.openlattice.postgres.PostgresColumn.DST_ENTITY_KEY_ID;
 import static com.openlattice.postgres.PostgresColumn.DST_ENTITY_SET_ID;
