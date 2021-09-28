@@ -1264,35 +1264,4 @@ public final class ResultSetAdapters {
         return mapper.readValue( rs.getString( METADATA.getName() ), SecurableObjectMetadata.class );
     }
 
-    public static String driver( ResultSet rs ) throws SQLException {
-        return rs.getString( DRIVER.getName() );
-    }
-
-    public static String database( ResultSet rs ) throws SQLException {
-        return rs.getString( DATABASE.getName() );
-    }
-
-    public static String credential ( ResultSet rs ) throws SQLException {
-        return rs.getString( CREDENTIAL.getName() );
-    }
-
-    public static Properties classProperties ( ResultSet rs ) throws SQLException {
-        return rs.getObject(CLASS_PROPERTIES.getName(), Properties.class);
-    }
-
-
-    public static JdbcConnectionParameters warehouses(ResultSet rs ) throws SQLException {
-        UUID id = id( rs );
-        String title = title( rs );
-        String url = url( rs );
-        String driver = driver( rs );
-        String database = database( rs );
-        String username = username( rs );
-        String password = credential( rs );
-        Properties properties =  classProperties( rs );
-        Optional<String> description = Optional.ofNullable(description( rs ));
-
-        return new JdbcConnectionParameters( id, title, url, driver, database, username, password, properties, description );
-    }
-
 }

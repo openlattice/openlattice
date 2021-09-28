@@ -2,23 +2,29 @@ package com.openlattice.organizations
 
 import com.google.common.base.Preconditions
 import com.hazelcast.core.HazelcastInstance
+import com.openlattice.authorization.AuthorizationManager
+import com.openlattice.authorization.AclKey
+import com.openlattice.authorization.securable.SecurableObjectType
+import com.openlattice.authorization.HazelcastAclKeyReservationService
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organizations.JdbcConnectionParameters
-import com.openlattice.authorization.*
-import com.openlattice.authorization.securable.SecurableObjectType
+import com.openlattice.organizations.processors.OrganizationEntryProcessor
+import com.openlattice.organizations.processors.OrganizationEntryProcessor.Result
+import org.springframework.stereotype.Service
 import java.util.*
 
 /**
  * @author Andrew Carter andrew@openlattice.com
  */
 
+@Service
 class WarehouseService(
-        hazelcast: HazelcastInstance,
-        private val authorizationManager: AuthorizationManager,
-        private val aclKeyReservationService: HazelcastAclKeyReservationService
+    hazelcastInstance: HazelcastInstance,
+    private val authorizationManager: AuthorizationManager,
+    private val aclKeyReservationService: HazelcastAclKeyReservationService
 ) {
 
-    private val warehouses = HazelcastMap.WAREHOUSES.getMap(hazelcast)
+    private val warehouses = HazelcastMap.WAREHOUSES.getMap(hazelcastInstance)
 
     fun getWarehouses(): Iterable<JdbcConnectionParameters> {
         return warehouses.values
@@ -31,8 +37,7 @@ class WarehouseService(
     fun createWarehouse(jdbc: JdbcConnectionParameters): UUID {
         val aclKey = reserveWarehouseIfNotExists(jdbc)
         authorizationManager.setSecurableObjectType(aclKey, SecurableObjectType.JdbcConnectionParameters)
-//        warehouses.set(jdbc.id, jdbc)
-        return jdbc.id
+        return jdbc._id
     }
 
     fun deleteWarehouse(id: UUID) {
@@ -40,9 +45,10 @@ class WarehouseService(
         warehouses.delete(id)
     }
 
-    fun updateWarehouse(jdbc: JdbcConnectionParameters) {
-        ensureValidWarehouseId(jdbc.id)
-        warehouses.set(jdbc.id, jdbc)
+    fun updateWarehouse(jdbc: JdbcConnectionParameters): Int {
+        ensureValidWarehouseId(jdbc._id)
+        warehouses.replace(jdbc._id, jdbc)
+        return 1
     }
 
     private fun reserveWarehouseIfNotExists(jdbc: JdbcConnectionParameters): AclKey {

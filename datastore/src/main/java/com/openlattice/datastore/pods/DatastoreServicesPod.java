@@ -133,6 +133,7 @@ import org.springframework.context.annotation.Profile;
 
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
+import java.util.UUID;
 
 @Configuration
 @Import( {
@@ -707,7 +708,7 @@ public class DatastoreServicesPod {
                 hazelcastInstance,
                 authorizationManager(),
                 aclKeyReservationService()
-                );
+        );
     }
 
     @Bean

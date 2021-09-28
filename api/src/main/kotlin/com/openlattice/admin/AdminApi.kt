@@ -152,5 +152,5 @@ interface AdminApi {
      *  @param jdbc JdbcConnectionParameters to replace existing parameters. Jdbc.id indicates the Warehouse to be updated.
      */
     @PATCH(BASE + WAREHOUSES)
-    fun updateWarehouse(@Body jdbc: JdbcConnectionParameters)
+    fun updateWarehouse(@Body jdbc: JdbcConnectionParameters): Int
 }

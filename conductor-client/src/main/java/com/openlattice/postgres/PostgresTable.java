@@ -162,6 +162,7 @@ import static com.openlattice.postgres.PostgresColumn.USER_DATA;
 import static com.openlattice.postgres.PostgresColumn.USER_ID;
 import static com.openlattice.postgres.PostgresColumn.VERSION;
 import static com.openlattice.postgres.PostgresColumn.VERSIONS;
+import static com.openlattice.postgres.PostgresColumn.WAREHOUSE;
 
 /**
  * Tables definitions for all tables used in the OpenLattice platform.
@@ -567,15 +568,7 @@ public final class PostgresTable {
             new PostgresTableDefinition("warehouses")
                     .addColumns(
                             ID,
-                            TITLE,
-                            URL,
-                            DRIVER,
-                            DATABASE,
-                            USERNAME,
-                            CREDENTIAL,
-                            CLASS_PROPERTIES,
-                            DESCRIPTION
-                    );
+                            WAREHOUSE);
     static {
         PRINCIPAL_TREES.addIndexes(
                 new PostgresColumnsIndexDefinition( PRINCIPAL_TREES, ACL_KEY )

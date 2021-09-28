@@ -267,7 +267,7 @@ class AdminController : AdminApi, AuthorizingComponent {
         produces = [MediaType.APPLICATION_JSON_VALUE]
     )
     override fun getWarehouses(): Iterable<JdbcConnectionParameters> {
-        ensureAdminAccess()
+//        ensureAdminAccess()
         return warehouseService.getWarehouses()
     }
 
@@ -309,9 +309,9 @@ class AdminController : AdminApi, AuthorizingComponent {
         path =      [WAREHOUSES],
         consumes =  [MediaType.APPLICATION_JSON_VALUE],
     )
-    override fun updateWarehouse(@RequestBody jdbc: JdbcConnectionParameters) {
+    override fun updateWarehouse(@RequestBody jdbc: JdbcConnectionParameters): Int {
         ensureAdminAccess()
-        warehouseService.updateWarehouse(jdbc)
+        return warehouseService.updateWarehouse(jdbc)
     }
 
     override fun getAuthorizationManager(): AuthorizationManager {

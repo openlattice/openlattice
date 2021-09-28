@@ -597,6 +597,10 @@ public final class PostgresColumn {
     public static final String                   VERTEX_ID_FIELD                   = "vertex_id";
     public static final PostgresColumnDefinition VERTEX_ID                         =
             new PostgresColumnDefinition( VERTEX_ID_FIELD, UUID );
+    public static final String                  WAREHOUSE_FIELD                    = "warehouse";
+    public static final PostgresColumnDefinition WAREHOUSE                      = new PostgresColumnDefinition(
+            WAREHOUSE_FIELD,
+            JSONB ).notNull();
 
     private PostgresColumn() {
     }
