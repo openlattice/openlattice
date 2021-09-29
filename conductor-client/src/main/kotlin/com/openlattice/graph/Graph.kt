@@ -261,6 +261,7 @@ class Graph(
      * @param entitySetIds The base entity set ids for the neighbor query
      * @param pagedNeighborRequest
      */
+    @Timed
     override fun getEdgesAndNeighborsForVertices(
             entitySetIds: Set<UUID>,
             pagedNeighborRequest: PagedNeighborRequest
@@ -918,6 +919,7 @@ class Graph(
         }.stream()
     }
 
+    @Timed
     override fun getNeighborEntitySets(
             entitySetIds: Set<UUID>
     ): List<NeighborSets> {
@@ -975,6 +977,7 @@ class Graph(
         }.toSet()
     }
 
+    @Timed
     override fun checkForUnauthorizedEdges(
             entitySetId: UUID,
             authorizedEdgeEntitySets: Set<UUID>,

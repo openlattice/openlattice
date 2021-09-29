@@ -1,5 +1,6 @@
 package com.openlattice.data.storage
 
+import com.codahale.metrics.annotation.Timed
 import com.geekbeast.rhizome.jobs.HazelcastJobService
 import com.openlattice.authorization.AccessCheck
 import com.openlattice.authorization.AclKey
@@ -19,6 +20,7 @@ import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.core.GraphService
 import com.openlattice.search.requests.EntityNeighborsFilter
 import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Service
 import java.util.*
 
 /*
@@ -38,6 +40,7 @@ import java.util.*
  *
  */
 
+@Service
 class DataDeletionService(
         private val entitySetManager: EntitySetManager,
         private val authorizationManager: AuthorizationManager,
@@ -59,6 +62,7 @@ class DataDeletionService(
 
     /** Delete all entities from an entity set **/
 
+    @Timed
     override fun clearOrDeleteEntitySet(entitySetId: UUID, deleteType: DeleteType): UUID {
         val partitions = partitionManager.getEntitySetPartitions(entitySetId)
 
@@ -70,6 +74,7 @@ class DataDeletionService(
 
     }
 
+    @Timed
     override fun clearOrDeleteEntities(entitySetId: UUID, entityKeyIds: MutableSet<UUID>, deleteType: DeleteType): UUID {
         val partitions = partitionManager.getEntitySetPartitions(entitySetId)
 
@@ -84,6 +89,7 @@ class DataDeletionService(
     /**
      * Delete property values from specific entities. No entities are actually deleted here.
      */
+    @Timed
     override fun clearOrDeleteEntityProperties(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
@@ -109,6 +115,7 @@ class DataDeletionService(
 
     /* Authorization checks */
 
+    @Timed
     override fun authCheckForEntitySetAndItsNeighbors(entitySetId: UUID, deleteType: DeleteType, principals: Set<Principal>, entityKeyIds: Set<UUID>?) {
         val isAssociationEntitySet = entitySetManager.getEntitySet(entitySetId)!!.flags.contains(EntitySetFlag.ASSOCIATION)
 
