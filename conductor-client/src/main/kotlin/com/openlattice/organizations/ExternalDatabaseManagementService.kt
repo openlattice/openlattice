@@ -423,7 +423,7 @@ class ExternalDatabaseManagementService(
             externalColumns.removeAll(idsPredicate(columnIds))
         }
 
-        extDbPermsManager.destroyExternalTablePermissions(organizationId, columnIdsByTableId)
+        extDbPermsManager.destroyExternalTablePermissions(columnIdsByTableId)
     }
 
     /**
@@ -677,7 +677,7 @@ class ExternalDatabaseManagementService(
     }
 
     private fun getPermissionsFromPrivileges(privileges: Set<PostgresPrivileges>): EnumSet<Permission> {
-        if (OWNER_PRIVILEGES.containsAll(privileges)) {
+        if (privileges.containsAll(OWNER_PRIVILEGES)) {
             return EnumSet.of(Permission.OWNER, Permission.READ, Permission.WRITE)
         }
 

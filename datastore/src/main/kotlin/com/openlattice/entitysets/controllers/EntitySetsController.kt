@@ -372,6 +372,17 @@ constructor(
             funTimer.elapsed(TimeUnit.MILLISECONDS),
             entitySetId
         )
+        logger.info(
+            "recording audit event DELETE_ENTITY_SET took {} ms - entity set {}",
+            timer.elapsed(TimeUnit.MILLISECONDS),
+            entitySetId
+        )
+
+        logger.info(
+            "deleting entity set took {} ms - entity set {}",
+            funTimer.elapsed(TimeUnit.MILLISECONDS),
+            entitySetId
+        )
 
         return deletionJobId
     }

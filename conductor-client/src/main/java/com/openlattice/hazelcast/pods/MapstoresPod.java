@@ -134,7 +134,7 @@ public class MapstoresPod {
     }
 
     @Bean
-    public SelfRegisteringMapStore<AccessTarget, UUID> externalPermissionRoleMapstore() {
+    public ExternalPermissionRolesMapstore externalPermissionRoleMapstore() {
         return new ExternalPermissionRolesMapstore( hikariDataSource );
     }
 
@@ -261,6 +261,12 @@ public class MapstoresPod {
     @Bean
     public SelfRegisteringMapStore<UUID, IntegrationJob> integrationJobsMapstore() {
         return new IntegrationJobsMapstore( hikariDataSource );
+    }
+
+    //this is for migration
+    @Bean
+    public SelfRegisteringMapStore<AceKey, AceValue> legacyPermissionMapstore(){
+        return new LegacyPermissionMapstore( hikariDataSource );
     }
 
     @Bean
