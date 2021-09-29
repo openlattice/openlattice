@@ -264,6 +264,12 @@ public class MapstoresPod {
         return new IntegrationJobsMapstore( hikariDataSource );
     }
 
+    //this is for migration
+    @Bean
+    public SelfRegisteringMapStore<AceKey, AceValue> legacyPermissionMapstore(){
+        return new LegacyPermissionMapstore( hikariDataSource );
+    }
+
     @Bean
     public Auth0TokenProvider auth0TokenProvider() {
         return new AwsAuth0TokenProvider( auth0Configuration );

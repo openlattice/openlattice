@@ -194,7 +194,6 @@ class HazelcastAuthorizationService(
         }
     }
 
-
     override fun removePermission(
             key: AclKey,
             principal: Principal,
@@ -487,6 +486,7 @@ class HazelcastAuthorizationService(
                 }
     }
 
+    @Timed
     override fun getAuthorizedPrincipalsOnSecurableObject(
             key: AclKey, permissions: EnumSet<Permission>
     ): Set<Principal> {
