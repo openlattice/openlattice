@@ -295,14 +295,14 @@ constructor(
     @RequestMapping(path = [ALL + ID_PATH], method = [RequestMethod.DELETE])
     override fun deleteEntitySet(@PathVariable(ID) entitySetId: UUID): UUID {
 
-        logger.info("attempting to delete entity set {}", entitySetId)
+        logger.info("deleteEntitySet - attempting to delete entity set {}", entitySetId)
 
         val funTimer = Stopwatch.createStarted()
         val timer = Stopwatch.createStarted()
 
         val entitySet = checkPermissionsForDelete(entitySetId)
         logger.info(
-            "checkPermissionsForDelete took {} ms - entity set {}",
+            "deleteEntitySet - checkPermissionsForDelete took {} ms - entity set {}",
             timer.elapsed(TimeUnit.MILLISECONDS),
             entitySetId
         )
@@ -310,7 +310,7 @@ constructor(
 
         ensureEntitySetCanBeDeleted(entitySet)
         logger.info(
-            "ensureEntitySetCanBeDeleted took {} ms - entity set {}",
+            "deleteEntitySet - ensureEntitySetCanBeDeleted took {} ms - entity set {}",
             timer.elapsed(TimeUnit.MILLISECONDS),
             entitySetId
         )
@@ -318,7 +318,7 @@ constructor(
 
         deletionManager.authCheckForEntitySetAndItsNeighbors(entitySetId, DeleteType.Hard, Principals.getCurrentPrincipals())
         logger.info(
-            "deletionManager.authCheckForEntitySetAndItsNeighbors took {} ms - entity set {}",
+            "deleteEntitySet - deletionManager.authCheckForEntitySetAndItsNeighbors took {} ms - entity set {}",
             timer.elapsed(TimeUnit.MILLISECONDS),
             entitySetId
         )
@@ -327,7 +327,7 @@ constructor(
         /* Delete first entity set data */
         val deletionJobId = deletionManager.clearOrDeleteEntitySet(entitySet.id, DeleteType.Hard)
         logger.info(
-            "deletionManager.clearOrDeleteEntitySet took {} ms - entity set {}",
+            "deleteEntitySet - deletionManager.clearOrDeleteEntitySet took {} ms - entity set {}",
             timer.elapsed(TimeUnit.MILLISECONDS),
             entitySetId
         )
@@ -335,7 +335,7 @@ constructor(
 
         deleteAuditEntitySetsForId(entitySetId)
         logger.info(
-            "deleteAuditEntitySetsForId took {} ms - entity set {}",
+            "deleteEntitySet - deleteAuditEntitySetsForId took {} ms - entity set {}",
             timer.elapsed(TimeUnit.MILLISECONDS),
             entitySetId
         )
@@ -343,23 +343,34 @@ constructor(
 
         entitySetManager.deleteEntitySet(entitySet)
         logger.info(
-            "entitySetManager.deleteEntitySet took {} ms - entity set {}",
+            "deleteEntitySet - entitySetManager.deleteEntitySet took {} ms - entity set {}",
             timer.elapsed(TimeUnit.MILLISECONDS),
             entitySetId
         )
         timer.reset().start()
 
         recordEvent(
-                AuditableEvent(
-                        spm.currentUserId,
-                        AclKey(entitySetId),
-                        AuditEventType.DELETE_ENTITY_SET,
-                        "Entity set deleted through EntitySetsApi.deleteEntitySet",
-                        Optional.empty(),
-                        ImmutableMap.of(),
-                        OffsetDateTime.now(),
-                        Optional.empty()
-                )
+            AuditableEvent(
+                spm.currentUserId,
+                AclKey(entitySetId),
+                AuditEventType.DELETE_ENTITY_SET,
+                "Entity set deleted through EntitySetsApi.deleteEntitySet",
+                Optional.empty(),
+                ImmutableMap.of(),
+                OffsetDateTime.now(),
+                Optional.empty()
+            )
+        )
+        logger.info(
+            "deleteEntitySet - recording audit event DELETE_ENTITY_SET took {} ms - entity set {}",
+            timer.elapsed(TimeUnit.MILLISECONDS),
+            entitySetId
+        )
+
+        logger.info(
+            "deleteEntitySet - deleting entity set took {} ms - entity set {}",
+            funTimer.elapsed(TimeUnit.MILLISECONDS),
+            entitySetId
         )
         logger.info(
             "recording audit event DELETE_ENTITY_SET took {} ms - entity set {}",
