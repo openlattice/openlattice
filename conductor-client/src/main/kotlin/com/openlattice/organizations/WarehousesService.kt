@@ -16,7 +16,7 @@ import java.util.UUID
  */
 
 @Service
-class WarehouseService(
+class WarehousesService(
     hazelcastInstance: HazelcastInstance,
     private val authorizationManager: AuthorizationManager,
     private val aclKeyReservationService: HazelcastAclKeyReservationService
@@ -43,10 +43,9 @@ class WarehouseService(
         warehouses.delete(id)
     }
 
-    fun updateWarehouse(jdbc: JdbcConnectionParameters): Int {
+    fun updateWarehouse(jdbc: JdbcConnectionParameters) {
         ensureValidWarehouseId(jdbc._id)
         warehouses.replace(jdbc._id, jdbc)
-        return 1
     }
 
     private fun reserveWarehouseIfNotExists(jdbc: JdbcConnectionParameters): AclKey {

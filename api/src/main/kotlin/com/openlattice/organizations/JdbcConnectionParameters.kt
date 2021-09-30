@@ -7,7 +7,6 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.openlattice.authorization.securable.AbstractSecurableObject
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.client.serialization.SerializationConstants
-import java.io.Serializable
 import java.util.*
 
 /**
@@ -21,6 +20,7 @@ class JdbcConnectionParameters
 /**
  * Creates an instance of a jdbc connection. All class properties must be serializable or marked as transient.
  *
+ * @param _id UUID to uniquely identify the connection.
  * @param _title Title of the connection.
  * @param url Url of the server hosting the database.
  * @param driver Name of the driver used to connect.

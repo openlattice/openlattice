@@ -96,7 +96,7 @@ import com.openlattice.linking.graph.PostgresLinkingQueryService;
 import com.openlattice.notifications.sms.PhoneNumberService;
 import com.openlattice.organizations.ExternalDatabaseManagementService;
 import com.openlattice.organizations.HazelcastOrganizationService;
-import com.openlattice.organizations.WarehouseService;
+import com.openlattice.organizations.WarehousesService;
 import com.openlattice.organizations.OrganizationExternalDatabaseConfiguration;
 import com.openlattice.organizations.pods.OrganizationExternalDatabaseConfigurationPod;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
@@ -702,8 +702,8 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    public WarehouseService warehouseService() {
-        return new WarehouseService(
+    public WarehousesService warehousesService() {
+        return new WarehousesService(
                 hazelcastInstance,
                 authorizationManager(),
                 aclKeyReservationService()

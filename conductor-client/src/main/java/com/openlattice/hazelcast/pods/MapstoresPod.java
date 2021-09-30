@@ -310,7 +310,7 @@ public class MapstoresPod {
     }
 
     @Bean
-    public WarehousesMapstore warehouseMapstore() {
+    public WarehousesMapstore warehousesMapstore() {
         return new WarehousesMapstore( hikariDataSource );
     }
 

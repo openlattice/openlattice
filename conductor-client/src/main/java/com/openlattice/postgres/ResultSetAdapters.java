@@ -75,7 +75,6 @@ import com.openlattice.organization.ExternalColumn;
 import com.openlattice.organization.ExternalTable;
 import com.openlattice.organization.OrganizationEntitySetFlag;
 import com.openlattice.organization.roles.Role;
-import com.openlattice.organizations.JdbcConnectionParameters;
 import com.openlattice.organizations.OrganizationDatabase;
 import com.openlattice.requests.Request;
 import com.openlattice.requests.RequestStatus;

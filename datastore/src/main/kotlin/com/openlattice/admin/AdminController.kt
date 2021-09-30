@@ -7,7 +7,6 @@ import com.geekbeast.rhizome.jobs.HazelcastJobService
 import com.geekbeast.rhizome.jobs.JobStatus
 import com.google.common.collect.Iterables
 import com.hazelcast.core.HazelcastInstance
-import com.openlattice.admin.AdminApi
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
 import com.openlattice.authorization.Principal
@@ -25,7 +24,7 @@ import com.openlattice.notifications.sms.SmsEntitySetInformation
 import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.organizations.Organization
 import com.openlattice.organizations.JdbcConnectionParameters
-import com.openlattice.organizations.WarehouseService
+import com.openlattice.organizations.WarehousesService
 import com.openlattice.postgres.DataTables.quote
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
@@ -79,7 +78,7 @@ class AdminController : AdminApi, AuthorizingComponent {
     private lateinit var jobService: HazelcastJobService
 
     @Inject
-    private lateinit var warehouseService: WarehouseService
+    private lateinit var warehousesService: WarehousesService
 
     @GetMapping(value = [SQL + ID_PATH], produces = [MediaType.APPLICATION_JSON_VALUE])
     override fun getEntitySetSql(
@@ -262,37 +261,37 @@ class AdminController : AdminApi, AuthorizingComponent {
 
     @Timed
     @GetMapping(
-        path = [WAREHOUSES],
+        path = [WAREHOUSES_PATH],
         produces = [MediaType.APPLICATION_JSON_VALUE]
     )
     override fun getWarehouses(): Iterable<JdbcConnectionParameters> {
-        ensureAdminAccess()
-        return warehouseService.getWarehouses()
+//        ensureAdminAccess()
+        return warehousesService.getWarehouses()
     }
 
     @Timed
     @GetMapping(
-        value = [WAREHOUSES + WAREHOUSE_ID_PATH],
+        value = [WAREHOUSES_PATH + WAREHOUSE_ID_PATH],
         produces = [MediaType.APPLICATION_JSON_VALUE]
     )
     override fun getWarehouse(@PathVariable(WAREHOUSE_ID_PARAM) WarehouseId: UUID): JdbcConnectionParameters {
         ensureAdminAccess()
-        return warehouseService.getWarehouse(WarehouseId)
+        return warehousesService.getWarehouse(WarehouseId)
     }
 
     @Timed
     @DeleteMapping(
-        value = [WAREHOUSES + WAREHOUSE_ID_PATH],
+        value = [WAREHOUSES_PATH + WAREHOUSE_ID_PATH],
         produces = [MediaType.APPLICATION_JSON_VALUE]
     )
     override fun deleteWarehouse(@PathVariable(WAREHOUSE_ID_PARAM) WarehouseId: UUID) {
         ensureAdminAccess()
-        warehouseService.deleteWarehouse(WarehouseId)
+        warehousesService.deleteWarehouse(WarehouseId)
     }
 
     @Timed
     @PostMapping(
-        value = [WAREHOUSES],
+        value = [WAREHOUSES_PATH],
         consumes = [MediaType.APPLICATION_JSON_VALUE],
         produces = [MediaType.APPLICATION_JSON_VALUE]
     )
@@ -300,17 +299,17 @@ class AdminController : AdminApi, AuthorizingComponent {
         @RequestBody jdbc: JdbcConnectionParameters
     ): UUID {
         ensureAdminAccess()
-        return warehouseService.createWarehouse(jdbc)
+        return warehousesService.createWarehouse(jdbc)
     }
 
     @Timed
     @PatchMapping(
-        path =      [WAREHOUSES],
+        path =      [WAREHOUSES_PATH],
         consumes =  [MediaType.APPLICATION_JSON_VALUE],
     )
-    override fun updateWarehouse(@RequestBody jdbc: JdbcConnectionParameters): Int {
+    override fun updateWarehouse(@RequestBody jdbc: JdbcConnectionParameters) {
         ensureAdminAccess()
-        return warehouseService.updateWarehouse(jdbc)
+        warehousesService.updateWarehouse(jdbc)
     }
 
     override fun getAuthorizationManager(): AuthorizationManager {
