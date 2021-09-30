@@ -5,6 +5,7 @@ import com.openlattice.IdConstants
 import com.openlattice.analysis.SqlBindInfo
 import com.openlattice.analysis.requests.Filter
 import com.openlattice.data.FilteredDataPageDefinition
+import com.openlattice.data.PropertyUpdateType
 import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.edm.PostgresEdmTypeConverter
 import com.openlattice.edm.type.PropertyType
@@ -823,7 +824,7 @@ fun getMergedDataColumnName(datatype: PostgresDatatype): String {
  * 7.  VERSIONS
  * 8.  Value Column
  */
-fun upsertPropertyValueSql(propertyType: PropertyType): String {
+fun upsertPropertyValueSql(propertyType: PropertyType, updateType: PropertyUpdateType): String {
     val insertColumn = getColumnDefinition(propertyType.postgresIndexType, propertyType.datatype)
     val metadataColumnsSql = listOf(
             ENTITY_SET_ID,
@@ -836,18 +837,26 @@ fun upsertPropertyValueSql(propertyType: PropertyType): String {
             VERSIONS
     ).joinToString(",") { it.name }
 
-    return "INSERT INTO ${DATA.name} ($metadataColumnsSql,${insertColumn.name}) " +
-            "VALUES (?,?,?,?,?,now(),?,?,?) " +
-            "ON CONFLICT ($primaryKeyColumnNamesAsString) " +
-            "DO UPDATE SET " +
-            "${VERSIONS.name} = ${DATA.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
-            "${LAST_WRITE.name} = GREATEST(${DATA.name}.${LAST_WRITE.name},EXCLUDED.${LAST_WRITE.name}), " +
-            "${ORIGIN_ID.name} = EXCLUDED.${ORIGIN_ID.name}, " +
-            "${VERSION.name} = CASE " +
-            "WHEN abs(${DATA.name}.${VERSION.name}) <= EXCLUDED.${VERSION.name} " +
-            "THEN EXCLUDED.${VERSION.name} " +
-            "ELSE ${DATA.name}.${VERSION.name} " +
-            "END"
+    val whereClause = when(updateType) {
+        PropertyUpdateType.Versioned -> ""
+        PropertyUpdateType.Unversioned -> """
+            WHERE ${DATA.name}.${VERSION.name} < 0 
+        """.trimIndent()
+    }
+    return """
+        INSERT INTO ${DATA.name} ($metadataColumnsSql,${insertColumn.name})
+            VALUES (?,?,?,?,?,now(),?,?,?)
+            ON CONFLICT ($primaryKeyColumnNamesAsString)
+            DO UPDATE SET
+                ${VERSIONS.name} = ${DATA.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name},
+                ${LAST_WRITE.name} = GREATEST(${DATA.name}.${LAST_WRITE.name},EXCLUDED.${LAST_WRITE.name}),
+                ${ORIGIN_ID.name} = EXCLUDED.${ORIGIN_ID.name}, 
+                ${VERSION.name} = CASE WHEN abs(${DATA.name}.${VERSION.name}) <= EXCLUDED.${VERSION.name}
+                    THEN EXCLUDED.${VERSION.name}
+                    ELSE ${DATA.name}.${VERSION.name} 
+                END
+            $whereClause
+        """.trimIndent()
 }
 
 /**

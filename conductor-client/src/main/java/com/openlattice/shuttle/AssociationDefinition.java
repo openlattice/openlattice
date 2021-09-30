@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.openlattice.client.serialization.SerializableFunction;
 import com.openlattice.client.serialization.SerializationConstants;
+import com.openlattice.data.PropertyUpdateType;
 import com.openlattice.data.UpdateType;
 import com.openlattice.shuttle.conditions.Condition;
 import java.io.Serializable;
@@ -68,7 +69,8 @@ public class AssociationDefinition extends EntityDefinition implements Serializa
             @JsonProperty( SerializationConstants.NAME ) String alias,
             @JsonProperty( SerializationConstants.GENERATOR ) Optional<SerializableFunction<Map<String, Object>, String>> generator,
             @JsonProperty( SerializationConstants.UPDATE_TYPE ) Optional<UpdateType> updateType,
-            @JsonProperty( SerializationConstants.ASSOCIATE_ONLY ) Optional<Boolean> associateOnly ) {
+            @JsonProperty( SerializationConstants.ASSOCIATE_ONLY ) Optional<Boolean> associateOnly,
+            @JsonProperty(SerializationConstants.PROPERTY_UPDATE_TYPE ) Optional<PropertyUpdateType> propertyUpdateType) {
         super( Optional.empty(),
                 entityTypeFqn,
                 entitySetName,
@@ -78,7 +80,8 @@ public class AssociationDefinition extends EntityDefinition implements Serializa
                 condition,
                 generator,
                 updateType,
-                associateOnly );
+                associateOnly,
+                propertyUpdateType );
         this.srcAlias = srcAlias;
         this.dstAlias = dstAlias;
     }
@@ -91,7 +94,8 @@ public class AssociationDefinition extends EntityDefinition implements Serializa
                 builder.propertyDefinitionMap,
                 Optional.ofNullable( builder.generator ),
                 builder.alias == null ? builder.entitySetName : builder.alias,
-                builder.updateType );
+                builder.updateType,
+                builder.propertyUpdateType );
         this.srcAlias = builder.srcAlias;
         this.dstAlias = builder.dstAlias;
     }
@@ -229,6 +233,7 @@ public class AssociationDefinition extends EntityDefinition implements Serializa
         private String                                            alias;
         private Set<String>                                       entityAliases;
         private UpdateType                                        updateType;
+        private PropertyUpdateType                                propertyUpdateType;
 
         public Builder(
                 String alias,
@@ -297,6 +302,11 @@ public class AssociationDefinition extends EntityDefinition implements Serializa
 
         public Builder updateType( UpdateType updateType ) {
             this.updateType = updateType;
+            return this;
+        }
+
+        public Builder propertyUpdateType( PropertyUpdateType propertyUpdateType ) {
+            this.propertyUpdateType = propertyUpdateType;
             return this;
         }
 

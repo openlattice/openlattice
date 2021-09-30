@@ -386,7 +386,17 @@ public final class PostgresTable {
                             ID_MAP,
                             VERSION )
                     .distributionColumn( LINKING_ID );
-
+    // needed for migration
+    public static final  PostgresTableDefinition LEGACY_PERMISSIONS        =
+            new PostgresTableDefinition("legacy_permissions")
+                    .addColumns(
+                        ACL_KEY,
+                        PRINCIPAL_TYPE,
+                        PRINCIPAL_ID,
+                        PostgresColumn.PERMISSIONS,
+                        EXPIRATION_DATE,
+                        SECURABLE_OBJECT_TYPE)
+                    .primaryKey(ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID);
     public static final PostgresTableDefinition MATCHED_ENTITIES                      =
             new CitusDistributedTableDefinition( "matched_entities" )
                     .addColumns( LINKING_ID,

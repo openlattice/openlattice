@@ -165,7 +165,12 @@ class DataGraphService(
     ): Pair<List<UUID>, WriteEvent> {
         val ids = idService.reserveIds(entitySetId, entities.size)
         val entityMap = ids.zip(entities).toMap()
-        val writeEvent = eds.createOrUpdateEntities(entitySetId, entityMap, authorizedPropertyTypes)
+        val writeEvent = eds.createOrUpdateEntities(
+                entitySetId,
+                entityMap,
+                authorizedPropertyTypes,
+                PropertyUpdateType.Versioned
+        )
 
         return Pair.of(ids, writeEvent)
     }
@@ -173,33 +178,42 @@ class DataGraphService(
     override fun mergeEntities(
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
+            authorizedPropertyTypes: Map<UUID, PropertyType>,
+            propertyUpdateType: PropertyUpdateType
     ): WriteEvent {
-        return eds.createOrUpdateEntities(entitySetId, entities, authorizedPropertyTypes)
+        return eds.createOrUpdateEntities(entitySetId, entities, authorizedPropertyTypes, propertyUpdateType)
     }
 
     override fun replaceEntities(
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
+            authorizedPropertyTypes: Map<UUID, PropertyType>,
+            propertyUpdateType: PropertyUpdateType
     ): WriteEvent {
-        return eds.replaceEntities(entitySetId, entities, authorizedPropertyTypes)
+        return eds.replaceEntities(entitySetId, entities, authorizedPropertyTypes, propertyUpdateType)
     }
 
     override fun partialReplaceEntities(
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
+            authorizedPropertyTypes: Map<UUID, PropertyType>,
+            propertyUpdateType: PropertyUpdateType
     ): WriteEvent {
-        return eds.partialReplaceEntities(entitySetId, entities, authorizedPropertyTypes)
+        return eds.partialReplaceEntities(entitySetId, entities, authorizedPropertyTypes, propertyUpdateType)
     }
 
     override fun replacePropertiesInEntities(
             entitySetId: UUID,
             replacementProperties: Map<UUID, Map<UUID, Set<Map<ByteBuffer, Any>>>>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
+            authorizedPropertyTypes: Map<UUID, PropertyType>,
+            propertyUpdateType: PropertyUpdateType
     ): WriteEvent {
-        return eds.replacePropertiesInEntities(entitySetId, replacementProperties, authorizedPropertyTypes)
+        return eds.replacePropertiesInEntities(
+                entitySetId,
+                replacementProperties,
+                authorizedPropertyTypes,
+                propertyUpdateType
+        )
     }
 
     override fun createAssociations(associations: Set<DataEdgeKey>): WriteEvent {

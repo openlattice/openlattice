@@ -7,11 +7,7 @@ import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
 import com.google.common.eventbus.EventBus
 import com.openlattice.assembler.events.MaterializedEntitySetDataChangeEvent
-import com.openlattice.data.DataExpiration
-import com.openlattice.data.DeleteType
-import com.openlattice.data.EntitySetData
-import com.openlattice.data.FilteredDataPageDefinition
-import com.openlattice.data.WriteEvent
+import com.openlattice.data.*
 import com.openlattice.data.events.EntitiesDeletedEvent
 import com.openlattice.data.events.EntitiesUpsertedEvent
 import com.openlattice.datastore.services.EdmManager
@@ -67,11 +63,17 @@ class PostgresEntityDatastore(
     override fun createOrUpdateEntities(
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
+            authorizedPropertyTypes: Map<UUID, PropertyType>,
+            propertyUpdateType: PropertyUpdateType
     ): WriteEvent {
         // need to collect linking ids before writes to the entities
 
-        val writeEvent = dataQueryService.upsertEntities(entitySetId, entities, authorizedPropertyTypes)
+        val writeEvent = dataQueryService.upsertEntities(
+                entitySetId,
+                entities,
+                authorizedPropertyTypes,
+                propertyUpdateType = propertyUpdateType
+        )
         signalCreatedEntities(entitySetId, entities.keys)
 
         return writeEvent
@@ -81,11 +83,17 @@ class PostgresEntityDatastore(
     override fun replaceEntities(
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
+            authorizedPropertyTypes: Map<UUID, PropertyType>,
+            propertyUpdateType: PropertyUpdateType
     ): WriteEvent {
         // need to collect linking ids before writes to the entities
 
-        val writeEvent = dataQueryService.replaceEntities(entitySetId, entities, authorizedPropertyTypes)
+        val writeEvent = dataQueryService.replaceEntities(
+                entitySetId,
+                entities,
+                authorizedPropertyTypes,
+                propertyUpdateType
+        )
         signalCreatedEntities(entitySetId, entities.keys)
 
         return writeEvent
@@ -95,11 +103,12 @@ class PostgresEntityDatastore(
     override fun partialReplaceEntities(
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
+            authorizedPropertyTypes: Map<UUID, PropertyType>,
+            propertyUpdateType: PropertyUpdateType
     ): WriteEvent {
         // need to collect linking ids before writes to the entities
         val writeEvent = dataQueryService
-                .partialReplaceEntities(entitySetId, entities, authorizedPropertyTypes)
+                .partialReplaceEntities(entitySetId, entities, authorizedPropertyTypes, propertyUpdateType)
 
         signalCreatedEntities(entitySetId, entities.keys)
 
@@ -160,11 +169,17 @@ class PostgresEntityDatastore(
     override fun replacePropertiesInEntities(
             entitySetId: UUID,
             replacementProperties: Map<UUID, Map<UUID, Set<Map<ByteBuffer, Any>>>>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
+            authorizedPropertyTypes: Map<UUID, PropertyType>,
+            propertyUpdateType: PropertyUpdateType
     ): WriteEvent {
 
         val writeEvent = dataQueryService
-                .replacePropertiesInEntities(entitySetId, replacementProperties, authorizedPropertyTypes)
+                .replacePropertiesInEntities(
+                        entitySetId,
+                        replacementProperties,
+                        authorizedPropertyTypes,
+                        propertyUpdateType
+                )
         signalCreatedEntities(entitySetId, replacementProperties.keys)
 
         return writeEvent
@@ -333,7 +348,8 @@ class PostgresEntityDatastore(
     @Timed
     override fun getLinkedEntitySetBreakDown(
             linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>>>,
-            authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>)
+            authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>
+    )
             : Map<UUID, Map<UUID, Map<UUID, Map<FullQualifiedName, Set<Any>>>>> {
         // pair<linking_id to pair<entity_set_id to pair<origin_id to property_data>>>
         val linkedEntityDataStream = dataQueryService.getLinkedEntitySetBreakDown(

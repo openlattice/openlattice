@@ -29,5 +29,6 @@ public enum Permission {
     LINK,
     READ,
     WRITE,
-    OWNER
+    OWNER,
+    INTEGRATE
 }
