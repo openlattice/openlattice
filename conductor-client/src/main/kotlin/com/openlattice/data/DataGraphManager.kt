@@ -101,19 +101,22 @@ interface DataGraphManager {
     fun replaceEntities(
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
+            authorizedPropertyTypes: Map<UUID, PropertyType>,
+            propertyUpdateType: PropertyUpdateType
     ): WriteEvent
 
     fun partialReplaceEntities(
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
+            authorizedPropertyTypes: Map<UUID, PropertyType>,
+            propertyUpdateType: PropertyUpdateType
     ): WriteEvent
 
     fun replacePropertiesInEntities(
             entitySetId: UUID,
             replacementProperties: Map<UUID, Map<UUID, Set<Map<ByteBuffer, Any>>>>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
+            authorizedPropertyTypes: Map<UUID, PropertyType>,
+            propertyUpdateType: PropertyUpdateType
     ): WriteEvent
 
     fun createAssociations(associations: Set<DataEdgeKey>): WriteEvent
@@ -144,7 +147,8 @@ interface DataGraphManager {
     fun mergeEntities(
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
+            authorizedPropertyTypes: Map<UUID, PropertyType>,
+            propertyUpdateType: PropertyUpdateType
     ): WriteEvent
 
     fun getNeighborEntitySetIds(entitySetIds: Set<UUID>): Set<UUID>

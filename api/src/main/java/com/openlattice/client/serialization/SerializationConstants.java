@@ -235,6 +235,7 @@ public final class SerializationConstants {
     public static final String PROPERTY_TYPES                   = "propertyTypes";
     public static final String PROPERTY_TYPE_ID                 = "propertyTypeId";
     public static final String PROPERTY_TYPE_IDS                = "propertyTypeIds";
+    public static final String PROPERTY_UPDATE_TYPE             = "propertyUpdateType";
     public static final String QUERY_ID                         = "queryId";
     public static final String QUEUE                            = "queue";
     public static final String QUEUE_SIZE                       = "queueSize";

@@ -2,10 +2,7 @@ package com.openlattice.data.storage
 
 import com.codahale.metrics.annotation.Timed
 import com.openlattice.analysis.requests.Filter
-import com.openlattice.data.DataExpiration
-import com.openlattice.data.DeleteType
-import com.openlattice.data.FilteredDataPageDefinition
-import com.openlattice.data.WriteEvent
+import com.openlattice.data.*
 import com.openlattice.data.storage.PostgresEntitySetSizesInitializationTask.Companion.ENTITY_SET_SIZES_VIEW
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.data.storage.partitions.getPartition
@@ -14,7 +11,6 @@ import com.openlattice.edm.EntitySet
 import com.openlattice.edm.EntitySet.Companion.DEFAULT_DATASOURCE
 import com.openlattice.edm.set.ExpirationBase
 import com.openlattice.edm.type.PropertyType
-import com.openlattice.jdbc.DataSourceManager
 import com.openlattice.postgres.*
 import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
 import com.openlattice.postgres.PostgresColumn.ID
@@ -27,8 +23,6 @@ import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.openlattice.postgres.streams.StatementHolderSupplier
-import com.openlattice.transporter.ids
-import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
@@ -277,11 +271,12 @@ class PostgresEntityDataQueryService(
      */
     @Timed
     fun upsertEntities(
-        entitySetId: UUID,
-        entities: Map<UUID, Map<UUID, Set<Any>>>,
-        authorizedPropertyTypes: Map<UUID, PropertyType>,
-        awsPassthrough: Boolean = false,
-        partitions: List<Int> = partitionManager.getEntitySetPartitions(entitySetId).toList()
+            entitySetId: UUID,
+            entities: Map<UUID, Map<UUID, Set<Any>>>,
+            authorizedPropertyTypes: Map<UUID, PropertyType>,
+            awsPassthrough: Boolean = false,
+            propertyUpdateType: PropertyUpdateType,
+            partitions: List<Int> = partitionManager.getEntitySetPartitions(entitySetId).toList()
     ): WriteEvent {
         val version = System.currentTimeMillis()
 
@@ -294,7 +289,8 @@ class PostgresEntityDataQueryService(
             authorizedPropertyTypes,
             version,
             partitions,
-            awsPassthrough
+            awsPassthrough,
+            propertyUpdateType
         )
     }
 
@@ -318,7 +314,8 @@ class PostgresEntityDataQueryService(
         authorizedPropertyTypes: Map<UUID, PropertyType>,
         version: Long,
         partitions: List<Int> = partitionManager.getEntitySetPartitions(entitySetId).toList(),
-        awsPassthrough: Boolean = false
+        awsPassthrough: Boolean = false,
+        propertyUpdateType: PropertyUpdateType
     ): WriteEvent {
         var updatedEntityCount = 0
         var updatedPropertyCounts = 0
@@ -347,7 +344,8 @@ class PostgresEntityDataQueryService(
                     authorizedPropertyTypes,
                     version + 1,
                     partition,
-                    awsPassthrough
+                    awsPassthrough,
+                    propertyUpdateType
                 )
 
                 //For now we can't track how many entities were updated in a call transactionally.
@@ -368,7 +366,8 @@ class PostgresEntityDataQueryService(
         authorizedPropertyTypes: Map<UUID, PropertyType>,
         version: Long,
         partition: Int,
-        awsPassthrough: Boolean
+        awsPassthrough: Boolean,
+        propertyUpdateType: PropertyUpdateType
     ): Int {
 
         val entitiesWithHashAndInsertData = entities.mapValues { entityKeyIdToEntity ->
@@ -406,7 +405,7 @@ class PostgresEntityDataQueryService(
                 entityData.map { (propertyTypeId, hashAndInsertValue) ->
                     val upsertPropertyValue = upsertPropertyValues.getOrPut(propertyTypeId) {
                         val pt = authorizedPropertyTypes[propertyTypeId] ?: abortInsert(entitySetId, entityKeyId)
-                        connection.prepareStatement(upsertPropertyValueSql(pt))
+                        connection.prepareStatement(upsertPropertyValueSql(pt, propertyUpdateType))
                     }
 
                     hashAndInsertValue.map { (propertyHash, insertValue) ->
@@ -484,10 +483,11 @@ class PostgresEntityDataQueryService(
 
     @Timed
     fun replaceEntities(
-        entitySetId: UUID,
-        entities: Map<UUID, Map<UUID, Set<Any>>>,
-        authorizedPropertyTypes: Map<UUID, PropertyType>,
-        partitions: List<Int> = partitionManager.getEntitySetPartitions(entitySetId).toList()
+            entitySetId: UUID,
+            entities: Map<UUID, Map<UUID, Set<Any>>>,
+            authorizedPropertyTypes: Map<UUID, PropertyType>,
+            propertyUpdateType: PropertyUpdateType,
+            partitions: List<Int> = partitionManager.getEntitySetPartitions(entitySetId).toList()
     ): WriteEvent {
 
         val propertyTypes = authorizedPropertyTypes.values
@@ -510,16 +510,18 @@ class PostgresEntityDataQueryService(
             entities,
             authorizedPropertyTypes,
             System.currentTimeMillis(),
-            partitions
+            partitions,
+            propertyUpdateType = propertyUpdateType
         )
     }
 
     @Timed
     fun partialReplaceEntities(
-        entitySetId: UUID,
-        entities: Map<UUID, Map<UUID, Set<Any>>>,
-        authorizedPropertyTypes: Map<UUID, PropertyType>,
-        partitions: List<Int> = partitionManager.getEntitySetPartitions(entitySetId).toList()
+            entitySetId: UUID,
+            entities: Map<UUID, Map<UUID, Set<Any>>>,
+            authorizedPropertyTypes: Map<UUID, PropertyType>,
+            propertyUpdateType: PropertyUpdateType,
+            partitions: List<Int> = partitionManager.getEntitySetPartitions(entitySetId).toList()
     ): WriteEvent {
 
         // Is the overhead from including irrelevant property types in a bulk delete really worse than performing individual queries? :thinking-face:
@@ -544,7 +546,8 @@ class PostgresEntityDataQueryService(
             entities,
             authorizedPropertyTypes,
             System.currentTimeMillis(),
-            partitions
+            partitions,
+            propertyUpdateType = propertyUpdateType
         )
     }
 
@@ -552,7 +555,8 @@ class PostgresEntityDataQueryService(
     fun replacePropertiesInEntities(
         entitySetId: UUID,
         replacementProperties: Map<UUID, Map<UUID, Set<Map<ByteBuffer, Any>>>>, // ekid -> ptid -> hashes -> shit
-        authorizedPropertyTypes: Map<UUID, PropertyType>
+        authorizedPropertyTypes: Map<UUID, PropertyType>,
+        propertyUpdateType: PropertyUpdateType
     ): WriteEvent {
         //We expect controller to have performed access control checks upstream.
         val partitions = partitionManager.getEntitySetPartitions(entitySetId).toList()
@@ -581,7 +585,8 @@ class PostgresEntityDataQueryService(
             replacementValues,
             authorizedPropertyTypes,
             System.currentTimeMillis(),
-            partitions
+            partitions,
+            propertyUpdateType = propertyUpdateType
         )
 
     }
