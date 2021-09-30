@@ -4,6 +4,7 @@ import com.auth0.json.mgmt.users.User
 import com.openlattice.organization.roles.Role
 import com.openlattice.organizations.Grant
 import com.openlattice.organizations.Organization
+import com.openlattice.organizations.JdbcConnectionParameters
 import retrofit2.http.*
 import java.util.*
 import javax.annotation.Nonnull
@@ -44,6 +45,7 @@ interface OrganizationsApi {
         const val ROLES = "/roles"
         const val ROLE_ID = "roleId"
         const val ROLE_ID_PATH = "/{$ROLE_ID}"
+        const val WAREHOUSES_PATH = "/warehouses"
 
         const val SET_ID = "setId"
         const val SET_ID_PATH = "/{$SET_ID}"
@@ -407,6 +409,16 @@ interface OrganizationsApi {
     fun renameOrganizationDatabase(
             @Path(ID) organizationId: UUID, @Body newDatabaseName: String
     ): Void?
+
+    @POST(BASE + ID_PATH + WAREHOUSES_PATH)
+    fun createOrganizationWarehouse(
+        @Path(ID) organizationId: UUID, @Body newOrganizationWarehouseName: String
+    ): JdbcConnectionParameters
+
+    @GET(BASE + ID_PATH + WAREHOUSES_PATH)
+    fun getAvailableWarehouses(
+        @Path(ID) organizationId: UUID
+    ): Map<String, String>
 
 
 }

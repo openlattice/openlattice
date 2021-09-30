@@ -835,6 +835,28 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
         accessCheck(aclKey, EnumSet.of(Permission.OWNER))
     }
 
+    @PostMapping(
+        value = [OrganizationsApi.ID_PATH + OrganizationsApi.WAREHOUSES_PATH],
+        consumes = [MediaType.TEXT_PLAIN_VALUE]
+    )
+    override fun createOrganizationWarehouse(
+        @PathVariable(OrganizationsApi.ID) organizationId: UUID,
+        @RequestBody newOrganizationWarehouseName: String
+    ): JdbcConnectionParameters {
+        ensureOwner(organizationId)
+        return warehouseService.createOrganizationWarehouse()
+    }
+
+    @GetMapping(
+        value = [OrganizationsApi.ID_PATH + OrganizationsApi.WAREHOUSES_PATH],
+        produces = [MediaType.APPLICATION_JSON_VALUE]
+    )
+    override fun getAvailableWarehouses(
+        @PathVariable(OrganizationsApi.ID) organizationId: UUID
+    ): Map<String, String> {
+        TODO("Not yet implemented")
+    }
+
     override fun getAuthorizationManager(): AuthorizationManager {
         return authorizations
     }

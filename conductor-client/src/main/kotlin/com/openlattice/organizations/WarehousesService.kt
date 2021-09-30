@@ -55,6 +55,11 @@ class WarehousesService(
         return AclKey(jdbc.id)
     }
 
+    fun createOrganizationWarehouse(newOrganizationWarehouseName: String): JdbcConnectionParameters {
+
+        return JdbcConnectionParameters(_title = "test", url = "test", driver = "test")
+    }
+
     private fun ensureValidWarehouseId(id: UUID) {
         check(warehouses.containsKey(id)) {"No collaboration exists with id $id"}
     }
