@@ -593,8 +593,7 @@ public class DatastoreServicesPod {
         return new AwsDataSinkService(
                 partitionManager(),
                 byteBlobDataManager,
-                dataSourceResolver(),
-                rds().getReadOnlyReplica()
+                dataSourceResolver()
         );
     }
 

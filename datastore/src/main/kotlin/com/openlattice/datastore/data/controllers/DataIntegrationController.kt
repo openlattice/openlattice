@@ -11,14 +11,13 @@ import com.openlattice.authorization.AuthorizingComponent
 import com.openlattice.authorization.EdmAuthorizationHelper
 import com.openlattice.data.DataGraphManager
 import com.openlattice.data.DataIntegrationApi
+import com.openlattice.data.DataIntegrationApi.PROPERTY_UPDATE_TYPE
 import com.openlattice.data.EntityKey
+import com.openlattice.data.PropertyUpdateType
 import com.openlattice.data.integration.S3EntityData
 import com.openlattice.data.storage.aws.AwsDataSinkService
 import org.springframework.http.MediaType
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.*
 import java.util.*
 import javax.inject.Inject
 
@@ -47,14 +46,21 @@ class DataIntegrationController : DataIntegrationApi, AuthorizingComponent {
         return authz
     }
 
-    override fun generatePresignedUrls(data: Collection<S3EntityData?>?): List<String?>? {
+    override fun generatePresignedUrls(
+            data: Collection<S3EntityData>,
+            propertyUpdateType: PropertyUpdateType
+    ): List<String> {
         throw UnsupportedOperationException("This shouldn't be invoked. Just here for the interface and efficiency")
     }
 
     @Timed
     @PostMapping("/" + DataIntegrationApi.S3)
     fun generatePresignedUrls(
-        @RequestBody data: List<S3EntityData>
+            @RequestBody data: List<S3EntityData>,
+            @RequestParam(
+                    name = PROPERTY_UPDATE_TYPE,
+                    defaultValue = "Versioned"
+            ) propertyUpdateType: PropertyUpdateType
     ): List<String> {
         val entitySetIds = data.map(S3EntityData::entitySetId).toSet()
         val propertyIdsByEntitySet: SetMultimap<UUID, UUID> = HashMultimap.create()
@@ -63,18 +69,24 @@ class DataIntegrationController : DataIntegrationApi, AuthorizingComponent {
         }
 
         //Ensure that we have read access to entity set metadata.
-        entitySetIds.forEach { entitySetId: UUID -> ensureReadAccess(AclKey(entitySetId)) }
+        entitySetIds.forEach { entitySetId: UUID ->
+            val entitySetAclKey = AclKey(entitySetId)
+            ensureReadAccess(entitySetAclKey)
+            if (propertyUpdateType == PropertyUpdateType.Unversioned) {
+                ensureIntegrateAccess(entitySetAclKey)
+            }
+        }
         accessCheck(
-            EdmAuthorizationHelper.aclKeysForAccessCheck(
-                propertyIdsByEntitySet,
-                EdmAuthorizationHelper.WRITE_PERMISSION
-            )
+                EdmAuthorizationHelper.aclKeysForAccessCheck(
+                        propertyIdsByEntitySet,
+                        EdmAuthorizationHelper.WRITE_PERMISSION
+                )
         )
         val authorizedPropertyTypes = entitySetIds.associateWith { entitySetId ->
             authzHelper.getAuthorizedPropertyTypes(entitySetId, EdmAuthorizationHelper.WRITE_PERMISSION)
         }
 
-        return awsDataSinkService.generatePresignedUrls(data, authorizedPropertyTypes)
+        return awsDataSinkService.generatePresignedUrls(data, authorizedPropertyTypes, propertyUpdateType)
     }
 
     //Just sugar to conform to API interface. While still allow efficient serialization.
@@ -84,9 +96,9 @@ class DataIntegrationController : DataIntegrationApi, AuthorizingComponent {
 
     @Timed
     @PostMapping(
-        "/" + DataIntegrationApi.ENTITY_KEY_IDS,
-        consumes = [MediaType.APPLICATION_JSON_VALUE],
-        produces = [MediaType.APPLICATION_JSON_VALUE]
+            "/" + DataIntegrationApi.ENTITY_KEY_IDS,
+            consumes = [MediaType.APPLICATION_JSON_VALUE],
+            produces = [MediaType.APPLICATION_JSON_VALUE]
     )
     fun getEntityKeyIds(@RequestBody entityKeys: LinkedHashSet<EntityKey>): Set<UUID> {
         val entitySetIds = entityKeys.map { it.entitySetId }.toSet()
@@ -96,9 +108,9 @@ class DataIntegrationController : DataIntegrationApi, AuthorizingComponent {
 
     @Timed
     @PostMapping(
-        "/" + DataIntegrationApi.ENTITY_KEYS,
-        consumes = [MediaType.APPLICATION_JSON_VALUE],
-        produces = [MediaType.APPLICATION_JSON_VALUE]
+            "/" + DataIntegrationApi.ENTITY_KEYS,
+            consumes = [MediaType.APPLICATION_JSON_VALUE],
+            produces = [MediaType.APPLICATION_JSON_VALUE]
     )
     override fun generateEntityKeys(@RequestBody bundle: EntityKeyGenerationBundle): Map<UUID, EntityKey> {
         val entityKeys = bundle.entities.map {

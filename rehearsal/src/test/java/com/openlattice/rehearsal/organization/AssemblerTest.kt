@@ -9,10 +9,7 @@ import com.openlattice.authorization.AclData
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.Action
 import com.openlattice.authorization.Permission
-import com.openlattice.data.DataEdgeKey
-import com.openlattice.data.DeleteType
-import com.openlattice.data.EntityDataKey
-import com.openlattice.data.UpdateType
+import com.openlattice.data.*
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.launchpad.IntegrationRunner
 import com.openlattice.launchpad.configuration.DataLake
@@ -312,7 +309,7 @@ class AssemblerTest : AssemblerTestBase() {
         // update data
         val newTestData = TestDataFactory.randomStringEntityData(numberOfEntities, et.properties).values.toList()
         val newTestDataWithIds = ids.zip(newTestData).toMap()
-        dataApi.updateEntitiesInEntitySet(es.id, newTestDataWithIds, UpdateType.Replace)
+        dataApi.updateEntitiesInEntitySet(es.id, newTestDataWithIds, UpdateType.Replace, PropertyUpdateType.Versioned)
         Assert.assertTrue(
                 organizationsApi.getOrganizationEntitySets(organizationID)[es.id]!!
                         .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)

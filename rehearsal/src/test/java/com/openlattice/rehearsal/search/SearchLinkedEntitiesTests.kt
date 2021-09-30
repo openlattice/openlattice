@@ -8,10 +8,7 @@ import com.openlattice.authorization.AclData
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.Action
 import com.openlattice.authorization.Permission
-import com.openlattice.data.DataEdgeKey
-import com.openlattice.data.DeleteType
-import com.openlattice.data.EntityDataKey
-import com.openlattice.data.UpdateType
+import com.openlattice.data.*
 import com.openlattice.data.requests.EntitySetSelection
 import com.openlattice.data.requests.FileType
 import com.openlattice.edm.EdmConstants
@@ -309,7 +306,8 @@ class SearchLinkedEntitiesTests : SetupTestData() {
         dataApi.updateEntitiesInEntitySet(
                 socratesAId,
                 mapOf(newAEntityIds.first() to entityData),
-                UpdateType.Replace)
+                UpdateType.Replace,
+                PropertyUpdateType.Versioned)
 
         Thread.sleep(10000L) // wait for linking to finish
         while (!checkLinkingFinished(importedEntitySets.keys)) {
