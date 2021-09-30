@@ -773,7 +773,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             @RequestParam( value = BLOCK, defaultValue = "true" ) boolean blockUntilCompletion ) {
 
         logger.info(
-                "attempting to delete {} entities - entity set {} entities {} block {}",
+                "deleteEntities - attempting to delete {} entities - entity set {} entities {} block {}",
                 entityKeyIds.size(),
                 entitySetId,
                 entityKeyIds,
@@ -785,8 +785,8 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
 
         ensureEntitySetCanBeWritten( entitySetId );
         logger.info(
-                "ensureEntitySetCanBeWritten took {} ms - entity set {} entities {}",
-                timer.elapsed( TimeUnit.MILLISECONDS ),
+                "deleteEntities - ensureEntitySetCanBeWritten took {} ms - entity set {} entities {}",
+                timer.elapsed( TimeUnit.MILLISECONDS),
                 entitySetId,
                 entityKeyIds.size()
         );
@@ -799,8 +799,8 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                 entityKeyIds
         );
         logger.info(
-                "deletionManager.authCheckForEntitySetAndItsNeighbors took {} ms - entity set {} entities {}",
-                timer.elapsed( TimeUnit.MILLISECONDS ),
+                "deleteEntities - deletionManager.authCheckForEntitySetAndItsNeighbors took {} ms - entity set {} entities {}",
+                timer.elapsed( TimeUnit.MILLISECONDS),
                 entitySetId,
                 entityKeyIds.size()
         );
@@ -808,8 +808,8 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
 
         UUID deletionJobId = deletionManager.clearOrDeleteEntities( entitySetId, entityKeyIds, deleteType );
         logger.info(
-                "deletionManager.clearOrDeleteEntities took {} ms - entity set {} entities {}",
-                timer.elapsed( TimeUnit.MILLISECONDS ),
+                "deleteEntities - deletionManager.clearOrDeleteEntities took {} ms - entity set {} entities {}",
+                timer.elapsed( TimeUnit.MILLISECONDS),
                 entitySetId,
                 entityKeyIds.size()
         );
@@ -826,8 +826,8 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                 Optional.empty()
         ) );
         logger.info(
-                "recording audit event DELETE_ENTITIES took {} ms - entity set {} entities {}",
-                timer.elapsed( TimeUnit.MILLISECONDS ),
+                "deleteEntities - recording audit event DELETE_ENTITIES took {} ms - entity set {} entities {}",
+                timer.elapsed(TimeUnit.MILLISECONDS),
                 entitySetId,
                 entityKeyIds.size()
         );
@@ -836,7 +836,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
 
         if ( deletedEntitiesCount != entityKeyIds.size() ) {
             logger.warn(
-                    "deleted entities count mismatch - entity set {} given {} reported {} block {}",
+                    "deleteEntities - deleted entities count mismatch - entity set {} given {} reported {} block {}",
                     entitySetId,
                     entityKeyIds.size(),
                     deletedEntitiesCount,
@@ -845,7 +845,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         }
 
         logger.info(
-                "deleting {} entities took {} ms - entity set {} entities {} block {}",
+                "deleteEntities - deleting {} entities took {} ms - entity set {} entities {} block {}",
                 entityKeyIds.size(),
                 funTimer.elapsed( TimeUnit.MILLISECONDS ),
                 entitySetId,

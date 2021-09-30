@@ -584,7 +584,7 @@ class ExternalDatabasePermissioner(
             DO 
             ${'$'}do${'$'}
             BEGIN
-                IF ${action.quantifier} $privilegeCheckString THEN
+                IF ${action.quantifier} ($privilegeCheckString) THEN
                     ${action.name} $privilege ( ${quote(columnName)} )
                     ON $schemaName${quote(tableName)}
                     ${action.verb} ${quote(roleName)};
