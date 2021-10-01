@@ -882,8 +882,8 @@ public final class TestDataFactory {
                 randomAlphanumeric( 10 ),
                 randomAlphanumeric( 10 ),
                 new Properties(),
-                Optional.empty()
-        );
+                randomAlphanumeric( 10 )
+                );
     }
 
     public static ProjectedTableKey projectedTableKey() {

@@ -41,8 +41,8 @@ constructor(
     @JsonProperty(SerializationConstants.USERNAME) val username: String = "",
     @JsonProperty(SerializationConstants.PASSWORD) val password: String = "",
     @JsonProperty(SerializationConstants.PROPERTIES_FIELD) val properties: Properties = Properties(),
-    @JsonProperty(SerializationConstants.DESCRIPTION_FIELD) val description: Optional<String> = Optional.empty()
-) : AbstractSecurableObject(_id, _title, description) {
+    @JsonProperty(SerializationConstants.DESCRIPTION_FIELD) val _description: String = ""
+) : AbstractSecurableObject(_id, _title, _description) {
 
     init {
         require(properties.keys.all { it is String }) { "All properties must have string keys." }
