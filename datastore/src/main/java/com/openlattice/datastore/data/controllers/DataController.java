@@ -956,7 +956,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         ) );
 
         if ( blockUntilCompletion ) {
-            waitForDeleteJobToFinish( deletionJobId );
+            waitForDeleteJobToTerminate( deletionJobId );
         }
 
         return deletionJobId;
@@ -1247,9 +1247,9 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         return 0;
     }
 
-    // Block until waiting threshold is exceeded or job finishes
-    public void waitForDeleteJobToFinish( UUID deletionJobId ) {
-        for ( int i = 0; i < MAX_DELETION_BLOCKING_CHECKS; i++ ) {
+    // Block until JobStatus is FINISHED or CANCELED
+    public void waitForDeleteJobToTerminate( UUID deletionJobId ) {
+       while ( true ) {
             try {
                 Thread.sleep( DELETION_BLOCKING_INTERVAL );
                 JobStatus status = jobService.getStatus( deletionJobId );
@@ -1266,8 +1266,6 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                 return;
             }
         }
-
-        logger.error( "Deletion job {} hasn't finished executing yet. ", deletionJobId.toString() );
     }
 
     /**
