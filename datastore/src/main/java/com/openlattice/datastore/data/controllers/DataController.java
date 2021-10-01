@@ -82,6 +82,7 @@ import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.search.requests.EntityNeighborsFilter;
+import com.openlattice.users.export.JobStatus;
 import com.openlattice.web.mediatypes.CustomMediaType;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.net.URL;
@@ -104,6 +105,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletResponse;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.tuple.Triple;
@@ -908,7 +910,8 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     public UUID deleteEntitiesAndNeighbors(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @RequestBody EntityNeighborsFilter filter,
-            @RequestParam( value = TYPE ) DeleteType deleteType ) {
+            @RequestParam( value = TYPE ) DeleteType deleteType,
+            @RequestParam( value = BLOCK, defaultValue = "true" ) boolean blockUntilCompletion ) {
         // Note: this function is only useful for deleting src/dst entities and their neighboring entities
         // (along with associations connected to all of them), not associations.
         // If called with an association entity set, it will simplify down to a basic delete call.
@@ -951,6 +954,10 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                 OffsetDateTime.now(),
                 Optional.empty()
         ) );
+
+        if ( blockUntilCompletion ) {
+            waitForDeleteJobToFinish( deletionJobId );
+        }
 
         return deletionJobId;
     }
@@ -1238,6 +1245,29 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         }
 
         return 0;
+    }
+
+    // Block until waiting threshold is exceeded or job finishes
+    public void waitForDeleteJobToFinish( UUID deletionJobId ) {
+        for ( int i = 0; i < MAX_DELETION_BLOCKING_CHECKS; i++ ) {
+            try {
+                Thread.sleep( DELETION_BLOCKING_INTERVAL );
+                JobStatus status = jobService.getStatus( deletionJobId );
+
+                if (status.equals(JobStatus.FINISHED)) {
+                    break;
+                }
+                if (status.equals( JobStatus.CANCELED )) {
+                    throw new IllegalStateException(
+                            "Deletion failed -- job " + deletionJobId.toString() + " was canceled." );
+                }
+            } catch ( InterruptedException e ) {
+                logger.error("Unable to wait for deletion job {} to finish.", deletionJobId);
+                return;
+            }
+        }
+
+        logger.error( "Deletion job {} hasn't finished executing yet. ", deletionJobId.toString() );
     }
 
     /**
