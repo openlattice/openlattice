@@ -82,7 +82,6 @@ import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.search.requests.EntityNeighborsFilter;
-import com.openlattice.users.export.JobStatus;
 import com.openlattice.web.mediatypes.CustomMediaType;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.net.URL;
