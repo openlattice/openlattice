@@ -922,6 +922,9 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         
         ensureEntitySetsCanBeWritten( allEntitySetIds );
 
+        // filter.entityKeyIds should be non-empty
+        Preconditions.checkArgument( !filter.getEntityKeyIds().isEmpty(), "EntityNeighborsFilter.entityKeyIds should be a non-empty set" );
+
         Map<UUID, Set<UUID>> entitySetIdEntityKeyIds = Maps.newHashMap();
         entitySetIdEntityKeyIds.put( entitySetId, filter.getEntityKeyIds() );
 
