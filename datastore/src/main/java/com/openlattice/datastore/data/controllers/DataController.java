@@ -915,15 +915,15 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         // (along with associations connected to all of them), not associations.
         // If called with an association entity set, it will simplify down to a basic delete call.
 
+        // filter.entityKeyIds should be non-empty
+        Preconditions.checkArgument( !filter.getEntityKeyIds().isEmpty(), "EntityNeighborsFilter.entityKeyIds should be a non-empty set" );
+        
         Set<UUID> dstEntitySetIds = filter.getDstEntitySetIds().orElse( Set.of() );
         Set<UUID> srcEntitySetIds = filter.getSrcEntitySetIds().orElse( Set.of() );
         Set<UUID> allEntitySetIds = Sets.union( srcEntitySetIds, dstEntitySetIds );
         allEntitySetIds = Sets.union( allEntitySetIds, Set.of( entitySetId ) );
         
         ensureEntitySetsCanBeWritten( allEntitySetIds );
-
-        // filter.entityKeyIds should be non-empty
-        Preconditions.checkArgument( !filter.getEntityKeyIds().isEmpty(), "EntityNeighborsFilter.entityKeyIds should be a non-empty set" );
 
         Map<UUID, Set<UUID>> entitySetIdEntityKeyIds = Maps.newHashMap();
         entitySetIdEntityKeyIds.put( entitySetId, filter.getEntityKeyIds() );
