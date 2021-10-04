@@ -43,6 +43,9 @@ class EntitiesAndNeighborsDeletionJob(
         publishJobState()
     }
 
+    /**
+     * Take an entity set id and associated entity key ids from the map and submit a DataDeletionJob
+     */
     override fun processNextBatch() {
         val entitySetId = getNextEntitySetId()
         if (entitySetId == null) {
@@ -58,10 +61,17 @@ class EntitiesAndNeighborsDeletionJob(
             return
         }
 
-        // safety check to avoid deleting all entities from current entity set
         val entityKeyIds = state.entitySetIdEntityKeyIds.getValue(entitySetId)
+
+        /**
+         *  safety check to avoid deleting all entities from current entity set
+         *  At initialization, all entity set ids are mapped to a non-empty set of entity key ids, so ideally we should
+         *  never end up at this state
+         */
         if (entityKeyIds.isEmpty()) {
-            logger.info("No entities to delete for entity set $entitySetId")
+            logger.warn("skipping entity set $entitySetId since there are no entities to delete")
+            cleanUpBatch(entitySetId)
+            publishJobState()
             return
         }
 
