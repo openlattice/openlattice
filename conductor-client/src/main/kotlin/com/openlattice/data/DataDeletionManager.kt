@@ -53,7 +53,7 @@ interface DataDeletionManager {
     )
 
     /**
-     * Clears of deletes the specified entity key ids and their neighboring entities, as well as any edges and association
+     * Clears or deletes the specified entity key ids and their neighboring entities, as well as any edges and associations
      * entities
      */
     fun clearOrDeleteEntitiesAndNeighbors(
