@@ -576,11 +576,10 @@ class ExternalDatabasePermissioner(
             ""
         }
 
-        return """
-            ${action.name} $privilege ( ${quote(columnName)} )
-            ON $schemaName${quote(tableName)}
-            ${action.verb} ${quote(roleName)};
-        """.trimIndent()
+        // there are column names with escaped characters, so not using string literals here
+        return "${action.name} $privilege ( ${quote(columnName)} )\n" +
+               "ON $schemaName${quote(tableName)}\n" +
+               "${action.verb} ${quote(roleName)};"
     }
 
     private fun revokeRoleSql(roleName: String, targetRoles: Set<String>): String {
