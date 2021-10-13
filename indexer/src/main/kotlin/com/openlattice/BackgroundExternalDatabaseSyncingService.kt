@@ -113,23 +113,27 @@ class BackgroundExternalDatabaseSyncingService(
                 val tableIds = mutableSetOf<UUID>()
                 val columnIds = mutableSetOf<UUID>()
                 edms.getTableInfoForOrganization(organizationId).forEach { (oid, tableName, schemaName, _) ->
-                    val table = getOrCreateTable(organizationId, oid, tableName, schemaName)
-                    logger.info(
-                        "org {}: obtained table {}",
-                        organizationId,
-                        table.id
-                    )
-                    val columns = syncTableColumns(table)
-                    dataSetService.indexDataSet(table.id)
-                    initializeTablePermissions(organizationId, table, columns, adminRolePrincipal)
+                    try {
+                        val table = getOrCreateTable(organizationId, oid, tableName, schemaName)
+                        logger.info(
+                            "org {}: obtained table {}",
+                            organizationId,
+                            table.id
+                        )
+                        val columns = syncTableColumns(table)
+                        dataSetService.indexDataSet(table.id)
+                        initializeTablePermissions(organizationId, table, columns, adminRolePrincipal)
 
-                    logger.info(
-                        "org {}: adding table {} for post-processing",
-                        organizationId,
-                        table.id
-                    )
-                    tableIds.add(table.id)
-                    columnIds.addAll(columns.map { it.id })
+                        logger.info(
+                            "org {}: adding table {} for post-processing",
+                            organizationId,
+                            table.id
+                        )
+                        tableIds.add(table.id)
+                        columnIds.addAll(columns.map { it.id })
+                    } catch (e: Exception) {
+                        logger.error("error syncing organization table - org {}", organizationId, e)
+                    }
                 }
 
                 removeNonexistentTablesAndColumnsForOrg(organizationId, tableIds, columnIds)
