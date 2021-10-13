@@ -114,7 +114,7 @@ class BackgroundExternalDatabaseSyncingService(
                 val columnIds = mutableSetOf<UUID>()
                 edms.getTableInfoForOrganization(organizationId).forEach { (oid, tableName, schemaName, _) ->
                     logger.info(
-                        "starting to process table {} of oid {} and schema {}"
+                        "starting to process table {} of oid {} and schema {}",
                         tableName,
                         oid,
                         schemaName
