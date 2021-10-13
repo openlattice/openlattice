@@ -114,7 +114,8 @@ class BackgroundExternalDatabaseSyncingService(
                 val columnIds = mutableSetOf<UUID>()
                 edms.getTableInfoForOrganization(organizationId).forEach { (oid, tableName, schemaName, _) ->
                     logger.info(
-                        "starting to process table {} of oid {} and schema {}",
+                        "org {}: starting to process table {} of oid {} and schema {}",
+                        organizationId,
                         tableName,
                         oid,
                         schemaName
@@ -125,7 +126,8 @@ class BackgroundExternalDatabaseSyncingService(
                     initializeTablePermissions(organizationId, table, columns, adminRolePrincipal)
 
                     logger.info(
-                        "adding table {} for post-processing",
+                        "org {}: adding table {} for post-processing",
+                        organizationId,
                         table.id
                     )
                     tableIds.add(table.id)
