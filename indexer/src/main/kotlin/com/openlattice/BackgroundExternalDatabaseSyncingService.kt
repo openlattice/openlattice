@@ -113,14 +113,12 @@ class BackgroundExternalDatabaseSyncingService(
                 val tableIds = mutableSetOf<UUID>()
                 val columnIds = mutableSetOf<UUID>()
                 edms.getTableInfoForOrganization(organizationId).forEach { (oid, tableName, schemaName, _) ->
-                    logger.info(
-                        "org {}: starting to process table {} of oid {} and schema {}",
-                        organizationId,
-                        tableName,
-                        oid,
-                        schemaName
-                    )
                     val table = getOrCreateTable(organizationId, oid, tableName, schemaName)
+                    logger.info(
+                        "org {}: obtained table {}",
+                        organizationId,
+                        table.id
+                    )
                     val columns = syncTableColumns(table)
                     dataSetService.indexDataSet(table.id)
                     initializeTablePermissions(organizationId, table, columns, adminRolePrincipal)
