@@ -114,9 +114,20 @@ class BackgroundExternalDatabaseSyncingService(
                 val columnIds = mutableSetOf<UUID>()
                 edms.getTableInfoForOrganization(organizationId).forEach { (oid, tableName, schemaName, _) ->
                     val table = getOrCreateTable(organizationId, oid, tableName, schemaName)
+                    logger.info(
+                        "org {}: obtained table {}",
+                        organizationId,
+                        table.id
+                    )
                     val columns = syncTableColumns(table)
                     dataSetService.indexDataSet(table.id)
                     initializeTablePermissions(organizationId, table, columns, adminRolePrincipal)
+
+                    logger.info(
+                        "org {}: adding table {} for post-processing",
+                        organizationId,
+                        table.id
+                    )
                     tableIds.add(table.id)
                     columnIds.addAll(columns.map { it.id })
                 }
@@ -237,6 +248,10 @@ class BackgroundExternalDatabaseSyncingService(
         existingTableIds: Set<UUID>,
         existingColumnIds: Set<UUID>
     ) {
+        logger.info(
+            "Removing non-existent tables and columns for org {}",
+            orgId
+        )
 
         // delete missing tables
 
