@@ -108,6 +108,8 @@ import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
 import com.openlattice.postgres.external.ExternalDatabasePermissioner;
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService;
 import com.openlattice.postgres.external.PostgresDatabaseQueryService;
+import com.openlattice.postgres.external.ExternalWarehouseConnectionManager;
+import com.openlattice.postgres.external.WarehouseQueryService;
 import com.openlattice.requests.HazelcastRequestsManager;
 import com.openlattice.requests.RequestQueryService;
 import com.openlattice.search.PersistentSearchService;
@@ -195,6 +197,9 @@ public class DatastoreServicesPod {
 
     @Inject
     private ExternalDatabaseConnectionManager externalDbConnMan;
+
+    @Inject
+    private ExternalWarehouseConnectionManager externalWhConnMan;
 
     @Inject
     private TransporterService transporterService;
@@ -701,11 +706,22 @@ public class DatastoreServicesPod {
     }
 
     @Bean
+    public WarehouseQueryService warehouseQueryManager() {
+        return new WarehouseQueryService(
+                assemblerConfiguration,
+                externalWhConnMan,
+                securePrincipalsManager(),
+                dcs()
+        );
+    }
+
+    @Bean
     public WarehousesService warehousesService() {
         return new WarehousesService(
                 hazelcastInstance,
                 authorizationManager(),
-                aclKeyReservationService()
+                aclKeyReservationService(),
+                warehouseQueryManager()
         );
     }
 

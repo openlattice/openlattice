@@ -61,6 +61,7 @@ import com.openlattice.organization.ExternalColumn
 import com.openlattice.organization.ExternalTable
 import com.openlattice.organizations.Organization
 import com.openlattice.organizations.OrganizationDatabase
+import com.openlattice.organizations.OrganizationWarehouse
 import com.openlattice.organizations.SortedPrincipalSet
 import com.openlattice.postgres.mapstores.TypedMapIdentifier
 import com.openlattice.requests.Status
@@ -146,6 +147,7 @@ class HazelcastMap<K, V> internal constructor(val name: String) : TypedMapIdenti
         @JvmField val NAMES = HazelcastMap<UUID, String>("NAMES")
         @JvmField val OBJECT_METADATA = HazelcastMap<AclKey, SecurableObjectMetadata>("OBJECT_METADATA")
         @JvmField val ORGANIZATION_DATABASES = HazelcastMap<UUID, OrganizationDatabase>("ORGANIZATION_DATABASES")
+        @JvmField val ORGANIZATION_WAREHOUSES = HazelcastMap<UUID, OrganizationWarehouse>("ORGANIZATION_WAREHOUSE")
         @JvmField val ORGANIZATIONS = HazelcastMap<UUID, Organization>("ORGANIZATIONS")
         @JvmField val PERMISSIONS = HazelcastMap<AceKey, AceValue>("PERMISSIONS")
         @JvmField val PRINCIPAL_TREES = HazelcastMap<AclKey, AclKeySet>("PRINCIPAL_TREES")

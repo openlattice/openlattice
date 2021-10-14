@@ -45,7 +45,8 @@ interface OrganizationsApi {
         const val ROLES = "/roles"
         const val ROLE_ID = "roleId"
         const val ROLE_ID_PATH = "/{$ROLE_ID}"
-        const val WAREHOUSES_PATH = "/warehouses"
+        const val WAREHOUSES_ID_PARAM = "warehouseId"
+        const val WAREHOUSES_ID_PATH = "/{$WAREHOUSES_ID_PARAM}"
 
         const val SET_ID = "setId"
         const val SET_ID_PATH = "/{$SET_ID}"
@@ -410,12 +411,12 @@ interface OrganizationsApi {
             @Path(ID) organizationId: UUID, @Body newDatabaseName: String
     ): Void?
 
-    @POST(BASE + ID_PATH + WAREHOUSES_PATH)
+    @POST(BASE + ID_PATH + WAREHOUSES_ID_PATH)
     fun createOrganizationWarehouse(
-        @Path(ID) organizationId: UUID, @Body newOrganizationWarehouseName: String
-    ): JdbcConnectionParameters
+        @Path(ID) organizationId: UUID, @Path(WAREHOUSES_ID_PARAM) warehouseId: UUID
+    ): String
 
-    @GET(BASE + ID_PATH + WAREHOUSES_PATH)
+    @GET(BASE + ID_PATH + WAREHOUSES_ID_PATH)
     fun getAvailableWarehouses(
         @Path(ID) organizationId: UUID
     ): Map<String, String>

@@ -108,6 +108,8 @@ import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
 import com.openlattice.postgres.external.ExternalDatabasePermissioner;
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService;
 import com.openlattice.postgres.external.PostgresDatabaseQueryService;
+import com.openlattice.postgres.external.ExternalWarehouseConnectionManager;
+import com.openlattice.postgres.external.WarehouseQueryService;
 import com.openlattice.postgres.tasks.PostgresMetaDataPropertiesInitializationDependency;
 import com.openlattice.postgres.tasks.PostgresMetaDataPropertiesInitializationTask;
 import com.openlattice.scheduling.ScheduledTaskService;
@@ -185,6 +187,9 @@ public class ConductorServicesPod {
 
     @Inject
     private ExternalDatabaseConnectionManager externalDbConnMan;
+
+    @Inject
+    private ExternalWarehouseConnectionManager externalWarehouseConnMan;
 
     @Inject
     private TransporterService transporterService;
@@ -360,6 +365,16 @@ public class ConductorServicesPod {
         return new PostgresDatabaseQueryService(
                 assemblerConfiguration,
                 externalDbConnMan,
+                securePrincipalsManager(),
+                dbCredService()
+        );
+    }
+
+    @Bean
+    public WarehouseQueryService warehouseQueryManager() {
+        return new WarehouseQueryService(
+                assemblerConfiguration,
+                externalWarehouseConnMan,
                 securePrincipalsManager(),
                 dbCredService()
         );

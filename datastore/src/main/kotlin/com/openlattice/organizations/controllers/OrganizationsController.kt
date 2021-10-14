@@ -5,6 +5,7 @@ import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Preconditions
 import com.google.common.collect.ImmutableSet
 import com.google.common.collect.Sets
+import com.openlattice.admin.WAREHOUSE_ID_PARAM
 import com.openlattice.apps.AppTypeSetting
 import com.openlattice.apps.services.AppService
 import com.openlattice.assembler.Assembler
@@ -25,6 +26,7 @@ import com.openlattice.organizations.ExternalDatabaseManagementService
 import com.openlattice.organizations.Grant
 import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.organizations.Organization
+import com.openlattice.organizations.WarehousesService
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.commons.lang3.NotImplementedException
@@ -76,6 +78,9 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
 
     @Inject
     private lateinit var dbCCredentialService: DbCredentialService
+
+    @Inject
+    private lateinit var warehousesService: WarehousesService
 
     companion object {
         private val logger = LoggerFactory.getLogger(OrganizationsController::class.java)
@@ -835,20 +840,26 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
         accessCheck(aclKey, EnumSet.of(Permission.OWNER))
     }
 
+    /**
+     * Create a member warehouse for the organization indicated by the organizationId
+     * inside the warehouse indicated by the warehouseId
+     *
+     *  @param warehouseId Id of the system-wide warehouse to create a organization warehouse in.
+     *  @param organizationId Id of the organization to create an organization warehouse for.
+     */
     @PostMapping(
-        value = [OrganizationsApi.ID_PATH + OrganizationsApi.WAREHOUSES_PATH],
-        consumes = [MediaType.TEXT_PLAIN_VALUE]
+        value = [OrganizationsApi.ID_PATH + OrganizationsApi.WAREHOUSES_ID_PATH],
     )
     override fun createOrganizationWarehouse(
         @PathVariable(OrganizationsApi.ID) organizationId: UUID,
-        @RequestBody newOrganizationWarehouseName: String
-    ): JdbcConnectionParameters {
+        @PathVariable(OrganizationsApi.WAREHOUSES_ID_PARAM) warehouseId: UUID
+    ): String {
         ensureOwner(organizationId)
-        return warehouseService.createOrganizationWarehouse()
+        return warehousesService.createOrganizationWarehouse(organizationId, warehouseId)
     }
 
     @GetMapping(
-        value = [OrganizationsApi.ID_PATH + OrganizationsApi.WAREHOUSES_PATH],
+        value = [OrganizationsApi.ID_PATH + OrganizationsApi.WAREHOUSES_ID_PATH],
         produces = [MediaType.APPLICATION_JSON_VALUE]
     )
     override fun getAvailableWarehouses(

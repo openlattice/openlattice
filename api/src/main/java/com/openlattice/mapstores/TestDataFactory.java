@@ -64,6 +64,7 @@ import com.openlattice.organizations.GrantType;
 import com.openlattice.organizations.Organization;
 import com.openlattice.organizations.OrganizationDatabase;
 import com.openlattice.organizations.JdbcConnectionParameters;
+import com.openlattice.organizations.OrganizationWarehouse;
 import com.openlattice.postgres.IndexType;
 import com.openlattice.postgres.PostgresAuthenticationRecord;
 import com.openlattice.postgres.PostgresConnectionType;
@@ -883,6 +884,15 @@ public final class TestDataFactory {
                 randomAlphanumeric( 10 ),
                 new Properties(),
                 Optional.empty()
+        );
+    }
+
+    public static OrganizationWarehouse organizationWarehouse() {
+        return new OrganizationWarehouse(
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                randomAlphanumeric(10)
         );
     }
 

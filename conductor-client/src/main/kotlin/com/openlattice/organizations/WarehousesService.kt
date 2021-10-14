@@ -8,6 +8,7 @@ import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.authorization.HazelcastAclKeyReservationService
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organizations.JdbcConnectionParameters
+import com.openlattice.postgres.external.WarehouseQueryService
 import org.springframework.stereotype.Service
 import java.util.UUID
 
@@ -19,10 +20,12 @@ import java.util.UUID
 class WarehousesService(
     hazelcastInstance: HazelcastInstance,
     private val authorizationManager: AuthorizationManager,
-    private val aclKeyReservationService: HazelcastAclKeyReservationService
+    private val aclKeyReservationService: HazelcastAclKeyReservationService,
+    private val warehouseQueryService: WarehouseQueryService
 ) {
 
     private val warehouses = HazelcastMap.WAREHOUSES.getMap(hazelcastInstance)
+    private val organizationWarehouses = HazelcastMap.ORGANIZATION_WAREHOUSES.getMap(hazelcastInstance)
 
     fun getWarehouses(): Iterable<JdbcConnectionParameters> {
         return warehouses.values
@@ -55,9 +58,22 @@ class WarehousesService(
         return AclKey(jdbc.id)
     }
 
-    fun createOrganizationWarehouse(newOrganizationWarehouseName: String): JdbcConnectionParameters {
+    fun createOrganizationWarehouse(organizationId: UUID, warehouseId: UUID): String {
+        val whName = generateName(organizationId, warehouseId)
+        val organizationWarehouse = OrganizationWarehouse(
+            organizationId = organizationId,
+            warehouseKey = warehouseId,
+            name = whName
+        )
+        organizationWarehouses.put(organizationWarehouse.organizationId, organizationWarehouse)
+        warehouseQueryService.createAndInitializeOrganizationWarehouse(organizationWarehouse)
+        return organizationWarehouse.organizationWarehouseId.toString()
+    }
 
-        return JdbcConnectionParameters(_title = "test", url = "test", driver = "test")
+    fun generateName(organizationId: UUID, warehouseId: UUID): String {
+        val warehouseName = warehouses.getValue(warehouseId)._title
+        val prefix = warehouseName.substring(0,3)
+        return "${prefix}_${organizationId.toString().replace("-", "").toLowerCase()}"
     }
 
     private fun ensureValidWarehouseId(id: UUID) {
