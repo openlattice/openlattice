@@ -21,6 +21,7 @@
 package com.openlattice.postgres;
 
 import com.openlattice.IdConstants;
+import com.openlattice.analysis.requests.StringValueFilter;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.Analyzer;
 
@@ -594,10 +595,14 @@ public final class PostgresColumn {
     public static final String                   VERTEX_ID_FIELD                   = "vertex_id";
     public static final PostgresColumnDefinition VERTEX_ID                         =
             new PostgresColumnDefinition( VERTEX_ID_FIELD, UUID );
-    public static final String                  WAREHOUSE_FIELD                    = "warehouse";
-    public static final PostgresColumnDefinition WAREHOUSE                      = new PostgresColumnDefinition(
+    public static final String                   WAREHOUSE_FIELD                   = "warehouse";
+    public static final PostgresColumnDefinition WAREHOUSE                         = new PostgresColumnDefinition(
             WAREHOUSE_FIELD,
             JSONB ).notNull();
+    public static final String                 WAREHOUSE_ID_FIELD                  = "warehouse_id";
+    public static final PostgresColumnDefinition WAREHOUSE_ID                      =
+            new PostgresColumnDefinition(WAREHOUSE_ID_FIELD, UUID);
+
 
     private PostgresColumn() {
     }

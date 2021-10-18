@@ -162,6 +162,7 @@ import static com.openlattice.postgres.PostgresColumn.USER_ID;
 import static com.openlattice.postgres.PostgresColumn.VERSION;
 import static com.openlattice.postgres.PostgresColumn.VERSIONS;
 import static com.openlattice.postgres.PostgresColumn.WAREHOUSE;
+import static com.openlattice.postgres.PostgresColumn.WAREHOUSE_ID;
 
 /**
  * Tables definitions for all tables used in the OpenLattice platform.
@@ -459,6 +460,14 @@ public final class PostgresTable {
                             DATATYPE,
                             IS_PRIMARY_KEY,
                             ORDINAL_POSITION );
+    public static final PostgresTableDefinition ORGANIZATION_WAREHOUSES              =
+            new PostgresTableDefinition( "organization_warehouses" )
+                    .addColumns(
+                            ID,
+                            ORGANIZATION_ID,
+                            WAREHOUSE_ID,
+                            NAME
+                    ).primaryKey(ID);
 
     public static final PostgresTableDefinition ORGANIZATION_EXTERNAL_DATABASE_TABLE =
             new PostgresTableDefinition( "organization_external_database_tables" )

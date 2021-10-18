@@ -7,7 +7,7 @@ import java.util.UUID
  */
 
 data class OrganizationWarehouse(
-    val organizationWarehouseId: UUID = UUID.randomUUID() ,
+    val organizationWarehouseId: UUID = UUID.randomUUID(),
     val organizationId: UUID,
     val warehouseKey: UUID,
     val name: String

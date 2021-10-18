@@ -56,7 +56,6 @@ class WarehouseQueryService(
 
     private fun createOrganizationDatabase(organizationWarehouse: OrganizationWarehouse) {
         // Warehouse credentials should be the same as organization creds
-        // While further investigation is needed to confirm, I believe getOrCreateOrganizationAccount should return Org creds
         logger.info("Creating Organization Warehouse id ${organizationWarehouse.organizationWarehouseId}")
         val (dbOrgRole, dbAdminUserPassword) = dbCredentialService.getOrCreateOrganizationAccount(AclKey(organizationWarehouse.organizationId))
         val createOrgWhUser = createUserInWarehouseSql(dbOrgRole, dbAdminUserPassword)
