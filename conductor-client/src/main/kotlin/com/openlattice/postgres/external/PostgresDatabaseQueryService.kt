@@ -35,6 +35,7 @@ import com.openlattice.postgres.PostgresProjectionService.Companion.RENAME_SERVE
 import com.openlattice.postgres.PostgresTable.E
 import com.openlattice.postgres.ResultSetAdapters.oid
 import com.openlattice.postgres.external.Schemas.*
+import com.openlattice.postgres.external.Extensions.PGAUDIT_EXTENSION
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -107,6 +108,7 @@ class PostgresDatabaseQueryService(
             createSchema(dataSource, STAGING_SCHEMA)
             createSchema(dataSource, TRANSPORTER_SCHEMA)
             createSchema(dataSource, ASSEMBLED_ENTITY_SETS)
+            createExtension(dataSource, PGAUDIT_EXTENSION, OPENLATTICE_SCHEMA)
             configureOrganizationUser(organizationId, dataSource)
             addMembersToOrganization(organizationId, dataSource, securePrincipalsManager.getOrganizationMemberPrincipals(organizationId))
             configureServerUser(dataSource)
@@ -643,6 +645,15 @@ class PostgresDatabaseQueryService(
             }
         }
     }
+
+    private fun createExtension(dataSource: HikariDataSource, extension: Extensions, schema: Schemas) {
+        logger.info("Creating ${extension.label} extension in ${schema.label}")
+        dataSource.connection.use { connection ->
+            connection.createStatement().use { statement ->
+                statement.execute(createExtensionSql(extension.label, schema.label))
+            }
+        }
+    }
 }
 
 val MEMBER_DATABASE_PERMISSIONS = setOf("CREATE", "CONNECT", "TEMPORARY", "TEMP")
@@ -739,6 +750,10 @@ internal fun dropAllConnectionsToDatabaseSql(dbName: String): String {
           pg_stat_activity.datname = '$dbName'
           AND pid <> pg_backend_pid();
     """.trimIndent()
+}
+
+internal fun createExtensionSql(extension: String, schema: String): String {
+    return "CREATE EXTENSION IF NOT EXISTS $extension SCHEMA $schema"
 }
 
 internal const val checkIfDatabaseNameIsInUseSql = "SELECT 1 FROM pg_database WHERE datname = ?"
