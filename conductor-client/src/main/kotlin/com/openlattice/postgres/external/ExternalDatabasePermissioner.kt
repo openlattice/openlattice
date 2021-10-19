@@ -211,7 +211,7 @@ class ExternalDatabasePermissioner(
         if (principalsToRemove.isEmpty() || fromPrincipals.isEmpty()) {
             return
         }
-        
+
         val removeFrom = dbCredentialService.getDbUsernames(fromPrincipals)
         val removeSqls = dbCredentialService.getDbUsernames(principalsToRemove).map { roleName ->
             revokeRoleSql(roleName, removeFrom)
@@ -262,19 +262,19 @@ class ExternalDatabasePermissioner(
         // add acl/TableColumn associated to EdmConstants.ID_FQN (with uuid IdConstants.ID_ID.id)
         val completedColumnAcls = columnAcls.toMutableList()
         val completedColumnsById = columnsById.toMutableMap()
-        columnAcls.forEach { 
+        columnAcls.forEach {
             val internalIdAclKey = AclKey(it.aclKey[0], IdConstants.ID_ID.id)
             val orgId = columnsById.getValue(it.aclKey).organizationId
             val readAces = it.aces.map { ace ->
                 Ace(ace.principal, EnumSet.of(Permission.READ))
             }
-            
+
             completedColumnsById.put(
-                internalIdAclKey, 
+                internalIdAclKey,
                 TableColumn(
-                    orgId, 
-                    it.aclKey[0], 
-                    IdConstants.ID_ID.id, 
+                    orgId,
+                    it.aclKey[0],
+                    IdConstants.ID_ID.id,
                     Schemas.ASSEMBLED_ENTITY_SETS
                 )
             )
@@ -291,7 +291,7 @@ class ExternalDatabasePermissioner(
             table: ExternalTable,
             columns: Set<ExternalColumn>
     ) {
-        val columnAclKeyToName = columns.associate { 
+        val columnAclKeyToName = columns.associate {
             AclKey(it.tableId, it.id) to it.name
         }
 
@@ -309,7 +309,7 @@ class ExternalDatabasePermissioner(
             table: ExternalTable,
             columns: Set<ExternalColumn>
     ) {
-        val columnAclKeyToName = columns.associate { 
+        val columnAclKeyToName = columns.associate {
             AclKey(it.tableId, it.id) to it.name
         }
 
@@ -324,7 +324,7 @@ class ExternalDatabasePermissioner(
             permissions: Set<Permission>
     ) {
         permissions.forEach { permission ->
-            columnAclKeyToName.forEach { 
+            columnAclKeyToName.forEach {
                 val at = AccessTarget(it.key, permission)
                 if (!externalRoleNames.containsKey(at)) {
                     val newRoleId = UUID.randomUUID()
@@ -352,7 +352,7 @@ class ExternalDatabasePermissioner(
         tablesToColumnIds.forEach { (tableId, columnIds) ->
             columnIds.forEach { columnId ->
                 val aclKey = AclKey(tableId, columnId)
-                allTablePermissions.map { permission -> 
+                allTablePermissions.map { permission ->
                     externalRoleNames.delete(AccessTarget(aclKey, permission))
                 }
             }
@@ -390,7 +390,9 @@ class ExternalDatabasePermissioner(
                 columnAcls.flatMap { it.aces.map { a -> a.principal } }.toSet()
         )
         val usernamesByAclKey = dbCredentialService.getDbUsernamesAsMap(principalAclKeys.values.toSet())
-        val principalToUsername = principalAclKeys.mapValues { usernamesByAclKey.getValue(it.value) }
+        val principalToUsername = principalAclKeys
+            .filter { usernamesByAclKey.containsKey(it.value) }
+            .mapValues { usernamesByAclKey.getValue(it.value) }
 
         val removes = mutableMapOf<UUID, MutableList<String>>()
         val adds = mutableMapOf<UUID, MutableList<String>>()
@@ -413,68 +415,70 @@ class ExternalDatabasePermissioner(
                 }
                 val tableSchema = column.schema
 
-                columnAcl.aces.forEach { ace ->
-                    val userRole = principalToUsername.getValue(ace.principal)
+                columnAcl.aces
+                    .filter { principalToUsername.containsKey(it.principal) }
+                    .forEach { ace ->
+                        val userRole = principalToUsername.getValue(ace.principal)
 
-                    // filter out permission which doesn't have a key in olToPostgres and not in allPermissions
-                    val acePermissions = ace.permissions.filter {
-                        olToPostgres.containsKey(it) && allPermissions.contains(it)
-                    }
-                    val requestedPermissions = acePermissions.flatMap { permission ->
-                        olToPostgres.getValue(permission)
-                    }
+                        // filter out permission which doesn't have a key in olToPostgres and not in allPermissions
+                        val acePermissions = ace.permissions.filter {
+                            olToPostgres.containsKey(it) && allPermissions.contains(it)
+                        }
+                        val requestedPermissions = acePermissions.flatMap { permission ->
+                            olToPostgres.getValue(permission)
+                        }
 
-                    when (action) {
-                        Action.ADD -> {
-                            orgAdds.addAll(grantPermissionsOnColumnsOfTableSql(
-                                    userRole, 
-                                    tableSchema, 
-                                    tableName, 
-                                    columnName, 
-                                    requestedPermissions
-                                ))
-                        }
-                        Action.REMOVE -> {
-                            orgRemoves.addAll(removePermissionsOnColumnsOfTableSql(
-                                    userRole, 
-                                    tableSchema, 
-                                    tableName, 
-                                    columnName, 
-                                    requestedPermissions
-                                ))
-                        }
-                        Action.DROP -> {
-                            // temp migration action
-                            orgRemoves.addAll(acePermissions.mapNotNull { 
-                                externalRoleNames[AccessTarget(columnAcl.aclKey, it)] 
-                            }.map {
-                                revokeRoleSql(it.second.toString(), setOf(userRole))
-                            })
-                        }
-                        Action.SET -> {
-                            val allColPermissions = allPermissions.flatMap { permission ->
-                                olToPostgres.getValue(permission)
+                        when (action) {
+                            Action.ADD -> {
+                                orgAdds.addAll(grantPermissionsOnColumnsOfTableSql(
+                                        userRole,
+                                        tableSchema,
+                                        tableName,
+                                        columnName,
+                                        requestedPermissions
+                                    ))
                             }
-                            orgRemoves.addAll(removePermissionsOnColumnsOfTableSql(
-                                    userRole, 
-                                    tableSchema, 
-                                    tableName, 
-                                    columnName, 
-                                    allColPermissions
-                                ))
+                            Action.REMOVE -> {
+                                orgRemoves.addAll(removePermissionsOnColumnsOfTableSql(
+                                        userRole,
+                                        tableSchema,
+                                        tableName,
+                                        columnName,
+                                        requestedPermissions
+                                    ))
+                            }
+                            Action.DROP -> {
+                                // temp migration action
+                                orgRemoves.addAll(acePermissions.mapNotNull {
+                                    externalRoleNames[AccessTarget(columnAcl.aclKey, it)]
+                                }.map {
+                                    revokeRoleSql(it.second.toString(), setOf(userRole))
+                                })
+                            }
+                            Action.SET -> {
+                                val allColPermissions = allPermissions.flatMap { permission ->
+                                    olToPostgres.getValue(permission)
+                                }
+                                orgRemoves.addAll(removePermissionsOnColumnsOfTableSql(
+                                        userRole,
+                                        tableSchema,
+                                        tableName,
+                                        columnName,
+                                        allColPermissions
+                                    ))
 
-                            orgAdds.addAll(grantPermissionsOnColumnsOfTableSql(
-                                    userRole, 
-                                    tableSchema, 
-                                    tableName, 
-                                    columnName, 
-                                    requestedPermissions
-                                ))
-                        }
-                        else -> {
+                                orgAdds.addAll(grantPermissionsOnColumnsOfTableSql(
+                                        userRole,
+                                        tableSchema,
+                                        tableName,
+                                        columnName,
+                                        requestedPermissions
+                                    ))
+                            }
+                            else -> {
+                            }
                         }
                     }
-                }
             }
 
             adds[orgId] = orgAdds
@@ -518,11 +522,11 @@ class ExternalDatabasePermissioner(
     ): List<String> {
         return privileges.map {
             applyPermissionOnColumnOfTableToRoleSql(
-                    userRole, 
+                    userRole,
                     schema,
                     tableName,
-                    columnName, 
-                    it, 
+                    columnName,
+                    it,
                     PgPermAction.REVOKE
             )
         }
@@ -540,11 +544,11 @@ class ExternalDatabasePermissioner(
         privileges.forEach {
             sqls.add(
                 applyPermissionOnColumnOfTableToRoleSql(
-                    userRole, 
+                    userRole,
                     schema,
                     tableName,
-                    columnName, 
-                    it, 
+                    columnName,
+                    it,
                     PgPermAction.GRANT
                 )
             )
@@ -558,40 +562,24 @@ class ExternalDatabasePermissioner(
     }
 
     private fun applyPermissionOnColumnOfTableToRoleSql(
-            roleName: String, 
+            roleName: String,
             schema: Schemas?,
             tableName: String,
             columnName: String,
             privilege: PostgresPrivileges,
             action: PgPermAction
     ): String {
+
         val schemaName = if (schema != null) {
             schema.toString() + "."
         } else {
             ""
         }
 
-        val privilegeCheckString = if (privilege == PostgresPrivileges.ALL) {
-            "has_column_privilege('$roleName', '$schemaName${quote(tableName)}', '$columnName', 'SELECT') AND " +
-            "has_column_privilege('$roleName', '$schemaName${quote(tableName)}', '$columnName', 'INSERT') AND " +
-            "has_column_privilege('$roleName', '$schemaName${quote(tableName)}', '$columnName', 'UPDATE') AND " +
-            "has_column_privilege('$roleName', '$schemaName${quote(tableName)}', '$columnName', 'REFERENCES')"
-        } else {
-            "has_column_privilege('$roleName', '$schemaName${quote(tableName)}', '$columnName', '$privilege')"
-        }
-
-        return """
-            DO 
-            ${'$'}do${'$'}
-            BEGIN
-                IF ${action.quantifier} ($privilegeCheckString) THEN
-                    ${action.name} $privilege ( ${quote(columnName)} )
-                    ON $schemaName${quote(tableName)}
-                    ${action.verb} ${quote(roleName)};
-                END IF;
-            END
-            ${'$'}do${'$'};
-        """.trimIndent()
+        // there are column names with escaped characters, so not using string literals here
+        return "${action.name} $privilege ( ${quote(columnName)} )\n" +
+               "ON $schemaName${quote(tableName)}\n" +
+               "${action.verb} ${quote(roleName)};"
     }
 
     private fun revokeRoleSql(roleName: String, targetRoles: Set<String>): String {
