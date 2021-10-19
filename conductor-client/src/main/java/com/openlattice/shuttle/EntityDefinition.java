@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.openlattice.client.serialization.SerializableFunction;
 import com.openlattice.client.serialization.SerializationConstants;
+import com.openlattice.data.PropertyUpdateType;
 import com.openlattice.data.UpdateType;
 import com.openlattice.shuttle.conditions.Condition;
 import com.openlattice.shuttle.conditions.ConditionValueMapper;
@@ -50,7 +51,7 @@ public class EntityDefinition implements Serializable {
 
     private static final long serialVersionUID = -3565689091187367622L;
 
-    protected final Optional<List<Condition>>                                        condition;
+    protected final Optional<List<Condition>>                                   condition;
     protected final SerializableFunction<Map<String, Object>, ?>                valueMapper;
     protected final Optional<UUID>                                              id;
     protected final FullQualifiedName                                           entityTypeFqn;
@@ -61,6 +62,7 @@ public class EntityDefinition implements Serializable {
     protected final Optional<SerializableFunction<Map<String, Object>, String>> generator;
     protected final UpdateType                                                  updateType;
     protected final boolean                                                     associateOnly;
+    protected final PropertyUpdateType                                          propertyUpdateType;
 
     @JsonCreator
     public EntityDefinition(
@@ -72,9 +74,11 @@ public class EntityDefinition implements Serializable {
                     Map<FullQualifiedName, PropertyDefinition> propertyDefinitions,
             @JsonProperty( SerializationConstants.NAME ) String alias,
             @JsonProperty( SerializationConstants.CONDITIONS ) Optional<List<Condition>> condition,
-            @JsonProperty( SerializationConstants.GENERATOR ) Optional<SerializableFunction<Map<String, Object>, String>> generator,
+            @JsonProperty( SerializationConstants.GENERATOR )
+                    Optional<SerializableFunction<Map<String, Object>, String>> generator,
             @JsonProperty( SerializationConstants.UPDATE_TYPE ) Optional<UpdateType> updateType,
-            @JsonProperty( SerializationConstants.ASSOCIATE_ONLY ) Optional<Boolean> associateOnly
+            @JsonProperty( SerializationConstants.ASSOCIATE_ONLY ) Optional<Boolean> associateOnly,
+            @JsonProperty( SerializationConstants.PROPERTY_UPDATE_TYPE ) Optional<PropertyUpdateType> propertyUpdateType
     ) {
 
         this.id = id;
@@ -87,6 +91,7 @@ public class EntityDefinition implements Serializable {
         this.updateType = updateType.orElse( UpdateType.Merge );
         this.generator = generator;
         this.associateOnly = associateOnly.orElse( false );
+        this.propertyUpdateType = propertyUpdateType.orElse( PropertyUpdateType.Unversioned );
 
         if ( condition.isPresent() ) {
             final List<Condition> internalConditions;
@@ -105,7 +110,8 @@ public class EntityDefinition implements Serializable {
             Map<FullQualifiedName, PropertyDefinition> propertyDefinitions,
             Optional<SerializableFunction<Map<String, Object>, String>> generator,
             String alias,
-            UpdateType updateType
+            UpdateType updateType,
+            PropertyUpdateType propertyUpdateType
     ) {
         this.id = Optional.empty();
         this.entityTypeFqn = entityTypeFqn == null ? null : new FullQualifiedName( entityTypeFqn );
@@ -118,6 +124,7 @@ public class EntityDefinition implements Serializable {
         this.valueMapper = null;
         this.updateType = updateType;
         this.associateOnly = false;
+        this.propertyUpdateType = propertyUpdateType;
     }
 
     private EntityDefinition( EntityDefinition.Builder builder ) {
@@ -132,6 +139,7 @@ public class EntityDefinition implements Serializable {
         this.generator = Optional.ofNullable( builder.entityIdGenerator );
         this.updateType = builder.updateType;
         this.associateOnly = builder.associateOnly;
+        this.propertyUpdateType = builder.propertyUpdateType;
     }
 
     @JsonProperty( SerializationConstants.ID_FIELD )
@@ -184,6 +192,11 @@ public class EntityDefinition implements Serializable {
         return condition;
     }
 
+    @JsonProperty( SerializationConstants.PROPERTY_UPDATE_TYPE )
+    public PropertyUpdateType getPropertyUpdateType() {
+        return propertyUpdateType;
+    }
+
     @JsonIgnore
     public Collection<PropertyDefinition> getProperties() {
         return this.propertyDefinitions.values();
@@ -213,28 +226,28 @@ public class EntityDefinition implements Serializable {
     @Override
     public boolean equals( Object obj ) {
 
-        if ( this == obj ) { return true; }
-        if ( obj == null ) { return false; }
-        if ( getClass() != obj.getClass() ) { return false; }
+        if ( this == obj ) {return true;}
+        if ( obj == null ) {return false;}
+        if ( getClass() != obj.getClass() ) {return false;}
         EntityDefinition other = (EntityDefinition) obj;
         if ( alias == null ) {
-            if ( other.alias != null ) { return false; }
-        } else if ( !alias.equals( other.alias ) ) { return false; }
+            if ( other.alias != null ) {return false;}
+        } else if ( !alias.equals( other.alias ) ) {return false;}
         if ( entitySetName == null ) {
-            if ( other.entitySetName != null ) { return false; }
-        } else if ( !entitySetName.equals( other.entitySetName ) ) { return false; }
+            if ( other.entitySetName != null ) {return false;}
+        } else if ( !entitySetName.equals( other.entitySetName ) ) {return false;}
         if ( entityTypeFqn == null ) {
-            if ( other.entityTypeFqn != null ) { return false; }
-        } else if ( !entityTypeFqn.equals( other.entityTypeFqn ) ) { return false; }
+            if ( other.entityTypeFqn != null ) {return false;}
+        } else if ( !entityTypeFqn.equals( other.entityTypeFqn ) ) {return false;}
         if ( generator == null ) {
-            if ( other.generator != null ) { return false; }
-        } else if ( !generator.equals( other.generator ) ) { return false; }
+            if ( other.generator != null ) {return false;}
+        } else if ( !generator.equals( other.generator ) ) {return false;}
         if ( key == null ) {
-            if ( other.key != null ) { return false; }
-        } else if ( !key.equals( other.key ) ) { return false; }
+            if ( other.key != null ) {return false;}
+        } else if ( !key.equals( other.key ) ) {return false;}
         if ( propertyDefinitions == null ) {
-            if ( other.propertyDefinitions != null ) { return false; }
-        } else if ( !propertyDefinitions.equals( other.propertyDefinitions ) ) { return false; }
+            if ( other.propertyDefinitions != null ) {return false;}
+        } else if ( !propertyDefinitions.equals( other.propertyDefinitions ) ) {return false;}
         return true;
     }
 
@@ -248,6 +261,7 @@ public class EntityDefinition implements Serializable {
         private SerializableFunction<Map<String, Object>, String> entityIdGenerator;
         private UpdateType                                        updateType;
         private boolean                                           associateOnly;
+        private PropertyUpdateType                                propertyUpdateType;
 
         public Builder(
                 String alias,
@@ -305,6 +319,11 @@ public class EntityDefinition implements Serializable {
 
         public Builder updateType( UpdateType updateType ) {
             this.updateType = updateType;
+            return this;
+        }
+
+        public Builder propertyUpdateType( PropertyUpdateType propertyUpdateType ) {
+            this.propertyUpdateType = propertyUpdateType;
             return this;
         }
 

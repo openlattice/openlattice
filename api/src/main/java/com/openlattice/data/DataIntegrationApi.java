@@ -18,7 +18,9 @@
 
 package com.openlattice.data;
 
+import com.openlattice.EntityKeyGenerationBundle;
 import com.openlattice.data.integration.S3EntityData;
+import java.util.Map;
 import retrofit2.http.Body;
 import retrofit2.http.POST;
 
@@ -26,6 +28,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import retrofit2.http.Query;
 
 public interface DataIntegrationApi {
 
@@ -40,6 +43,8 @@ public interface DataIntegrationApi {
     // @formatter:on
 
     String ENTITY_KEY_IDS = "entityKeyIds";
+    String ENTITY_KEYS = "entityKeys";
+    String PROPERTY_UPDATE_TYPE = "propertyUpdateType";
     /**
      * To discuss paths later; perhaps batch this with EdmApi paths
      */
@@ -47,9 +52,13 @@ public interface DataIntegrationApi {
     String S3 = "s3";
 
     @POST( BASE + "/" + S3 )
-    List<String> generatePresignedUrls( @Body Collection<S3EntityData> data );
+    List<String> generatePresignedUrls(
+            @Body Collection<S3EntityData> data,
+            @Query( PROPERTY_UPDATE_TYPE ) PropertyUpdateType propertyUpdateType );
 
     @POST( BASE + "/" + ENTITY_KEY_IDS )
     List<UUID> getEntityKeyIds( @Body Set<EntityKey> entityKeys );
 
+    @POST( BASE + "/" + ENTITY_KEYS )
+    Map<UUID,EntityKey> generateEntityKeys( @Body EntityKeyGenerationBundle bundle );
 }

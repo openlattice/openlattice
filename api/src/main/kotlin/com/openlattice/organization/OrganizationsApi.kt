@@ -4,7 +4,6 @@ import com.auth0.json.mgmt.users.User
 import com.openlattice.organization.roles.Role
 import com.openlattice.organizations.Grant
 import com.openlattice.organizations.Organization
-import com.openlattice.organizations.OrganizationMetadataEntitySetIds
 import retrofit2.http.*
 import java.util.*
 import javax.annotation.Nonnull
@@ -38,10 +37,7 @@ interface OrganizationsApi {
         const val INTEGRATION = "/integration"
         const val MEMBERS = "/members"
         const val METADATA = "/metadata"
-        const val METADATA_ENTITY_SET_IDS = "/metadata-entity-set-ids"
         const val PRINCIPALS = "/principals"
-        const val PRINCIPAL_ID = "pid"
-        const val PRINCIPAL_ID_PATH = "/{$PRINCIPAL_ID}"
         const val PROMOTE = "/promote"
         const val REFRESH = "/refresh"
         const val REFRESH_RATE = "/refresh-rate"
@@ -79,6 +75,11 @@ interface OrganizationsApi {
 
     @GET(BASE + ID_PATH + INTEGRATION)
     fun getOrganizationIntegrationAccount(
+            @Path(ID) organizationId: UUID
+    ): OrganizationIntegrationAccount
+
+    @GET(BASE + ID_PATH + INTEGRATION + ROLES)
+    fun getOrganizationAdminRoleDatabaseAccount(
             @Path(ID) organizationId: UUID
     ): OrganizationIntegrationAccount
 
@@ -273,30 +274,22 @@ interface OrganizationsApi {
     @GET(BASE + ID_PATH + PRINCIPALS + MEMBERS)
     fun getMembers(@Path(ID) organizationId: UUID): Iterable<OrganizationMember>
 
-    @GET(
-            BASE + PRINCIPALS + MEMBERS + COUNT
-    )
+    @GET(BASE + PRINCIPALS + MEMBERS + COUNT)
     fun getMemberCountForOrganizations(@Body organizationIds: Set<UUID>): Map<UUID, Int>
 
     @GET(BASE + PRINCIPALS + ROLES + COUNT)
     fun getRoleCountForOrganizations(@Body organizationIds: Set<UUID>): Map<UUID, Int>
 
-    @PUT(
-            BASE + ID_PATH + PRINCIPALS + MEMBERS + USER_ID_PATH
-    )
+    @PUT(BASE + ID_PATH + PRINCIPALS + MEMBERS + USER_ID_PATH)
     fun addMember(
-            @Path(ID) organizationId: UUID, @Path(
-                    USER_ID
-            ) userId: String
+            @Path(ID) organizationId: UUID,
+            @Path(USER_ID) userId: String
     ): Void?
 
-    @DELETE(
-            BASE + ID_PATH + PRINCIPALS + MEMBERS + USER_ID_PATH
-    )
+    @DELETE(BASE + ID_PATH + PRINCIPALS + MEMBERS + USER_ID_PATH)
     fun removeMember(
-            @Path(ID) organizationId: UUID, @Path(
-                    USER_ID
-            ) userId: String
+            @Path(ID) organizationId: UUID,
+            @Path(USER_ID) userId: String
     ): Void?
 
     // Endpoints about roles
@@ -391,12 +384,6 @@ interface OrganizationsApi {
 
     @PUT(BASE + ID_PATH + CONNECTIONS)
     fun setConnections(@Path(ID) organizationId: UUID, @Body connections: Set<String>): Void?
-
-    @PUT(BASE + ID_PATH + METADATA_ENTITY_SET_IDS)
-    fun setMetadataEntitySetIds(
-            @Path(ID) organizationId: UUID,
-            @Body entitySetIds: OrganizationMetadataEntitySetIds
-    ): Void?
 
     @POST(BASE + ID_PATH + METADATA)
     fun importMetadata(@Path(ID) organizationId: UUID): Void?

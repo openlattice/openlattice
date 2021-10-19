@@ -7,10 +7,7 @@ import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
 import com.google.common.eventbus.EventBus
 import com.openlattice.assembler.events.MaterializedEntitySetDataChangeEvent
-import com.openlattice.data.DeleteType
-import com.openlattice.data.EntitySetData
-import com.openlattice.data.FilteredDataPageDefinition
-import com.openlattice.data.WriteEvent
+import com.openlattice.data.*
 import com.openlattice.data.events.EntitiesDeletedEvent
 import com.openlattice.data.events.EntitiesUpsertedEvent
 import com.openlattice.datastore.services.EdmManager
@@ -21,12 +18,12 @@ import com.openlattice.edm.type.PropertyType
 import com.openlattice.linking.LinkingQueryService
 import com.openlattice.linking.PostgresLinkingFeedbackService
 import com.openlattice.postgres.streams.BasePostgresIterable
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.nio.ByteBuffer
+import java.time.OffsetDateTime
 import java.util.*
 import java.util.stream.Stream
 import kotlin.streams.asSequence
@@ -40,7 +37,7 @@ class PostgresEntityDatastore(
         private val dataQueryService: PostgresEntityDataQueryService,
         private val edmManager: EdmManager,
         private val entitySetManager: EntitySetManager,
-        private val metricRegistry: MetricRegistry,
+        metricRegistry: MetricRegistry,
         private val eventBus: EventBus,
         private val feedbackQueryService: PostgresLinkingFeedbackService,
         private val linkingQueryService: LinkingQueryService
@@ -66,11 +63,17 @@ class PostgresEntityDatastore(
     override fun createOrUpdateEntities(
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
+            authorizedPropertyTypes: Map<UUID, PropertyType>,
+            propertyUpdateType: PropertyUpdateType
     ): WriteEvent {
         // need to collect linking ids before writes to the entities
 
-        val writeEvent = dataQueryService.upsertEntities(entitySetId, entities, authorizedPropertyTypes)
+        val writeEvent = dataQueryService.upsertEntities(
+                entitySetId,
+                entities,
+                authorizedPropertyTypes,
+                propertyUpdateType = propertyUpdateType
+        )
         signalCreatedEntities(entitySetId, entities.keys)
 
         return writeEvent
@@ -80,11 +83,17 @@ class PostgresEntityDatastore(
     override fun replaceEntities(
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
+            authorizedPropertyTypes: Map<UUID, PropertyType>,
+            propertyUpdateType: PropertyUpdateType
     ): WriteEvent {
         // need to collect linking ids before writes to the entities
 
-        val writeEvent = dataQueryService.replaceEntities(entitySetId, entities, authorizedPropertyTypes)
+        val writeEvent = dataQueryService.replaceEntities(
+                entitySetId,
+                entities,
+                authorizedPropertyTypes,
+                propertyUpdateType
+        )
         signalCreatedEntities(entitySetId, entities.keys)
 
         return writeEvent
@@ -94,11 +103,12 @@ class PostgresEntityDatastore(
     override fun partialReplaceEntities(
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
+            authorizedPropertyTypes: Map<UUID, PropertyType>,
+            propertyUpdateType: PropertyUpdateType
     ): WriteEvent {
         // need to collect linking ids before writes to the entities
         val writeEvent = dataQueryService
-                .partialReplaceEntities(entitySetId, entities, authorizedPropertyTypes)
+                .partialReplaceEntities(entitySetId, entities, authorizedPropertyTypes, propertyUpdateType)
 
         signalCreatedEntities(entitySetId, entities.keys)
 
@@ -159,31 +169,19 @@ class PostgresEntityDatastore(
     override fun replacePropertiesInEntities(
             entitySetId: UUID,
             replacementProperties: Map<UUID, Map<UUID, Set<Map<ByteBuffer, Any>>>>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
+            authorizedPropertyTypes: Map<UUID, PropertyType>,
+            propertyUpdateType: PropertyUpdateType
     ): WriteEvent {
 
         val writeEvent = dataQueryService
-                .replacePropertiesInEntities(entitySetId, replacementProperties, authorizedPropertyTypes)
+                .replacePropertiesInEntities(
+                        entitySetId,
+                        replacementProperties,
+                        authorizedPropertyTypes,
+                        propertyUpdateType
+                )
         signalCreatedEntities(entitySetId, replacementProperties.keys)
 
-        return writeEvent
-    }
-
-    @Timed
-    override fun clearEntitySet(
-            entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): WriteEvent {
-        val writeEvent = dataQueryService.clearEntitySet(entitySetId, authorizedPropertyTypes)
-        signalEntitySetDataDeleted(entitySetId, DeleteType.Soft)
-        return writeEvent
-    }
-
-    @Timed
-    override fun clearEntities(
-            entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): WriteEvent {
-        val writeEvent = dataQueryService.clearEntities(entitySetId, entityKeyIds, authorizedPropertyTypes)
-        signalDeletedEntities(entitySetId, entityKeyIds, DeleteType.Soft)
         return writeEvent
     }
 
@@ -283,7 +281,7 @@ class PostgresEntityDatastore(
     override fun getLinkingEntities(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
-    ): Stream<MutableMap<FullQualifiedName, MutableSet<Any>>> {
+    ): Collection<MutableMap<FullQualifiedName, MutableSet<Any>>> {
         //If the query generated exceed 33.5M UUIDs good chance that it exceed Postgres's 1 GB max query buffer size
         return getLinkingEntitiesWithMetadata(
                 entityKeyIds,
@@ -297,7 +295,7 @@ class PostgresEntityDatastore(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             metadataOptions: EnumSet<MetadataOption>
-    ): Stream<MutableMap<FullQualifiedName, MutableSet<Any>>> {
+    ): Collection<MutableMap<FullQualifiedName, MutableSet<Any>>> {
         //If the query generated exceed 33.5M UUIDs good chance that it exceed Postgres's 1 GB max query buffer size
         return dataQueryService.getEntitiesWithPropertyTypeFqns(
                 entityKeyIds,
@@ -306,7 +304,7 @@ class PostgresEntityDatastore(
                 metadataOptions,
                 Optional.empty(),
                 true
-        ).values.stream()
+        ).values
     }
 
     /**
@@ -350,7 +348,8 @@ class PostgresEntityDatastore(
     @Timed
     override fun getLinkedEntitySetBreakDown(
             linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>>>,
-            authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>)
+            authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>
+    )
             : Map<UUID, Map<UUID, Map<UUID, Map<FullQualifiedName, Set<Any>>>>> {
         // pair<linking_id to pair<entity_set_id to pair<origin_id to property_data>>>
         val linkedEntityDataStream = dataQueryService.getLinkedEntitySetBreakDown(
@@ -412,70 +411,6 @@ class PostgresEntityDatastore(
         return linkingQueryService.getEntityKeyIdsOfLinkingIds(linkingIds, normalEntitySetIds)
     }
 
-    /**
-     * Delete data of an entity set across ALL sync Ids.
-     */
-    @SuppressFBWarnings(
-            value = ["UC_USELESS_OBJECT"],
-            justification = "results Object is used to execute deletes in batches"
-    )
-    override fun deleteEntitySetData(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent {
-        logger.info("Deleting data of entity set: {}", entitySetId)
-
-        val (_, numUpdates) = dataQueryService.deleteEntitySetData(entitySetId, authorizedPropertyTypes)
-        val writeEvent = dataQueryService.tombstoneDeletedEntitySet(entitySetId)
-
-        signalEntitySetDataDeleted(entitySetId, DeleteType.Hard)
-
-        // delete entities from linking feedbacks
-        val deleteFeedbackCount = feedbackQueryService.deleteLinkingFeedback(entitySetId, Optional.empty())
-
-        // Delete all neighboring entries from matched entities
-        val deleteMatchCount = linkingQueryService.deleteEntitySetNeighborhood(entitySetId)
-
-        logger.info(
-                "Finished deleting data from entity set {}. " + "Deleted {} rows and {} property data, {} linking feedback and {} matched entries.",
-                entitySetId,
-                writeEvent.numUpdates,
-                numUpdates,
-                deleteFeedbackCount,
-                deleteMatchCount
-        )
-
-        return writeEvent
-    }
-
-    override fun deleteEntities(
-            entitySetId: UUID,
-            entityKeyIds: Set<UUID>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): WriteEvent {
-
-        val (_, numUpdates) = dataQueryService
-                .deleteEntityDataAndEntities(entitySetId, entityKeyIds, authorizedPropertyTypes)
-        val writeEvent = dataQueryService.tombstoneDeletedEntities(entitySetId, entityKeyIds)
-        signalDeletedEntities(entitySetId, entityKeyIds, DeleteType.Hard)
-
-        // delete entities from linking feedbacks too
-        val deleteFeedbackCount = feedbackQueryService.deleteLinkingFeedback(entitySetId, Optional.of(entityKeyIds))
-
-        // Delete all neighboring entries from matched entities
-        val deleteMatchCount = linkingQueryService.deleteNeighborhoods(entitySetId, entityKeyIds)
-
-        logger.info(
-                "Finished deletion of entities ( {} ) from entity set {}. Deleted {} rows, {} property data, " + "{} linking feedback and {} matched entries.",
-                entityKeyIds,
-                entitySetId,
-                writeEvent.numUpdates,
-                numUpdates,
-                deleteFeedbackCount,
-                deleteMatchCount
-        )
-
-        return writeEvent
-        TODO("DREW add linking logs")
-    }
-
     override fun deleteEntityProperties(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
@@ -498,14 +433,19 @@ class PostgresEntityDatastore(
 
     override fun getExpiringEntitiesFromEntitySet(
             entitySetId: UUID,
-            expirationBaseColumn: String,
-            formattedDateMinusTTE: Any,
-            sqlFormat: Int,
-            deleteType: DeleteType
+            expirationPolicy: DataExpiration,
+            currentDateTime: OffsetDateTime
     ): BasePostgresIterable<UUID> {
-        return dataQueryService.getExpiringEntitiesFromEntitySet(
-                entitySetId, expirationBaseColumn, formattedDateMinusTTE, sqlFormat, deleteType
-        )
+        if (expirationPolicy.startDateProperty.isPresent) {
+            return dataQueryService.getExpiringEntitiesFromEntitySetUsingData(
+                    entitySetId,
+                    expirationPolicy,
+                    edmManager.getPropertyType(expirationPolicy.startDateProperty.get()),
+                    currentDateTime
+            )
+        }
+
+        return dataQueryService.getExpiringEntitiesFromEntitySetUsingIds(entitySetId, expirationPolicy, currentDateTime)
     }
 
 }

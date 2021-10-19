@@ -8,7 +8,7 @@ import com.openlattice.hazelcast.StreamSerializerTypeIds
  * @author Drew Bailey &lt;drew@openlattice.com&gt;
  */
 class GetFqnFromPropertyTypeEntryProcessorStreamSerializer: NoOpSelfRegisteringStreamSerializer<GetFqnFromPropertyTypeEntryProcessor>() {
-    override fun read(`in`: ObjectDataInput?): GetFqnFromPropertyTypeEntryProcessor {
+    override fun read(`in`: ObjectDataInput): GetFqnFromPropertyTypeEntryProcessor {
         return GetFqnFromPropertyTypeEntryProcessor()
     }
 

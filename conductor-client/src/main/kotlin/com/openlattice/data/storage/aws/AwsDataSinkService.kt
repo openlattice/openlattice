@@ -1,8 +1,10 @@
 package com.openlattice.data.storage.aws
 
 import com.amazonaws.HttpMethod
+import com.openlattice.data.PropertyUpdateType
 import com.openlattice.data.integration.S3EntityData
 import com.openlattice.data.storage.ByteBlobDataManager
+import com.openlattice.data.storage.DataSourceResolver
 import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.edm.type.PropertyType
@@ -12,14 +14,14 @@ import java.util.*
 class AwsDataSinkService(
         partitionManager: PartitionManager,
         private val byteBlobDataManager: ByteBlobDataManager,
-        hds: HikariDataSource,
-        reader: HikariDataSource
+        resolver: DataSourceResolver
 ) {
-    private val dqs = PostgresEntityDataQueryService(hds, reader, byteBlobDataManager, partitionManager)
+    private val dqs = PostgresEntityDataQueryService(resolver, byteBlobDataManager, partitionManager)
 
     fun generatePresignedUrls(
             entities: List<S3EntityData>,
-            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
+            propertyUpdateType: PropertyUpdateType
     ): List<String> {
         val data = mutableMapOf<UUID, MutableMap<UUID, MutableMap<UUID, MutableSet<Any>>>>()
         val urls = ArrayList<String>(entities.size)
@@ -29,7 +31,7 @@ class AwsDataSinkService(
         entities.forEach {
             val key = "${it.entitySetId}/${it.entityKeyId}/${it.propertyTypeId}/${it.propertyHash}"
             val url = byteBlobDataManager
-                    .getPresignedUrl(key, expirationTime, HttpMethod.PUT, Optional.empty())
+                    .getPresignedUrl(key, expirationTime, HttpMethod.PUT)
                     .toString()
 
             data
@@ -43,7 +45,11 @@ class AwsDataSinkService(
         //write s3Keys to postgres
         data.forEach { (entitySetId, entityData) ->
             dqs.upsertEntities(
-                    entitySetId, entityData, authorizedPropertyTypes.getValue(entitySetId), true
+                    entitySetId,
+                    entityData,
+                    authorizedPropertyTypes.getValue(entitySetId),
+                    awsPassthrough = true,
+                    propertyUpdateType = propertyUpdateType
             )
         }
 

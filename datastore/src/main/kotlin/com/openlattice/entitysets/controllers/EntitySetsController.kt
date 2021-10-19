@@ -21,6 +21,7 @@ package com.openlattice.entitysets.controllers
 
 import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Preconditions
+import com.google.common.base.Stopwatch
 import com.google.common.collect.ImmutableMap
 import com.google.common.collect.Lists
 import com.google.common.collect.Maps
@@ -40,7 +41,6 @@ import com.openlattice.controllers.util.ApiExceptions
 import com.openlattice.data.DataDeletionManager
 import com.openlattice.data.DataGraphManager
 import com.openlattice.data.DeleteType
-import com.openlattice.data.WriteEvent
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
@@ -68,10 +68,12 @@ import com.openlattice.entitysets.EntitySetsApi.Companion.PROPERTY_TYPE_ID_PATH
 import com.openlattice.linking.util.PersonProperties
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
+import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
 import java.time.OffsetDateTime
 import java.util.*
+import java.util.concurrent.TimeUnit
 import java.util.stream.Collectors
 import javax.inject.Inject
 import kotlin.streams.asSequence
@@ -95,6 +97,10 @@ constructor(
         private val entitySetManager: EntitySetManager,
         private val partitionManager: PartitionManager
 ) : EntitySetsApi, AuthorizingComponent, AuditingComponent {
+
+    companion object {
+        private val logger = LoggerFactory.getLogger(EntitySetsController::class.java)
+    }
 
     override fun getAuditingManager(): AuditingManager {
         return auditingManager
@@ -287,38 +293,98 @@ constructor(
 
     @Timed
     @RequestMapping(path = [ALL + ID_PATH], method = [RequestMethod.DELETE])
-    override fun deleteEntitySet(@PathVariable(ID) entitySetId: UUID): Int {
+    override fun deleteEntitySet(@PathVariable(ID) entitySetId: UUID): UUID {
+
+        logger.info("deleteEntitySet - attempting to delete entity set {}", entitySetId)
+
+        val funTimer = Stopwatch.createStarted()
+        val timer = Stopwatch.createStarted()
+
         val entitySet = checkPermissionsForDelete(entitySetId)
+        logger.info(
+            "deleteEntitySet - checkPermissionsForDelete took {} ms - entity set {}",
+            timer.elapsed(TimeUnit.MILLISECONDS),
+            entitySetId
+        )
+        timer.reset().start()
+
         ensureEntitySetCanBeDeleted(entitySet)
+        logger.info(
+            "deleteEntitySet - ensureEntitySetCanBeDeleted took {} ms - entity set {}",
+            timer.elapsed(TimeUnit.MILLISECONDS),
+            entitySetId
+        )
+        timer.reset().start()
+
+        deletionManager.authCheckForEntitySetAndItsNeighbors(entitySetId, DeleteType.Hard, Principals.getCurrentPrincipals())
+        logger.info(
+            "deleteEntitySet - deletionManager.authCheckForEntitySetAndItsNeighbors took {} ms - entity set {}",
+            timer.elapsed(TimeUnit.MILLISECONDS),
+            entitySetId
+        )
+        timer.reset().start()
 
         /* Delete first entity set data */
-        val deleted = if (!entitySet.isLinking) {
-            // associations need to be deleted first, because edges are deleted in DataGraphManager.deleteEntitySet call
-            deletionManager.clearOrDeleteEntitySetIfAuthorized(
-                    entitySet.id, DeleteType.Hard, Principals.getCurrentPrincipals()
-            )
-        } else {
-            // linking entitysets have no entities or associations
-            WriteEvent(System.currentTimeMillis(), 1)
-        }
+        val deletionJobId = deletionManager.clearOrDeleteEntitySet(entitySet.id, DeleteType.Hard)
+        logger.info(
+            "deleteEntitySet - deletionManager.clearOrDeleteEntitySet took {} ms - entity set {}",
+            timer.elapsed(TimeUnit.MILLISECONDS),
+            entitySetId
+        )
+        timer.reset().start()
 
         deleteAuditEntitySetsForId(entitySetId)
+        logger.info(
+            "deleteEntitySet - deleteAuditEntitySetsForId took {} ms - entity set {}",
+            timer.elapsed(TimeUnit.MILLISECONDS),
+            entitySetId
+        )
+        timer.reset().start()
+
         entitySetManager.deleteEntitySet(entitySet)
+        logger.info(
+            "deleteEntitySet - entitySetManager.deleteEntitySet took {} ms - entity set {}",
+            timer.elapsed(TimeUnit.MILLISECONDS),
+            entitySetId
+        )
+        timer.reset().start()
 
         recordEvent(
-                AuditableEvent(
-                        spm.currentUserId,
-                        AclKey(entitySetId),
-                        AuditEventType.DELETE_ENTITY_SET,
-                        "Entity set deleted through EntitySetsApi.deleteEntitySet",
-                        Optional.empty(),
-                        ImmutableMap.of(),
-                        OffsetDateTime.now(),
-                        Optional.empty()
-                )
+            AuditableEvent(
+                spm.currentUserId,
+                AclKey(entitySetId),
+                AuditEventType.DELETE_ENTITY_SET,
+                "Entity set deleted through EntitySetsApi.deleteEntitySet",
+                Optional.empty(),
+                ImmutableMap.of(),
+                OffsetDateTime.now(),
+                Optional.empty()
+            )
+        )
+        logger.info(
+            "deleteEntitySet - recording audit event DELETE_ENTITY_SET took {} ms - entity set {}",
+            timer.elapsed(TimeUnit.MILLISECONDS),
+            entitySetId
         )
 
-        return deleted.numUpdates
+        logger.info(
+            "deleteEntitySet - deleting entity set took {} ms - entity set {}",
+            funTimer.elapsed(TimeUnit.MILLISECONDS),
+            entitySetId
+        )
+        logger.info(
+            "recording audit event DELETE_ENTITY_SET took {} ms - entity set {}",
+            timer.elapsed(TimeUnit.MILLISECONDS),
+            entitySetId
+        )
+
+        logger.info(
+            "deleting entity set took {} ms - entity set {}",
+            funTimer.elapsed(TimeUnit.MILLISECONDS),
+            entitySetId
+        )
+
+        return deletionJobId
     }
 
     private fun deleteAuditEntitySetsForId(entitySetId: UUID) {
@@ -375,7 +441,7 @@ constructor(
             @RequestBody update: MetadataUpdate
     ): Int {
         ensureOwnerAccess(AclKey(entitySetId))
-        entitySetManager.updateEntitySetMetadata(entitySetId, update)
+        entitySetManager.updateEntitySet(entitySetId, update)
 
         recordEvent(
                 AuditableEvent(
@@ -528,9 +594,6 @@ constructor(
         val es = entitySetManager.getEntitySet(entitySetId)!!
         check(es.hasExpirationPolicy()) { "Entity set ${es.name} does not have an expiration policy" }
 
-        val expirationPolicy = es.expiration!!
-        val expirationPT = expirationPolicy.startDateProperty.map { edmManager.getPropertyType(it) }
-
         recordEvent(
                 AuditableEvent(
                         spm.currentUserId,
@@ -544,13 +607,7 @@ constructor(
                 )
         )
 
-        return dgm.getExpiringEntitiesFromEntitySet(
-                entitySetId,
-                expirationPolicy,
-                OffsetDateTime.parse(dateTime),
-                expirationPolicy.deleteType,
-                expirationPT
-        ).toSet()
+        return dgm.getExpiringEntitiesFromEntitySet(entitySetId, es.expiration!!, OffsetDateTime.parse(dateTime)).toSet()
     }
 
 

@@ -25,9 +25,14 @@ import com.google.common.cache.CacheBuilder
 import com.google.common.cache.CacheLoader
 import com.google.common.cache.LoadingCache
 import com.google.common.collect.*
-import com.openlattice.authorization.*
+import com.openlattice.authorization.Ace
+import com.openlattice.authorization.Acl
+import com.openlattice.authorization.AclData
+import com.openlattice.authorization.AclKey
+import com.openlattice.authorization.Action
 import com.openlattice.authorization.EdmAuthorizationHelper.OWNER_PERMISSION
 import com.openlattice.authorization.EdmAuthorizationHelper.WRITE_PERMISSION
+import com.openlattice.authorization.Permission
 import com.openlattice.data.*
 import com.openlattice.data.requests.EntitySetSelection
 import com.openlattice.data.requests.FileType
@@ -40,12 +45,16 @@ import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
 import com.openlattice.rehearsal.edm.EdmTestConstants
 import com.openlattice.search.requests.EntityNeighborsFilter
 import com.openlattice.search.requests.SearchTerm
-import org.apache.commons.lang.RandomStringUtils
+import org.apache.commons.lang3.RandomStringUtils
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
-import java.time.*
+import java.time.Instant
+import java.time.LocalDate
+import java.time.OffsetDateTime
+import java.time.ZoneId
+import java.time.ZoneOffset
 import java.util.*
 import kotlin.math.abs
 
@@ -62,7 +71,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val fqnCache: LoadingCache<UUID, FullQualifiedName> = CacheBuilder.newBuilder()
                 .build(
                         object : CacheLoader<UUID, FullQualifiedName>() {
-                            override fun load(key: UUID?): FullQualifiedName {
+                            override fun load(key: UUID): FullQualifiedName {
                                 return edmApi.getPropertyType(key!!).type
                             }
 
@@ -175,7 +184,15 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         val replacementMap = mapOf(ids[0]!! to replacement)
 
-        Assert.assertEquals(1, dataApi.updateEntitiesInEntitySet(es.id, replacementMap, UpdateType.PartialReplace))
+        Assert.assertEquals(
+                1,
+                dataApi.updateEntitiesInEntitySet(
+                        es.id,
+                        replacementMap,
+                        UpdateType.PartialReplace,
+                        PropertyUpdateType.Versioned
+                )
+        )
 
         val ess2 = EntitySetSelection(
                 Optional.of(et.properties),
@@ -750,9 +767,12 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         // add permission on all properties
         et2.properties.forEach {
-            permissionsApi.updateAcl(AclData(
-                    Acl(AclKey(es2.id, it), setOf(Ace(user1, readPermission, OffsetDateTime.MAX))),
-                    Action.ADD))
+            permissionsApi.updateAcl(
+                    AclData(
+                            Acl(AclKey(es2.id, it), setOf(Ace(user1, readPermission, OffsetDateTime.MAX))),
+                            Action.ADD
+                    )
+            )
         }
 
         loginAs("user1")
@@ -811,7 +831,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         /*   HARD DELETE   */
         loginAs("user1")
         assertException(
-                { dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Hard) },
+                { dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Hard, true) },
                 "Object [${es.id}] is not accessible."
         )
         loginAs("admin")
@@ -823,7 +843,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         loginAs("user1")
         assertException(
-                { dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Hard) },
+                { dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Hard, true) },
                 "You must have OWNER permission of all required entity set ${es.id} properties to delete entities from it."
         )
         loginAs("admin")
@@ -836,7 +856,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         loginAs("user1")
         assertException(
-                { dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Hard) },
+                { dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Hard, true) },
                 "Object [${esEdge.id}] is not accessible."
         )
         loginAs("admin")
@@ -883,7 +903,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         loginAs("user1")
         assertException(
-                { dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Soft) },
+                { dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Soft, true) },
                 "Object [${es.id}] is not accessible."
         )
         loginAs("admin")
@@ -895,7 +915,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         loginAs("user1")
         assertException(
-                { dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Soft) },
+                { dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Soft, true) },
                 "You must have WRITE permission of all required entity set ${es.id} properties to delete entities from it."
         )
         loginAs("admin")
@@ -910,7 +930,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         loginAs("user1")
         assertException(
-                { dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Soft) },
+                { dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Soft, true) },
                 "Object [${esEdge.id}] is not accessible."
         )
         loginAs("admin")
@@ -994,7 +1014,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val ess = EntitySetSelection(Optional.of(personEt.properties))
         Assert.assertEquals(numberOfEntries, dataApi.loadSelectedEntitySetData(es.id, ess, FileType.json).toList().size)
 
-        dataApi.deleteEntities(es.id, setOf(newEntityIds[0]), DeleteType.Hard)
+        dataApi.deleteEntities(es.id, setOf(newEntityIds[0]), DeleteType.Hard, true)
 
         val loadedEntries = dataApi.loadSelectedEntitySetData(es.id, ess, FileType.json).toList()
 
@@ -1003,7 +1023,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
             it[EdmTestConstants.personGivenNameFqn] == entries.first().values
         })
 
-        dataApi.deleteEntities(es.id, newEntityIds.drop(1).toSet(), DeleteType.Hard)
+        dataApi.deleteEntities(es.id, newEntityIds.drop(1).toSet(), DeleteType.Hard, true)
         Assert.assertEquals(0, dataApi.loadSelectedEntitySetData(es.id, ess, FileType.json).toList().size)
 
         /* Association entity set */
@@ -1031,13 +1051,15 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val createdEdges = dataApi.createAssociations(edgesToBeCreated)[aes.id]
 
         val aess = EntitySetSelection(Optional.of(et.properties))
-        Assert.assertEquals(numberOfEntries, dataApi.loadSelectedEntitySetData(aes.id, aess, FileType.json).toList().size)
+        Assert.assertEquals(
+                numberOfEntries, dataApi.loadSelectedEntitySetData(aes.id, aess, FileType.json).toList().size
+        )
 
-        dataApi.deleteEntities(aes.id, setOf(createdEdges[0]), DeleteType.Soft)
+        dataApi.deleteEntities(aes.id, setOf(createdEdges[0]), DeleteType.Soft, true)
         val loadedAssociations = dataApi.loadSelectedEntitySetData(aes.id, aess, FileType.json).toList()
         Assert.assertEquals(numberOfEntries - 1, loadedAssociations.size)
 
-        dataApi.deleteEntities(aes.id, createdEdges.drop(1).toSet(), DeleteType.Soft)
+        dataApi.deleteEntities(aes.id, createdEdges.drop(1).toSet(), DeleteType.Soft, true)
         Assert.assertEquals(0, dataApi.loadSelectedEntitySetData(aes.id, aess, FileType.json).toList().size)
     }
 
@@ -1079,7 +1101,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
 
         // hard delete 1st entity
-        dataApi.deleteEntities(es.id, setOf(newEntityIds[0]), DeleteType.Hard)
+        dataApi.deleteEntities(es.id, setOf(newEntityIds[0]), DeleteType.Hard, true)
 
         val ess1 = EntitySetSelection(Optional.of(personEt.properties))
         val loadedEntries1 = dataApi.loadSelectedEntitySetData(es.id, ess1, FileType.json).toList()
@@ -1104,7 +1126,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         })
 
         // soft delete last entity
-        dataApi.deleteEntities(es.id, setOf(newEntityIds[numberOfEntries - 1]), DeleteType.Soft)
+        dataApi.deleteEntities(es.id, setOf(newEntityIds[numberOfEntries - 1]), DeleteType.Soft, true)
 
         val ess2 = EntitySetSelection(Optional.of(personEt.properties))
         val loadedEntries2 = dataApi.loadSelectedEntitySetData(es.id, ess2, FileType.json).toList()
@@ -1182,10 +1204,14 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         Assert.assertEquals(numberOfEntries, loadedEntriesDst1.size)
 
         Thread.sleep(10000L) // it takes some time to delete documents from elasticsearch
-        Assert.assertEquals(0L, searchApi
-                .executeEntitySetDataQuery(es.id, SearchTerm("*", 0, 10)).numHits)
-        Assert.assertEquals(0L, searchApi
-                .executeEntitySetDataQuery(esEdge.id, SearchTerm("*", 0, 10)).numHits)
+        Assert.assertEquals(
+                0L, searchApi
+                .executeEntitySetDataQuery(es.id, SearchTerm("*", 0, 10)).numHits
+        )
+        Assert.assertEquals(
+                0L, searchApi
+                .executeEntitySetDataQuery(esEdge.id, SearchTerm("*", 0, 10)).numHits
+        )
 
 
         // soft delete entityset data
@@ -1217,10 +1243,14 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         Assert.assertEquals(numberOfEntries, loadedEntriesDst.size)
 
         Thread.sleep(5000L) // it takes some time to delete documents from elasticsearch
-        Assert.assertEquals(0L, searchApi
-                .executeEntitySetDataQuery(es.id, SearchTerm("*", 0, 10)).numHits)
-        Assert.assertEquals(0L, searchApi
-                .executeEntitySetDataQuery(esEdge.id, SearchTerm("*", 0, 10)).numHits)
+        Assert.assertEquals(
+                0L, searchApi
+                .executeEntitySetDataQuery(es.id, SearchTerm("*", 0, 10)).numHits
+        )
+        Assert.assertEquals(
+                0L, searchApi
+                .executeEntitySetDataQuery(esEdge.id, SearchTerm("*", 0, 10)).numHits
+        )
     }
 
     @Test
@@ -1272,9 +1302,13 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         val testData1 = TestDataFactory.randomStringEntityData(numberOfEntries, et1.properties).values.toList()
         val testDataDst1 = TestDataFactory.randomStringEntityData(numberOfEntries, dst1.properties).values.toList()
-        val testDataEdgeDst1 = TestDataFactory.randomStringEntityData(numberOfEntries, edgeDst1.properties).values.toList()
+        val testDataEdgeDst1 = TestDataFactory.randomStringEntityData(
+                numberOfEntries, edgeDst1.properties
+        ).values.toList()
         val testDataSrc1 = TestDataFactory.randomStringEntityData(numberOfEntries, src1.properties).values.toList()
-        val testDataEdgeSrc1 = TestDataFactory.randomStringEntityData(numberOfEntries, edgeSrc1.properties).values.toList()
+        val testDataEdgeSrc1 = TestDataFactory.randomStringEntityData(
+                numberOfEntries, edgeSrc1.properties
+        ).values.toList()
 
         val ids1 = dataApi.createEntities(es1.id, testData1)
         val idsDst1 = dataApi.createEntities(esDst1.id, testDataDst1)
@@ -1304,8 +1338,10 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                 es1.id,
                 EntityNeighborsFilter(
                         ids1.toSet(),
-                        Optional.of(setOf(esSrc1.id)), Optional.of(setOf(esDst1.id)), Optional.empty()),
-                DeleteType.Hard)
+                        Optional.of(setOf(esSrc1.id)), Optional.of(setOf(esDst1.id)), Optional.empty()
+                ),
+                DeleteType.Hard
+        )
         Assert.assertEquals(30L, deleteCount1)
 
         // test if there is really no data
@@ -1318,7 +1354,9 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         Assert.assertEquals(0, loadedSrcEntities1.size)
 
         val essEdgeSrc1 = EntitySetSelection(Optional.of(edgeSrc1.properties))
-        val loadedEdgeSrcEntities1 = dataApi.loadSelectedEntitySetData(esEdgeSrc1.id, essEdgeSrc1, FileType.json).toList()
+        val loadedEdgeSrcEntities1 = dataApi.loadSelectedEntitySetData(
+                esEdgeSrc1.id, essEdgeSrc1, FileType.json
+        ).toList()
         Assert.assertEquals(0, loadedEdgeSrcEntities1.size)
 
         val essDst1 = EntitySetSelection(Optional.of(dst1.properties))
@@ -1326,7 +1364,9 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         Assert.assertEquals(0, loadedDstEntities1.size)
 
         val essEdgeDst1 = EntitySetSelection(Optional.of(edgeDst1.properties))
-        val loadedEdgeDstEntities1 = dataApi.loadSelectedEntitySetData(esEdgeDst1.id, essEdgeDst1, FileType.json).toList()
+        val loadedEdgeDstEntities1 = dataApi.loadSelectedEntitySetData(
+                esEdgeDst1.id, essEdgeDst1, FileType.json
+        ).toList()
         Assert.assertEquals(0, loadedEdgeDstEntities1.size)
 
 
@@ -1351,9 +1391,13 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         val testData2 = TestDataFactory.randomStringEntityData(numberOfEntries, et2.properties).values.toList()
         val testDataDst2 = TestDataFactory.randomStringEntityData(numberOfEntries, dst2.properties).values.toList()
-        val testDataEdgeDst2 = TestDataFactory.randomStringEntityData(numberOfEntries, edgeDst2.properties).values.toList()
+        val testDataEdgeDst2 = TestDataFactory.randomStringEntityData(
+                numberOfEntries, edgeDst2.properties
+        ).values.toList()
         val testDataSrc2 = TestDataFactory.randomStringEntityData(numberOfEntries, src2.properties).values.toList()
-        val testDataEdgeSrc2 = TestDataFactory.randomStringEntityData(numberOfEntries, edgeSrc2.properties).values.toList()
+        val testDataEdgeSrc2 = TestDataFactory.randomStringEntityData(
+                numberOfEntries, edgeSrc2.properties
+        ).values.toList()
 
         val ids2 = dataApi.createEntities(es2.id, testData2)
         val idsDst2 = dataApi.createEntities(esDst2.id, testDataDst2)
@@ -1383,8 +1427,10 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                 es2.id,
                 EntityNeighborsFilter(
                         ids2.toSet(),
-                        Optional.of(setOf(esSrc2.id)), Optional.empty(), Optional.empty()),
-                DeleteType.Hard)
+                        Optional.of(setOf(esSrc2.id)), Optional.empty(), Optional.empty()
+                ),
+                DeleteType.Hard
+        )
         Assert.assertEquals(20L, deleteCount2)
 
         // test if there is really no data, what is deleted and data which is not
@@ -1397,7 +1443,9 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         Assert.assertEquals(0, loadedSrcEntities2.size)
 
         val essEdgeSrc2 = EntitySetSelection(Optional.of(edgeSrc2.properties))
-        val loadedEdgeSrcEntities2 = dataApi.loadSelectedEntitySetData(esEdgeSrc2.id, essEdgeSrc2, FileType.json).toList()
+        val loadedEdgeSrcEntities2 = dataApi.loadSelectedEntitySetData(
+                esEdgeSrc2.id, essEdgeSrc2, FileType.json
+        ).toList()
         Assert.assertEquals(0, loadedEdgeSrcEntities2.size)
 
         val essDst2 = EntitySetSelection(Optional.of(dst2.properties))
@@ -1408,7 +1456,9 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         }
 
         val essEdgeDst2 = EntitySetSelection(Optional.of(edgeDst2.properties))
-        val loadedEdgeDstEntities2 = dataApi.loadSelectedEntitySetData(esEdgeDst2.id, essEdgeDst2, FileType.json).toList()
+        val loadedEdgeDstEntities2 = dataApi.loadSelectedEntitySetData(
+                esEdgeDst2.id, essEdgeDst2, FileType.json
+        ).toList()
         Assert.assertEquals(0, loadedEdgeDstEntities2.size)
     }
 
@@ -1438,9 +1488,13 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         val testData = TestDataFactory.randomStringEntityData(numberOfEntries, et.properties).values.toList()
         val testDataDst = TestDataFactory.randomStringEntityData(numberOfEntries, dst.properties).values.toList()
-        val testDataEdgeDst = TestDataFactory.randomStringEntityData(numberOfEntries, edgeDst.properties).values.toList()
+        val testDataEdgeDst = TestDataFactory.randomStringEntityData(
+                numberOfEntries, edgeDst.properties
+        ).values.toList()
         val testDataSrc = TestDataFactory.randomStringEntityData(numberOfEntries, src.properties).values.toList()
-        val testDataEdgeSrc = TestDataFactory.randomStringEntityData(numberOfEntries, edgeSrc.properties).values.toList()
+        val testDataEdgeSrc = TestDataFactory.randomStringEntityData(
+                numberOfEntries, edgeSrc.properties
+        ).values.toList()
 
         val ids = dataApi.createEntities(es.id, testData)
         val idsDst = dataApi.createEntities(esDst.id, testDataDst)
@@ -1483,15 +1537,18 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                             es.id,
                             EntityNeighborsFilter(
                                     ids.toSet(),
-                                    Optional.of(setOf(esSrc.id)), Optional.of(setOf(esDst.id)), Optional.empty()),
-                            deleteType)
+                                    Optional.of(setOf(esSrc.id)), Optional.of(setOf(esDst.id)), Optional.empty()
+                            ),
+                            deleteType
+                    )
                 },
                 listOf(
                         "Unable to delete from entity sets [${es.id}, ${esDst.id}, ${esSrc.id}]: missing required " +
                                 "permissions $requiredPermission for AclKeys",
                         "[${es.id}]",
                         "[${esDst.id}]",
-                        "[${esSrc.id}]")
+                        "[${esSrc.id}]"
+                )
         )
 
         // try to delete with write permissions on entity sets, but not properties
@@ -1510,15 +1567,18 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                             es.id,
                             EntityNeighborsFilter(
                                     ids.toSet(),
-                                    Optional.of(setOf(esSrc.id)), Optional.of(setOf(esDst.id)), Optional.empty()),
-                            deleteType)
+                                    Optional.of(setOf(esSrc.id)), Optional.of(setOf(esDst.id)), Optional.empty()
+                            ),
+                            deleteType
+                    )
                 },
                 listOf(
                         "Unable to delete from entity sets [${es.id}, ${esDst.id}, ${esSrc.id}]: missing required " +
                                 "permissions $requiredPermission for AclKeys",
                         "[${es.id}, ${et.properties.random()}]",
                         "[${esSrc.id}, ${src.properties.random()}]",
-                        "[${esDst.id}, ${dst.properties.random()}]")
+                        "[${esDst.id}, ${dst.properties.random()}]"
+                )
         )
 
 
@@ -1555,11 +1615,14 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                             es.id,
                             EntityNeighborsFilter(
                                     ids.toSet(),
-                                    Optional.of(setOf(esSrc.id)), Optional.of(setOf(esDst.id)), Optional.empty()),
-                            deleteType)
+                                    Optional.of(setOf(esSrc.id)), Optional.of(setOf(esDst.id)), Optional.empty()
+                            ),
+                            deleteType
+                    )
                 },
-                listOf("Unable to delete from entity sets [${es.id}, ${esDst.id}, ${esSrc.id}]: missing required " +
-                        "permissions $requiredPermission for AclKeys",
+                listOf(
+                        "Unable to delete from entity sets [${es.id}, ${esDst.id}, ${esSrc.id}]: missing required " +
+                                "permissions $requiredPermission for AclKeys",
                         "[${es.id}, $pt]",
                         "[${esDst.id}, $dstPt]",
                         "[${esSrc.id}, $srcPt]"
@@ -1585,8 +1648,10 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                             es.id,
                             EntityNeighborsFilter(
                                     ids.toSet(),
-                                    Optional.of(setOf(esSrc.id)), Optional.of(setOf(esDst.id)), Optional.empty()),
-                            deleteType)
+                                    Optional.of(setOf(esSrc.id)), Optional.of(setOf(esDst.id)), Optional.empty()
+                            ),
+                            deleteType
+                    )
                 },
                 listOf(
                         "Unable to delete from entity set ${es.id}: missing required permissions " +
@@ -1622,8 +1687,10 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                 es.id,
                 EntityNeighborsFilter(
                         ids.toSet(),
-                        Optional.of(setOf(esSrc.id)), Optional.of(setOf(esDst.id)), Optional.empty()),
-                deleteType)
+                        Optional.of(setOf(esSrc.id)), Optional.of(setOf(esDst.id)), Optional.empty()
+                ),
+                deleteType
+        )
 
         loginAs("admin")
         val esEmptyResult = dataApi.loadSelectedEntitySetData(

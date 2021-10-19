@@ -31,6 +31,7 @@ import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.EntityTypePropertyMetadata;
 import com.openlattice.edm.type.PropertyType;
+import kotlin.Triple;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 import javax.annotation.Nullable;
@@ -68,7 +69,7 @@ public interface EdmManager {
 
     Iterable<EntityType> getAssociationEntityTypes();
 
-    Iterable<AssociationType> getAssociationTypes();
+    Iterable<AssociationType> getAllAssociationTypes();
 
     void deleteEntityType( UUID entityTypeId );
 
@@ -103,19 +104,11 @@ public interface EdmManager {
     // Helper methods to check existence
     boolean checkPropertyTypesExist( Set<UUID> properties );
 
-    boolean checkPropertyTypeExists( FullQualifiedName fqn );
-
     boolean checkPropertyTypeExists( UUID propertyTypeId );
 
     boolean checkEntityTypesExist( Set<UUID> entityTypeIds );
 
-    boolean checkEntityTypeExists( FullQualifiedName fqn );
-
-    boolean checkEntityTypeExists( UUID entityTypeId );
-
     Collection<PropertyType> getPropertyTypes( Set<UUID> properties );
-
-    Set<UUID> getAclKeys( Set<?> fqnsOrNames );
 
     Map<String, UUID> getAclKeyIds( Set<String> aclNames );
 
@@ -124,8 +117,6 @@ public interface EdmManager {
     Set<UUID> getEntityTypeUuids( Set<FullQualifiedName> fqns );
 
     UUID getPropertyTypeId( FullQualifiedName fqn );
-
-    Set<UUID> getPropertyTypeUuids( Set<FullQualifiedName> fqns );
 
     AssociationType getAssociationType( FullQualifiedName typeFqn );
 
@@ -136,22 +127,15 @@ public interface EdmManager {
 
     FullQualifiedName getPropertyTypeFqn( UUID propertyTypeId );
 
-    FullQualifiedName getEntityTypeFqn( UUID entityTypeId );
-
     Map<FullQualifiedName, UUID> getFqnToIdMap( Set<FullQualifiedName> propertyTypeFqns );
 
     Map<UUID, PropertyType> getPropertyTypesAsMap( Set<UUID> propertyTypeIds );
 
     Map<UUID, EntityType> getEntityTypesAsMap( Set<UUID> entityTypeIds );
 
-    <V> Map<UUID, V> fromPropertyTypes( Set<UUID> propertyTypeIds, EntryProcessor<UUID, PropertyType, V> ep );
-
-    Set<UUID> getPropertyTypeIdsOfEntityType( UUID entityTypeId );
-
     Map<UUID, PropertyType> getPropertyTypesOfEntityType( UUID entityTypeId );
 
-    Set<UUID> getPropertyTypeIdsOfEntityTypeWithPIIField( UUID entityTypeId );
-
+    @Deprecated
     Set<EntityType> getEntityTypeHierarchy( UUID entityTypeId );
 
     UUID createAssociationType( AssociationType associationType, UUID entityTypeId );
@@ -183,4 +167,6 @@ public interface EdmManager {
     void ensureEntityTypeExists( UUID entityTypeId );
 
     void ensurePropertyTypeExists( UUID propertyTypeId );
+
+    Triple<Set<UUID>, Set<UUID>, Set<UUID>> getSrcAssocDstInvolvingEntityTypes( Set<UUID> entityTypeIds );
 }

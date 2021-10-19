@@ -20,58 +20,64 @@ package com.openlattice.data;
 
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.SetMultimap;
-import com.openlattice.analysis.requests.Filter;
 import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
 import com.openlattice.search.requests.EntityNeighborsFilter;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
-import retrofit2.http.*;
-
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import retrofit2.http.Body;
+import retrofit2.http.DELETE;
+import retrofit2.http.GET;
+import retrofit2.http.HTTP;
+import retrofit2.http.PATCH;
+import retrofit2.http.POST;
+import retrofit2.http.PUT;
+import retrofit2.http.Path;
+import retrofit2.http.Query;
 
 public interface DataApi {
     // @formatter:off
+    /*
+     * These determine the service routing for the LB
+     */
     String SERVICE               = "/datastore";
     String CONTROLLER            = "/data";
     String BASE                  = SERVICE + CONTROLLER;
     // @formatter:on
 
-    String ASSOCIATION           = "association";
+    String ALL                  = "all";
+    String ASSOCIATION          = "association";
+    String BINARY               = "binary";
+    String BLOCK                = "block";
+    String COUNT                = "count";
+    String DETAILED             = "detailed";
+    String ENTITY_KEY_ID        = "entityKeyId";
+    String ENTITY_SET           = "set";
+    String ENTITY_SET_ID        = "setId";
+    String FILE_TYPE            = "fileType";
+    String FILTERED             = "filtered";
+    String NEIGHBORS            = "neighbors";
+    String PARTIAL              = "partial";
+    String PROPERTIES           = "properties";
+    String PROPERTY_TYPE_ID     = "propertyTypeId";
+    String PROPERTY_UPDATE_TYPE = "propertyUpdateType";
+    String S3_URL               = "s3Url";
+    String S3_URLS              = "s3Urls";
+    String TOKEN                = "token";
+    String TYPE                 = "type";
+    String UPDATE               = "update";
 
-    int    MAX_BATCH_SIZE        = 10_000;
-    String COUNT                 = "count";
-    String ENTITY_KEY_ID         = "entityKeyId";
+    String SET_ID_PATH = "{" + ENTITY_SET_ID + "}";
     String ENTITY_KEY_ID_PATH    = "{" + ENTITY_KEY_ID + "}";
-    /**
-     * To discuss paths later; perhaps batch this with EdmApi paths
-     */
-
-    String ALL                   = "all";
-    String PROPERTIES            = "properties";
-    String ENTITY_SET            = "set";
-    String ENTITY_SET_ID         = "setId";
-    String S3_URL                = "s3Url";
-    String S3_URLS               = "s3Urls";
-    String FILE_TYPE             = "fileType";
-    String FILTERED              = "filtered";
-    String NEIGHBORS             = "neighbors";
-    String PARTIAL               = "partial";
-    String DETAILED              = "detailed";
-    String PROPERTY_TYPE_ID      = "propertyTypeId";
     String PROPERTY_TYPE_ID_PATH = "{" + PROPERTY_TYPE_ID + "}";
-    /*
-     * These determine the service routing for the LB
-     */
-    String SET_ID_PATH           = "{" + ENTITY_SET_ID + "}";
-    String S3_URL_PATH           = "{" + S3_URL + "}";
     String S3_URLS_PATH          = "{" + S3_URLS + "}";
-    String TOKEN                 = "token";
-    String TYPE                  = "type";
-    String UPDATE                = "update";
+    String S3_URL_PATH           = "{" + S3_URL + "}";
+
+    int    MAX_BATCH_SIZE       = 10_000;
 
     @GET( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
     Iterable<SetMultimap<FullQualifiedName, Object>> loadEntitySetData(
@@ -81,7 +87,7 @@ public interface DataApi {
 
     /**
      * @param req If syncId is not specified in the request, will retrieve the data from the current syncIds. If
-     *            selectedProperties are not specified, all readable properties will be fetched.
+     * selectedProperties are not specified, all readable properties will be fetched.
      * @return An iterable containing the entity data, using property type FQNs as keys
      */
     @POST( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
@@ -95,7 +101,7 @@ public interface DataApi {
             @Query( ENTITY_SET_ID ) UUID entitySetId,
             @Body List<Map<UUID, Set<Object>>> entities );
 
-    @POST( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + FILTERED)
+    @POST( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + FILTERED )
     Iterable<Map<FullQualifiedName, Set<Object>>> loadFilteredEntitySetData(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Body FilteredDataPageDefinition filteredDataPageDefinition
@@ -106,26 +112,29 @@ public interface DataApi {
      *
      * @param entitySetId The id of the entity set the entity belongs to.
      * @param entityKeyId The id of the entity to replace.
-     * @param entity      The new entity details object that will be merged into old values, with property type ids as keys.
+     * @param entity The new entity details object that will be merged into old values, with property type ids as keys.
      */
     @PUT( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH )
     Integer mergeIntoEntityInEntitySet(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Path( ENTITY_KEY_ID ) UUID entityKeyId,
-            @Body Map<UUID, Set<Object>> entity );
+            @Body Map<UUID, Set<Object>> entity,
+            @Query( PROPERTY_UPDATE_TYPE ) PropertyUpdateType propertyUpdateType );
 
     /**
      * Replaces a single entity from an entity set.
      *
      * @param entitySetId The id of the entity set the entity belongs to.
      * @param entityKeyId The id of the entity to replace.
-     * @param entity      The new entity details object that will replace the old value, with property type ids as keys.
+     * @param entity The new entity details object that will replace the old value, with property type ids as keys.
+     * @param propertyUpdateType The property update type to perform. Defaults to {@link PropertyUpdateType#Versioned}
      */
     @PUT( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH )
     Integer replaceEntityInEntitySet(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Path( ENTITY_KEY_ID ) UUID entityKeyId,
-            @Body Map<UUID, Set<Object>> entity );
+            @Body Map<UUID, Set<Object>> entity,
+            @Query( PROPERTY_UPDATE_TYPE ) PropertyUpdateType propertyUpdateType );
 
     /**
      * Perform one of the following bulk update operations on entities.
@@ -138,26 +147,28 @@ public interface DataApi {
      * </ul>
      *
      * @param entitySetId The id of the entity set to write to.
-     * @param entities    A map of entity key ids to entities to merge
-     * @param updateType  The update type to perform.
+     * @param entities A map of entity key ids to entities to merge
+     * @param updateType The update type to perform.
      * @return The total number of entities updated.
      */
     @PUT( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
     Integer updateEntitiesInEntitySet(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Body Map<UUID, Map<UUID, Set<Object>>> entities,
-            @Query( TYPE ) UpdateType updateType );
+            @Query( TYPE ) UpdateType updateType,
+            @Query( PROPERTY_UPDATE_TYPE ) PropertyUpdateType propertyUpdateType );
 
     @PATCH( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
     Integer replaceEntityProperties(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
-            @Body Map<UUID, Map<UUID, Set<Map<ByteBuffer, Object>>>> entities );
+            @Body Map<UUID, Map<UUID, Set<Map<ByteBuffer, Object>>>> entities,
+            @Query( PROPERTY_UPDATE_TYPE ) PropertyUpdateType propertyUpdateType );
 
     /**
      * Creates a new set of associations.
      *
      * @param associations Set of associations to create. An association is the triple of source, destination, and edge
-     *                     entitiy data keys.
+     * entitiy data keys.
      */
     @PUT( BASE + "/" + ASSOCIATION )
     Integer createEdges( @Body Set<DataEdgeKey> associations );
@@ -166,7 +177,7 @@ public interface DataApi {
      * Creates a new set of associations.
      *
      * @param associations Set of associations to create. Keys are association entity set ids and values for each keys
-     *                     are the data to be created.
+     * are the data to be created.
      */
     @POST( BASE + "/" + ASSOCIATION )
     ListMultimap<UUID, UUID> createAssociations( @Body ListMultimap<UUID, DataEdge> associations );
@@ -174,19 +185,19 @@ public interface DataApi {
     @PATCH( BASE + "/" + ASSOCIATION )
     Integer replaceAssociationData(
             @Body Map<UUID, Map<UUID, DataEdge>> associations,
-            @Query( PARTIAL ) boolean partial );
+            @Query( PARTIAL ) boolean partial,
+            @Query( PROPERTY_UPDATE_TYPE ) PropertyUpdateType propertyUpdateType );
 
     @POST( BASE )
     DataGraphIds createEntityAndAssociationData( @Body DataGraph data );
-
 
     /**
      * Deletes the entities matching the given entity ids and all of its neighbor entities provided in the filter.
      *
      * @param entitySetId The id of the EntitySet to delete from.
      * @param filter EntityNeighboursFilter containing which ids of entities to delete and entity set ids of neighbours
-     *               to delete from.
-     * @param deleteType  The delete type to perform (soft or hard delete).
+     * to delete from.
+     * @param deleteType The delete type to perform (soft or hard delete).
      */
     @POST( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + NEIGHBORS )
     Long deleteEntitiesAndNeighbors(
@@ -198,10 +209,10 @@ public interface DataApi {
      * Deletes all entities from an entity set.
      *
      * @param entitySetId The id of the entity set to delete from.
-     * @param deleteType  The delete type to perform (soft or hard delete).
+     * @param deleteType The delete type to perform (soft or hard delete).
      */
     @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ALL )
-    Integer deleteAllEntitiesFromEntitySet(
+    UUID deleteAllEntitiesFromEntitySet(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Query( TYPE ) DeleteType deleteType );
 
@@ -210,34 +221,36 @@ public interface DataApi {
      *
      * @param entitySetId The id of the entity set to delete from.
      * @param entityKeyId The id of the entity to delete.
-     * @param deleteType  The delete type to perform (soft or hard delete).
+     * @param deleteType The delete type to perform (soft or hard delete).
      */
     @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH )
     Integer deleteEntity(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Path( ENTITY_KEY_ID ) UUID entityKeyId,
-            @Query( TYPE ) DeleteType deleteType );
+            @Query( TYPE ) DeleteType deleteType,
+            @Query( BLOCK ) boolean blockUntilCompletion );
 
     /**
      * Deletes multiple entities from an entity set.
      *
-     * @param entitySetId  The id of the entity set to delete from.
+     * @param entitySetId The id of the entity set to delete from.
      * @param entityKeyIds The ids of the entities to delete.
-     * @param deleteType   The delete type to perform (soft or hard delete).
+     * @param deleteType The delete type to perform (soft or hard delete).
      */
     @HTTP( method = "DELETE", path = BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH, hasBody = true )
     Integer deleteEntities(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Body Set<UUID> entityKeyIds,
-            @Query( TYPE ) DeleteType deleteType );
+            @Query( TYPE ) DeleteType deleteType,
+            @Query( BLOCK ) boolean blockUntilCompletion );
 
     /**
      * Deletes properties from an entity.
      *
-     * @param entitySetId     The id of the entitySet to delete from.
-     * @param entityKeyId     The id of the entity to delete from.
+     * @param entitySetId The id of the entitySet to delete from.
+     * @param entityKeyId The id of the entity to delete from.
      * @param propertyTypeIds The property type ids to be deleted.
-     * @param deleteType      The delete type to perform (soft or hard delete).
+     * @param deleteType The delete type to perform (soft or hard delete).
      * @return the number of deleted property values
      */
     @HTTP(
@@ -254,15 +267,16 @@ public interface DataApi {
     /**
      * Replaces a single entity from an entity set.
      *
-     * @param entitySetId  The id of the entity set the entity belongs to.
-     * @param entityKeyId  The id of the entity to replace.
+     * @param entitySetId The id of the entity set the entity belongs to.
+     * @param entityKeyId The id of the entity to replace.
      * @param entityByFqns The new entity details object that will replace the old value, with property type FQNs as keys.
      */
     @POST( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH )
     Integer replaceEntityInEntitySetUsingFqns(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Path( ENTITY_KEY_ID ) UUID entityKeyId,
-            @Body Map<FullQualifiedName, Set<Object>> entityByFqns );
+            @Body Map<FullQualifiedName, Set<Object>> entityByFqns,
+            @Query( PROPERTY_UPDATE_TYPE ) PropertyUpdateType propertyUpdateType );
 
     /**
      * Gets the number of entities in an entity set.
@@ -299,10 +313,21 @@ public interface DataApi {
      * @return Returns linked entity set data detailed in a Map mapped by linking id, (normal) entity set id, origin id,
      * property type full qualified name and values respectively.
      */
-    @POST( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + DETAILED  )
+    @POST( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + DETAILED )
     Map<UUID, Map<UUID, Map<UUID, Map<FullQualifiedName, Set<Object>>>>> loadLinkedEntitySetBreakdown(
             @Path( ENTITY_SET_ID ) UUID linkedEntitySetId,
             @Body EntitySetSelection selection
     );
+
+    /**
+     * Loads a presigned URL for a particular binary object with the requested content disposition
+     *
+     * @param binaryObjectRequest An object containing information about which binary properties to load from which
+     * entity sets, optionally mapping each to a desired content disposition.
+     * @return The same request structure, with the content disposition field replaced by a presigned URL for the
+     * requested binary object, with the specified content disposition
+     */
+    @POST( BASE + "/" + BINARY )
+    BinaryObjectResponse loadBinaryProperties( @Body BinaryObjectRequest binaryObjectRequest );
 
 }

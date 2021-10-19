@@ -12,6 +12,7 @@ import com.openlattice.assembler.Assembler
 import com.openlattice.assembler.PostgresDatabases
 import com.openlattice.authorization.*
 import com.openlattice.authorization.mapstores.PrincipalMapstore
+import com.openlattice.collaborations.CollaborationService
 import com.openlattice.collections.mapstores.EntitySetCollectionMapstore
 import com.openlattice.controllers.exceptions.ResourceNotFoundException
 import com.openlattice.data.storage.partitions.PartitionManager
@@ -61,18 +62,15 @@ import javax.inject.Inject
  */
 @Service
 class HazelcastOrganizationService(
-        hazelcastInstance: HazelcastInstance,
-        private val reservations: HazelcastAclKeyReservationService,
-        private val authorizations: AuthorizationManager,
-        private val securePrincipalsManager: SecurePrincipalsManager,
-        private val phoneNumbers: PhoneNumberService,
-        private val partitionManager: PartitionManager,
-        private val assembler: Assembler,
-        private val organizationMetadataEntitySetsService: OrganizationMetadataEntitySetsService
+    hazelcastInstance: HazelcastInstance,
+    private val reservations: HazelcastAclKeyReservationService,
+    private val authorizations: AuthorizationManager,
+    private val securePrincipalsManager: SecurePrincipalsManager,
+    private val phoneNumbers: PhoneNumberService,
+    private val partitionManager: PartitionManager,
+    private val assembler: Assembler,
+    private val collaborationService: CollaborationService
 ) {
-    init {
-        organizationMetadataEntitySetsService.organizationService = this
-    }
 
     protected val organizations = HazelcastMap.ORGANIZATIONS.getMap(hazelcastInstance)
     protected val users = HazelcastMap.USERS.getMap(hazelcastInstance)
@@ -86,7 +84,7 @@ class HazelcastOrganizationService(
 
     @Timed
     fun getOrganization(p: Principal): OrganizationPrincipal {
-        return checkNotNull(securePrincipalsManager.getPrincipal(p.id) as OrganizationPrincipal)
+        return checkNotNull(securePrincipalsManager.getSecurablePrincipal(p.id) as OrganizationPrincipal)
     }
 
     @Timed
@@ -99,7 +97,7 @@ class HazelcastOrganizationService(
     @Timed
     fun maybeGetOrganization(p: Principal): Optional<SecurablePrincipal> {
         return try {
-            Optional.of(securePrincipalsManager.getPrincipal(p.id))
+            Optional.of(securePrincipalsManager.getSecurablePrincipal(p.id))
         } catch (e: NullPointerException) {
             Optional.empty()
         }
@@ -135,7 +133,7 @@ class HazelcastOrganizationService(
     }
 
     @Timed
-    fun createOrganization(principal: Principal, organization: Organization) {
+    fun createOrganization(creatorPrincipal: Principal, organization: Organization): UUID {
         /*
          * Roles shouldn't be members of an organizations.
          *
@@ -144,33 +142,30 @@ class HazelcastOrganizationService(
          *
          * In order to function roles must have READ access on the organization and
          */
-        val membersToAdd = when (principal.type) {
-            PrincipalType.USER ->
-                //Add the organization principal to the creator marking them as a member of the organization
-                setOf(principal)
-            PrincipalType.ROLE ->
-                //For a role we ensure that it has
-                setOf()
-            else -> throw IllegalStateException("Only users and roles can create organizations.")
-        }//Fall through by design
 
-        initializeOrganizationPrincipal(principal, organization)
+        check(ALLOWED_ORG_CREATOR_PRINCIPAL_TYPES.contains(creatorPrincipal.type)) {
+            "Error creating org ${organization.title} -- only $ALLOWED_ORG_CREATOR_PRINCIPAL_TYPES can create organizations."
+        }
+
+        initializeOrganizationPrincipal(creatorPrincipal, organization)
+        initializeOrganizationAdminRole(creatorPrincipal, organization.adminRoleAclKey, organization)
         initializeOrganization(organization)
 
         // set up organization database
-        val orgDatabase = assembler.createOrganizationAndReturnOid(organization.id)
-        organizationDatabases.set(organization.id, orgDatabase)
+        val orgDb = assembler.createOrganizationAndReturnOid(organization.id)
+        organizationDatabases[organization.id] = orgDb
 
-        val adminRole = initializeOrganizationAdminRole(principal, organization.adminRoleAclKey, organization)
+        if (creatorPrincipal.type == PrincipalType.USER) {
+            val userAclKey = securePrincipalsManager.lookup(creatorPrincipal)
 
-        organizationMetadataEntitySetsService.initializeOrganizationMetadataEntitySets(adminRole)
-
-        if (membersToAdd.isNotEmpty()) {
-            addMembers(organization.getAclKey().first(), membersToAdd, mapOf())
+            addMembers(organization.id, setOf(creatorPrincipal), mapOf())
+            securePrincipalsManager.addPrincipalToPrincipal(organization.adminRoleAclKey, userAclKey)
         }
 
         eventBus.post(OrganizationCreatedEvent(organization))
         setSmsEntitySetInformation(organization.smsEntitySetInfo)
+
+        return organization.id
     }
 
     private fun initializeOrganization(organization: Organization) {
@@ -241,8 +236,7 @@ class HazelcastOrganizationService(
                             it.partitions,
                             it.apps,
                             it.connections,
-                            it.grants,
-                            it.organizationMetadataEntitySetIds
+                            it.grants
                     )
                 }
     }
@@ -259,6 +253,7 @@ class HazelcastOrganizationService(
         eventBus.post(OrganizationDeletedEvent(organizationId))
 
         appConfigsMapstore.removeAll(Predicates.equal(AppConfigMapstore.ORGANIZATION_ID, organizationId))
+        collaborationService.handleOrganizationDeleted(organizationId)
         changeEntitySetsAndCollectionsOrganizationId(organizationId, IdConstants.GLOBAL_ORGANIZATION_ID.id)
     }
 
@@ -318,6 +313,10 @@ class HazelcastOrganizationService(
         return organizations[organizationId]?.emailDomains ?: setOf()
     }
 
+    fun organizationExists(id: UUID): Boolean {
+        return organizations.containsKey(id)
+    }
+
     fun ensureOrganizationExists(id: UUID) {
         Preconditions.checkState(
                 organizations.containsKey(id),
@@ -352,10 +351,7 @@ class HazelcastOrganizationService(
 
     @Timed
     fun getMembers(organizationId: UUID): Set<Principal> {
-        return securePrincipalsManager.getOrganizationMembers(setOf(organizationId))
-                .getValue(organizationId)
-                .map { it.principal }
-                .toSet()
+        return securePrincipalsManager.getOrganizationMemberPrincipals(organizationId)
     }
 
     @Timed
@@ -388,6 +384,7 @@ class HazelcastOrganizationService(
 
         if (newMembers.isNotEmpty()) {
             val newMemberSecurablePrincipals = securePrincipalsManager.getSecurablePrincipals(newMembers)
+            collaborationService.handleMembersAdddedToOrg(organizationId, newMemberSecurablePrincipals.map { it.aclKey }.toSet())
             eventBus.post(
                     MembersAddedToOrganizationEvent(
                             organizationId, SecurablePrincipalList(newMemberSecurablePrincipals.toMutableList())
@@ -406,7 +403,6 @@ class HazelcastOrganizationService(
             profiles: Map<Principal, Map<String, Set<String>>>
     ): Set<Principal> {
         require(orgAclKey.size == 1) { "Organization acl key should only be of length 1" }
-        val members = membersToAdd.keys.toSet()
         val organizationId = orgAclKey[0]
 
         //Always trigger as this won't cause a write to organizations table.
@@ -471,15 +467,13 @@ class HazelcastOrganizationService(
     fun removeMembers(organizationId: UUID, members: Set<Principal>) {
         val users = members.filter { it.type == PrincipalType.USER }
         val securablePrincipals = securePrincipalsManager.getSecurablePrincipals(users)
-        val userAclKeys = securePrincipalsManager
-                .getSecurablePrincipals(users)
-                .map { it.aclKey }
-                .toSet()
+        val userAclKeys = securablePrincipals.map { it.aclKey }.toSet()
 
         removeRolesFromMembers(getRoles(organizationId).map { it.aclKey }, userAclKeys)
 
         val orgAclKey = AclKey(organizationId)
         removeOrganizationFromMembers(orgAclKey, userAclKeys)
+        collaborationService.handleMembersRemovedFromOrg(organizationId, userAclKeys)
         eventBus.post(
                 MembersRemovedFromOrganizationEvent(
                         organizationId,
@@ -499,8 +493,7 @@ class HazelcastOrganizationService(
     @Timed
     fun createRoleIfNotExists(callingUser: Principal, role: Role) {
         val organizationId = role.organizationId
-        val orgPrincipal = securePrincipalsManager
-                .getSecurablePrincipal(AclKey(organizationId))
+        val orgPrincipal = securePrincipalsManager.getSecurablePrincipal(AclKey(organizationId))
 
         /*
          * We set the organization to be the owner of the principal and grant everyone in the organization read access
@@ -642,8 +635,9 @@ class HazelcastOrganizationService(
         val currentDatabaseName = getOrganizationDatabaseName(organizationId)
 
         try {
-            assembler.renameOrganizationDatabase(currentDatabaseName, newDatabaseName)
+            assembler.renameDatabase(currentDatabaseName, newDatabaseName)
             executeDatabaseNameUpdate(organizationId, newDatabaseName)
+            collaborationService.handleOrganizationDatabaseRename(organizationId, currentDatabaseName, newDatabaseName)
         } catch (e: Exception) {
             throw IllegalStateException(
                     "An error occurred while trying to rename org $organizationId database " +
@@ -677,7 +671,7 @@ class HazelcastOrganizationService(
 
     @JvmOverloads
     fun removeMemberFromAllOrganizations(principal: Principal, clearPermissions: Boolean = true) {
-        val organizationIds = securePrincipalsManager.getAllPrincipals(securePrincipalsManager.getPrincipal(principal.id))
+        val organizationIds = securePrincipalsManager.getAllPrincipals(securePrincipalsManager.getSecurablePrincipal(principal.id))
                 .filter { it.principalType == PrincipalType.ORGANIZATION }
                 .map { it.id }
 
@@ -686,27 +680,11 @@ class HazelcastOrganizationService(
         logger.info("Removed {} from organizations: {}", principal, organizationIds)
     }
 
-    fun getOrganizationMetadataEntitySetIds(organizationId: UUID): OrganizationMetadataEntitySetIds {
-        return organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
-            Result(it.organizationMetadataEntitySetIds, false)
-        }) as OrganizationMetadataEntitySetIds? ?: throw ResourceNotFoundException(
-                "Unable able to resolve organization $organizationId"
-        )
-    }
-
-    fun setOrganizationMetadataEntitySetIds(
-            organizationId: UUID,
-            organizationMetadataEntitySetIds: OrganizationMetadataEntitySetIds
-    ) {
-        organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
-            it.organizationMetadataEntitySetIds = organizationMetadataEntitySetIds
-            Result(null, true)
-        })
-    }
-
     companion object {
 
         private val logger = LoggerFactory.getLogger(HazelcastOrganizationService::class.java)
+
+        private val ALLOWED_ORG_CREATOR_PRINCIPAL_TYPES = setOf(PrincipalType.USER, PrincipalType.ROLE)
 
         private fun constructOrganizationAdminRolePrincipalTitle(organization: SecurablePrincipal): String {
             return organization.name + " - ADMIN"

@@ -23,15 +23,12 @@ package com.openlattice.organizations.roles;
 import com.auth0.json.mgmt.users.User;
 import com.hazelcast.query.Predicate;
 import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.SecurablePrincipal;
 import com.openlattice.organization.roles.Role;
 
 import javax.annotation.Nonnull;
 import java.util.Collection;
-import java.util.EnumSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -53,16 +50,11 @@ public interface SecurePrincipalsManager {
      */
     SecurablePrincipal getSecurablePrincipal( AclKey aclKey );
 
-    @Nonnull SecurablePrincipal getPrincipal( String principalId );
-
     Collection<SecurablePrincipal> getAllRolesInOrganization( UUID organizationId );
 
     Map<UUID, Collection<SecurablePrincipal>> getAllRolesInOrganizations( Collection<UUID> organizationIds );
 
     Collection<SecurablePrincipal> getSecurablePrincipals( Predicate<AclKey, SecurablePrincipal> p );
-
-    void createSecurablePrincipal(
-            Principal owner, SecurablePrincipal principal );
 
     void updateTitle( AclKey aclKey, String title );
 
@@ -87,19 +79,23 @@ public interface SecurePrincipalsManager {
 
     void removePrincipalsFromPrincipals( Set<AclKey> sources, Set<AclKey> target );
 
-    Collection<SecurablePrincipal> getAllPrincipalsWithPrincipal( AclKey aclKey );
+    /**
+     * Reads
+     */
+
+    @Nonnull SecurablePrincipal getSecurablePrincipal( String principalId );
+
+    Map<AclKey, SecurablePrincipal> getSecurablePrincipals( Set<AclKey> aclKeys );
 
     Collection<SecurablePrincipal> getParentPrincipalsOfPrincipal( AclKey aclKey );
 
-    Map<AclKey, Collection<SecurablePrincipal>> getParentPrincipalsOfPrincipals( Set<AclKey> aclKeys );
-
     Map<UUID, Set<SecurablePrincipal>> getOrganizationMembers( Set<UUID> organizationIds );
+
+    Set<Principal> getOrganizationMemberPrincipals( UUID organizationId );
 
     boolean principalHasChildPrincipal( AclKey parent, AclKey child );
 
     // Methods about users
-    List<SecurablePrincipal> getAllUsersWithPrincipal( AclKey principal );
-
     Collection<User> getAllUserProfilesWithPrincipal( AclKey principal );
 
     boolean principalExists( Principal p );
@@ -119,18 +115,6 @@ public interface SecurePrincipalsManager {
     Collection<SecurablePrincipal> getAllPrincipals( SecurablePrincipal sp );
 
     Map<SecurablePrincipal, Set<Principal>> bulkGetUnderlyingPrincipals( Set<SecurablePrincipal> sps );
-
-    Collection<Principal> getAllUnderlyingPrincipals( SecurablePrincipal sp );
-
-    /**
-     * Returns all Principals, which have all the specified permissions on the securable object
-     *
-     * @param key         The securable object
-     * @param permissions Set of permission to check for
-     */
-    Set<Principal> getAuthorizedPrincipalsOnSecurableObject( AclKey key, EnumSet<Permission> permissions );
-
-    SecurablePrincipal getSecurablePrincipalById( UUID id );
 
     UUID getCurrentUserId();
 

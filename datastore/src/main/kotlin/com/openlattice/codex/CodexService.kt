@@ -105,7 +105,11 @@ class CodexService(
     val codexMedia: IMap<UUID, Base64Media> = HazelcastMap.CODEX_MEDIA.getMap(hazelcast)
     val smsInformationMapstore = HazelcastMap.SMS_INFORMATION.getMap(hazelcast)
     val codexLocks = HazelcastMap.CODEX_LOCKS.getMap(hazelcast)
-    val propertyTypesByAppType = typesByFqn.values.associate { it.id to edmManager.getPropertyTypesOfEntityType(it.entityTypeId) }
+    val propertyTypesByAppType = typesByFqn.values.associate {
+        it.id to edmManager.getPropertyTypesOfEntityType(
+                it.entityTypeId
+        )
+    }
     val propertyTypesByFqn = propertyTypesByAppType.values.flatMap { it.values }.associate { it.type to it.id }
 
 
@@ -150,7 +154,10 @@ class CodexService(
                 }
 
             } catch (e: Exception) {
-                logger.error("Unable to send outgoing message to phone numbers $toPhoneNumbers in entity set $messageEntitySetId for organization $organizationId", e)
+                logger.error(
+                        "Unable to send outgoing message to phone numbers $toPhoneNumbers in entity set $messageEntitySetId for organization $organizationId",
+                        e
+                )
             }
         }
     }
@@ -294,7 +301,9 @@ class CodexService(
         val messageEntityKey = EntityKey(messageEntitySetId, message.sid)
         val sentFromEntityKey = EntityKey(sentFromEntitySetId, message.sid)
 
-        val idsByEntityKey = entityKeyIdService.getEntityKeyIds(setOf(senderEntityKey, messageEntityKey, sentFromEntityKey))
+        val idsByEntityKey = entityKeyIdService.getEntityKeyIds(
+                setOf(senderEntityKey, messageEntityKey, sentFromEntityKey)
+        )
 
         val senderEntityKeyId = idsByEntityKey.getValue(senderEntityKey)
         val messageEntityKeyId = idsByEntityKey.getValue(messageEntityKey)
@@ -303,20 +312,26 @@ class CodexService(
         dataGraphManager.mergeEntities(
                 senderEntitySetId,
                 mapOf(senderEntityKeyId to getSenderEntity(sender)),
-                getPropertyTypes(CodexConstants.CollectionTemplateType.PEOPLE)
+                getPropertyTypes(CodexConstants.CollectionTemplateType.PEOPLE),
+                PropertyUpdateType.Versioned
         )
 
         dataGraphManager.mergeEntities(
                 sentFromEntitySetId,
                 mapOf(sentFromEntityKeyId to getAssociationEntity(formatDateTime(message.dateCreated))),
-                getPropertyTypes(CodexConstants.CollectionTemplateType.SENT_FROM)
+                getPropertyTypes(CodexConstants.CollectionTemplateType.SENT_FROM),
+                PropertyUpdateType.Versioned
         )
 
-        dataGraphManager.createAssociations(setOf(DataEdgeKey(
-                EntityDataKey(messageEntitySetId, messageEntityKeyId),
-                EntityDataKey(senderEntitySetId, senderEntityKeyId),
-                EntityDataKey(sentFromEntitySetId, sentFromEntityKeyId)
-        )))
+        dataGraphManager.createAssociations(
+                setOf(
+                        DataEdgeKey(
+                                EntityDataKey(messageEntitySetId, messageEntityKeyId),
+                                EntityDataKey(senderEntitySetId, senderEntityKeyId),
+                                EntityDataKey(sentFromEntitySetId, sentFromEntityKeyId)
+                        )
+                )
+        )
 
         integrateMissingMessages(organizationId, listOf(message), isOutgoing = true)
     }
@@ -405,7 +420,12 @@ class CodexService(
         entitiesByEntityKey.entries.groupBy { it.key.entitySetId }.mapValues {
             it.value.associate { entry -> idsByEntityKey.getValue(entry.key) to entry.value }
         }.forEach { (entitySetId, entities) ->
-            dataGraphManager.partialReplaceEntities(entitySetId, entities, allPropertyTypes)
+            dataGraphManager.partialReplaceEntities(
+                    entitySetId,
+                    entities,
+                    allPropertyTypes,
+                    PropertyUpdateType.Versioned
+            )
         }
 
         dataGraphManager.createAssociations(
@@ -445,8 +465,13 @@ class CodexService(
 
         dataGraphManager.partialReplaceEntities(
                 messageEntitySetId,
-                mapOf(messageEntityKeyId to mapOf(getPropertyTypeId(CodexConstants.PropertyType.WAS_DELIVERED) to setOf(wasDelivered))),
-                getPropertyTypes(CodexConstants.CollectionTemplateType.MESSAGES)
+                mapOf(
+                        messageEntityKeyId to mapOf(
+                                getPropertyTypeId(CodexConstants.PropertyType.WAS_DELIVERED) to setOf(wasDelivered)
+                        )
+                ),
+                getPropertyTypes(CodexConstants.CollectionTemplateType.MESSAGES),
+                PropertyUpdateType.Versioned
         )
     }
 
@@ -469,7 +494,9 @@ class CodexService(
         }.toMap()
     }
 
-    fun getScheduledMessagesForOrganizationAndPhoneNumber(organizationId: UUID, phoneNumber: String): Map<UUID, MessageRequest> {
+    fun getScheduledMessagesForOrganizationAndPhoneNumber(
+            organizationId: UUID, phoneNumber: String
+    ): Map<UUID, MessageRequest> {
         return BasePostgresIterable(PreparedStatementHolderSupplier(hds, GET_SCHEDULED_MESSAGES_FOR_ORG_AND_PHONE_SQL) {
             it.setString(1, organizationId.toString())
             it.setString(2, DataTables.quote(phoneNumber))
@@ -533,9 +560,12 @@ class CodexService(
 
         (0 until MAX_MEDIA_RETRIES).forEach {
             Media.reader(message.sid).read().forEach {
-                media.add(mapOf(
-                        "content-type" to it.contentType,
-                        "data" to retrieveMediaAsBaseSixtyFour(it.uri.toString()).get()))
+                media.add(
+                        mapOf(
+                                "content-type" to it.contentType,
+                                "data" to retrieveMediaAsBaseSixtyFour(it.uri.toString()).get()
+                        )
+                )
             }
 
             if (media.isNotEmpty()) {
@@ -545,7 +575,10 @@ class CodexService(
             Thread.sleep(RETRY_MILLIS)
         }
 
-        logger.error("Unable to load message media from Twilio after {} retries for message {}.", MAX_MEDIA_RETRIES, message.sid)
+        logger.error(
+                "Unable to load message media from Twilio after {} retries for message {}.", MAX_MEDIA_RETRIES,
+                message.sid
+        )
         return setOf()
     }
 

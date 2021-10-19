@@ -64,17 +64,18 @@ class DatasetController : DatasetApi, AuthorizingComponent {
     @Timed
     @GetMapping(path = [ID_PATH + EXTERNAL_DATABASE_TABLE])
     override fun getExternalDatabaseTables(
-            @PathVariable(ID) organizationId: UUID): Set<OrganizationExternalDatabaseTable> {
+            @PathVariable(ID) organizationId: UUID): Set<ExternalTable> {
         val tables = edms.getExternalDatabaseTables(organizationId)
-        val authorizedTableIds = getAuthorizedTableIds(tables.map { it.key }.toSet(), Permission.READ)
-        return tables.filter { it.key in authorizedTableIds }.map { it.value }.toSet()
+        val authorizedTableIds = getAuthorizedTableIds(tables.keys, Permission.READ)
+
+        return tables.values.filter { it.id in authorizedTableIds }.toSet()
     }
 
     @Timed
     @GetMapping(path = [ID_PATH + EXTERNAL_DATABASE_TABLE + EXTERNAL_DATABASE_COLUMN])
     override fun getExternalDatabaseTablesWithColumnMetadata(
             @PathVariable(ID) organizationId: UUID
-    ): Set<OrganizationExternalDatabaseTableColumnsPair> {
+    ): Set<ExternalTableColumnsPair> {
 
         return getAuthorizedExternalDbTablesWithColumnMetadata(organizationId, Permission.READ)
     }
@@ -84,7 +85,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
     override fun getAuthorizedExternalDbTablesWithColumnMetadata(
             @PathVariable(ID) organizationId: UUID,
             @PathVariable(PERMISSION) permission: Permission
-    ): Set<OrganizationExternalDatabaseTableColumnsPair> {
+    ): Set<ExternalTableColumnsPair> {
 
         val orgTables = edms.getExternalDatabaseTables(organizationId)
         val authorizedTableIds = getAuthorizedTableIds(orgTables.keys, permission)
@@ -96,7 +97,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
             val table = orgTables.getValue(tableId)
             val authorizedColumns = columnsById.values.filter { authorizedColumnIds.contains(it.id) }.toSet()
 
-            OrganizationExternalDatabaseTableColumnsPair(table, authorizedColumns)
+            ExternalTableColumnsPair(table, authorizedColumns)
         }.toSet()
     }
 
@@ -104,7 +105,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
     @GetMapping(path = [ID_PATH + TABLE_ID_PATH + EXTERNAL_DATABASE_TABLE + EXTERNAL_DATABASE_COLUMN])
     override fun getExternalDatabaseTableWithColumnMetadata(
             @PathVariable(ID) organizationId: UUID,
-            @PathVariable(TABLE_ID) tableId: UUID): OrganizationExternalDatabaseTableColumnsPair {
+            @PathVariable(TABLE_ID) tableId: UUID): ExternalTableColumnsPair {
         ensureReadAccess(AclKey(tableId))
         return edms.getExternalDatabaseTableWithColumns(tableId)
     }
@@ -129,9 +130,9 @@ class DatasetController : DatasetApi, AuthorizingComponent {
     @GetMapping(path = [ID_PATH + TABLE_ID_PATH + EXTERNAL_DATABASE_TABLE])
     override fun getExternalDatabaseTable(
             @PathVariable(ID) organizationId: UUID,
-            @PathVariable(TABLE_ID) tableId: UUID): OrganizationExternalDatabaseTable {
+            @PathVariable(TABLE_ID) tableId: UUID): ExternalTable {
         ensureReadAccess(AclKey(tableId))
-        return edms.getOrganizationExternalDatabaseTable(tableId)
+        return edms.getExternalTable(tableId)
     }
 
     @Timed
@@ -141,7 +142,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
             @PathVariable(TABLE_ID) tableId: UUID
     ): String? {
         ensureReadAccess(AclKey(tableId))
-        return edms.getExternalDatabaseTableSchema(organizationId, tableId)
+        return edms.getExternalTable(tableId).schema
     }
 
     @Timed
@@ -149,11 +150,11 @@ class DatasetController : DatasetApi, AuthorizingComponent {
     override fun getExternalDatabaseColumn(
             @PathVariable(ID) organizationId: UUID,
             @PathVariable(TABLE_NAME) tableName: String,
-            @PathVariable(COLUMN_NAME) columnName: String): OrganizationExternalDatabaseColumn {
+            @PathVariable(COLUMN_NAME) columnName: String): ExternalColumn {
         val (_, tableId) = getExternalDatabaseObjectFqnToIdPair(organizationId, tableName)
         val (_, columnId) = getExternalDatabaseObjectFqnToIdPair(tableId, columnName)
         ensureReadAccess(AclKey(tableId, columnId))
-        return edms.getOrganizationExternalDatabaseColumn(columnId)
+        return edms.getExternalColumn(columnId)
     }
 
     //TODO Metadata update probably won't work
@@ -165,7 +166,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
             @RequestBody metadataUpdate: MetadataUpdate) {
         val tableFqnToId = getExternalDatabaseObjectFqnToIdPair(organizationId, tableName)
         ensureWriteAccess(AclKey(tableFqnToId.second))
-        edms.updateOrganizationExternalDatabaseTable(organizationId, tableFqnToId, metadataUpdate)
+        edms.updateExternalTable(organizationId, tableFqnToId, metadataUpdate)
     }
 
     @SuppressFBWarnings(
@@ -182,7 +183,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
         val tableFqnToId = getExternalDatabaseObjectFqnToIdPair(organizationId, tableName)
         ensureWriteAccess(AclKey(tableFqnToId.second))
         val columnFqnToId = getExternalDatabaseObjectFqnToIdPair(tableFqnToId.second, columnName)
-        edms.updateOrganizationExternalDatabaseColumn(organizationId, tableFqnToId, columnFqnToId, metadataUpdate)
+        edms.updateExternalColumn(organizationId, tableFqnToId, columnFqnToId, metadataUpdate)
     }
 
     @Timed
@@ -214,7 +215,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
             }
             columnIds.forEach { ensureObjectCanBeDeleted(it) }
         }
-        edms.deleteOrganizationExternalDatabaseTables(organizationId, tableIdByFqn)
+        edms.deleteExternalTables(organizationId, tableIdByFqn)
     }
 
     @Timed
@@ -241,7 +242,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
         aclKeys.forEach { aclKey ->
             ensureOwnerAccess(aclKey)
         }
-        edms.deleteOrganizationExternalDatabaseColumns(organizationId, mapOf(tableFqnToId to columnIdByFqn))
+        edms.deleteExternalColumns(organizationId, mapOf(tableFqnToId to columnIdByFqn))
     }
 
     private fun getExternalDatabaseObjectFqnToIdPair(containingObjectId: UUID, name: String): Pair<String, UUID> {
@@ -266,7 +267,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
     }
 
     private fun getAuthorizedColumnIds(
-            columnsByTable: Map<UUID, Map<UUID, OrganizationExternalDatabaseColumn>>,
+            columnsByTable: Map<UUID, Map<UUID, ExternalColumn>>,
             permission: Permission
     ): Set<UUID> {
         val accessChecks = columnsByTable.flatMap { (tableId, columnsById) ->

@@ -85,6 +85,7 @@ public final class SerializationConstants {
     public static final String DATA                             = "data";
     public static final String DATABASE                         = "database";
     public static final String DATASOURCE_IDS                   = "datasourceIds";
+    public static final String DATASTORE                        = "datastore";
     public static final String DATATYPE_FIELD                   = "datatype";
     public static final String DATA_ID                          = "dataId";
     public static final String DEFAULT_SHOW                     = "defaultShow";
@@ -188,7 +189,6 @@ public final class SerializationConstants {
     public static final String MEMBERS_FIELD                    = "members";
     public static final String MESSAGE                          = "message";
     public static final String MESSAGE_ENTITY_SET               = "messageEntitySet";
-    public static final String METADATA_ENTITY_SETS_IDS         = "metadataEntitySetIds";
     public static final String MIN                              = "min";
     public static final String MISSING                          = "missing";
     public static final String MULTI_VALUED                     = "multiValued";
@@ -235,6 +235,7 @@ public final class SerializationConstants {
     public static final String PROPERTY_TYPES                   = "propertyTypes";
     public static final String PROPERTY_TYPE_ID                 = "propertyTypeId";
     public static final String PROPERTY_TYPE_IDS                = "propertyTypeIds";
+    public static final String PROPERTY_UPDATE_TYPE             = "propertyUpdateType";
     public static final String QUERY_ID                         = "queryId";
     public static final String QUEUE                            = "queue";
     public static final String QUEUE_SIZE                       = "queueSize";

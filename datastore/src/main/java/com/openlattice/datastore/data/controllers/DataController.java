@@ -20,11 +20,30 @@
 
 package com.openlattice.datastore.data.controllers;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.Maps.transformValues;
+import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
+import static com.openlattice.authorization.EdmAuthorizationHelper.WRITE_PERMISSION;
+import static com.openlattice.authorization.EdmAuthorizationHelper.aclKeysForAccessCheck;
+
 import com.auth0.spring.security.api.authentication.PreAuthenticatedAuthenticationJsonWebToken;
 import com.codahale.metrics.annotation.Timed;
+import com.geekbeast.rhizome.jobs.HazelcastJobService;
+import com.geekbeast.rhizome.jobs.JobStatus;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.*;
-import com.openlattice.analysis.requests.Filter;
+import com.google.common.base.Stopwatch;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSetMultimap;
+import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Multimaps;
+import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
+import com.google.common.collect.Streams;
 import com.openlattice.auditing.AuditEventType;
 import com.openlattice.auditing.AuditableEvent;
 import com.openlattice.auditing.AuditingComponent;
@@ -37,10 +56,30 @@ import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principals;
 import com.openlattice.controllers.exceptions.BadRequestException;
 import com.openlattice.controllers.exceptions.ForbiddenException;
-import com.openlattice.data.*;
+import com.openlattice.data.BinaryObjectRequest;
+import com.openlattice.data.BinaryObjectResponse;
+import com.openlattice.data.CreateAssociationEvent;
+import com.openlattice.data.DataApi;
+import com.openlattice.data.DataAssociation;
+import com.openlattice.data.DataDeletionManager;
+import com.openlattice.data.DataEdge;
+import com.openlattice.data.DataEdgeKey;
+import com.openlattice.data.DataGraph;
+import com.openlattice.data.DataGraphIds;
+import com.openlattice.data.DataGraphManager;
+import com.openlattice.data.DeleteType;
+import com.openlattice.data.EntityDataKey;
+import com.openlattice.data.EntitySetData;
+import com.openlattice.data.FilteredDataPageDefinition;
+import com.openlattice.data.PropertyUpdateType;
+import com.openlattice.data.UpdateType;
+import com.openlattice.data.WriteEvent;
 import com.openlattice.data.graph.DataGraphServiceHelper;
+import com.openlattice.data.jobs.DataDeletionJobState;
 import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
+import com.openlattice.data.storage.ByteBlobDataManager;
+import com.openlattice.data.storage.DataDeletionService;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.EntitySetManager;
 import com.openlattice.edm.EntitySet;
@@ -50,34 +89,48 @@ import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.search.requests.EntityNeighborsFilter;
 import com.openlattice.web.mediatypes.CustomMediaType;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.net.URL;
+import java.nio.ByteBuffer;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import javax.inject.Inject;
+import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.tuple.Triple;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.*;
-
-import javax.inject.Inject;
-import javax.servlet.http.HttpServletResponse;
-import java.nio.ByteBuffer;
-import java.time.Instant;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
-import java.util.*;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
-import static com.google.common.collect.Maps.transformValues;
-import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
-import static com.openlattice.authorization.EdmAuthorizationHelper.WRITE_PERMISSION;
-import static com.openlattice.authorization.EdmAuthorizationHelper.aclKeysForAccessCheck;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @SuppressFBWarnings(
         value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE",
@@ -86,35 +139,33 @@ import static com.openlattice.authorization.EdmAuthorizationHelper.aclKeysForAcc
 @RequestMapping( DataApi.CONTROLLER )
 public class DataController implements DataApi, AuthorizingComponent, AuditingComponent {
 
+    private static final Logger                  logger                       = LoggerFactory.getLogger( DataController.class );
+    private static final int                     DELETION_BLOCKING_INTERVAL   = 1000; // 1 second
+    private static final int                     MAX_DELETION_BLOCKING_CHECKS = 60 * 5; // 5 minutes
     @Inject
-    private EntitySetManager entitySetService;
-
+    private              EntitySetManager        entitySetService;
     @Inject
-    private EdmService edmService;
-
+    private              EdmService              edmService;
     @Inject
-    private DataGraphManager dgm;
-
+    private              DataGraphManager        dgm;
     @Inject
-    private AuthorizationManager authz;
-
+    private              AuthorizationManager    authz;
     @Inject
-    private EdmAuthorizationHelper authzHelper;
-
+    private              EdmAuthorizationHelper  authzHelper;
     @Inject
-    private AuthenticationManager authProvider;
-
+    private              AuthenticationManager   authProvider;
     @Inject
-    private AuditingManager auditingManager;
-
+    private              AuditingManager         auditingManager;
     @Inject
-    private SecurePrincipalsManager spm;
-
+    private              SecurePrincipalsManager spm;
     @Inject
-    private DataGraphServiceHelper dataGraphServiceHelper;
-
+    private              DataGraphServiceHelper  dataGraphServiceHelper;
     @Inject
-    private DataDeletionManager deletionManager;
+    private              DataDeletionManager     deletionManager;
+    @Inject
+    private              HazelcastJobService     jobService;
+    @Inject
+    private              ByteBlobDataManager     byteBlobDataManager;
 
     @RequestMapping(
             path = { "/" + ENTITY_SET + "/" + SET_ID_PATH },
@@ -275,9 +326,15 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     public Integer updateEntitiesInEntitySet(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @RequestBody Map<UUID, Map<UUID, Set<Object>>> entities,
-            @RequestParam( value = TYPE, defaultValue = "Merge" ) UpdateType updateType ) {
+            @RequestParam( value = TYPE, defaultValue = "Merge" ) UpdateType updateType,
+            @RequestParam( value = PROPERTY_UPDATE_TYPE, defaultValue = "Versioned" )
+                    PropertyUpdateType propertyUpdateType ) {
         Preconditions.checkNotNull( updateType, "An invalid update type value was specified." );
-        ensureReadAccess( new AclKey( entitySetId ) );
+        final var entitySetAclKey = new AclKey( entitySetId );
+        ensureReadAccess( entitySetAclKey );
+        if ( propertyUpdateType == PropertyUpdateType.Unversioned ) {
+            ensureIntegrateAccess( entitySetAclKey );
+        }
         ensureEntitySetCanBeWritten( entitySetId );
 
         var requiredPropertyTypes = requiredEntitySetPropertyTypes( entities );
@@ -295,15 +352,18 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         switch ( updateType ) {
             case Replace:
                 auditEventType = AuditEventType.REPLACE_ENTITIES;
-                writeEvent = dgm.replaceEntities( entitySetId, entities, authorizedPropertyTypes );
+                writeEvent = dgm.replaceEntities( entitySetId, entities, authorizedPropertyTypes, propertyUpdateType );
                 break;
             case PartialReplace:
                 auditEventType = AuditEventType.PARTIAL_REPLACE_ENTITIES;
-                writeEvent = dgm.partialReplaceEntities( entitySetId, entities, authorizedPropertyTypes );
+                writeEvent = dgm.partialReplaceEntities( entitySetId,
+                        entities,
+                        authorizedPropertyTypes,
+                        propertyUpdateType );
                 break;
             case Merge:
                 auditEventType = AuditEventType.MERGE_ENTITIES;
-                writeEvent = dgm.mergeEntities( entitySetId, entities, authorizedPropertyTypes );
+                writeEvent = dgm.mergeEntities( entitySetId, entities, authorizedPropertyTypes, propertyUpdateType );
                 break;
             default:
                 throw new BadRequestException( "Unsupported UpdateType: \"" + updateType + "\'" );
@@ -331,8 +391,14 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     @Timed
     public Integer replaceEntityProperties(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
-            @RequestBody Map<UUID, Map<UUID, Set<Map<ByteBuffer, Object>>>> entities ) {
-        ensureReadAccess( new AclKey( entitySetId ) );
+            @RequestBody Map<UUID, Map<UUID, Set<Map<ByteBuffer, Object>>>> entities,
+            @RequestParam( value = PROPERTY_UPDATE_TYPE, defaultValue = "Versioned" )
+                    PropertyUpdateType propertyUpdateType ) {
+        final var entitySetAclKey = new AclKey(entitySetId);
+        ensureReadAccess( entitySetAclKey );
+        if ( propertyUpdateType == PropertyUpdateType.Unversioned ) {
+            ensureIntegrateAccess( entitySetAclKey );
+        }
         ensureEntitySetCanBeWritten( entitySetId );
 
         final Set<UUID> requiredPropertyTypes = requiredReplacementPropertyTypes( entities );
@@ -343,7 +409,8 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         WriteEvent writeEvent = dgm.replacePropertiesInEntities(
                 entitySetId,
                 entities,
-                edmService.getPropertyTypesAsMap( requiredPropertyTypes )
+                edmService.getPropertyTypesAsMap( requiredPropertyTypes ),
+                propertyUpdateType
         );
 
         recordEvent( new AuditableEvent(
@@ -452,9 +519,11 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     public Integer mergeIntoEntityInEntitySet(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId,
-            @RequestBody Map<UUID, Set<Object>> entity ) {
+            @RequestBody Map<UUID, Set<Object>> entity,
+            @RequestParam( value = PROPERTY_UPDATE_TYPE, defaultValue = "Versioned" )
+                    PropertyUpdateType propertyUpdateType ) {
         final var entities = ImmutableMap.of( entityKeyId, entity );
-        return updateEntitiesInEntitySet( entitySetId, entities, UpdateType.Merge );
+        return updateEntitiesInEntitySet( entitySetId, entities, UpdateType.Merge, propertyUpdateType );
     }
 
     @Override
@@ -568,8 +637,16 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     @PatchMapping( value = "/" + ASSOCIATION )
     public Integer replaceAssociationData(
             @RequestBody Map<UUID, Map<UUID, DataEdge>> associations,
-            @RequestParam( value = PARTIAL, required = false, defaultValue = "false" ) boolean partial ) {
-        associations.keySet().forEach( entitySetId -> ensureReadAccess( new AclKey( entitySetId ) ) );
+            @RequestParam( value = PARTIAL, required = false, defaultValue = "false" ) boolean partial,
+            @RequestParam( value = PROPERTY_UPDATE_TYPE, defaultValue = "Versioned" )
+                    PropertyUpdateType propertyUpdateType ) {
+        associations.keySet().forEach( entitySetId -> {
+            final var entitySetAclKey = new AclKey(entitySetId);
+            ensureReadAccess( entitySetAclKey );
+            if ( propertyUpdateType == PropertyUpdateType.Unversioned ) {
+                ensureIntegrateAccess( entitySetAclKey );
+            }
+        } );
 
         //Ensure that we can write properties.
         final SetMultimap<UUID, UUID> requiredPropertyTypes = requiredAssociationPropertyTypes( associations );
@@ -583,12 +660,14 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             if ( partial ) {
                 return dgm.partialReplaceEntities( entitySetId,
                         transformValues( association.getValue(), DataEdge::getData ),
-                        authorizedPropertyTypes ).getNumUpdates();
+                        authorizedPropertyTypes,
+                        propertyUpdateType ).getNumUpdates();
             } else {
 
                 return dgm.replaceEntities( entitySetId,
                         transformValues( association.getValue(), DataEdge::getData ),
-                        authorizedPropertyTypes ).getNumUpdates();
+                        authorizedPropertyTypes,
+                        propertyUpdateType ).getNumUpdates();
             }
         } ).sum();
     }
@@ -646,13 +725,17 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     @RequestMapping(
             path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ALL },
             method = RequestMethod.DELETE )
-    public Integer deleteAllEntitiesFromEntitySet(
+    public UUID deleteAllEntitiesFromEntitySet(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @RequestParam( value = TYPE ) DeleteType deleteType ) {
         ensureEntitySetCanBeWritten( entitySetId );
 
-        WriteEvent writeEvent = deletionManager
-                .clearOrDeleteEntitySetIfAuthorized( entitySetId, deleteType, Principals.getCurrentPrincipals() );
+        deletionManager.authCheckForEntitySetAndItsNeighbors( entitySetId,
+                deleteType,
+                Principals.getCurrentPrincipals(),
+                null );
+
+        UUID deletionJobId = deletionManager.clearOrDeleteEntitySet( entitySetId, deleteType );
 
         recordEvent( new AuditableEvent(
                 spm.getCurrentUserId(),
@@ -662,11 +745,11 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                         + " through DataApi.deleteAllEntitiesFromEntitySet",
                 Optional.empty(),
                 ImmutableMap.of(),
-                getDateTimeFromLong( writeEvent.getVersion() ),
+                OffsetDateTime.now(),
                 Optional.empty()
         ) );
 
-        return writeEvent.getNumUpdates();
+        return deletionJobId;
     }
 
     @Timed
@@ -675,8 +758,9 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     public Integer deleteEntity(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId,
-            @RequestParam( value = TYPE ) DeleteType deleteType ) {
-        return deleteEntities( entitySetId, ImmutableSet.of( entityKeyId ), deleteType );
+            @RequestParam( value = TYPE ) DeleteType deleteType,
+            @RequestParam( value = BLOCK, defaultValue = "true" ) boolean blockUntilCompletion ) {
+        return deleteEntities( entitySetId, ImmutableSet.of( entityKeyId ), deleteType, blockUntilCompletion );
     }
 
     @Timed
@@ -685,15 +769,51 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     public Integer deleteEntities(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @RequestBody Set<UUID> entityKeyIds,
-            @RequestParam( value = TYPE ) DeleteType deleteType ) {
+            @RequestParam( value = TYPE ) DeleteType deleteType,
+            @RequestParam( value = BLOCK, defaultValue = "true" ) boolean blockUntilCompletion ) {
+
+        logger.info(
+                "deleteEntities - attempting to delete {} entities - entity set {} entities {} block {}",
+                entityKeyIds.size(),
+                entitySetId,
+                entityKeyIds,
+                blockUntilCompletion
+        );
+
+        Stopwatch funTimer = Stopwatch.createStarted();
+        Stopwatch timer = Stopwatch.createStarted();
 
         ensureEntitySetCanBeWritten( entitySetId );
+        logger.info(
+                "deleteEntities - ensureEntitySetCanBeWritten took {} ms - entity set {} entities {}",
+                timer.elapsed( TimeUnit.MILLISECONDS),
+                entitySetId,
+                entityKeyIds.size()
+        );
+        timer.reset().start();
 
-        WriteEvent writeEvent = deletionManager
-                .clearOrDeleteEntitiesIfAuthorized( entitySetId,
-                        entityKeyIds,
-                        deleteType,
-                        Principals.getCurrentPrincipals() );
+        deletionManager.authCheckForEntitySetAndItsNeighbors(
+                entitySetId,
+                deleteType,
+                Principals.getCurrentPrincipals(),
+                entityKeyIds
+        );
+        logger.info(
+                "deleteEntities - deletionManager.authCheckForEntitySetAndItsNeighbors took {} ms - entity set {} entities {}",
+                timer.elapsed( TimeUnit.MILLISECONDS),
+                entitySetId,
+                entityKeyIds.size()
+        );
+        timer.reset().start();
+
+        UUID deletionJobId = deletionManager.clearOrDeleteEntities( entitySetId, entityKeyIds, deleteType );
+        logger.info(
+                "deleteEntities - deletionManager.clearOrDeleteEntities took {} ms - entity set {} entities {}",
+                timer.elapsed( TimeUnit.MILLISECONDS),
+                entitySetId,
+                entityKeyIds.size()
+        );
+        timer.reset().start();
 
         recordEvent( new AuditableEvent(
                 spm.getCurrentUserId(),
@@ -702,11 +822,38 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                 "Entities deleted using delete type " + deleteType.toString() + " through DataApi.deleteEntities",
                 Optional.of( entityKeyIds ),
                 ImmutableMap.of(),
-                getDateTimeFromLong( writeEvent.getVersion() ),
+                OffsetDateTime.now(),
                 Optional.empty()
         ) );
+        logger.info(
+                "deleteEntities - recording audit event DELETE_ENTITIES took {} ms - entity set {} entities {}",
+                timer.elapsed(TimeUnit.MILLISECONDS),
+                entitySetId,
+                entityKeyIds.size()
+        );
 
-        return writeEvent.getNumUpdates();
+        int deletedEntitiesCount = blockOnDeletionJobGettingNumUpdates( deletionJobId, blockUntilCompletion );
+
+        if ( deletedEntitiesCount != entityKeyIds.size() ) {
+            logger.warn(
+                    "deleteEntities - deleted entities count mismatch - entity set {} given {} reported {} block {}",
+                    entitySetId,
+                    entityKeyIds.size(),
+                    deletedEntitiesCount,
+                    blockUntilCompletion
+            );
+        }
+
+        logger.info(
+                "deleteEntities - deleting {} entities took {} ms - entity set {} entities {} block {}",
+                entityKeyIds.size(),
+                funTimer.elapsed( TimeUnit.MILLISECONDS ),
+                entitySetId,
+                entityKeyIds,
+                blockUntilCompletion
+        );
+
+        return deletedEntitiesCount;
     }
 
     @Timed
@@ -718,14 +865,31 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId,
             @RequestBody Set<UUID> propertyTypeIds,
             @RequestParam( value = TYPE ) DeleteType deleteType ) {
-
+        AclKey entitySetAclKey = new AclKey( entitySetId );
+        if ( deleteType.equals( DeleteType.Soft ) ) {
+            ensureWriteAccess( entitySetAclKey );
+        } else {
+            ensureOwnerAccess( entitySetAclKey );
+        }
         ensureEntitySetCanBeWritten( entitySetId );
 
-        WriteEvent writeEvent = deletionManager.clearOrDeleteEntityProperties( entitySetId,
+        Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper.getAuthorizedPropertiesOnEntitySets(
+                ImmutableSet.of( entitySetId ),
+                DataDeletionService.getPERMISSIONS_FOR_DELETE_TYPE().get( deleteType )
+        ).get( entitySetId );
+        Set<UUID> unauthorizedPropertyTypeIds = Sets.difference( propertyTypeIds, authorizedPropertyTypes.keySet() );
+        if ( !unauthorizedPropertyTypeIds.isEmpty() ) {
+            throw new ForbiddenException( "Cannot delete properties of entity set " + entitySetId.toString() +
+                    " because properties " + unauthorizedPropertyTypeIds.toString() + " are not authorized." );
+        }
+
+        WriteEvent writeEvent = deletionManager.clearOrDeleteEntityProperties(
+                entitySetId,
                 ImmutableSet.of( entityKeyId ),
                 deleteType,
                 propertyTypeIds,
-                Principals.getCurrentPrincipals() );
+                authorizedPropertyTypes
+        );
 
         recordEvent( new AuditableEvent(
                 spm.getCurrentUserId(),
@@ -756,14 +920,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
 
         ensureEntitySetCanBeWritten( entitySetId );
 
-        WriteEvent writeEvent = deletionManager.clearOrDeleteEntitiesAndNeighborsIfAuthorized(
-                entitySetId,
-                filter.getEntityKeyIds(),
-                filter.getSrcEntitySetIds().orElse( ImmutableSet.of() ),
-                filter.getDstEntitySetIds().orElse( ImmutableSet.of() ),
-                deleteType,
-                Principals.getCurrentPrincipals()
-        );
+        WriteEvent writeEvent = new WriteEvent( 0, 0 );
 
         recordEvent( new AuditableEvent(
                 spm.getCurrentUserId(),
@@ -789,8 +946,14 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     public Integer replaceEntityInEntitySet(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId,
-            @RequestBody Map<UUID, Set<Object>> entity ) {
-        ensureReadAccess( new AclKey( entitySetId ) );
+            @RequestBody Map<UUID, Set<Object>> entity,
+            @RequestParam( value = PROPERTY_UPDATE_TYPE, defaultValue = "Versioned" )
+                    PropertyUpdateType propertyUpdateType ) {
+        final var entitySetAclKey = new AclKey(entitySetId);
+        ensureReadAccess( entitySetAclKey );
+        if ( propertyUpdateType == PropertyUpdateType.Unversioned ) {
+            ensureIntegrateAccess( entitySetAclKey );
+        }
         ensureEntitySetCanBeWritten( entitySetId );
 
         Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper.getAuthorizedPropertyTypes( entitySetId,
@@ -799,7 +962,10 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                 Principals.getCurrentPrincipals() );
 
         WriteEvent writeEvent = dgm
-                .replaceEntities( entitySetId, ImmutableMap.of( entityKeyId, entity ), authorizedPropertyTypes );
+                .replaceEntities( entitySetId,
+                        ImmutableMap.of( entityKeyId, entity ),
+                        authorizedPropertyTypes,
+                        propertyUpdateType );
 
         recordEvent( new AuditableEvent(
                 spm.getCurrentUserId(),
@@ -823,13 +989,15 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     public Integer replaceEntityInEntitySetUsingFqns(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId,
-            @RequestBody Map<FullQualifiedName, Set<Object>> entityByFqns ) {
+            @RequestBody Map<FullQualifiedName, Set<Object>> entityByFqns,
+            @RequestParam( value = PROPERTY_UPDATE_TYPE, defaultValue = "Versioned" )
+                    PropertyUpdateType propertyUpdateType ) {
         final Map<UUID, Set<Object>> entity = new HashMap<>();
 
         entityByFqns
                 .forEach( ( fqn, properties ) -> entity.put( edmService.getPropertyTypeId( fqn ), properties ) );
 
-        return replaceEntityInEntitySet( entitySetId, entityKeyId, entity );
+        return replaceEntityInEntitySet( entitySetId, entityKeyId, entity, propertyUpdateType );
     }
 
     @Timed
@@ -910,9 +1078,9 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                     .getType();
 
             return dgm.getLinkingEntity(
-                    entitySet.getLinkedEntitySets(),
-                    entityKeyId,
-                    authorizedPropertyTypes )
+                            entitySet.getLinkedEntitySets(),
+                            entityKeyId,
+                            authorizedPropertyTypes )
                     .get( propertyTypeFqn );
         } else {
             ensureReadAccess( new AclKey( entitySetId, propertyTypeId ) );
@@ -956,46 +1124,27 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         return dgm.getLinkedEntitySetBreakDown( entityKeyIdsOfEntitySets, authorizedPropertyTypesOfEntitySets );
     }
 
+    @Timed
+    @Override
+    @PostMapping(
+            path = BINARY,
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public BinaryObjectResponse loadBinaryProperties( @RequestBody BinaryObjectRequest binaryObjectRequest ) {
+        binaryObjectRequest.getAclKeys().forEach( this::ensureReadAccess );
+
+        Map<String, URL> result = byteBlobDataManager.getPresignedUrlsWithDispositions(
+                binaryObjectRequest.mapToS3KeysToDispositions()
+        );
+
+        return BinaryObjectResponse.fromS3Response( result );
+    }
+
     @NotNull
     @Override
     public AuditingManager getAuditingManager() {
         return auditingManager;
-    }
-
-    /**
-     * Methods for setting http response header
-     */
-
-    private static void setDownloadContentType( HttpServletResponse response, FileType fileType ) {
-        if ( fileType == FileType.csv ) {
-            response.setContentType( CustomMediaType.TEXT_CSV_VALUE );
-        } else {
-            response.setContentType( MediaType.APPLICATION_JSON_VALUE );
-        }
-    }
-
-    private static void setContentDisposition(
-            HttpServletResponse response,
-            String fileName,
-            FileType fileType ) {
-        if ( fileType == FileType.csv || fileType == FileType.json ) {
-            response.setHeader( "Content-Disposition",
-                    "attachment; filename=" + fileName + "." + fileType.toString() );
-        }
-    }
-
-    private static SetMultimap<UUID, UUID> requiredAssociationPropertyTypes( ListMultimap<UUID, DataEdge> associations ) {
-        final SetMultimap<UUID, UUID> propertyTypesByEntitySet = HashMultimap.create();
-        associations.entries().forEach( entry -> propertyTypesByEntitySet
-                .putAll( entry.getKey(), entry.getValue().getData().keySet() ) );
-        return propertyTypesByEntitySet;
-    }
-
-    private static SetMultimap<UUID, UUID> requiredAssociationPropertyTypes( Map<UUID, Map<UUID, DataEdge>> associations ) {
-        final SetMultimap<UUID, UUID> propertyTypesByEntitySet = HashMultimap.create();
-        associations.forEach( ( esId, edges ) -> edges.values()
-                .forEach( de -> propertyTypesByEntitySet.putAll( esId, de.getData().keySet() ) ) );
-        return propertyTypesByEntitySet;
     }
 
     private void assertRequiredEntitySetPropertyTypesMatchEDM( UUID entitySetId, Set<UUID> requiredPropertyTypes ) {
@@ -1004,19 +1153,6 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         checkArgument( missingPropertyTypes.isEmpty(),
                 "Entity set " + entitySetId.toString() + " does not contain the property types: "
                         + missingPropertyTypes.toString() );
-    }
-
-    private static Set<UUID> requiredEntitySetPropertyTypes( Map<UUID, Map<UUID, Set<Object>>> entities ) {
-        return entities.values().stream().map( Map::keySet ).flatMap( Set::stream )
-                .collect( Collectors.toSet() );
-    }
-
-    private static Set<UUID> requiredReplacementPropertyTypes( Map<UUID, Map<UUID, Set<Map<ByteBuffer, Object>>>> entities ) {
-        return entities.values().stream().flatMap( m -> m.keySet().stream() ).collect( Collectors.toSet() );
-    }
-
-    private static OffsetDateTime getDateTimeFromLong( long epochTime ) {
-        return OffsetDateTime.ofInstant( Instant.ofEpochMilli( epochTime ), ZoneId.systemDefault() );
     }
 
     private Stream<UUID> streamEntitySetIds( DataAssociation association ) {
@@ -1057,6 +1193,83 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             throw new ForbiddenException( "You cannot modify data of entity sets " + auditEntitySetIds.toString()
                     + " because they are audit entity sets." );
         }
+    }
+
+    private int blockOnDeletionJobGettingNumUpdates( UUID deletionJobId, boolean blockUntilCompletion ) {
+        if ( !blockUntilCompletion ) {
+            return 0;
+        }
+
+        for ( int i = 0; i < MAX_DELETION_BLOCKING_CHECKS; i++ ) {
+            try {
+                Thread.sleep( DELETION_BLOCKING_INTERVAL );
+                JobStatus status = jobService.getStatus( deletionJobId );
+
+                if ( status.equals( JobStatus.FINISHED ) ) {
+                    return Long.valueOf(
+                            ( (DataDeletionJobState) jobService.getJob( deletionJobId ).getState() ).getNumDeletes()
+                    ).intValue();
+                }
+
+                if ( status.equals( JobStatus.CANCELED ) ) {
+                    throw new IllegalStateException(
+                            "Deletion failed -- job " + deletionJobId.toString() + " was canceled." );
+                }
+            } catch ( InterruptedException e ) {
+                logger.error( "Unable to block until deletion finished." );
+            }
+        }
+
+        return 0;
+    }
+
+    /**
+     * Methods for setting http response header
+     */
+
+    private static void setDownloadContentType( HttpServletResponse response, FileType fileType ) {
+        if ( fileType == FileType.csv ) {
+            response.setContentType( CustomMediaType.TEXT_CSV_VALUE );
+        } else {
+            response.setContentType( MediaType.APPLICATION_JSON_VALUE );
+        }
+    }
+
+    private static void setContentDisposition(
+            HttpServletResponse response,
+            String fileName,
+            FileType fileType ) {
+        if ( fileType == FileType.csv || fileType == FileType.json ) {
+            response.setHeader( "Content-Disposition",
+                    "attachment; filename=" + fileName + "." + fileType.toString() );
+        }
+    }
+
+    private static SetMultimap<UUID, UUID> requiredAssociationPropertyTypes( ListMultimap<UUID, DataEdge> associations ) {
+        final SetMultimap<UUID, UUID> propertyTypesByEntitySet = HashMultimap.create();
+        associations.entries().forEach( entry -> propertyTypesByEntitySet
+                .putAll( entry.getKey(), entry.getValue().getData().keySet() ) );
+        return propertyTypesByEntitySet;
+    }
+
+    private static SetMultimap<UUID, UUID> requiredAssociationPropertyTypes( Map<UUID, Map<UUID, DataEdge>> associations ) {
+        final SetMultimap<UUID, UUID> propertyTypesByEntitySet = HashMultimap.create();
+        associations.forEach( ( esId, edges ) -> edges.values()
+                .forEach( de -> propertyTypesByEntitySet.putAll( esId, de.getData().keySet() ) ) );
+        return propertyTypesByEntitySet;
+    }
+
+    private static Set<UUID> requiredEntitySetPropertyTypes( Map<UUID, Map<UUID, Set<Object>>> entities ) {
+        return entities.values().stream().map( Map::keySet ).flatMap( Set::stream )
+                .collect( Collectors.toSet() );
+    }
+
+    private static Set<UUID> requiredReplacementPropertyTypes( Map<UUID, Map<UUID, Set<Map<ByteBuffer, Object>>>> entities ) {
+        return entities.values().stream().flatMap( m -> m.keySet().stream() ).collect( Collectors.toSet() );
+    }
+
+    private static OffsetDateTime getDateTimeFromLong( long epochTime ) {
+        return OffsetDateTime.ofInstant( Instant.ofEpochMilli( epochTime ), ZoneId.systemDefault() );
     }
 
 }

@@ -24,14 +24,18 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.health.HealthCheckRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.geekbeast.hazelcast.HazelcastClientProvider;
+import com.geekbeast.rhizome.jobs.HazelcastJobService;
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
+import com.openlattice.data.DataGraphManager;
+import com.openlattice.data.DataGraphService;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
 import com.openlattice.data.storage.ByteBlobDataManager;
+import com.openlattice.data.storage.DataSourceResolver;
 import com.openlattice.data.storage.EntityDatastore;
 import com.openlattice.data.storage.IndexingMetadataManager;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
@@ -40,11 +44,24 @@ import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EntitySetManager;
+import com.openlattice.graph.Graph;
+import com.openlattice.graph.core.GraphService;
 import com.openlattice.ids.HazelcastIdGenerationService;
-import com.openlattice.linking.*;
+import com.openlattice.jdbc.DataSourceManager;
+import com.openlattice.linking.BackgroundLinkingService;
+import com.openlattice.linking.DataLoader;
+import com.openlattice.linking.EdmCachingDataLoader;
+import com.openlattice.linking.LinkingConfiguration;
+import com.openlattice.linking.LinkingQueryService;
+import com.openlattice.linking.PostgresLinkingFeedbackService;
+import com.openlattice.linking.blocking.Blocker;
 import com.openlattice.linking.blocking.ElasticsearchBlocker;
+import com.openlattice.linking.clustering.Clusterer;
+import com.openlattice.linking.clustering.PostgresClusterer;
 import com.openlattice.linking.controllers.RealtimeLinkingController;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
+import com.openlattice.linking.matching.Matcher;
+import com.openlattice.postgres.PostgresTable;
 import com.zaxxer.hikari.HikariDataSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -105,6 +122,12 @@ public class LinkerPostConfigurationServicesPod {
     @Inject
     private HealthCheckRegistry healthCheckRegistry;
 
+    @Inject
+    private PostgresLinkingFeedbackService postgresLinkingFeedbackQueryService;
+
+    @Inject
+    private DataSourceManager dataSourceManager;
+
     @Bean
     public HazelcastIdGenerationService idGeneration() {
         return new HazelcastIdGenerationService( hazelcastClientProvider );
@@ -113,17 +136,24 @@ public class LinkerPostConfigurationServicesPod {
     @Bean
     public EntityKeyIdService idService() {
         return new PostgresEntityKeyIdService(
-                hikariDataSource,
+                dataSourceResolver(),
                 idGeneration(),
                 partitionManager );
     }
 
     @Bean
+    public DataSourceResolver dataSourceResolver() {
+        dataSourceManager.registerTablesWithAllDatasources( PostgresTable.E );
+        dataSourceManager.registerTablesWithAllDatasources( PostgresTable.DATA );
+        return new DataSourceResolver( hazelcastInstance, dataSourceManager );
+    }
+
+    @Bean
     public PostgresEntityDataQueryService dataQueryService() {
+
         //TODO: fix it to use read replica
         return new PostgresEntityDataQueryService(
-                hikariDataSource,
-                hikariDataSource,
+                dataSourceResolver(),
                 byteBlobDataManager,
                 partitionManager
         );
@@ -139,7 +169,7 @@ public class LinkerPostConfigurationServicesPod {
         return new ElasticsearchBlocker(
                 elasticsearchApi,
                 dataLoader(),
-                postgresLinkingFeedbackQueryService(),
+                postgresLinkingFeedbackQueryService,
                 hazelcastInstance );
     }
 
@@ -156,9 +186,29 @@ public class LinkerPostConfigurationServicesPod {
                 entitySetManager,
                 metricRegistry,
                 eventBus,
-                postgresLinkingFeedbackQueryService(),
+                postgresLinkingFeedbackQueryService,
                 lqs()
         );
+    }
+
+    @Bean
+    public GraphService graphService() {
+        return new Graph( dataSourceResolver(),
+                entitySetManager,
+                partitionManager,
+                dataQueryService(),
+                idService(),
+                metricRegistry );
+    }
+
+    @Bean
+    public HazelcastJobService jobService() {
+        return new HazelcastJobService( hazelcastInstance );
+    }
+
+    @Bean
+    public DataGraphManager dgm() {
+        return new DataGraphService(graphService(), idService(), entityDatastore(), jobService() );
     }
 
     @Bean
@@ -173,20 +223,23 @@ public class LinkerPostConfigurationServicesPod {
                 blocker(),
                 matcher,
                 idService(),
-                dataLoader(),
+                clusterer(),
                 lqs(),
-                postgresLinkingFeedbackQueryService(),
+                postgresLinkingFeedbackQueryService,
                 edm.getEntityTypeUuids( linkingConfiguration.getEntityTypes() ),
                 linkingConfiguration );
     }
 
     @Bean
-    public RealtimeLinkingController realtimeLinkingController() {
-        return new RealtimeLinkingController( linkingConfiguration, edm );
+    public Clusterer clusterer() {
+        return new PostgresClusterer(
+                dataLoader(),
+                matcher
+        );
     }
 
     @Bean
-    public PostgresLinkingFeedbackService postgresLinkingFeedbackQueryService() {
-        return new PostgresLinkingFeedbackService( hikariDataSource, hazelcastInstance );
+    public RealtimeLinkingController realtimeLinkingController() {
+        return new RealtimeLinkingController( linkingConfiguration, edm );
     }
 }
