@@ -3255,6 +3255,26 @@ paths:
       responses:
         "200":
           description: Success
+  /datastore/permissions/update:
+    patch:
+      summary: Adds, removes, or sets the ace for a particular set of acl keys. Successful only if user is the owner of all acl keys.
+      operationId: updateAcls
+      tags:
+        - permissions
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/AclData"
+      responses:
+        "200":
+          description: Success
   /datastore/authorizations:
     post:
       summary: Check authorizations
