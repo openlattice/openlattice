@@ -3,6 +3,7 @@ package com.openlattice.data
 import com.openlattice.authorization.Principal
 import com.openlattice.controllers.exceptions.ForbiddenException
 import com.openlattice.edm.type.PropertyType
+import com.openlattice.search.requests.EntityNeighborsFilter
 import java.util.*
 
 interface DataDeletionManager {
@@ -51,4 +52,15 @@ interface DataDeletionManager {
             entityKeyIds: Set<UUID>? = null
     )
 
+    /**
+     * Clears or deletes the specified entity key ids and their neighboring entities, as well as any edges and associations
+     * entities
+     */
+    fun clearOrDeleteEntitiesAndNeighbors(
+            entitySetIdEntityKeyIds: Map<UUID, Set<UUID>>,
+            entitySetId: UUID,
+            allEntitySetIds: Set<UUID>,
+            filter: EntityNeighborsFilter,
+            deleteType: DeleteType
+    ): UUID
 }
