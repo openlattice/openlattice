@@ -95,7 +95,7 @@ class DbCredentialService(
     }
 
     fun getDbUsernamesAsMap(aclKeys: Set<AclKey>): Map<AclKey, String> {
-        return dbCreds.executeOnKeys(aclKeys, GetDbUsernameFromDbCredsEntryProcessor())
+        return dbCreds.executeOnKeys(aclKeys, GetDbUsernameFromDbCredsEntryProcessor()).filter { it.value.isNotBlank() }
     }
 
     fun getDbUsernames(aclKeys: Set<AclKey>): Set<String> {

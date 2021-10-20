@@ -1677,6 +1677,11 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             return false;
         }
 
+        if (dataSet == null) {
+            logger.warn( "encountered null data set" );
+            return false;
+        }
+
         try {
             Map<String, Object> objectToIndex = ImmutableMap.of(
                     DATASET, dataSet,
