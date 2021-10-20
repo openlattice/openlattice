@@ -956,10 +956,6 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                 Optional.empty()
         ) );
 
-        if ( blockUntilCompletion ) {
-            waitForDeleteJobToTerminate( deletionJobId );
-        }
-
         return deletionJobId;
     }
 
