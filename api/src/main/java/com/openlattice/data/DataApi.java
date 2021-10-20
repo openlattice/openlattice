@@ -191,14 +191,12 @@ public interface DataApi {
      * @param filter               EntityNeighboursFilter containing which ids of entities to delete and entity set ids of neighbours
      *                             to delete from.
      * @param deleteType           The delete type to perform (soft or hard delete).
-     * @param blockUntilCompletion If set to true, controller will wait for deletion to complete before returning to caller
      */
     @HTTP( method = "DELETE", path = BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + NEIGHBORS, hasBody = true )
     UUID deleteEntitiesAndNeighbors(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Body EntityNeighborsFilter filter,
-            @Query( TYPE ) DeleteType deleteType,
-            @Query( BLOCK ) boolean blockUntilCompletion );
+            @Query( TYPE ) DeleteType deleteType );
 
     /**
      * Deletes all entities from an entity set.

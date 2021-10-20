@@ -871,8 +871,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                                     newEntityIds.toSet(),
                                     Optional.empty(), Optional.of(setOf(esDst.id)), Optional.empty()
                             ),
-                            DeleteType.Hard,
-                            true
+                            DeleteType.Hard
                     )
                 },
                 "Object [${esEdge.id}] is not accessible."
@@ -892,9 +891,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                                     newEntityIds.toSet(),
                                     Optional.empty(), Optional.of(setOf(esDst.id)), Optional.of(setOf(esEdge.id))
                             ),
-                            DeleteType.Hard,
-                            false
-                    )
+                            DeleteType.Hard)
                 },
                 "You must have OWNER permission of all required entity set ${esEdge.id} properties to delete entities from it."
         )
@@ -952,9 +949,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                                     newEntityIds.toSet(),
                                     Optional.empty(), Optional.of(setOf(esDst.id)), Optional.empty()
                             ),
-                            DeleteType.Soft,
-                            true
-                    )
+                            DeleteType.Soft)
                 },
                 "You must have WRITE permission of all required entity set ${esEdge.id} properties to delete entities from it."
         )
@@ -976,9 +971,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                                     newEntityIds.toSet(),
                                     Optional.empty(), Optional.of(setOf(esDst.id)), Optional.empty()
                             ),
-                            DeleteType.Soft,
-                            true
-                    )
+                            DeleteType.Soft )
                 },
                 "Object [${esDst.id}] is not accessible."
         )
@@ -998,9 +991,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                                     newEntityIds.toSet(),
                                     Optional.empty(), Optional.of(setOf(esDst.id)), Optional.empty()
                             ),
-                            DeleteType.Soft,
-                            true
-                    )
+                            DeleteType.Soft)
                 },
                 "You must have WRITE permission of all required entity set ${esDst.id} properties to delete entities from it."
         )
@@ -1345,9 +1336,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                         ids1.toSet(),
                         Optional.of(setOf(esSrc1.id)), Optional.of(setOf(esDst1.id)), Optional.empty()
                 ),
-                DeleteType.Hard,
-                true
-        )
+                DeleteType.Hard)
 
         // test if there is really no data
         val ess1 = EntitySetSelection(Optional.of(et1.properties))
@@ -1434,9 +1423,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                         ids2.toSet(),
                         Optional.of(setOf(esSrc2.id)), Optional.empty(), Optional.empty()
                 ),
-                DeleteType.Hard,
-                true
-        )
+                DeleteType.Hard )
 
         // test if there is really no data, what is deleted and data which is not
         val ess2 = EntitySetSelection(Optional.of(et2.properties))
@@ -1544,9 +1531,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                                     ids.toSet(),
                                     Optional.of(setOf(esSrc.id)), Optional.of(setOf(esDst.id)), Optional.empty()
                             ),
-                            deleteType,
-                            true
-                    )
+                            deleteType )
                 },
                 listOf(
                         "Unable to delete from entity sets [${es.id}, ${esDst.id}, ${esSrc.id}]: missing required " +
@@ -1575,9 +1560,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                                     ids.toSet(),
                                     Optional.of(setOf(esSrc.id)), Optional.of(setOf(esDst.id)), Optional.empty()
                             ),
-                            deleteType,
-                            true
-                    )
+                            deleteType )
                 },
                 listOf(
                         "Unable to delete from entity sets [${es.id}, ${esDst.id}, ${esSrc.id}]: missing required " +
@@ -1624,9 +1607,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                                     ids.toSet(),
                                     Optional.of(setOf(esSrc.id)), Optional.of(setOf(esDst.id)), Optional.empty()
                             ),
-                            deleteType,
-                            true
-                    )
+                            deleteType )
                 },
                 listOf(
                         "Unable to delete from entity sets [${es.id}, ${esDst.id}, ${esSrc.id}]: missing required " +
@@ -1658,9 +1639,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                                     ids.toSet(),
                                     Optional.of(setOf(esSrc.id)), Optional.of(setOf(esDst.id)), Optional.empty()
                             ),
-                            deleteType,
-                            true
-                    )
+                            deleteType )
                 },
                 listOf(
                         "Unable to delete from entity set ${es.id}: missing required permissions " +
@@ -1698,9 +1677,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                         ids.toSet(),
                         Optional.of(setOf(esSrc.id)), Optional.of(setOf(esDst.id)), Optional.empty()
                 ),
-                deleteType,
-                true
-        )
+                deleteType )
 
         loginAs("admin")
         val esEmptyResult = dataApi.loadSelectedEntitySetData(
