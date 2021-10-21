@@ -22,6 +22,7 @@
 package com.openlattice.rehearsal.linking
 
 import com.google.common.collect.ImmutableSet
+import com.openlattice.data.DeleteType
 import com.openlattice.data.EntityDataKey
 import com.openlattice.edm.EdmConstants
 import com.openlattice.edm.EntitySet
@@ -103,7 +104,7 @@ class LinkingFeedbackTest : SetupTestData() {
             // delete all created entity sets
             (importedEntitySets.keys + linkingEntitySet.name).forEach {
                 try {
-                    entitySetsApi.deleteEntitySet(entitySetsApi.getEntitySetId(it))
+                    entitySetsApi.deleteEntitySet(entitySetsApi.getEntitySetId(it), DeleteType.Hard)
                 } catch (e: UndeclaredThrowableException) {
                 }
             }
