@@ -6,10 +6,12 @@ import com.openlattice.authorization.Principal
 import com.openlattice.jobs.JobUpdate
 import com.openlattice.notifications.sms.SmsEntitySetInformation
 import com.openlattice.organizations.Organization
+import com.openlattice.organizations.JdbcConnectionParameters
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.PATCH
 import retrofit2.http.POST
+import retrofit2.http.DELETE
 import retrofit2.http.Path
 import retrofit2.http.Query
 import java.util.*
@@ -37,10 +39,13 @@ const val ID_PATH = "/{$ID}"
 const val NAME = "name"
 const val NAME_PATH = "/{$NAME}"
 
+const val WAREHOUSES_PATH = "/warehouses"
+const val WAREHOUSE_ID_PARAM = "warehouseId"
+const val WAREHOUSE_ID_PATH = "/{${WAREHOUSE_ID_PARAM}}"
+
 const val JOBS = "/jobs"
 
 interface AdminApi {
-
 
     /**
      * Reload the all the in memory caches.
@@ -72,7 +77,7 @@ interface AdminApi {
      *
      * @param organizationId The organization id to set the phone number for.
      * @param entitySetInformationList An array of [SmsEntitySetInformation] containing per entity set contact info.
-     * @return The current phone number after the set operation completed. This be different from the input phone number
+     * @return The current phone number after the set operation completed. This would be different from the input phone number
      * either because it has been reformatted or someone else set the phone number simultaneously.
      */
     @POST(BASE + ID_PATH + PHONE)
@@ -101,4 +106,51 @@ interface AdminApi {
 
     @PATCH(BASE + JOBS + ID_PATH)
     fun updateJob(@Path(ID) jobId: UUID, @Body update: JobUpdate): Map<UUID, DistributableJob<*>>
+
+    /**
+     *  Gets all data warehouses known by the application.
+     *
+     *  @return List containing JDBC connection details for all known warehouses.
+     */
+
+    @GET(BASE + WAREHOUSES_PATH)
+    fun getWarehouses(): Iterable<JdbcConnectionParameters>
+
+    /**
+     *  Gets JDBC connection details for a specified Warehouse
+     *
+     *   @param warehouseId the ID for the warehouse to get details about.
+     *   @return The JDBC connection details that define the warehouse.
+     *   - Fields: Title, Url, Driver, Database, Username, Password, Properties, Description
+     *
+     */
+    @GET(BASE + WAREHOUSES_PATH + WAREHOUSE_ID_PATH)
+    fun getWarehouse(@Path(WAREHOUSE_ID_PARAM) warehouseId: UUID): JdbcConnectionParameters
+
+    /**
+     *  Creates a warehouse by providing the application JDBC details needed
+     *  to connect.
+     *
+     *  @param JdbcConnection The JDBC connection details that define the warehouse.
+     *  - Fields: Title, Url, Driver, Database, Username, Password, Properties, Description
+     *   @return The ID of the new warehouse.
+     */
+    @POST(BASE + WAREHOUSES_PATH)
+    fun createWarehouse(@Body jdbc: JdbcConnectionParameters): UUID
+
+    /**
+     *  Deletes a specified warehouse from the known warehouse connections.
+     *
+     *  @param WarehouseID The ID of the warehouse to be deleted.
+     */
+    @DELETE(BASE + WAREHOUSES_PATH + WAREHOUSE_ID_PATH)
+    fun deleteWarehouse(@Path(WAREHOUSE_ID_PARAM) warehouseId: UUID)
+
+    /**
+     * Update the connection details for a warehouse JDBC connection.
+     *
+     *  @param jdbc JdbcConnectionParameters to replace existing parameters. Jdbc.id indicates the Warehouse to be updated.
+     */
+    @PATCH(BASE + WAREHOUSES_PATH)
+    fun updateWarehouse(@Body jdbc: JdbcConnectionParameters)
 }

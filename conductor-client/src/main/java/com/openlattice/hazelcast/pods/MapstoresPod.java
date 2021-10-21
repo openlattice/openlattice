@@ -46,6 +46,7 @@ import com.openlattice.authorization.SecurablePrincipal;
 import com.openlattice.authorization.mapstores.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.collaborations.mapstores.CollaborationMapstore;
+import com.openlattice.organizations.mapstores.WarehousesMapstore;
 import com.openlattice.collaborations.mapstores.ProjectedTablesMapstore;
 import com.openlattice.collections.CollectionTemplateKey;
 import com.openlattice.collections.EntitySetCollection;
@@ -312,6 +313,11 @@ public class MapstoresPod {
     @Bean
     public CollaborationMapstore collaborationMapstore() {
         return new CollaborationMapstore( hikariDataSource );
+    }
+
+    @Bean
+    public WarehousesMapstore warehousesMapstore() {
+        return new WarehousesMapstore( hikariDataSource );
     }
 
     @Bean

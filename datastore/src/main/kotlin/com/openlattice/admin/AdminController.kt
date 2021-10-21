@@ -23,13 +23,17 @@ import com.openlattice.jobs.JobUpdate
 import com.openlattice.notifications.sms.SmsEntitySetInformation
 import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.organizations.Organization
+import com.openlattice.organizations.JdbcConnectionParameters
+import com.openlattice.organizations.WarehousesService
 import com.openlattice.postgres.DataTables.quote
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
-import java.util.*
+import java.util.UUID
+import java.util.Optional
+import java.util.EnumSet
 import javax.inject.Inject
 
 @SuppressFBWarnings(
@@ -72,6 +76,9 @@ class AdminController : AdminApi, AuthorizingComponent {
 
     @Inject
     private lateinit var jobService: HazelcastJobService
+
+    @Inject
+    private lateinit var warehousesService: WarehousesService
 
     @GetMapping(value = [SQL + ID_PATH], produces = [MediaType.APPLICATION_JSON_VALUE])
     override fun getEntitySetSql(
@@ -250,6 +257,59 @@ class AdminController : AdminApi, AuthorizingComponent {
 
         return jobService.getJobs(jobs)
 
+    }
+
+    @Timed
+    @GetMapping(
+        path = [WAREHOUSES_PATH],
+        produces = [MediaType.APPLICATION_JSON_VALUE]
+    )
+    override fun getWarehouses(): Iterable<JdbcConnectionParameters> {
+        ensureAdminAccess()
+        return warehousesService.getWarehouses()
+    }
+
+    @Timed
+    @GetMapping(
+        value = [WAREHOUSES_PATH + WAREHOUSE_ID_PATH],
+        produces = [MediaType.APPLICATION_JSON_VALUE]
+    )
+    override fun getWarehouse(@PathVariable(WAREHOUSE_ID_PARAM) WarehouseId: UUID): JdbcConnectionParameters {
+        ensureAdminAccess()
+        return warehousesService.getWarehouse(WarehouseId)
+    }
+
+    @Timed
+    @DeleteMapping(
+        value = [WAREHOUSES_PATH + WAREHOUSE_ID_PATH],
+        produces = [MediaType.APPLICATION_JSON_VALUE]
+    )
+    override fun deleteWarehouse(@PathVariable(WAREHOUSE_ID_PARAM) WarehouseId: UUID) {
+        ensureAdminAccess()
+        warehousesService.deleteWarehouse(WarehouseId)
+    }
+
+    @Timed
+    @PostMapping(
+        value = [WAREHOUSES_PATH],
+        consumes = [MediaType.APPLICATION_JSON_VALUE],
+        produces = [MediaType.APPLICATION_JSON_VALUE]
+    )
+    override fun createWarehouse(
+        @RequestBody jdbc: JdbcConnectionParameters
+    ): UUID {
+        ensureAdminAccess()
+        return warehousesService.createWarehouse(jdbc)
+    }
+
+    @Timed
+    @PatchMapping(
+        path =      [WAREHOUSES_PATH],
+        consumes =  [MediaType.APPLICATION_JSON_VALUE],
+    )
+    override fun updateWarehouse(@RequestBody jdbc: JdbcConnectionParameters) {
+        ensureAdminAccess()
+        warehousesService.updateWarehouse(jdbc)
     }
 
     override fun getAuthorizationManager(): AuthorizationManager {
