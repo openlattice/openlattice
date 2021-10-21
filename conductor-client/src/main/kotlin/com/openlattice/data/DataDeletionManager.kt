@@ -45,11 +45,10 @@ interface DataDeletionManager {
      * Performs auth checks for [principals] in order to delete entities from entity set [entitySetId], throwing
      * a [ForbiddenException] if the user does not have required permissions for a delete of type [deleteType].
      */
-    fun authCheckForEntitySetAndItsNeighbors(
-            entitySetId: UUID,
+    fun authCheckForEntitySetsAndNeighbors(
+            entitySetIds: Set<UUID>,
             deleteType: DeleteType,
-            principals: Set<Principal>,
-            entityKeyIds: Set<UUID>? = null
+            principals: Set<Principal>
     )
 
     /**
