@@ -21,21 +21,13 @@
 
 package com.openlattice.transporter
 
-import com.kryptnostic.rhizome.configuration.RhizomeConfiguration
-import com.openlattice.assembler.AssemblerConfiguration
-import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
-import com.openlattice.postgres.external.ExternalDatabasePermissioningService
-import com.openlattice.transporter.types.TransporterDatastore
-import org.slf4j.LoggerFactory
-import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Configuration
-import java.io.IOException
-import javax.inject.Inject
+class TransporterConfigurationPod
 
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
+/*
 @Configuration
 class TransporterConfigurationPod {
     @Inject
@@ -57,3 +49,4 @@ class TransporterConfigurationPod {
         return TransporterDatastore(assemblerConfiguration, rhizome, externalDbConnMan, externalDbPermMan)
     }
 }
+*/

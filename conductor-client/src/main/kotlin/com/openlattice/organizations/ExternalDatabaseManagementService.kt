@@ -6,17 +6,11 @@ import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.hazelcast.query.QueryConstants
 import com.openlattice.authorization.*
-import com.openlattice.authorization.mapstores.PermissionMapstore
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.datasets.DataSetService
 import com.openlattice.datasets.SecurableObjectMetadata
 import com.openlattice.datasets.SecurableObjectMetadataUpdate
-import com.openlattice.edm.PropertyTypeIdFqn
-import com.openlattice.edm.processors.AddFlagsOnEntitySetEntryProcessor
-import com.openlattice.edm.processors.GetEntityTypeFromEntitySetEntryProcessor
-import com.openlattice.edm.processors.GetFqnFromPropertyTypeEntryProcessor
 import com.openlattice.edm.requests.MetadataUpdate
-import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.processors.organizations.ExternalTableEntryProcessor
 import com.openlattice.hazelcast.processors.organizations.UpdateExternalColumnEntryProcessor
@@ -30,35 +24,16 @@ import com.openlattice.organizations.mapstores.ORGANIZATION_ID_INDEX
 import com.openlattice.organizations.mapstores.TABLE_ID_INDEX
 import com.openlattice.postgres.*
 import com.openlattice.postgres.DataTables.quote
-import com.openlattice.postgres.PostgresColumn.COLUMN_NAMES_FIELD
-import com.openlattice.postgres.PostgresColumn.CONNECTION_TYPE
-import com.openlattice.postgres.PostgresColumn.DATABASE
-import com.openlattice.postgres.PostgresColumn.IP_ADDRESS
-import com.openlattice.postgres.PostgresColumn.NAME
-import com.openlattice.postgres.PostgresColumn.OID
-import com.openlattice.postgres.PostgresColumn.SCHEMA_NAME_FIELD
-import com.openlattice.postgres.ResultSetAdapters.columnName
-import com.openlattice.postgres.ResultSetAdapters.columnNames
-import com.openlattice.postgres.ResultSetAdapters.constraintType
-import com.openlattice.postgres.ResultSetAdapters.name
-import com.openlattice.postgres.ResultSetAdapters.oid
-import com.openlattice.postgres.ResultSetAdapters.ordinalPosition
-import com.openlattice.postgres.ResultSetAdapters.postgresAuthenticationRecord
-import com.openlattice.postgres.ResultSetAdapters.privilegeType
-import com.openlattice.postgres.ResultSetAdapters.schemaName
-import com.openlattice.postgres.ResultSetAdapters.sqlDataType
-import com.openlattice.postgres.ResultSetAdapters.user
+import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.ResultSetAdapters.*
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService
-import com.openlattice.postgres.external.Schemas.INTEGRATIONS_SCHEMA
-import com.openlattice.postgres.external.Schemas.OPENLATTICE_SCHEMA
-import com.openlattice.postgres.external.Schemas.STAGING_SCHEMA
+import com.openlattice.postgres.external.Schemas.*
 import com.openlattice.postgres.external.dropAllConnectionsToDatabaseSql
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.StatementHolderSupplier
-import com.openlattice.transporter.processors.GetPropertyTypesFromTransporterColumnSetEntryProcessor
-import com.openlattice.transporter.services.TransporterService
 import com.zaxxer.hikari.HikariDataSource
+import org.apache.commons.lang3.NotImplementedException
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -70,7 +45,6 @@ import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import java.util.*
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit
 
 @Service
 class ExternalDatabaseManagementService(
@@ -81,7 +55,6 @@ class ExternalDatabaseManagementService(
     private val authorizationManager: AuthorizationManager,
     private val organizationExternalDatabaseConfiguration: OrganizationExternalDatabaseConfiguration,
     private val extDbPermsManager: ExternalDatabasePermissioningService,
-    private val transporterService: TransporterService,
     private val dbCredentialService: DbCredentialService,
     private val hds: HikariDataSource,
     private val dataSetService: DataSetService
@@ -169,6 +142,8 @@ class ExternalDatabaseManagementService(
     }
 
     fun destroyTransportedEntitySet(organizationId: UUID, entitySetId: UUID) {
+        throw NotImplementedException("transporter is disabled indefinitely")
+        /*
         try {
             entitySets.lock(entitySetId, 10, TimeUnit.SECONDS)
             val es = entitySets.getValue(entitySetId)
@@ -180,9 +155,12 @@ class ExternalDatabaseManagementService(
         } finally {
             entitySets.unlock(entitySetId)
         }
+        */
     }
 
     fun transportEntitySet(organizationId: UUID, entitySetId: UUID): CompletableFuture<Boolean> {
+        throw NotImplementedException("transporter is disabled indefinitely")
+        /*
         val ptIds = entitySets.submitToKey(
                 entitySetId,
                 GetEntityTypeFromEntitySetEntryProcessor()
@@ -237,6 +215,7 @@ class ExternalDatabaseManagementService(
             }
             return@thenCombineAsync true
         }.toCompletableFuture()
+        */
     }
 
     /*GET*/

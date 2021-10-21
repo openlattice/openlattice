@@ -39,8 +39,6 @@ import com.openlattice.ioc.providers.LateInitProvidersPod;
 import com.openlattice.jdbc.JdbcPod;
 import com.openlattice.postgres.PostgresPod;
 import com.openlattice.postgres.pods.ExternalDatabaseConnectionManagerPod;
-import com.openlattice.transporter.TransporterConfigurationPod;
-import com.openlattice.transporter.pods.TransporterPod;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -61,8 +59,8 @@ public class Indexer extends BaseRhizomeServer {
             PlasmaCoupling.class,
             PostgresPod.class,
             SharedStreamSerializersPod.class,
-            TransporterPod.class,
-            TransporterConfigurationPod.class,
+            // TransporterPod.class,
+            // TransporterConfigurationPod.class,
             LateInitProvidersPod.class
     };
 

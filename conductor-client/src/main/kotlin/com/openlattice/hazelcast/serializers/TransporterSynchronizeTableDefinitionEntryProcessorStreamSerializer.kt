@@ -1,14 +1,8 @@
 package com.openlattice.hazelcast.serializers
 
-import com.hazelcast.nio.ObjectDataInput
-import com.hazelcast.nio.ObjectDataOutput
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
-import com.openlattice.hazelcast.StreamSerializerTypeIds
-import com.openlattice.transporter.processors.TransporterSynchronizeTableDefinitionEntryProcessor
-import com.openlattice.transporter.types.TransporterDatastore
-import com.openlattice.transporter.types.TransporterDependent
-import org.springframework.stereotype.Component
+class TransporterSynchronizeTableDefinitionEntryProcessorStreamSerializer
 
+/*
 @Component
 class TransporterSynchronizeTableDefinitionEntryProcessorStreamSerializer:
         SelfRegisteringStreamSerializer<TransporterSynchronizeTableDefinitionEntryProcessor>,
@@ -46,3 +40,4 @@ class TransporterSynchronizeTableDefinitionEntryProcessorStreamSerializer:
         return null
     }
 }
+*/
