@@ -1,31 +1,7 @@
 package com.openlattice.transporter
 
 import com.google.common.base.Strings
-import com.kryptnostic.rhizome.configuration.RhizomeConfiguration
-import com.kryptnostic.rhizome.pods.ConfigurationLoader
-import com.openlattice.TestServer
-import com.openlattice.assembler.AssemblerConfiguration
-import com.openlattice.edm.type.PropertyType
-import com.openlattice.mapstores.TestDataFactory
-import com.openlattice.postgres.IndexType
-import com.openlattice.postgres.PostgresArrays
-import com.openlattice.postgres.PostgresTableManager
-import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
-import com.openlattice.postgres.external.ExternalDatabasePermissioningService
-import com.openlattice.postgres.external.Schemas
-import com.openlattice.transporter.processors.TransporterSynchronizeTableDefinitionEntryProcessor
-import com.openlattice.transporter.types.TransporterColumn
-import com.openlattice.transporter.types.TransporterColumnSet
-import com.openlattice.transporter.types.TransporterDatastore
-import com.openlattice.transporter.types.TransporterDependent
-import com.zaxxer.hikari.HikariDataSource
-import org.junit.After
-import org.junit.Assert.assertEquals
-import org.junit.Assert.fail
-import org.junit.BeforeClass
-import org.junit.Test
 import org.postgresql.util.PSQLException
-import java.util.*
 
 fun pretty(query: String, e: PSQLException): String {
     val errorMessage = e.serverErrorMessage
@@ -38,6 +14,8 @@ fun pretty(query: String, e: PSQLException): String {
 }
 
 class TransporterQueriesTest {
+
+    /*
     companion object {
         lateinit var data: TransporterDatastore
         lateinit var transporter: HikariDataSource
@@ -156,4 +134,5 @@ class TransporterQueriesTest {
             }
         }
     }
+    */
 }

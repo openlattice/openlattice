@@ -5,13 +5,10 @@ import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.openlattice.TestServer.Companion.testServer
 import com.openlattice.rhizome.KotlinDelegatedUUIDSet
-import com.openlattice.transporter.types.TransporterDatastore
-import com.openlattice.transporter.types.TransporterDependent
 import org.junit.Assert
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
-import org.mockito.Mockito
 import org.slf4j.LoggerFactory
 import org.springframework.util.ClassUtils
 
@@ -25,14 +22,16 @@ class SerializersTest(val serializer: TestableSelfRegisteringStreamSerializer<An
         @Parameterized.Parameters(name = "{1}")
         fun getSerializers(): Array<Array<Any>> {
             val serializers: MutableCollection<TestableSelfRegisteringStreamSerializer<*>> = testServer.context.getBeansOfType(TestableSelfRegisteringStreamSerializer::class.java).values
-            val tds = Mockito.mock(TransporterDatastore::class.java)
+            // val tds = Mockito.mock(TransporterDatastore::class.java)
             return serializers
+                    /*
                     .map { ss ->
                         if (ss is TransporterDependent<*>) {
                             ss.init(tds)
                         }
                         ss
                     }
+                    */
                     .map { ss -> arrayOf(ss, ClassUtils.getUserClass(ss).simpleName) }
                     .toTypedArray()
         }

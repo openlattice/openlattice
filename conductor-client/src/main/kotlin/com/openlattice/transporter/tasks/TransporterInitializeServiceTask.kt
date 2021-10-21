@@ -1,10 +1,8 @@
 package com.openlattice.transporter.tasks
 
-import com.openlattice.edm.tasks.EdmSyncInitializerTask
-import com.openlattice.tasks.HazelcastInitializationTask
-import com.openlattice.tasks.PostConstructInitializerTaskDependencies
-import com.openlattice.tasks.Task
+class TransporterInitializeServiceTask
 
+/*
 class TransporterInitializeServiceTask: HazelcastInitializationTask<TransporterRunSyncTaskDependencies> {
 
     override fun getInitialDelay(): Long {
@@ -31,3 +29,4 @@ class TransporterInitializeServiceTask: HazelcastInitializationTask<TransporterR
     }
 
 }
+*/

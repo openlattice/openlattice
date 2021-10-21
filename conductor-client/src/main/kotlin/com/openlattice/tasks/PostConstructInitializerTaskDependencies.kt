@@ -31,8 +31,6 @@ import com.openlattice.ids.HazelcastIdGenerationService
 import com.openlattice.ids.IdGenerationServiceDependent
 import com.openlattice.ioc.providers.LateInitAware
 import com.openlattice.ioc.providers.LateInitProvider
-import com.openlattice.transporter.types.TransporterDatastore
-import com.openlattice.transporter.types.TransporterDependent
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import javax.inject.Inject
@@ -45,11 +43,14 @@ private val logger = LoggerFactory.getLogger(PostConstructInitializerTaskDepende
  */
 @Component
 class PostConstructInitializerTaskDependencies : HazelcastTaskDependencies {
+
+    /*
     @Inject
     private lateinit var transporterDatastore: TransporterDatastore
 
     @Inject
     private lateinit var transporterDependent: Set<TransporterDependent<out Any>>
+    */
 
     @Inject
     private lateinit var byteBlobDataManager: ByteBlobDataManager
@@ -88,10 +89,12 @@ class PostConstructInitializerTaskDependencies : HazelcastTaskDependencies {
         }
 
         override fun initialize(dependencies: PostConstructInitializerTaskDependencies) {
+            /*
             dependencies.transporterDependent.forEach {
                 it.init(dependencies.transporterDatastore)
                 logger.info("Initialized ${it.javaClass} with TransporterDatastore")
             }
+            */
 
             dependencies.byteBlobDataManagerAware.forEach {
                 it.setByteBlobDataManager(dependencies.byteBlobDataManager)
