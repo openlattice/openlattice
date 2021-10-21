@@ -19,6 +19,8 @@
 
 package com.openlattice.entitysets
 
+import com.openlattice.client.serialization.SerializationConstants.DELETE_TYPE
+import com.openlattice.data.DeleteType
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.edm.set.EntitySetPropertyMetadata
@@ -103,7 +105,7 @@ interface EntitySetsApi {
      * @return The id of the deletion job
      */
     @DELETE(BASE + ALL + ID_PATH)
-    fun deleteEntitySet(@Path(ID) entitySetId: UUID): UUID
+    fun deleteEntitySet(@Path(ID) entitySetId: UUID, @Query(DELETE_TYPE) deleteType: DeleteType): UUID
 
     /**
      * Get entity set id, entity type id, name, title, description, and contacts list for a given entity set.

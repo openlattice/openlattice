@@ -54,7 +54,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
         fun tearDown() {
             importedEntitySets.keys.forEach {
                 try {
-                    entitySetsApi.deleteEntitySet(entitySetsApi.getEntitySetId(it))
+                    entitySetsApi.deleteEntitySet(entitySetsApi.getEntitySetId(it), DeleteType.Hard)
                 } catch (e: UndeclaredThrowableException) {
                 }
             }
@@ -85,7 +85,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
         Assert.assertTrue(result2.numHits > 0)
         Assert.assertTrue(result2.hits.flatMap { it[EdmTestConstants.personGivenNameFqn]!! }.toSet().contains("Fermin"))
 
-        entitySetsApi.deleteEntitySet(esLinked.id)
+        entitySetsApi.deleteEntitySet(esLinked.id, DeleteType.Hard)
     }
 
     @Test
@@ -117,7 +117,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
         Assert.assertTrue(result2.numHits > 0)
         Assert.assertTrue(result2.hits.flatMap { it[EdmTestConstants.personSurnameFqn]!! }.toSet().contains("Morris"))
 
-        entitySetsApi.deleteEntitySet(esLinked.id)
+        entitySetsApi.deleteEntitySet(esLinked.id, DeleteType.Hard)
     }
 
     @Test
@@ -130,7 +130,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
         val result = searchApi.searchEntitySetData(simpleSearchConstraint)
         Assert.assertEquals(DataSearchResult(0, Lists.newArrayList()), result)
 
-        entitySetsApi.deleteEntitySet(esLinked.id)
+        entitySetsApi.deleteEntitySet(esLinked.id, DeleteType.Hard)
     }
 
     @Test
@@ -143,7 +143,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
                 .simpleSearchConstraints(arrayOf(esLinked.id), 0, 100, "*")
         val result = searchApi.searchEntitySetData(simpleSearchConstraint)
 
-        entitySetsApi.deleteEntitySet(esLinked.id)
+        entitySetsApi.deleteEntitySet(esLinked.id, DeleteType.Hard)
         Thread.sleep(60000L) // wait for indexing to finish
 
         Assert.assertEquals(
@@ -174,8 +174,8 @@ class SearchLinkedEntitiesTests : SetupTestData() {
         Assert.assertTrue(result1.numHits > 0)
         Assert.assertEquals(result1.numHits, result2.numHits)
 
-        entitySetsApi.deleteEntitySet(esLinked1.id)
-        entitySetsApi.deleteEntitySet(esLinked2.id)
+        entitySetsApi.deleteEntitySet(esLinked1.id, DeleteType.Hard)
+        entitySetsApi.deleteEntitySet(esLinked2.id, DeleteType.Hard)
     }
 
     @Test
@@ -190,7 +190,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
                 .simpleSearchConstraints(arrayOf(esLinked.id), 0, 100, "*")
         val resultsAB = searchApi.searchEntitySetData(simpleSearchConstraint)
 
-        entitySetsApi.deleteEntitySet(socratesBId)
+        entitySetsApi.deleteEntitySet(socratesBId, DeleteType.Hard)
         val resultsA = searchApi.searchEntitySetData(simpleSearchConstraint)
 
         Assert.assertTrue(resultsAB.numHits > resultsA.numHits)
@@ -204,7 +204,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
             Thread.sleep(5000L)
         }
 
-        entitySetsApi.deleteEntitySet(esLinked.id)
+        entitySetsApi.deleteEntitySet(esLinked.id, DeleteType.Hard)
     }
 
     @Test
@@ -233,7 +233,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
         val resultsA2 = searchApi.searchEntitySetData(simpleSearchConstraint)
         Assert.assertEquals(resultsA1, resultsA2)
 
-        entitySetsApi.deleteEntitySet(esLinked.id)
+        entitySetsApi.deleteEntitySet(esLinked.id, DeleteType.Hard)
     }
 
     @Test
@@ -267,7 +267,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
         Assert.assertEquals(newPropertyType.title, newPropertyHit["title"])
         Assert.assertEquals(newPropertyType.description, newPropertyHit["description"])
 
-        entitySetsApi.deleteEntitySet(esLinked.id)
+        entitySetsApi.deleteEntitySet(esLinked.id, DeleteType.Hard)
     }
 
     @Test
@@ -379,7 +379,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
         Assert.assertTrue(result6.hits.none { it[EdmTestConstants.personGivenNameFqn]!!.contains("newtestt") })
         Assert.assertTrue(result6.hits.any { it[EdmTestConstants.personGivenNameFqn] == setOf("newtest") })
 
-        entitySetsApi.deleteEntitySet(esLinked.id)
+        entitySetsApi.deleteEntitySet(esLinked.id, DeleteType.Hard)
     }
 
     @Test
@@ -387,7 +387,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
         loginAs("admin")
 
         importedEntitySets.keys.forEach {
-            entitySetsApi.deleteEntitySet(entitySetsApi.getEntitySetId(it))
+            entitySetsApi.deleteEntitySet(entitySetsApi.getEntitySetId(it), DeleteType.Hard)
         }
         Thread.sleep(5000L)
 
@@ -772,7 +772,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
 
         loginAs("admin")
 
-        entitySetsApi.deleteEntitySet(esLinking.id)
+        entitySetsApi.deleteEntitySet(esLinking.id, DeleteType.Hard)
     }
 
 }

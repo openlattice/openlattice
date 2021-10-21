@@ -890,7 +890,7 @@ class AssemblerTest : AssemblerTestBase() {
         organizationsApi.assembleEntitySets(organizationID, mapOf(esSrc.id to 100))
         checkMaterializedEntitySetColumns(organizationDataSource, esSrc, src, srcPropertyFqns.values.toList())
 
-        entitySetsApi.deleteEntitySet(esSrc.id)
+        entitySetsApi.deleteEntitySet(esSrc.id, DeleteType.Hard)
 
         // we need to wait a bit for assembler to finish all tasks after deleting a materialized entity set
         Thread.sleep(1000L)
