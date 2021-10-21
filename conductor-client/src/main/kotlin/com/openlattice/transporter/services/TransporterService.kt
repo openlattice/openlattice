@@ -1,36 +1,13 @@
 package com.openlattice.transporter.services
 
 import com.google.common.eventbus.EventBus
-import com.google.common.eventbus.Subscribe
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
-import com.openlattice.authorization.Acl
-import com.openlattice.authorization.AclKey
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
-import com.openlattice.edm.EntitySet
-import com.openlattice.edm.PropertyTypeIdFqn
-import com.openlattice.edm.events.*
-import com.openlattice.edm.type.EntityType
-import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.postgres.TableColumn
-import com.openlattice.transporter.MAT_EDGES_TABLE
-import com.openlattice.transporter.processors.TransporterPropagateDataEntryProcessor
-import com.openlattice.transporter.processors.TransporterSynchronizeTableDefinitionEntryProcessor
-import com.openlattice.transporter.quotedEtTableName
-import com.openlattice.transporter.transportTable
-import com.openlattice.transporter.transporterNamespace
-import com.openlattice.transporter.types.TransporterColumnSet
 import com.openlattice.transporter.types.TransporterDatastore
-import io.prometheus.client.Counter
-import io.prometheus.client.Histogram
-import org.eclipse.jetty.util.MultiException
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import java.util.*
-import java.util.concurrent.Future
 
 @Service
 final class TransporterService(
@@ -43,6 +20,7 @@ final class TransporterService(
         private val transporter: TransporterDatastore
 ) {
 
+    /*
     companion object {
         val logger: Logger = LoggerFactory.getLogger(TransporterService::class.java)
         val pollTimer: Histogram = Histogram.build()
@@ -213,5 +191,5 @@ final class TransporterService(
                         .init(transporter)
         )
     }
+    */
 }
-

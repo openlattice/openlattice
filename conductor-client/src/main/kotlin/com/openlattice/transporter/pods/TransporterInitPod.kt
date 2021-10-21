@@ -1,14 +1,11 @@
 package com.openlattice.transporter.pods
 
-import com.openlattice.transporter.tasks.TransporterInitializeServiceTask
-import org.slf4j.LoggerFactory
-import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Configuration
+class TransporterInitPod
 
 /**
  * @author Drew Bailey (drew@openlattice.com)
  */
-
+/*
 @Configuration
 class TransporterInitPod {
 
@@ -18,3 +15,4 @@ class TransporterInitPod {
         return TransporterInitializeServiceTask()
     }
 }
+*/

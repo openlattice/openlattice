@@ -39,9 +39,6 @@ import com.openlattice.postgres.PostgresPod;
 import com.openlattice.postgres.PostgresTablesPod;
 import com.openlattice.postgres.pods.ExternalDatabaseConnectionManagerPod;
 import com.openlattice.tasks.pods.TaskSchedulerPod;
-import com.openlattice.transporter.TransporterConfigurationPod;
-import com.openlattice.transporter.pods.TransporterInitPod;
-import com.openlattice.transporter.pods.TransporterPod;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -64,9 +61,9 @@ public class Conductor extends RhizomeApplicationServer {
             PostgresTablesPod.class,
             SharedStreamSerializersPod.class,
             TaskSchedulerPod.class,
-            TransporterPod.class,
-            TransporterInitPod.class,
-            TransporterConfigurationPod.class,
+            // TransporterPod.class,
+            // TransporterInitPod.class,
+            // TransporterConfigurationPod.class,
             LateInitProvidersPod.class
     };
 

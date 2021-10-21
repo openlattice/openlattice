@@ -86,15 +86,13 @@ import com.openlattice.postgres.external.ExternalDatabasePermissioner;
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService;
 import com.openlattice.postgres.external.PostgresDatabaseQueryService;
 import com.openlattice.scrunchie.search.ConductorElasticsearchImpl;
-import com.openlattice.transporter.pods.TransporterPod;
 import com.zaxxer.hikari.HikariDataSource;
+import javax.annotation.PostConstruct;
+import javax.inject.Inject;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Profile;
-
-import javax.annotation.PostConstruct;
-import javax.inject.Inject;
 
 @Configuration
 @Import( {
@@ -102,8 +100,8 @@ import javax.inject.Inject;
         AuditingConfigurationPod.class,
         AssemblerConfigurationPod.class,
         ByteBlobServicePod.class,
-        OrganizationExternalDatabaseConfigurationPod.class,
-        TransporterPod.class
+        OrganizationExternalDatabaseConfigurationPod.class
+        // TransporterPod.class
 } )
 public class IndexerServicesPod {
 
