@@ -127,7 +127,7 @@ class DataDeletionService(
 
 
         val entitySetPropertyTypes = entitySetManager.getPropertyTypesOfEntitySets(authorizedEdgeEntitySets + entitySetId)
-
+        val unauthorizedEntitySets = mutableSetOf<UUID>()
         val requiredPermissions = PERMISSIONS_FOR_DELETE_TYPE.getValue(deleteType)
         authorizationManager.accessChecksForPrincipals(entitySetPropertyTypes.flatMap { (entitySetId, propertyTypes) ->
             propertyTypes.keys.map { ptId ->
@@ -142,11 +142,13 @@ class DataDeletionService(
                                 "$requiredPermissions permissions are required on all its property types.")
                     }
                     authorizedEdgeEntitySets.remove(unauthorizedEntitySetId)
+                    unauthorizedEntitySets.add(unauthorizedEntitySetId)
                 }
             }
         }
 
         if (graphService.checkForUnauthorizedEdges(entitySetId, authorizedEdgeEntitySets, entityKeyIds)) {
+            logger.error("Unable to perform delete on entity set $entitySetId -- delete would have required permissions on unauthorized edge entity sets $unauthorizedEntitySets.")
             throw ForbiddenException("Unable to perform delete on entity set $entitySetId -- delete would have required permissions on unauthorized edge entity sets.")
         }
 
