@@ -1,14 +1,8 @@
 package com.openlattice.hazelcast.serializers
 
-import com.hazelcast.nio.ObjectDataInput
-import com.hazelcast.nio.ObjectDataOutput
-import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
-import com.openlattice.hazelcast.StreamSerializerTypeIds
-import com.openlattice.mapstores.TestDataFactory
-import com.openlattice.postgres.IndexType
-import com.openlattice.transporter.types.TransporterColumnSet
-import org.springframework.stereotype.Component
+class TransporterColumnSetStreamSerializer
 
+/*
 @Component
 class TransporterColumnSetStreamSerializer : TestableSelfRegisteringStreamSerializer<TransporterColumnSet> {
 
@@ -57,3 +51,4 @@ class TransporterColumnSetStreamSerializer : TestableSelfRegisteringStreamSerial
         ))
     }
 }
+*/

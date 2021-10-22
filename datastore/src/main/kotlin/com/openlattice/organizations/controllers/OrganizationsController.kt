@@ -163,6 +163,8 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
             @PathVariable(OrganizationsApi.ID) organizationId: UUID,
             @PathVariable(OrganizationsApi.SET_ID) entitySetId: UUID
     ): Void? {
+        throw NotImplementedException("transporter is disabled indefinitely")
+        /*
         if ( !organizations.organizationExists(organizationId) ) {
             throw IllegalArgumentException("Organization $organizationId doesn't exist")
         }
@@ -177,6 +179,7 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
             logger.error("Error while transporting entityset $entitySetId to organization $organizationId")
         }
         return null
+        */
     }
 
     @GetMapping(
@@ -190,10 +193,13 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
             @PathVariable(OrganizationsApi.ID) organizationId: UUID,
             @PathVariable(OrganizationsApi.SET_ID) entitySetId: UUID
     ): Void? {
+        throw NotImplementedException("transporter is disabled indefinitely")
+        /*
         ensureRead(organizationId)
         ensureTransportAccess(AclKey(entitySetId))
         edms.destroyTransportedEntitySet(organizationId, entitySetId)
         return null
+        */
     }
 
     @Timed

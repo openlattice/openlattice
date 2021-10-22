@@ -1,23 +1,10 @@
 package com.openlattice.transporter.types
 
-import com.geekbeast.configuration.postgres.PostgresConfiguration
 import com.kryptnostic.rhizome.configuration.RhizomeConfiguration
-import com.openlattice.ApiHelpers
 import com.openlattice.assembler.AssemblerConfiguration
-import com.openlattice.authorization.Acl
-import com.openlattice.authorization.AclKey
-import com.openlattice.authorization.Action
-import com.openlattice.edm.EntitySet
-import com.openlattice.edm.PropertyTypeIdFqn
-import com.openlattice.postgres.PostgresProjectionService
-import com.openlattice.postgres.PostgresTable
-import com.openlattice.postgres.TableColumn
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService
-import com.openlattice.postgres.external.Schemas
 import com.openlattice.transporter.*
-import com.zaxxer.hikari.HikariDataSource
-import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.util.*
 
@@ -31,6 +18,7 @@ class TransporterDatastore(
         private val exConnMan: ExternalDatabaseConnectionManager,
         private val exDbPermMan: ExternalDatabasePermissioningService
 ) {
+    /*
     companion object {
         private val logger = LoggerFactory.getLogger(TransporterDatastore::class.java)
 
@@ -336,4 +324,5 @@ class TransporterDatastore(
                 Schemas.TRANSPORTER_SCHEMA.label
         )
     }
+    */
 }
