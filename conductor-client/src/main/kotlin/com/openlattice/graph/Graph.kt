@@ -977,6 +977,25 @@ class Graph(
         }.toSet()
     }
 
+    override fun getNeighborEdgeEntitySets(
+            entitySetIds: Set<UUID>
+    ): Set<UUID> {
+        val query = """
+            SELECT DISTINCT ${EDGE_ENTITY_SET_ID.name} FROM ${E.name}
+            WHERE (${SRC_SQL} OR ${DST_SQL})
+        """.trimIndent()
+
+        val reader = dataSourceResolver.getDefaultDataSource()
+        return BasePostgresIterable(PreparedStatementHolderSupplier(reader, query) { ps ->
+            val entitySetIdsArr = PostgresArrays.createUuidArray(ps.connection, entitySetIds)
+            ps.setArray(1, entitySetIdsArr)
+            ps.setArray(2, entitySetIdsArr)
+        }) {
+            ResultSetAdapters.edgeEntitySetId(it)
+        }.toSet()
+    }
+
+
     @Timed
     override fun checkForUnauthorizedEdges(
             entitySetId: UUID,
@@ -1219,6 +1238,8 @@ private val NEIGHBORHOOD_OF_ENTITY_SET_SQL = "SELECT * FROM ${E.name} WHERE " +
 private val SRC_IDS_SQL = "${SRC_ENTITY_KEY_ID.name} = ANY(?) AND ${SRC_ENTITY_SET_ID.name} = ?"
 private val EDGE_IDS_SQL = "${EDGE_ENTITY_KEY_ID.name} = ANY(?) AND ${EDGE_ENTITY_SET_ID.name} = ?"
 private val DST_IDS_SQL = "${DST_ENTITY_KEY_ID.name} = ANY(?) AND ${DST_ENTITY_SET_ID.name} = ?"
+private val DST_SQL = "${DST_ENTITY_SET_ID.name} = ANY(?)"
+private val SRC_SQL = "${SRC_ENTITY_SET_ID.name} = ANY(?)"
 
 private val DEFAULT_NEIGHBORHOOD_SRC_FILTER = "${SRC_ENTITY_KEY_ID.name} = ANY(?) AND ${SRC_ENTITY_SET_ID.name} = ANY(?) AND ${PARTITION.name} = ANY(?)"
 private val DEFAULT_NEIGHBORHOOD_DST_FILTER = "${DST_ENTITY_KEY_ID.name} = ANY(?) AND ${DST_ENTITY_SET_ID.name} = ANY(?)"
