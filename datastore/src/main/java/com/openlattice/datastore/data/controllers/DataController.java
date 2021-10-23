@@ -897,7 +897,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                 spm.getCurrentUserId(),
                 new AclKey( entitySetId ),
                 AuditEventType.DELETE_ENTITY_AND_NEIGHBORHOOD,
-                "Entities and neighbors deleted using delete type " + deleteType.toString() +
+                "Entities and neighbors deleted using delete type " + deleteType +
                         " through DataApi.clearEntityAndNeighborEntities",
                 Optional.of( filter.getEntityKeyIds() ),
                 ImmutableMap.of(),

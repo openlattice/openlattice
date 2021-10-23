@@ -115,19 +115,16 @@ class DataDeletionService(
 
     @Timed
     override fun authCheckForEntitySetsAndNeighbors(entitySetIds: Set<UUID>, deleteType: DeleteType, principals: Set<Principal>) {
-        val associationEntitySets = entitySetIds.filter { entitySetManager.getEntitySet(it)!!.flags.contains(EntitySetFlag.ASSOCIATION) }.toSet()
+        val srcDstEntitySets = entitySetIds.filter {
+            !entitySetManager.getEntitySet(it)!!.flags.contains(EntitySetFlag.ASSOCIATION)
+        }.toSet()
+        val neighborEdgeEntitySets = if (srcDstEntitySets.isEmpty()) mutableSetOf() else graphService.getNeighborEdgeEntitySets(srcDstEntitySets)
 
-        val srcDstEntitySets = entitySetIds - associationEntitySets
-
-        val authorizedEdgeEntitySets = mutableSetOf<UUID>() + entitySetManager.getAuthorizedNeighborEntitySets(
-                principals,
-                srcDstEntitySets,
-                EntityNeighborsFilter(srcDstEntitySets)
-        ).associationEntitySetIds.get()
-
-        val entitySetPropertyTypes = entitySetManager.getPropertyTypesOfEntitySets(authorizedEdgeEntitySets + entitySetIds)
+        val entitySetPropertyTypes = entitySetManager.getPropertyTypesOfEntitySets(neighborEdgeEntitySets + entitySetIds)
 
         val requiredPermissions = PERMISSIONS_FOR_DELETE_TYPE.getValue(deleteType)
+
+        val unauthorized = mutableSetOf<AclKey>()
         authorizationManager.accessChecksForPrincipals(entitySetPropertyTypes.flatMap { (entitySetId, propertyTypes) ->
             propertyTypes.keys.map { ptId ->
                 AccessCheck(AclKey(entitySetId, ptId), requiredPermissions)
@@ -135,19 +132,15 @@ class DataDeletionService(
         }.toSet(), principals).forEach { authorization ->
             requiredPermissions.forEach { permission ->
                 if (!authorization.permissions.getValue(permission)) {
-                    val unauthorizedEntitySetId = authorization.aclKey.first()
-                    if (entitySetIds.contains(unauthorizedEntitySetId)) {
-                        throw ForbiddenException("Unable to perform delete on entity set $unauthorizedEntitySetId because " +
-                                "$requiredPermissions permissions are required on all its property types.")
-                    }
+                    unauthorized.add(authorization.aclKey)
                 }
             }
         }
 
-        // Unnecessary since we have already access checked all potential entity sets
-//        if (graphService.checkForUnauthorizedEdges(entitySetId, authorizedEdgeEntitySets, entityKeyIds)) {
-//            throw ForbiddenException("Unable to perform delete on entity set $entitySetId -- delete would have required permissions on unauthorized edge entity sets.")
-//        }
+        if (unauthorized.isNotEmpty()) {
+            logger.error("unable to perform $deleteType delete on $entitySetIds because $requiredPermissions permissions are required on $unauthorized")
+            throw ForbiddenException("Unable to perform delete on  $entitySetIds because $requiredPermissions permissions are required on entity sets, neighbor edge entity sets and properties")
+        }
     }
 
     override fun clearOrDeleteEntitiesAndNeighbors(
