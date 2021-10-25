@@ -9,8 +9,6 @@ import com.openlattice.data.DeleteType
 import com.openlattice.data.WriteEvent
 import com.openlattice.data.jobs.DataDeletionJob
 import com.openlattice.data.jobs.DataDeletionJobState
-import com.openlattice.data.jobs.EntitiesAndNeighborsDeletionJob
-import com.openlattice.data.jobs.EntitiesAndNeighborsDeletionJobState
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.set.EntitySetFlag
@@ -62,7 +60,7 @@ class DataDeletionService(
 
     @Timed
     override fun clearOrDeleteEntitySet(entitySetId: UUID, deleteType: DeleteType): UUID {
-        val partitions = partitionManager.getEntitySetPartitions(entitySetId)
+        val partitions = partitionManager.getPartitionsByEntitySetId(setOf(entitySetId))
 
         return jobService.submitJob(DataDeletionJob(DataDeletionJobState(
                 entitySetId,
@@ -74,7 +72,7 @@ class DataDeletionService(
 
     @Timed
     override fun clearOrDeleteEntities(entitySetId: UUID, entityKeyIds: MutableSet<UUID>, deleteType: DeleteType): UUID {
-        val partitions = partitionManager.getEntitySetPartitions(entitySetId)
+        val partitions = partitionManager.getPartitionsByEntitySetId(setOf(entitySetId))
 
         return jobService.submitJob(DataDeletionJob(DataDeletionJobState(
                 entitySetId,
@@ -152,13 +150,13 @@ class DataDeletionService(
 
         val partitions = partitionManager.getPartitionsByEntitySetId(allEntitySetIds)
 
-        return jobService.submitJob(EntitiesAndNeighborsDeletionJob(EntitiesAndNeighborsDeletionJobState(
-                entitySetIdEntityKeyIds.toMutableMap(),
+        return jobService.submitJob(DataDeletionJob(DataDeletionJobState(
                 entitySetId,
-                filter,
                 deleteType,
                 partitions,
-                mutableSetOf()
+                filter.entityKeyIds,
+                neighborDstEntitySetIds = filter.dstEntitySetIds.orElse(setOf()),
+                neighborSrcEntitySetIds = filter.srcEntitySetIds.orElse(setOf())
         )))
     }
 }
