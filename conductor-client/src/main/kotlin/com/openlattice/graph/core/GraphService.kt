@@ -63,7 +63,8 @@ interface GraphService {
 
     // returns a set of edge entity sets where either src or dst is in any of the specified entity set ids
     fun getNeighborEdgeEntitySets(
-            entitySetIds: Set<UUID>
+            entitySetIds: Set<UUID>,
+            entityKeyIds: Set<UUID>? = null
     ): Set<UUID>
 
     fun computeTopEntities(

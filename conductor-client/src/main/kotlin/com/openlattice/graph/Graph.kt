@@ -978,18 +978,31 @@ class Graph(
     }
 
     override fun getNeighborEdgeEntitySets(
-            entitySetIds: Set<UUID>
-    ): Set<UUID> {
+            entitySetIds: Set<UUID>,
+            entityKeyIds: Set<UUID>? ): Set<UUID> {
+
+        val srcEntityKeyIdFilter = if (entityKeyIds == null) "" else "AND ${SRC_ENTITY_KEY_ID.name} = ANY(?)"
+        val dstEntityKeyIdFilter = if (entityKeyIds == null) "" else "AND ${DST_ENTITY_KEY_ID.name} = ANY(?)"
+
         val query = """
             SELECT DISTINCT ${EDGE_ENTITY_SET_ID.name} FROM ${E.name}
-            WHERE (${SRC_SQL} OR ${DST_SQL})
+            WHERE ( ${DST_ENTITY_SET_ID.name} = ANY(?) $dstEntityKeyIdFilter )
+            OR ( ${SRC_ENTITY_SET_ID.name} = ANY(?) $srcEntityKeyIdFilter )
         """.trimIndent()
 
         val reader = dataSourceResolver.getDefaultDataSource()
         return BasePostgresIterable(PreparedStatementHolderSupplier(reader, query) { ps ->
             val entitySetIdsArr = PostgresArrays.createUuidArray(ps.connection, entitySetIds)
-            ps.setArray(1, entitySetIdsArr)
-            ps.setArray(2, entitySetIdsArr)
+
+            var index = 1
+            ps.setArray(++index, entitySetIdsArr)
+            if (entityKeyIds != null) {
+                ps.setArray(++index, PostgresArrays.createUuidArray(ps.connection, entityKeyIds))
+            }
+            ps.setArray(++index, entitySetIdsArr)
+            if (entityKeyIds != null) {
+                ps.setArray(++index, PostgresArrays.createUuidArray(ps.connection, entityKeyIds))
+            }
         }) {
             ResultSetAdapters.edgeEntitySetId(it)
         }.toSet()

@@ -79,9 +79,7 @@ import java.util.stream.Stream;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.Maps.transformValues;
-import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
-import static com.openlattice.authorization.EdmAuthorizationHelper.WRITE_PERMISSION;
-import static com.openlattice.authorization.EdmAuthorizationHelper.aclKeysForAccessCheck;
+import static com.openlattice.authorization.EdmAuthorizationHelper.*;
 
 @SuppressFBWarnings(
         value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE",
@@ -683,7 +681,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
 
         deletionManager.authCheckForEntitySetsAndNeighbors( Set.of( entitySetId ),
                 deleteType,
-                Principals.getCurrentPrincipals() );
+                Principals.getCurrentPrincipals(), null );
 
         UUID deletionJobId = deletionManager.clearOrDeleteEntitySet( entitySetId, deleteType );
 
@@ -745,7 +743,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         deletionManager.authCheckForEntitySetsAndNeighbors(
                 Set.of( entitySetId ),
                 deleteType,
-                Principals.getCurrentPrincipals() );
+                Principals.getCurrentPrincipals(), entityKeyIds );
         logger.info(
                 "deleteEntities - deletionManager.authCheckForEntitySetAndItsNeighbors took {} ms - entity set {} entities {}",
                 timer.elapsed( TimeUnit.MILLISECONDS ),
@@ -884,7 +882,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         deletionManager.authCheckForEntitySetsAndNeighbors(
                 allEntitySetIds,
                 deleteType,
-                Principals.getCurrentPrincipals() );
+                Principals.getCurrentPrincipals(), filter.getEntityKeyIds() );
 
         UUID deletionJobId = deletionManager.clearOrDeleteEntitiesAndNeighbors(
                 entitySetIdEntityKeyIds,

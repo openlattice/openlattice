@@ -112,11 +112,11 @@ class DataDeletionService(
     /* Authorization checks */
 
     @Timed
-    override fun authCheckForEntitySetsAndNeighbors(entitySetIds: Set<UUID>, deleteType: DeleteType, principals: Set<Principal>) {
+    override fun authCheckForEntitySetsAndNeighbors(entitySetIds: Set<UUID>, deleteType: DeleteType, principals: Set<Principal>, entityKeyIds: Set<UUID>?) {
         val srcDstEntitySets = entitySetIds.filter {
             !entitySetManager.getEntitySet(it)!!.flags.contains(EntitySetFlag.ASSOCIATION)
         }.toSet()
-        val neighborEdgeEntitySets = if (srcDstEntitySets.isEmpty()) mutableSetOf() else graphService.getNeighborEdgeEntitySets(srcDstEntitySets)
+        val neighborEdgeEntitySets = if (srcDstEntitySets.isEmpty()) mutableSetOf() else graphService.getNeighborEdgeEntitySets(srcDstEntitySets, entityKeyIds)
 
         val entitySetPropertyTypes = entitySetManager.getPropertyTypesOfEntitySets(neighborEdgeEntitySets + entitySetIds)
 

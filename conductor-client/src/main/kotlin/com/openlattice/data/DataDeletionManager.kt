@@ -48,7 +48,8 @@ interface DataDeletionManager {
     fun authCheckForEntitySetsAndNeighbors(
             entitySetIds: Set<UUID>,
             deleteType: DeleteType,
-            principals: Set<Principal>
+            principals: Set<Principal>,
+            entityKeyIds: Set<UUID>? = null
     )
 
     /**
