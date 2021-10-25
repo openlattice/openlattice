@@ -1251,8 +1251,6 @@ private val NEIGHBORHOOD_OF_ENTITY_SET_SQL = "SELECT * FROM ${E.name} WHERE " +
 private val SRC_IDS_SQL = "${SRC_ENTITY_KEY_ID.name} = ANY(?) AND ${SRC_ENTITY_SET_ID.name} = ?"
 private val EDGE_IDS_SQL = "${EDGE_ENTITY_KEY_ID.name} = ANY(?) AND ${EDGE_ENTITY_SET_ID.name} = ?"
 private val DST_IDS_SQL = "${DST_ENTITY_KEY_ID.name} = ANY(?) AND ${DST_ENTITY_SET_ID.name} = ?"
-private val DST_SQL = "${DST_ENTITY_SET_ID.name} = ANY(?)"
-private val SRC_SQL = "${SRC_ENTITY_SET_ID.name} = ANY(?)"
 
 private val DEFAULT_NEIGHBORHOOD_SRC_FILTER = "${SRC_ENTITY_KEY_ID.name} = ANY(?) AND ${SRC_ENTITY_SET_ID.name} = ANY(?) AND ${PARTITION.name} = ANY(?)"
 private val DEFAULT_NEIGHBORHOOD_DST_FILTER = "${DST_ENTITY_KEY_ID.name} = ANY(?) AND ${DST_ENTITY_SET_ID.name} = ANY(?)"
