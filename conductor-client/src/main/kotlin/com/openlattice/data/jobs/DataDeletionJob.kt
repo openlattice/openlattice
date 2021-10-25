@@ -184,7 +184,7 @@ class DataDeletionJob(
 
         var edgeBatch = getBatchOfNeighborEdges(entityDataKeys)
         while (edgeBatch.isNotEmpty()) {
-            logger.info("${state.deleteType} deleting neighbor entities and edges involving {}", edgeBatch)
+            logger.info("${state.deleteType} deleting neighbor edge entities and edges of size ${edgeBatch.size}")
             val edgeEdkBatch = edgeBatch.map { it.edge }.toSet()
             val deletedEntities = deleteEntities(edgeEdkBatch)
             val deletedEdges = deleteEdges(edgeBatch).numUpdates
@@ -214,8 +214,8 @@ class DataDeletionJob(
 
                         ps.setObject(1, entitySetId)
                         ps.setArray(2, entityKeyIdsArr)
-                        ps.setObject(2, entitySetId)
-                        ps.setObject(3, entityKeyIdsArr)
+                        ps.setObject(3, entitySetId)
+                        ps.setObject(4, entityKeyIdsArr)
                     }) {
                         DataEdgeKey(
                                 ResultSetAdapters.srcEntityDataKey(it),
@@ -520,19 +520,19 @@ class DataDeletionJob(
      */
     private fun getNeighborIdsCountSql(): String {
         val dstFilter = if (state.neighborDstEntitySetIds.isEmpty()) "" else """
-            (${DST_ENTITY_SET_ID.name} = ANY(?) AND ${SRC_ENTITY_SET_ID.name} = ${state.entitySetId} AND ${SRC_ENTITY_KEY_ID.name} = ANY(?))
+            (${DST_ENTITY_SET_ID.name} = ANY(?) AND ${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ANY(?))
         """.trimIndent()
 
         val srcFilter = if (state.neighborSrcEntitySetIds.isEmpty()) "" else """
-            (${SRC_ENTITY_SET_ID.name} = ANY(?) AND ${DST_ENTITY_SET_ID.name} = ${state.entitySetId} AND ${DST_ENTITY_KEY_ID.name} = ANY(?))
+            (${SRC_ENTITY_SET_ID.name} = ANY(?) AND ${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} = ANY(?))
         """.trimIndent()
 
-        val filter = listOf(dstFilter, srcFilter).filter { it.isNotEmpty() }.joinToString(" OR ")
+        val filter = listOf(dstFilter, srcFilter).filter { it.isNotEmpty() }.joinToString( " OR ")
 
         return """
             SELECT COUNT(*)
             FROM ${E.name}
-            $filter
+            WHERE $filter
         """.trimIndent()
     }
 
@@ -570,14 +570,14 @@ class DataDeletionJob(
     @JsonIgnore
     private fun getNeighborIdsBatchSql(): String {
         val dstSql = if (state.neighborDstEntitySetIds.isEmpty()) "" else """
-            SELECT ${DST_ENTITY_SET_ID.name}, ${DST_ENTITY_KEY_ID.name}
+            SELECT ${DST_ENTITY_SET_ID.name} as $ENTITY_SET_ID_FIELD, ${DST_ENTITY_KEY_ID.name} as $ID_FIELD
             FROM ${E.name}
             WHERE ${DST_ENTITY_SET_ID.name} = ANY(?) AND ${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ANY(?)
             ${excludeClearedIfSoftDeleteSql()}
         """.trimIndent()
 
         val srcSql = if (state.neighborSrcEntitySetIds.isEmpty()) "" else """
-            SELECT ${SRC_ENTITY_SET_ID.name}, ${SRC_ENTITY_KEY_ID.name}
+            SELECT ${SRC_ENTITY_SET_ID.name} as $ENTITY_SET_ID_FIELD, ${SRC_ENTITY_KEY_ID.name} as $ID_FIELD
             FROM ${E.name}
             WHERE ${SRC_ENTITY_SET_ID.name} = ANY(?) AND ${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} = ANY(?)
             ${excludeClearedIfSoftDeleteSql()}

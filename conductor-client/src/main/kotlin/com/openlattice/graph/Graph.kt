@@ -993,8 +993,8 @@ class Graph(
         val reader = dataSourceResolver.getDefaultDataSource()
         return BasePostgresIterable(PreparedStatementHolderSupplier(reader, query) { ps ->
             val entitySetIdsArr = PostgresArrays.createUuidArray(ps.connection, entitySetIds)
+            var index = 0
 
-            var index = 1
             ps.setArray(++index, entitySetIdsArr)
             if (entityKeyIds != null) {
                 ps.setArray(++index, PostgresArrays.createUuidArray(ps.connection, entityKeyIds))
