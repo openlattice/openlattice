@@ -1195,27 +1195,6 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         return 0;
     }
 
-    // Block until JobStatus is FINISHED or CANCELED
-    public void waitForDeleteJobToTerminate( UUID deletionJobId ) {
-        while ( true ) {
-            try {
-                Thread.sleep( DELETION_BLOCKING_INTERVAL );
-                JobStatus status = jobService.getStatus( deletionJobId );
-
-                if ( status.equals( JobStatus.FINISHED ) ) {
-                    break;
-                }
-                if ( status.equals( JobStatus.CANCELED ) ) {
-                    throw new IllegalStateException(
-                            "Deletion failed -- job " + deletionJobId.toString() + " was canceled." );
-                }
-            } catch ( InterruptedException e ) {
-                logger.error( "Unable to wait for deletion job {} to finish.", deletionJobId );
-                return;
-            }
-        }
-    }
-
     /**
      * Methods for setting http response header
      */
