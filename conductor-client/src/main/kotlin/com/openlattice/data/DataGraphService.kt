@@ -72,14 +72,6 @@ class DataGraphService(
         return idService.reserveEntityKeyIds(entityKeys)
     }
 
-    fun getGraphService(): GraphService {
-        return graphService
-    }
-
-    fun getJobService(): HazelcastJobService {
-        return jobService
-    }
-
     /* Select */
 
     override fun getEntitySetData(
