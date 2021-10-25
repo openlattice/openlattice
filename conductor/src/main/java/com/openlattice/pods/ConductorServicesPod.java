@@ -65,7 +65,15 @@ import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.DataGraphService;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
-import com.openlattice.data.storage.*;
+import com.openlattice.data.storage.ByteBlobDataManager;
+import com.openlattice.data.storage.DataDeletionService;
+import com.openlattice.data.storage.DataSourceResolver;
+import com.openlattice.data.storage.EntityDatastore;
+import com.openlattice.data.storage.IndexingMetadataManager;
+import com.openlattice.data.storage.PostgresEntityDataQueryService;
+import com.openlattice.data.storage.PostgresEntityDatastore;
+import com.openlattice.data.storage.PostgresEntitySetSizesInitializationTask;
+import com.openlattice.data.storage.PostgresEntitySetSizesTaskDependency;
 import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datasets.DataSetService;
 import com.openlattice.datastore.pods.ByteBlobServicePod;
@@ -119,28 +127,32 @@ import com.openlattice.subscriptions.SubscriptionNotificationTask;
 import com.openlattice.subscriptions.SubscriptionService;
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies;
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask;
-import com.openlattice.transporter.pods.TransporterInitPod;
-import com.openlattice.transporter.pods.TransporterPod;
-import com.openlattice.transporter.services.TransporterService;
-import com.openlattice.users.*;
+import com.openlattice.users.Auth0SyncInitializationTask;
+import com.openlattice.users.Auth0SyncService;
+import com.openlattice.users.Auth0SyncTask;
+import com.openlattice.users.Auth0SyncTaskDependencies;
+import com.openlattice.users.Auth0UserListingService;
+import com.openlattice.users.DefaultAuth0SyncTask;
+import com.openlattice.users.LocalAuth0SyncTask;
+import com.openlattice.users.LocalUserListingService;
+import com.openlattice.users.UserListingService;
 import com.openlattice.users.export.Auth0ApiExtension;
 import com.zaxxer.hikari.HikariDataSource;
+import javax.annotation.PostConstruct;
+import javax.inject.Inject;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Profile;
 
-import javax.annotation.PostConstruct;
-import javax.inject.Inject;
-
 @Configuration
 @Import( {
         ByteBlobServicePod.class,
         AuditingConfigurationPod.class,
-        AssemblerConfigurationPod.class,
-        TransporterPod.class,
-        TransporterInitPod.class
+        AssemblerConfigurationPod.class
+        // TransporterPod.class,
+        // TransporterInitPod.class
 } )
 public class ConductorServicesPod {
 
@@ -186,8 +198,8 @@ public class ConductorServicesPod {
     @Inject
     private ExternalDatabaseConnectionManager externalDbConnMan;
 
-    @Inject
-    private TransporterService transporterService;
+    // @Inject
+    // private TransporterService transporterService;
 
     @Inject
     private DataSourceManager dataSourceManager;

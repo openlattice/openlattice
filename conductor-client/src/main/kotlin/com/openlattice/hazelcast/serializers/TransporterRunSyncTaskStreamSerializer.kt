@@ -1,12 +1,11 @@
 package com.openlattice.hazelcast.serializers
 
-import com.openlattice.hazelcast.StreamSerializerTypeIds
-import com.openlattice.transporter.tasks.TransporterRunSyncTask
-import org.springframework.stereotype.Component
+class TransporterRunSyncTaskStreamSerializer
 
 /**
  * @author Drew Bailey &lt;drew@openlattice.com&gt;
  */
+/*
 @Component
 class TransporterRunSyncTaskStreamSerializer: NoOpSelfRegisteringStreamSerializer<TransporterRunSyncTask>() {
     override fun getClazz(): Class<out TransporterRunSyncTask> {
@@ -17,3 +16,4 @@ class TransporterRunSyncTaskStreamSerializer: NoOpSelfRegisteringStreamSerialize
         return StreamSerializerTypeIds.TRANSPORTER_RUN_SYNC_TASK.ordinal
     }
 }
+*/

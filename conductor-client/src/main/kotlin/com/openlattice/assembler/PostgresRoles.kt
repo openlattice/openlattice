@@ -28,7 +28,7 @@ class PostgresRoles private constructor() {
                     "      FROM   pg_catalog.pg_roles\n" +
                     "      WHERE  rolname = '$dbRole') THEN\n" +
                     "\n" +
-                    "      CREATE ROLE ${ApiHelpers.dbQuote(dbRole)} NOSUPERUSER NOCREATEDB NOCREATEROLE INHERIT NOLOGIN;\n" +
+                    "      CREATE ROLE ${ApiHelpers.dbQuote(dbRole)} NOCREATEDB NOCREATEROLE INHERIT NOLOGIN;\n" +
                     "   END IF;\n" +
                     "END\n" +
                     "\$do\$;"

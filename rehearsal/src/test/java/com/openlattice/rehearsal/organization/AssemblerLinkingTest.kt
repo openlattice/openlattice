@@ -87,7 +87,7 @@ class AssemblerLinkingTest : AssemblerTestBase() {
         fun tearDown() {
             importedEntitySets.keys.forEach {
                 try {
-                    entitySetsApi.deleteEntitySet(entitySetsApi.getEntitySetId(it))
+                    entitySetsApi.deleteEntitySet(entitySetsApi.getEntitySetId(it), DeleteType.Hard)
                 } catch (e: UndeclaredThrowableException) {
                 }
             }

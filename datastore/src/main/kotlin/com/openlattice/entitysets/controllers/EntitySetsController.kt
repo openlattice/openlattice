@@ -34,6 +34,7 @@ import com.openlattice.authorization.*
 import com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.authorization.util.getLastAclKeySafely
+import com.openlattice.client.serialization.SerializationConstants.DELETE_TYPE
 import com.openlattice.controllers.exceptions.ForbiddenException
 import com.openlattice.controllers.exceptions.wrappers.BatchException
 import com.openlattice.controllers.exceptions.wrappers.ErrorsDTO
@@ -180,7 +181,7 @@ constructor(
                         )
                 )
             } catch (e: Exception) {
-                deleteAuditEntitySetsForId(entitySet.id)
+                deleteAuditEntitySetsForId(entitySet.id, DeleteType.Hard)
                 dto.addError(ApiExceptions.OTHER_EXCEPTION, entitySet.name + ": " + e.message)
             }
 
@@ -293,7 +294,10 @@ constructor(
 
     @Timed
     @RequestMapping(path = [ALL + ID_PATH], method = [RequestMethod.DELETE])
-    override fun deleteEntitySet(@PathVariable(ID) entitySetId: UUID): UUID {
+    override fun deleteEntitySet(
+        @PathVariable(ID) entitySetId: UUID,
+        @RequestParam( value = DELETE_TYPE, defaultValue = "Soft") deleteType: DeleteType
+    ): UUID {
 
         logger.info("deleteEntitySet - attempting to delete entity set {}", entitySetId)
 
@@ -325,7 +329,7 @@ constructor(
         timer.reset().start()
 
         /* Delete first entity set data */
-        val deletionJobId = deletionManager.clearOrDeleteEntitySet(entitySet.id, DeleteType.Hard)
+        val deletionJobId = deletionManager.clearOrDeleteEntitySet(entitySet.id, deleteType)
         logger.info(
             "deleteEntitySet - deletionManager.clearOrDeleteEntitySet took {} ms - entity set {}",
             timer.elapsed(TimeUnit.MILLISECONDS),
@@ -333,7 +337,7 @@ constructor(
         )
         timer.reset().start()
 
-        deleteAuditEntitySetsForId(entitySetId)
+        deleteAuditEntitySetsForId(entitySetId, deleteType)
         logger.info(
             "deleteEntitySet - deleteAuditEntitySetsForId took {} ms - entity set {}",
             timer.elapsed(TimeUnit.MILLISECONDS),
@@ -387,18 +391,18 @@ constructor(
         return deletionJobId
     }
 
-    private fun deleteAuditEntitySetsForId(entitySetId: UUID) {
+    private fun deleteAuditEntitySetsForId(entitySetId: UUID, deleteType: DeleteType) {
         val aclKey = AclKey(entitySetId)
 
         aresManager.getAuditEdgeEntitySets(aclKey).forEach {
             val auditEdgeEntitySet = entitySetManager.getEntitySet(it)!!
-            deletionManager.clearOrDeleteEntitySet(it, DeleteType.Hard)
+            deletionManager.clearOrDeleteEntitySet(it, deleteType)
             entitySetManager.deleteEntitySet(auditEdgeEntitySet)
         }
 
         aresManager.getAuditRecordEntitySets(aclKey).forEach {
             val auditEntitySet = entitySetManager.getEntitySet(it)!!
-            deletionManager.clearOrDeleteEntitySet(it, DeleteType.Hard)
+            deletionManager.clearOrDeleteEntitySet(it, deleteType)
             entitySetManager.deleteEntitySet(auditEntitySet)
         }
 

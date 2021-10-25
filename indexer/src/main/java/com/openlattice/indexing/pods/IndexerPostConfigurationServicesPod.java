@@ -55,13 +55,10 @@ import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService;
 import com.openlattice.search.SearchService;
-import com.openlattice.transporter.services.TransporterService;
 import com.zaxxer.hikari.HikariDataSource;
+import javax.inject.Inject;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import javax.annotation.PostConstruct;
-import javax.inject.Inject;
 
 @Configuration
 public class IndexerPostConfigurationServicesPod {
@@ -108,8 +105,8 @@ public class IndexerPostConfigurationServicesPod {
     @Inject
     private ExternalDatabaseConnectionManager externalDbConnMan;
 
-    @Inject
-    private TransporterService transporterService;
+    // @Inject
+    // private TransporterService transporterService;
 
     @Inject
     private OrganizationExternalDatabaseConfiguration organizationExternalDatabaseConfiguration;
@@ -215,7 +212,6 @@ public class IndexerPostConfigurationServicesPod {
                 authorizationManager,
                 organizationExternalDatabaseConfiguration,
                 externalDatabasePermissioningService,
-                transporterService,
                 dbcs,
                 hikariDataSource,
                 dataSetService

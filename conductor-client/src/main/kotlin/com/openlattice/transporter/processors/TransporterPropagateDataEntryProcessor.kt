@@ -1,31 +1,16 @@
 package com.openlattice.transporter.processors
 
-import com.hazelcast.core.Offloadable
 import com.openlattice.edm.EntitySet
-import com.openlattice.edm.set.EntitySetFlag
-import com.openlattice.postgres.PostgresArrays
-import com.openlattice.postgres.ResultSetAdapters
-import com.openlattice.postgres.streams.BasePostgresIterable
-import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
-import com.openlattice.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
-import com.openlattice.transporter.hasModifiedData
-import com.openlattice.transporter.quotedEtTableName
-import com.openlattice.transporter.transporterNamespace
-import com.openlattice.transporter.types.TransporterColumnSet
-import com.openlattice.transporter.types.TransporterDatastore
-import com.openlattice.transporter.types.TransporterDependent
-import com.openlattice.transporter.updateEntityTypeTableEntries
-import com.openlattice.transporter.updateLastWriteForId
-import com.openlattice.transporter.updateRowsForEdges
-import com.openlattice.transporter.updateRowsForPropertyType
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
-import io.prometheus.client.Counter
-import org.slf4j.LoggerFactory
-import java.util.*
+
+data class TransporterPropagateDataEntryProcessor(
+    val entitySets: Set<EntitySet>,
+    val entitySetPartitions: Collection<Int>
+)
 
 /**
  * Transport data from enterprise into entity_type tables on atlas
  */
+/*
 @SuppressFBWarnings(value = ["SE_BAD_FIELD"], justification = "Custom Stream Serializer is implemented")
 class TransporterPropagateDataEntryProcessor(
         val entitySets: Set<EntitySet>,
@@ -155,3 +140,4 @@ class TransporterPropagateDataEntryProcessor(
         return this
     }
 }
+*/

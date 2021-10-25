@@ -6,7 +6,6 @@ import com.google.common.cache.LoadingCache
 import com.hazelcast.core.HazelcastInstance
 import com.openlattice.assembler.AssemblerConfiguration
 import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.transporter.types.TransporterDatastore
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
@@ -69,9 +68,11 @@ class ExternalDatabaseConnectionManager(
         organizationDatabases.delete(organizationId)
     }
 
+    /*
     fun connectToTransporter(): HikariDataSource {
         return perDbCache.get(TransporterDatastore.TRANSPORTER_DB_NAME)
     }
+    */
 
     fun connectAsSuperuser(): HikariDataSource {
         return perDbCache.get("postgres")

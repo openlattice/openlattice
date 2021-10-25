@@ -22,6 +22,7 @@
 package com.openlattice.rehearsal.edm
 
 import com.google.common.collect.ImmutableList
+import com.openlattice.data.DeleteType
 import com.openlattice.data.requests.EntitySetSelection
 import com.openlattice.data.requests.FileType
 import com.openlattice.edm.requests.MetadataUpdate
@@ -110,7 +111,7 @@ class EdmTest : MultipleAuthenticatedUsersBase() {
         val ess = EntitySetSelection(Optional.of(EdmTestConstants.personEt.properties))
         Assert.assertEquals(numberOfEntries, dataApi.loadSelectedEntitySetData(es1.id, ess, FileType.json).toList().size)
 
-        entitySetsApi.deleteEntitySet(es1.id)
+        entitySetsApi.deleteEntitySet(es1.id, DeleteType.Hard)
 
         assertException(
                 { entitySetsApi.getEntitySet(es1.id) },
@@ -175,7 +176,7 @@ class EdmTest : MultipleAuthenticatedUsersBase() {
                 "Unable to delete entity type because it is associated with an entity set."
         )
 
-        entitySetsApi.deleteEntitySet(es.id)
+        entitySetsApi.deleteEntitySet(es.id, DeleteType.Hard)
         edmApi.deleteEntityType(et.id)
 
         assertException(
@@ -188,7 +189,7 @@ class EdmTest : MultipleAuthenticatedUsersBase() {
     fun testEntityTypePropertyTypeMetadata() {
         val pt1 = createPropertyType()
         val et = createEntityType(pt1.id)
-        val newtitle = "New Title !";
+        val newtitle = "New Title !"
         val update =  MetadataUpdate(
                 Optional.of(newtitle),
                 Optional.empty(),
@@ -205,7 +206,7 @@ class EdmTest : MultipleAuthenticatedUsersBase() {
                 Optional.empty()
         )
         edmApi.updateEntityTypePropertyMetadata( et.id , pt1.id, update )
-        val metadata = edmApi.getEntityTypePropertyMetadata(et.id, pt1.id);
+        val metadata = edmApi.getEntityTypePropertyMetadata(et.id, pt1.id)
         Assert.assertEquals(
                 newtitle,
                 metadata.title
