@@ -2,7 +2,6 @@ package com.openlattice.data.jobs
 
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonIgnore
-import com.geekbeast.auth0.LIMIT
 import com.geekbeast.rhizome.jobs.AbstractDistributedJob
 import com.geekbeast.rhizome.jobs.JobStatus
 import com.hazelcast.core.HazelcastInstance
@@ -85,8 +84,6 @@ class DataDeletionJob(
     }
 
     override fun processNextBatch() {
-        // TODO: delete neighbors first
-
         val entityDataKeys = getBatchOfEntityDataKeys()
 
         if (entityDataKeys.isEmpty()) {
@@ -95,7 +92,13 @@ class DataDeletionJob(
             return
         }
 
-        // GET Batch of neighbors to delete
+        // batch delete neighbors first. Only delete from state.entitySetId if there are no more neighbors to delete
+        val neighborEntityDataKeys = getBatchOfNeighborEntityDataKeys(entityDataKeys.map { it.entityKeyId }.toSet())
+        if (neighborEntityDataKeys.isNotEmpty()) {
+            deleteNeighborEntitiesAndEdges(neighborEntityDataKeys)
+            return
+        }
+
         logger.info("Processing data keys: {}", entityDataKeys)
         var edgeBatch = getBatchOfEdgesForIds(entityDataKeys)
         while (edgeBatch.isNotEmpty()) {
@@ -154,7 +157,6 @@ class DataDeletionJob(
         }
     }
 
-
     @JsonIgnore
     private fun getTotalToDelete(): Long {
         state.entityKeyIds?.let {
@@ -173,6 +175,86 @@ class DataDeletionJob(
                 }
             }
         }
+    }
+
+    @JsonIgnore
+    private fun deleteNeighborEntitiesAndEdges(entityDataKeys: Set<EntityDataKey>) {
+
+        logger.info("Processing neighbor entity data keys of batch size ${entityDataKeys.size}")
+
+        var edgeBatch = getBatchOfNeighborEdges(entityDataKeys)
+        while (edgeBatch.isNotEmpty()) {
+            logger.info("${state.deleteType} deleting neighbor entities and edges involving {}", edgeBatch)
+            val edgeEdkBatch = edgeBatch.map { it.edge }.toSet()
+            val deletedEntities = deleteEntities(edgeEdkBatch)
+            val deletedEdges = deleteEdges(edgeBatch).numUpdates
+            logger.info("Deleted $deletedEntities neighbor edge entities and $deletedEdges edges")
+            edgeBatch = getBatchOfNeighborEdges(entityDataKeys)
+        }
+
+        val deletedEntities = deleteEntities(entityDataKeys)
+        logger.info("Deleted $deletedEntities neighbor entities from batch size ${entityDataKeys.size}")
+        state.numDeletes += deletedEntities
+    }
+
+    /**
+     * Returns edges with either src or dst matching the given entity data keys
+     * @param entityDataKeys: Can be from multiple entity sets
+     */
+    private fun getBatchOfNeighborEdges(entityDataKeys: Set<EntityDataKey>): Set<DataEdgeKey> {
+
+        return entityDataKeys
+                .groupBy { it.entitySetId }
+                .flatMap { (entitySetId, entityDataKeys) ->
+                    val dataSourceName = lateInitProvider.resolver.getDataSourceName(entitySetId)
+                    val hds = lateInitProvider.resolver.getDataSource(dataSourceName)
+
+                    BasePostgresIterable(PreparedStatementHolderSupplier(hds, getNeighborEdgesBatchSql()) { ps ->
+                        val entityKeyIdsArr = PostgresArrays.createUuidArray(ps.connection, entityDataKeys.map { it.entityKeyId })
+
+                        ps.setObject(1, entitySetId)
+                        ps.setArray(2, entityKeyIdsArr)
+                        ps.setObject(2, entitySetId)
+                        ps.setObject(3, entityKeyIdsArr)
+                    }) {
+                        DataEdgeKey(
+                                ResultSetAdapters.srcEntityDataKey(it),
+                                ResultSetAdapters.dstEntityDataKey(it),
+                                ResultSetAdapters.edgeEntityDataKey(it)
+                        )
+                    }
+                }.toSet()
+    }
+
+    /**
+     * Returns entity data keys of neighbors connected to the specified entity key ids
+     *
+     * @param entityKeyIds These are non-empty and from the same entity set id
+     */
+    @JsonIgnore
+    private fun getBatchOfNeighborEntityDataKeys(entityKeyIds: Set<UUID>): Set<EntityDataKey> {
+        val neighborEntitySets = state.neighborDstEntitySetIds + state.neighborSrcEntitySetIds
+        if (neighborEntitySets.isEmpty()) return setOf()
+
+        val hds = lateInitProvider.resolver.getDefaultDataSource()
+
+        return BasePostgresIterable(PreparedStatementHolderSupplier(hds, getNeighborIdsBatchSql()) {
+            var index = 0
+
+            if (state.neighborDstEntitySetIds.isNotEmpty()) {
+                it.setArray(++index, PostgresArrays.createUuidArray(it.connection, state.neighborDstEntitySetIds))
+                it.setObject(++index, state.entitySetId)
+                it.setArray(++index, PostgresArrays.createUuidArray(it.connection, entityKeyIds))
+            }
+
+            if (state.neighborSrcEntitySetIds.isNotEmpty()) {
+                it.setArray(++index, PostgresArrays.createUuidArray(it.connection, state.neighborSrcEntitySetIds))
+                it.setObject(++index, state.entitySetId)
+                it.setArray(++index, PostgresArrays.createUuidArray(it.connection, entityKeyIds))
+            }
+        }) {
+            ResultSetAdapters.entityDataKey(it)
+        }.toSet()
     }
 
     @JsonIgnore
@@ -445,13 +527,63 @@ class DataDeletionJob(
             (${SRC_ENTITY_SET_ID.name} = ANY(?) AND ${DST_ENTITY_SET_ID.name} = ${state.entitySetId} AND ${DST_ENTITY_KEY_ID.name} = ANY(?))
         """.trimIndent()
 
-        val filter =  listOf(dstFilter, srcFilter).filter { it.isNotEmpty() }.joinToString(" OR ")
+        val filter = listOf(dstFilter, srcFilter).filter { it.isNotEmpty() }.joinToString(" OR ")
 
         return """
             SELECT COUNT(*)
             FROM ${E.name}
             $filter
         """.trimIndent()
+    }
+
+    /**
+     * PreparedStatement bind order:
+     * 1) entitySetId
+     * 2) neighborEntityKeyIds
+     * 3) entitySetId
+     * 4) neighborEntityKeyIds
+     */
+
+    private fun getNeighborEdgesBatchSql(): String {
+        return """
+            SELECT ${SRC_ENTITY_SET_ID.name}, ${SRC_ENTITY_KEY_ID.name},
+                   ${DST_ENTITY_SET_ID.name}, ${DST_ENTITY_KEY_ID.name},
+                   ${EDGE_ENTITY_SET_ID.name},${EDGE_ENTITY_KEY_ID.name}
+            FROM ${E.name}
+            WHERE (${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} = ANY(?))
+               OR (${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ANY(?))
+            ${excludeClearedIfSoftDeleteSql()}
+            LIMIT $BATCH_SIZE
+        """.trimIndent()
+    }
+
+    /**
+     * PreparedStatement bind order:
+     *
+     * 1) dstEntitySetIds
+     * 2) entitySetId
+     * 3) entityKeyIds
+     * 4) srcEntitySetIds
+     * 5) entitySetId
+     * 6) entityKeyIds
+     */
+    @JsonIgnore
+    private fun getNeighborIdsBatchSql(): String {
+        val dstSql = if (state.neighborDstEntitySetIds.isEmpty()) "" else """
+            SELECT ${DST_ENTITY_SET_ID.name}, ${DST_ENTITY_KEY_ID.name}
+            FROM ${E.name}
+            WHERE ${DST_ENTITY_SET_ID.name} = ANY(?) AND ${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ANY(?)
+            ${excludeClearedIfSoftDeleteSql()}
+        """.trimIndent()
+
+        val srcSql = if (state.neighborSrcEntitySetIds.isEmpty()) "" else """
+            SELECT ${SRC_ENTITY_SET_ID.name}, ${SRC_ENTITY_KEY_ID.name}
+            FROM ${E.name}
+            WHERE ${SRC_ENTITY_SET_ID.name} = ANY(?) AND ${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} = ANY(?)
+            ${excludeClearedIfSoftDeleteSql()}
+        """.trimIndent()
+
+        return listOf(dstSql, srcSql).filter { it.isNotEmpty() }.joinToString(" UNION ", postfix = "LIMIT $BATCH_SIZE")
     }
 
     /**
