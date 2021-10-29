@@ -368,7 +368,7 @@ class ExternalDatabasePermissioner(
     ) {
 
         when (action) {
-            Action.ADD, Action.REMOVE, Action.DROP, Action.SET -> {
+            Action.ADD, Action.REMOVE, Action.SET -> {
             }
             else -> {
                 logger.error("Action $action passed through to updateTablePermissions is unhandled. Doing no operations")
@@ -446,14 +446,6 @@ class ExternalDatabasePermissioner(
                                         columnName,
                                         requestedPermissions
                                     ))
-                            }
-                            Action.DROP -> {
-                                // temp migration action
-                                orgRemoves.addAll(acePermissions.mapNotNull {
-                                    externalRoleNames[AccessTarget(columnAcl.aclKey, it)]
-                                }.map {
-                                    revokeRoleSql(it.second.toString(), setOf(userRole))
-                                })
                             }
                             Action.SET -> {
                                 val allColPermissions = allPermissions.flatMap { permission ->
