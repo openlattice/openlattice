@@ -230,27 +230,6 @@ class ExternalDatabasePermissioner(
     }
 
     /**
-     * Create all postgres roles to apply to [entitySetId] and [propertyTypes]
-     * Adds permissions on [EdmConstants.ID_FQN] to each of the above roles
-     */
-    override fun initializeAssemblyPermissions(
-            orgDatasource: HikariDataSource,
-            entitySetId: UUID,
-            entitySetName: String,
-            propertyTypesIdToFqn: Set<PropertyTypeIdFqn>
-    ) {
-        // note: orgDatasource is unused, but left it in to ensure build go green without fiddling with mechanic
-        val propertyTypesAclKeyToFqn = propertyTypesIdToFqn.associate { (id, fqn) ->
-            AclKey(entitySetId, id) to fqn.toString()
-        }
-
-        initializePermissionSetForExternalTable(
-                columnAclKeyToName = propertyTypesAclKeyToFqn,
-                permissions = allViewPermissions
-        )
-    }
-
-    /**
      * Updates permissions on [propertyTypes] for [entitySet] in org database for [organizationId]
      */
     override fun updateAssemblyPermissions(
@@ -281,48 +260,6 @@ class ExternalDatabasePermissioner(
         }
 
         updateTablePermissions(action, SecurableObjectType.PropertyTypeInEntitySet, completedColumnAcls, completedColumnsById, TableType.VIEW)
-    }
-
-    /**
-     * Create all postgres roles to apply to [table] and [columns] in [organizationId] database
-     */
-    override fun initializeExternalTablePermissions(
-            table: ExternalTable,
-            columns: Set<ExternalColumn>
-    ) {
-        val columnAclKeyToName = columns.associate {
-            AclKey(it.tableId, it.id) to it.name
-        }
-
-        initializePermissionSetForExternalTable(
-                columnAclKeyToName = columnAclKeyToName,
-                permissions = allTablePermissions
-        )
-    }
-
-    /**
-     * Create all postgres roles to apply to [table] and [columns] in [organizationId] database
-     */
-    override fun initializeProjectedTableViewPermissions(
-            schema: String,
-            table: ExternalTable,
-            columns: Set<ExternalColumn>
-    ) {
-        val columnAclKeyToName = columns.associate {
-            AclKey(it.tableId, it.id) to it.name
-        }
-
-        initializePermissionSetForExternalTable(
-                columnAclKeyToName = columnAclKeyToName,
-                permissions = allViewPermissions
-        )
-    }
-
-    private fun initializePermissionSetForExternalTable(
-            columnAclKeyToName: Map<AclKey, String>,
-            permissions: Set<Permission>
-    ) {
-        // no longer needed function
     }
 
     /**
