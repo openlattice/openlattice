@@ -401,8 +401,6 @@ class ExternalDatabaseManagementService(
             }
             externalColumns.removeAll(idsPredicate(columnIds))
         }
-
-        extDbPermsManager.destroyExternalTablePermissions(columnIdsByTableId)
     }
 
     /**

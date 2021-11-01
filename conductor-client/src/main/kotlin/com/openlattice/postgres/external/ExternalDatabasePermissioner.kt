@@ -273,19 +273,6 @@ class ExternalDatabasePermissioner(
         updateTablePermissions(action, SecurableObjectType.OrganizationExternalDatabaseColumn, columnAcls, columnsById, TableType.TABLE)
     }
 
-    override fun destroyExternalTablePermissions(
-            tablesToColumnIds: Map<UUID, Set<UUID>>
-    ) {
-        tablesToColumnIds.forEach { (tableId, columnIds) ->
-            columnIds.forEach { columnId ->
-                val aclKey = AclKey(tableId, columnId)
-                allTablePermissions.map { permission ->
-                    // probably need something here?
-                }
-            }
-        }
-    }
-
     private fun updateTablePermissions(
             action: Action,
             securableObjectType: SecurableObjectType,
