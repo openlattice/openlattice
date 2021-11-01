@@ -135,11 +135,6 @@ public class MapstoresPod {
     }
 
     @Bean
-    public ExternalPermissionRolesMapstore externalPermissionRoleMapstore() {
-        return new ExternalPermissionRolesMapstore( hikariDataSource );
-    }
-
-    @Bean
     public SelfRegisteringMapStore<AclKey, SecurableObjectType> securableObjectTypeMapstore() {
         return new SecurableObjectTypeMapstore( hikariDataSource );
     }

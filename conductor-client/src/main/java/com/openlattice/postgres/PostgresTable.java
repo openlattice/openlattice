@@ -316,11 +316,6 @@ public final class PostgresTable {
                             ANALYZER,
                             MULTI_VALUED,
                             INDEX_TYPE );
-    public static final PostgresTableDefinition EXTERNAL_PERMISSION_ROLES     =
-            new PostgresTableDefinition( "external_permission_roles" )
-                    .addColumns( ACL_KEY, PERMISSION, COLUMN_NAME, ROLE_ID  )
-                    .primaryKey( ACL_KEY, PERMISSION );
-
     public static final PostgresTableDefinition GRAPH_QUERIES              =
             new PostgresTableDefinition( "graph_queries" )
                     .addColumns( QUERY_ID, QUERY, STATE, START_TIME )

@@ -43,7 +43,6 @@ class ExternalDatabasePermissioner(
     private val propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap(hazelcastInstance)
     private val externalColumns = HazelcastMap.EXTERNAL_COLUMNS.getMap(hazelcastInstance)
     private val externalTables = HazelcastMap.EXTERNAL_TABLES.getMap(hazelcastInstance)
-    private val externalRoleNames = HazelcastMap.EXTERNAL_PERMISSION_ROLES.getMap(hazelcastInstance)
 
     companion object {
         private val logger = LoggerFactory.getLogger(ExternalDatabasePermissioner::class.java)
@@ -323,16 +322,7 @@ class ExternalDatabasePermissioner(
             columnAclKeyToName: Map<AclKey, String>,
             permissions: Set<Permission>
     ) {
-        permissions.forEach { permission ->
-            columnAclKeyToName.forEach {
-                val at = AccessTarget(it.key, permission)
-                if (!externalRoleNames.containsKey(at)) {
-                    val newRoleId = UUID.randomUUID()
-                    // insert column name into external_permission_roles as (column_name, role_id)
-                    externalRoleNames.put(at, Pair(it.value,  newRoleId))
-                }
-            }
-        }
+        // no longer needed function
     }
 
     /**
@@ -353,7 +343,7 @@ class ExternalDatabasePermissioner(
             columnIds.forEach { columnId ->
                 val aclKey = AclKey(tableId, columnId)
                 allTablePermissions.map { permission ->
-                    externalRoleNames.delete(AccessTarget(aclKey, permission))
+                    // probably need something here?
                 }
             }
         }
