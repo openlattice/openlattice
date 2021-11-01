@@ -712,7 +712,7 @@ class PostgresEntityDataQueryService(
      */
     fun deleteEntities(entitySetId: UUID, entityKeyIds: Set<UUID>, partitions: Set<Int>): WriteEvent {
         val entitiesByPartition = getIdsByPartition(entityKeyIds, partitions.toList())
-        val hds = dataSourceResolver.getDefaultDataSource()
+        val hds = dataSourceResolver.resolve(entitySetId)
 
         val numUpdates = hds.connection.use { connection ->
             try {

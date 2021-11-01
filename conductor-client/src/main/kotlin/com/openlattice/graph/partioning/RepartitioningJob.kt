@@ -92,7 +92,7 @@ class RepartitioningJob(
 
     @JsonIgnore
     override fun setDataSourceResolver(resolver: DataSourceResolver) {
-        this.hds = resolver.getDefaultDataSource()
+        this.hds = resolver.resolve(state.entitySetId)
     }
 
     override fun initialize() {
