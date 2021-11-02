@@ -1163,10 +1163,6 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         }
     }
 
-    private void ensureEntitySetsAreNotEdges( Set<UUID> entitySetIds ) {
-
-    }
-
     private int blockOnDeletionJobGettingNumUpdates( UUID deletionJobId, boolean blockUntilCompletion ) {
         if ( !blockUntilCompletion ) {
             return 0;
