@@ -320,7 +320,7 @@ constructor(
         )
         timer.reset().start()
 
-        deletionManager.authCheckForEntitySetsAndNeighbors(setOf(entitySetId), DeleteType.Hard, Principals.getCurrentPrincipals())
+        deletionManager.authCheckForEntitySetsAndNeighbors(setOf(entitySetId), deleteType, Principals.getCurrentPrincipals())
         logger.info(
             "deleteEntitySet - deletionManager.authCheckForEntitySetAndItsNeighbors took {} ms - entity set {}",
             timer.elapsed(TimeUnit.MILLISECONDS),
