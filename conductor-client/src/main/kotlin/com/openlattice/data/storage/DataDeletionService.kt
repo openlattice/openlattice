@@ -17,6 +17,7 @@ import com.openlattice.graph.core.GraphService
 import com.openlattice.search.requests.EntityNeighborsFilter
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
+import java.lang.IllegalArgumentException
 import java.util.*
 
 /*
@@ -113,9 +114,18 @@ class DataDeletionService(
 
     @Timed
     override fun authCheckForEntitySetsAndNeighbors(entitySetIds: Set<UUID>, deleteType: DeleteType, principals: Set<Principal>, entityKeyIds: Set<UUID>?) {
-        val srcDstEntitySets = entitySetIds.filter {
-            !entitySetManager.getEntitySet(it)!!.flags.contains(EntitySetFlag.ASSOCIATION)
-        }.toSet()
+
+        val srcDstEntitySets = mutableSetOf<UUID>()
+        entitySetIds.forEach { esid ->
+            entitySetManager.getEntitySet(esid)?.let {
+                if (!it.flags.contains(EntitySetFlag.ASSOCIATION)) {
+                    srcDstEntitySets.add(esid)
+                }
+            } ?: run {
+                throw IllegalArgumentException("Unable to perform delete on $entitySetIds because $esid does not exist")
+            }
+        }
+
         val neighborEdgeEntitySets = if (srcDstEntitySets.isEmpty()) mutableSetOf() else graphService.getNeighborEdgeEntitySets(srcDstEntitySets, entityKeyIds)
 
         val entitySetPropertyTypes = entitySetManager.getPropertyTypesOfEntitySets(neighborEdgeEntitySets + entitySetIds)
