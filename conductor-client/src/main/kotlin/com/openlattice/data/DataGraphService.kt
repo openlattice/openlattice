@@ -252,36 +252,6 @@ class DataGraphService(
         return graphService.deleteEdges(associations, deleteType)
     }
 
-    /* Top utilizers */
-    @Timed
-    override fun getFilteredRankings(
-            entitySetIds: Set<UUID>,
-            numResults: Int,
-            filteredRankings: List<AuthorizedFilteredNeighborsRanking>,
-            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
-            linked: Boolean,
-            linkingEntitySetId: Optional<UUID>
-    ): AggregationResult {
-        return graphService.computeTopEntities(
-                numResults,
-                entitySetIds,
-                authorizedPropertyTypes,
-                filteredRankings,
-                linked,
-                linkingEntitySetId
-        )
-
-    }
-
-    override fun getTopUtilizers(
-            entitySetId: UUID,
-            filteredNeighborsRankingList: List<FilteredNeighborsRankingAggregation>,
-            numResults: Int,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Stream<SetMultimap<FullQualifiedName, Any>> {
-        return Stream.empty()
-    }
-
     override fun getExpiringEntitiesFromEntitySet(
             entitySetId: UUID,
             expirationPolicy: DataExpiration,
