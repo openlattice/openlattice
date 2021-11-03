@@ -145,6 +145,8 @@ public class LinkerPostConfigurationServicesPod {
     public DataSourceResolver dataSourceResolver() {
         dataSourceManager.registerTablesWithAllDatasources( PostgresTable.E );
         dataSourceManager.registerTablesWithAllDatasources( PostgresTable.DATA );
+        dataSourceManager.registerTablesWithAllDatasources( PostgresTable.IDS );
+        dataSourceManager.registerTablesWithAllDatasources( PostgresTable.SYNC_IDS );
         return new DataSourceResolver( hazelcastInstance, dataSourceManager );
     }
 

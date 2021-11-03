@@ -80,6 +80,7 @@ import com.openlattice.organizations.OrganizationExternalDatabaseConfiguration;
 import com.openlattice.organizations.pods.OrganizationExternalDatabaseConfigurationPod;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
+import com.openlattice.postgres.PostgresTable;
 import com.openlattice.postgres.external.DatabaseQueryManager;
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
 import com.openlattice.postgres.external.ExternalDatabasePermissioner;
@@ -428,6 +429,10 @@ public class IndexerServicesPod {
 
     @Bean
     public DataSourceResolver dataSourceResolver() {
+        dataSourceManager.registerTablesWithAllDatasources( PostgresTable.DATA );
+        dataSourceManager.registerTablesWithAllDatasources( PostgresTable.E );
+        dataSourceManager.registerTablesWithAllDatasources( PostgresTable.IDS );
+        dataSourceManager.registerTablesWithAllDatasources( PostgresTable.SYNC_IDS );
         return new DataSourceResolver( hazelcastInstance, dataSourceManager );
     }
 
