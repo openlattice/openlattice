@@ -1099,8 +1099,8 @@ public final class ResultSetAdapters {
     }
 
     public static OrganizationWarehouse organizationWarehouse( ResultSet rs ) throws SQLException {
-        UUID id = id( rs );
         UUID organizationId = organizationId( rs );
+        UUID id = id( rs );
         UUID warehouseId = warehouseId( rs );
         String name = name( rs );
         return new OrganizationWarehouse(id, organizationId, warehouseId, name );

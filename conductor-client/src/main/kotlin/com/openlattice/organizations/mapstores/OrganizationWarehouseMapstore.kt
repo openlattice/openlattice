@@ -7,7 +7,6 @@ import com.openlattice.organizations.OrganizationWarehouse
 import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore
 import com.openlattice.postgres.PostgresTable.ORGANIZATION_WAREHOUSES
 import com.openlattice.mapstores.TestDataFactory
-import com.openlattice.organizations.Organization
 import com.openlattice.postgres.ResultSetAdapters
 import com.zaxxer.hikari.HikariDataSource
 import org.springframework.stereotype.Component
@@ -34,7 +33,7 @@ class OrganizationWarehouseMapstore(
     }
 
     override fun bind(ps: PreparedStatement, key: UUID, value: OrganizationWarehouse) {
-        var index = bind(ps, key, 1)
+        var index = 1
 
         // insert
         ps.setObject(index++, value.organizationWarehouseId)
@@ -43,10 +42,9 @@ class OrganizationWarehouseMapstore(
         ps.setString(index++, value.name)
 
         // update
-        ps.setObject(index++, value.organizationWarehouseId)
         ps.setObject(index++, value.organizationId)
         ps.setObject(index++, value.warehouseKey)
-        ps.setString(index++, value.name)
+        ps.setString(index, value.name)
     }
 
     override fun bind(ps: PreparedStatement, key: UUID, offset: Int): Int {

@@ -467,7 +467,7 @@ public final class PostgresTable {
                             ORGANIZATION_ID,
                             WAREHOUSE_ID,
                             NAME
-                    ).primaryKey(ID);
+                    );
 
     public static final PostgresTableDefinition ORGANIZATION_EXTERNAL_DATABASE_TABLE =
             new PostgresTableDefinition( "organization_external_database_tables" )

@@ -122,4 +122,8 @@ class ExternalWarehouseConnectionManager(
     fun appendDatabaseToJdbcPartial(jdbcStringNoDatabase: String, dbName: String): String {
         return "${jdbcStringNoDatabase.removeSuffix("/")}/$dbName"
     }
+
+    fun getWarehouseType(warehouseId: UUID): String {
+        return warehouses.getValue(warehouseId)._title
+    }
 }

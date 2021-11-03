@@ -19,7 +19,8 @@ enum class Schemas(val label: String) {
     ASSEMBLED_ENTITY_SETS("entitysets"),
     ENTERPRISE_FDW_SCHEMA("ol"),
     STAGING_SCHEMA("staging"),
-    PROJECTIONS_SCHEMA("projections");
+    PROJECTIONS_SCHEMA("projections"),
+    UPLOAD_SCHEMA("upload");
 
     override fun toString(): String {
         return label
