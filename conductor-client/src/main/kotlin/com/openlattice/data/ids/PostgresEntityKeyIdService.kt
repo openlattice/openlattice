@@ -36,7 +36,6 @@ import com.openlattice.postgres.PostgresTable.*
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
-import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -76,7 +75,7 @@ class PostgresEntityKeyIdService(
         private val idGenerationService: HazelcastIdGenerationService,
         protected val partitionManager: PartitionManager
 ) : EntityKeyIdService {
-    //    private val hds = dataSourceResolver.getDefaultDataSource()
+
     private fun genEntityKeyIds(entityIds: Set<EntityKey>): Map<EntityKey, UUID> {
         val ids = idGenerationService.getNextIds(entityIds.size)
         require(ids.size == entityIds.size) { "Insufficient ids generated." }
@@ -106,19 +105,19 @@ class PostgresEntityKeyIdService(
 
     }
 
-    private fun <T, V> getByDatasource(entityIds: Map<T, V>, entitySetIdReader: (T) -> UUID): Map<String, Map<T, V>> {
+    private fun <T, V> getByDataSource(entityIds: Map<T, V>, entitySetIdReader: (T) -> UUID): Map<String, Map<T, V>> {
         return entityIds
                 .asSequence()
                 .groupBy { dataSourceResolver.getDataSourceName(entitySetIdReader(it.key)) }
                 .mapValues { dataSourceEntityIds -> dataSourceEntityIds.value.associate { it.toPair() } }
     }
 
-    private fun getEntityKeyIdsByDatasource(entityKeyIds: Map<EntityKey, UUID>): Map<String, Map<EntityKey, UUID>> {
-        return getByDatasource(entityKeyIds) { it.entitySetId }
+    private fun getEntityKeyIdsByDataSource(entityKeyIds: Map<EntityKey, UUID>): Map<String, Map<EntityKey, UUID>> {
+        return getByDataSource(entityKeyIds) { it.entitySetId }
     }
 
     private fun storeEntityKeyIds(entityKeyIds: Map<EntityKey, UUID>): Map<EntityKey, UUID> {
-        val entityKeyIdsByDatasource = getEntityKeyIdsByDatasource(entityKeyIds)
+        val entityKeyIdsByDatasource = getEntityKeyIdsByDataSource(entityKeyIds)
 
         val partitionsByEntitySet = partitionManager
                 .getPartitionsByEntitySetId(entityKeyIds.keys.map { it.entitySetId }.toSet())
@@ -198,7 +197,7 @@ class PostgresEntityKeyIdService(
             entityIds: Map<UUID, Set<String>>,
             allIdWritten: Boolean = false
     ): MutableMap<EntityKey, UUID> {
-        return getByDatasource(entityIds) { it }.asSequence().flatMap { (datasourceName, entityIdGroup) ->
+        return getByDataSource(entityIds) { it }.asSequence().flatMap { (datasourceName, entityIdGroup) ->
             dataSourceResolver.getDataSource(datasourceName).connection.use { connection ->
                 loadEntityKeyIds(connection, entityIdGroup, allIdWritten)
             }.entries
