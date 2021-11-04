@@ -108,7 +108,7 @@ class PostgresDatabaseQueryService(
             createSchema(dataSource, STAGING_SCHEMA)
             createSchema(dataSource, TRANSPORTER_SCHEMA)
             createSchema(dataSource, ASSEMBLED_ENTITY_SETS)
-            createExtension(dataSource, PGAUDIT_EXTENSION, OPENLATTICE_SCHEMA)
+            // createExtension(dataSource, PGAUDIT_EXTENSION, OPENLATTICE_SCHEMA)
             configureOrganizationUser(organizationId, dataSource)
             addMembersToOrganization(organizationId, dataSource, securePrincipalsManager.getOrganizationMemberPrincipals(organizationId))
             configureServerUser(dataSource)
