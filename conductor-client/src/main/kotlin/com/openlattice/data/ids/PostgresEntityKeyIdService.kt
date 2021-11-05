@@ -26,6 +26,7 @@ import com.openlattice.data.EntityDataKey
 import com.openlattice.data.EntityKey
 import com.openlattice.data.EntityKeyIdService
 import com.openlattice.data.storage.DataSourceResolver
+import com.openlattice.data.storage.getByDataSource
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.data.util.PostgresDataHasher
@@ -105,15 +106,9 @@ class PostgresEntityKeyIdService(
 
     }
 
-    private fun <T, V> getByDataSource(entityIds: Map<T, V>, entitySetIdReader: (T) -> UUID): Map<String, Map<T, V>> {
-        return entityIds
-                .asSequence()
-                .groupBy { dataSourceResolver.getDataSourceName(entitySetIdReader(it.key)) }
-                .mapValues { dataSourceEntityIds -> dataSourceEntityIds.value.associate { it.toPair() } }
-    }
 
     private fun getEntityKeyIdsByDataSource(entityKeyIds: Map<EntityKey, UUID>): Map<String, Map<EntityKey, UUID>> {
-        return getByDataSource(entityKeyIds) { it.entitySetId }
+        return getByDataSource(dataSourceResolver, entityKeyIds) { it.entitySetId }
     }
 
     private fun storeEntityKeyIds(entityKeyIds: Map<EntityKey, UUID>): Map<EntityKey, UUID> {
@@ -197,26 +192,14 @@ class PostgresEntityKeyIdService(
             entityIds: Map<UUID, Set<String>>,
             allIdWritten: Boolean = false
     ): MutableMap<EntityKey, UUID> {
-        return getByDataSource(entityIds) { it }.asSequence().flatMap { (datasourceName, entityIdGroup) ->
+        return getByDataSource(
+                dataSourceResolver,
+                entityIds
+        ) { it }.asSequence().flatMap { (datasourceName, entityIdGroup) ->
             dataSourceResolver.getDataSource(datasourceName).connection.use { connection ->
                 loadEntityKeyIds(connection, entityIdGroup, allIdWritten)
             }.entries
         }.map { it.toPair() }.toMap(mutableMapOf())
-    }
-
-    private fun storeEntityKeyIdAddBatch(
-            entitySetId: UUID,
-            entityKeyId: UUID,
-            insertIds: PreparedStatement,
-            insertToData: PreparedStatement
-    ) {
-        storeEntityKeyIdAddBatch(
-                entitySetId,
-                entityKeyId,
-                insertIds,
-                insertToData,
-                partitionManager.getEntitySetPartitions(entitySetId).toIntArray()
-        )
     }
 
     /**

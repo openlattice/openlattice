@@ -106,9 +106,6 @@ public class IndexerPostConfigurationServicesPod {
     @Inject
     private ExternalDatabaseConnectionManager externalDbConnMan;
 
-    // @Inject
-    // private TransporterService transporterService;
-
     @Inject
     private OrganizationExternalDatabaseConfiguration organizationExternalDatabaseConfiguration;
 
@@ -153,12 +150,13 @@ public class IndexerPostConfigurationServicesPod {
 
     @Bean
     public PartitionManager partitionManager() {
+        //Uses default datasource (metadata home).
         return new PartitionManager( hazelcastInstance, hikariDataSource );
     }
 
     @Bean
     public IndexingMetadataManager indexingMetadataManager() {
-        return new IndexingMetadataManager( hikariDataSource, partitionManager() );
+        return new IndexingMetadataManager( resolver, partitionManager() );
     }
 
     @Bean
@@ -177,7 +175,7 @@ public class IndexerPostConfigurationServicesPod {
         return new BackgroundLinkingIndexingService(
                 hazelcastInstance,
                 executor,
-                hikariDataSource,
+                resolver,
                 elasticsearchApi,
                 indexingMetadataManager(),
                 entityDatastore,
@@ -188,7 +186,7 @@ public class IndexerPostConfigurationServicesPod {
     public BackgroundIndexedEntitiesDeletionService backgroundIndexedEntitiesDeletionService() {
         return new BackgroundIndexedEntitiesDeletionService(
                 hazelcastInstance,
-                hikariDataSource,
+                resolver,
                 indexerConfiguration,
                 dataQueryService
         );
@@ -208,6 +206,8 @@ public class IndexerPostConfigurationServicesPod {
 
     @Bean
     public ExternalDatabaseManagementService edms() {
+        //Hikari datasource is only used for hba record storage/retrieval, which is currently unused/untested/probably
+        //broken functionality
         return new ExternalDatabaseManagementService(
                 hazelcastInstance,
                 externalDbConnMan,
