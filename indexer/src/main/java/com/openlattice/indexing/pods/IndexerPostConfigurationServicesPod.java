@@ -35,6 +35,7 @@ import com.openlattice.authorization.PrincipalsMapManager;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.DataDeletionManager;
 import com.openlattice.data.DataGraphManager;
+import com.openlattice.data.storage.DataSourceResolver;
 import com.openlattice.data.storage.EntityDatastore;
 import com.openlattice.data.storage.IndexingMetadataManager;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
@@ -145,6 +146,9 @@ public class IndexerPostConfigurationServicesPod {
     private EdmService dataModelService;
 
     @Inject
+    private DataSourceResolver resolver;
+
+    @Inject
     private GraphService graphApi;
 
     @Bean
@@ -162,7 +166,7 @@ public class IndexerPostConfigurationServicesPod {
         return new BackgroundIndexingService(
                 hazelcastInstance,
                 indexerConfiguration,
-                hikariDataSource,
+                resolver,
                 dataQueryService,
                 elasticsearchApi,
                 indexingMetadataManager() );
