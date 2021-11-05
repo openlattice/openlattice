@@ -475,20 +475,6 @@ class ExternalDatabaseManagementService(
         updateHBARecords(orgId)
     }
 
-    /**
-     * Revokes all privileges for a user on an organization's database
-     * when that user is removed from an organization.
-     */
-    fun revokeAllPrivilegesFromMember(orgId: UUID, userId: String) {
-        val userName = getDBUser(userId)
-        val (hds, dbName) = externalDbManager.connectToOrgGettingName(orgId)
-        hds.connection.use { conn ->
-            conn.createStatement().use { stmt ->
-                stmt.execute("REVOKE ALL ON DATABASE $dbName FROM $userName")
-            }
-        }
-    }
-
     fun syncPermissions(
             adminRolePrincipal: Principal,
             table: ExternalTable,
