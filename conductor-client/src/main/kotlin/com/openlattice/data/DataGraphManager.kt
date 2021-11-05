@@ -126,22 +126,6 @@ interface DataGraphManager {
             authorizedPropertiesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>
     ): Map<UUID, CreateAssociationEvent>
 
-    fun getTopUtilizers(
-            entitySetId: UUID,
-            filteredNeighborsRankingList: List<FilteredNeighborsRankingAggregation>,
-            numResults: Int,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Stream<SetMultimap<FullQualifiedName, Any>>
-
-    fun getFilteredRankings(
-            entitySetIds: Set<UUID>,
-            numResults: Int,
-            filteredRankings: List<AuthorizedFilteredNeighborsRanking>,
-            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
-            linked: Boolean,
-            linkingEntitySetId: Optional<UUID>
-    ): AggregationResult
-
     fun getNeighborEntitySets(entitySetIds: Set<UUID>): List<NeighborSets>
 
     fun mergeEntities(
