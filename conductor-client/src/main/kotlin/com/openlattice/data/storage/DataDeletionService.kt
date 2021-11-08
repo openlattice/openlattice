@@ -128,6 +128,13 @@ class DataDeletionService(
 
         val neighborEdgeEntitySets = if (srcDstEntitySets.isEmpty()) mutableSetOf() else graphService.getNeighborEdgeEntitySets(srcDstEntitySets, entityKeyIds)
 
+        // ensure entity set access
+        (neighborEdgeEntitySets + entitySetIds).filter { !authorizationManager.checkIfHasPermissions(AclKey(it), principals, EnumSet.of(Permission.READ)) }.let {
+            if (it.isNotEmpty()) {
+                throw ForbiddenException("Unable to perform delete on $entitySetIds because entity sets{$it} are inaccessible")
+            }
+        }
+
         val entitySetPropertyTypes = entitySetManager.getPropertyTypesOfEntitySets(neighborEdgeEntitySets + entitySetIds)
 
         val requiredPermissions = PERMISSIONS_FOR_DELETE_TYPE.getValue(deleteType)
