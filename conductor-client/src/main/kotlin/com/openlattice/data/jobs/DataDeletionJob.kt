@@ -345,15 +345,15 @@ class DataDeletionJob(
         }
 
         return entityDataKeys.groupBy { lateInitProvider.resolver.getDataSourceName(it.entitySetId) }
-            .map { (dataSourceName, entityDataKeysForDataSource) ->
-                val dataHds = lateInitProvider.resolver.getDataSource(dataSourceName)
+                .map { (dataSourceName, entityDataKeysForDataSource) ->
+                    val dataHds = lateInitProvider.resolver.getDataSource(dataSourceName)
 //                val idsHds = lateInitProvider.resolver.getDefaultDataSource()
-                val entitySetIdToPartitionToIds = entityDataKeysForDataSource
-                    .groupBy { edkForDataSource -> edkForDataSource.entitySetId }
-                    .mapValues { (entitySetId, edks) ->
-                        val partitions = entitySetIdToPartitions.getValue(entitySetId).toList()
-                        edks.map { edk -> edk.entityKeyId }.groupBy { id -> getPartition(id, partitions) }
-                    }
+                    val entitySetIdToPartitionToIds = entityDataKeysForDataSource
+                            .groupBy { edkForDataSource -> edkForDataSource.entitySetId }
+                            .mapValues { (entitySetId, edks) ->
+                                val partitions = entitySetIdToPartitions.getValue(entitySetId).toList()
+                                edks.map { edk -> edk.entityKeyId }.groupBy { id -> getPartition(id, partitions) }
+                            }
 
                     dataHds.connection.use {
                         it.prepareStatement(deleteFromDataSql).use { ps ->
@@ -364,18 +364,16 @@ class DataDeletionJob(
                                 }
                             }
                             ps.executeBatch()
-                        }
-                        ps.executeBatch()
-                    }.sum() + it.prepareStatement(deleteFromIdsSql).use { ps ->
-                        entitySetIdToPartitionToIds.forEach { (entitySetId, partitionToIds) ->
-                            partitionToIds.forEach { (partition, ids) ->
-                                bindEntityDelete(ps, entitySetId, partition, ids, version)
+                        }.sum() + it.prepareStatement(deleteFromIdsSql).use { ps ->
+                            entitySetIdToPartitionToIds.forEach { (entitySetId, partitionToIds) ->
+                                partitionToIds.forEach { (partition, ids) ->
+                                    bindEntityDelete(ps, entitySetId, partition, ids, version)
+                                }
                             }
+                            ps.executeBatch().sum()
                         }
-                        ps.executeBatch().sum()
                     }
-                }
-            }.sum()
+                }.sum()
     }
 
     @JsonIgnore
