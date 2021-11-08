@@ -17,7 +17,6 @@ import com.openlattice.graph.core.GraphService
 import com.openlattice.search.requests.EntityNeighborsFilter
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import java.lang.IllegalArgumentException
 import java.util.*
 
 /*
@@ -135,6 +134,7 @@ class DataDeletionService(
             }
         }
 
+        // ensure access on property types
         val entitySetPropertyTypes = entitySetManager.getPropertyTypesOfEntitySets(neighborEdgeEntitySets + entitySetIds)
 
         val requiredPermissions = PERMISSIONS_FOR_DELETE_TYPE.getValue(deleteType)
