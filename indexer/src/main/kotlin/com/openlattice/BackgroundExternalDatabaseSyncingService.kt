@@ -105,7 +105,9 @@ class BackgroundExternalDatabaseSyncingService(
                 }
 
                 val database = organizationDatabases[organizationId]
-                logger.info("starting to sync organization database - org {} db {}", organizationId, database!!.name)
+                    ?: throw Exception("organization database does not exist - org $organizationId")
+
+                logger.info("starting to sync organization database - org {} db {}", organizationId, database.name)
 
                 val adminRoleAclKey = organizations.getValue(organizationId).adminRoleAclKey
                 val adminRolePrincipal = principalsMapManager.getSecurablePrincipal(adminRoleAclKey)!!.principal

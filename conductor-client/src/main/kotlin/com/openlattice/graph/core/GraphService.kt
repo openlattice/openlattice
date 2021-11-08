@@ -67,15 +67,6 @@ interface GraphService {
             entityKeyIds: Set<UUID>? = null
     ): Set<UUID>
 
-    fun computeTopEntities(
-        limit: Int,
-        entitySetIds: Set<UUID>,
-        authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
-        details: List<AuthorizedFilteredNeighborsRanking>,
-        linked: Boolean,
-        linkingEntitySetId: Optional<UUID>
-    ): AggregationResult
-
     fun getNeighborEntitySets(entitySetIds: Set<UUID>): List<NeighborSets>
 
     fun checkForUnauthorizedEdges(

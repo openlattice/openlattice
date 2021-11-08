@@ -115,7 +115,7 @@ class DataIntegrationController : DataIntegrationApi, AuthorizingComponent {
     override fun generateEntityKeys(@RequestBody bundle: EntityKeyGenerationBundle): Map<UUID, EntityKey> {
         val entityKeys = bundle.entities.map {
             EntityKey(bundle.entitySetId, ApiHelpers.generateDefaultEntityId(bundle.keyPropertyTypeIds, it))
-        }.toSet()
+        }.toCollection(linkedSetOf())
         val ids = getEntityKeyIds(entityKeys)
         return ids.zip(entityKeys).toMap()
     }

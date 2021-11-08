@@ -583,7 +583,6 @@ class OrganizationsController : AuthorizingComponent, OrganizationsApi {
             ensureOwnerAccess(AclKey(organizationId))
         }
         organizations.removeMembers(organizationId, ImmutableSet.of(Principal(PrincipalType.USER, userId)))
-        edms.revokeAllPrivilegesFromMember(organizationId, userId)
         return null
     }
 

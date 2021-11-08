@@ -21,32 +21,20 @@
 
 package com.openlattice.data.ids
 
-import com.geekbeast.hazelcast.HazelcastClientProvider
 import com.geekbeast.hazelcast.IHazelcastClientProvider
 import com.hazelcast.core.HazelcastInstance
-import com.kryptnostic.rhizome.configuration.RhizomeConfiguration
-import com.kryptnostic.rhizome.configuration.hazelcast.HazelcastConfiguration
-import com.kryptnostic.rhizome.configuration.hazelcast.HazelcastConfigurationContainer
 import com.openlattice.TestServer
-import com.openlattice.authorization.SystemRole
-import com.openlattice.data.EntityDataKey
 import com.openlattice.data.EntityKey
-import com.openlattice.data.storage.lockEntitiesInIdsTable
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.data.storage.upsertEntitiesSql
-import com.openlattice.edm.EntitySet
-import com.openlattice.hazelcast.HazelcastClient
-import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.ids.HazelcastIdGenerationService
-import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.lockIdsAndExecute
 import org.apache.commons.lang3.RandomStringUtils
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
-import org.mockito.Matchers.any
 import org.mockito.Matchers.anySet
 import org.mockito.Mockito
 import org.slf4j.LoggerFactory
@@ -54,7 +42,6 @@ import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
 import java.util.concurrent.locks.ReentrantLock
-import javax.mail.Part
 
 /**
  *

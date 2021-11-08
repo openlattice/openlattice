@@ -162,7 +162,7 @@ class DataDeletionJob(
         state.entityKeyIds?.let {
             return it.size.toLong() + getNeighborTotalToDelete()
         }
-        val hds = lateInitProvider.resolver.getDefaultDataSource()
+        val hds = lateInitProvider.resolver.resolve(state.entitySetId)
         return hds.connection.use { connection ->
             connection.prepareStatement(GET_ENTITY_SET_COUNT_SQL).use { ps ->
                 ps.setObject(1, state.entitySetId)
@@ -263,7 +263,7 @@ class DataDeletionJob(
             return entityKeyIds.take(BATCH_SIZE).mapTo(mutableSetOf()) { EntityDataKey(state.entitySetId, it) }
         }
 
-        val hds = lateInitProvider.resolver.getDefaultDataSource()
+        val hds = lateInitProvider.resolver.resolve(state.entitySetId)
 
         return BasePostgresIterable(PreparedStatementHolderSupplier(hds, getIdsBatchSql()) {
             it.setObject(1, state.entitySetId)
@@ -275,6 +275,7 @@ class DataDeletionJob(
 
     private fun cleanUpBatch(entityDataKeys: Set<EntityDataKey>) {
         val entityKeyIds = entityDataKeys.mapTo(mutableSetOf()) { it.entityKeyId }
+        //This is just affecting linking so we use default data source by design.
         val hds = lateInitProvider.resolver.getDefaultDataSource()
         PostgresLinkingQueryService.deleteNeighborhoods(hds, state.entitySetId, entityKeyIds)
         state.entityKeyIds?.removeAll(entityKeyIds)
@@ -344,15 +345,15 @@ class DataDeletionJob(
         }
 
         return entityDataKeys.groupBy { lateInitProvider.resolver.getDataSourceName(it.entitySetId) }
-                .map { (dataSourceName, entityDataKeysForDataSource) ->
-                    val dataHds = lateInitProvider.resolver.getDataSource(dataSourceName)
-                    val idsHds = lateInitProvider.resolver.getDefaultDataSource()
-                    val entitySetIdToPartitionToIds = entityDataKeysForDataSource
-                            .groupBy { edkForDataSource -> edkForDataSource.entitySetId }
-                            .mapValues { (entitySetId, edks) ->
-                                val partitions = entitySetIdToPartitions.getValue(entitySetId).toList()
-                                edks.map { edk -> edk.entityKeyId }.groupBy { id -> getPartition(id, partitions) }
-                            }
+            .map { (dataSourceName, entityDataKeysForDataSource) ->
+                val dataHds = lateInitProvider.resolver.getDataSource(dataSourceName)
+//                val idsHds = lateInitProvider.resolver.getDefaultDataSource()
+                val entitySetIdToPartitionToIds = entityDataKeysForDataSource
+                    .groupBy { edkForDataSource -> edkForDataSource.entitySetId }
+                    .mapValues { (entitySetId, edks) ->
+                        val partitions = entitySetIdToPartitions.getValue(entitySetId).toList()
+                        edks.map { edk -> edk.entityKeyId }.groupBy { id -> getPartition(id, partitions) }
+                    }
 
                     dataHds.connection.use {
                         it.prepareStatement(deleteFromDataSql).use { ps ->
@@ -364,17 +365,17 @@ class DataDeletionJob(
                             }
                             ps.executeBatch()
                         }
-                    }.sum() + idsHds.connection.use {
-                        it.prepareStatement(deleteFromIdsSql).use { ps ->
-                            entitySetIdToPartitionToIds.forEach { (entitySetId, partitionToIds) ->
-                                partitionToIds.forEach { (partition, ids) ->
-                                    bindEntityDelete(ps, entitySetId, partition, ids, version)
-                                }
+                        ps.executeBatch()
+                    }.sum() + it.prepareStatement(deleteFromIdsSql).use { ps ->
+                        entitySetIdToPartitionToIds.forEach { (entitySetId, partitionToIds) ->
+                            partitionToIds.forEach { (partition, ids) ->
+                                bindEntityDelete(ps, entitySetId, partition, ids, version)
                             }
-                            ps.executeBatch()
-                        }.sum()
+                        }
+                        ps.executeBatch().sum()
                     }
-                }.sum()
+                }
+            }.sum()
     }
 
     @JsonIgnore
@@ -593,8 +594,8 @@ class DataDeletionJob(
      */
     @JsonIgnore
     private val GET_ENTITY_SET_COUNT_SQL = """
-        SELECT $COUNT 
-            FROM ${PostgresEntitySetSizesInitializationTask.ENTITY_SET_SIZES_VIEW} 
+        SELECT $COUNT
+            FROM ${PostgresEntitySetSizesInitializationTask.ENTITY_SET_SIZES_VIEW}
             WHERE ${ENTITY_SET_ID.name} = ?
     """.trimIndent()
 
@@ -659,21 +660,21 @@ class DataDeletionJob(
      */
     @JsonIgnore
     private val SOFT_DELETE_FROM_DATA_SQL = """
-        UPDATE ${DATA.name} 
+        UPDATE ${DATA.name}
         SET
-          ${VERSIONS.name} = ${VERSIONS.name} || ARRAY[?], 
-          ${VERSION.name} = 
+          ${VERSIONS.name} = ${VERSIONS.name} || ARRAY[?],
+          ${VERSION.name} =
             CASE
               WHEN abs(${DATA.name}.${VERSION.name}) <= abs(?)
               THEN ?
-              ELSE ${DATA.name}.${VERSION.name} 
+              ELSE ${DATA.name}.${VERSION.name}
             END,
           ${LAST_WRITE.name} = 'now()'
         WHERE
           ${ENTITY_SET_ID.name} = ?
           AND ${PARTITION.name} = ?
           AND ${ID.name} = ANY(?)
-            
+
     """.trimIndent()
 
     /**
