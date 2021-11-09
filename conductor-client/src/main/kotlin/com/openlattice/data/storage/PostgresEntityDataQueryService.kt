@@ -885,7 +885,7 @@ class PostgresEntityDataQueryService(
     ): BasePostgresIterable<UUID> {
         val partitions = partitionManager.getEntitySetPartitions(entitySetId)
         val hds =
-            dataSourceResolver.resolve(entitySetId) //This query hits the ids table which is still centralized.
+            dataSourceResolver.resolve(entitySetId)
 
         return BasePostgresIterable(
             PreparedStatementHolderSupplier(hds, getExpiringEntitiesUsingIdsQuery(expirationPolicy)) { ps ->
