@@ -22,6 +22,7 @@ package com.openlattice.indexing
 
 import com.google.common.base.Stopwatch
 import com.hazelcast.core.HazelcastInstance
+import com.openlattice.data.storage.DataSourceResolver
 import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.indexing.configuration.IndexerConfiguration
@@ -57,7 +58,7 @@ const val DELETE_RATE = 30_000L
  */
 class BackgroundIndexedEntitiesDeletionService(
         hazelcastInstance: HazelcastInstance,
-        private val hds: HikariDataSource,
+        private val dataSourceResolver: DataSourceResolver,
         private val indexerConfiguration: IndexerConfiguration,
         private val dataQueryService: PostgresEntityDataQueryService
 ) {
@@ -158,7 +159,7 @@ class BackgroundIndexedEntitiesDeletionService(
             isCurrentEntitySet: Boolean = true
     ): BasePostgresIterable<UUID> {
         val sql = if (isCurrentEntitySet) selectCurrentEntitySetIdsBatch else selectDeletedEntitySetIdsBatch
-
+        val hds = dataSourceResolver.resolve(entitySet.id)
         return BasePostgresIterable(
                 PreparedStatementHolderSupplier(hds, sql) {
                     val partitionsArray = PostgresArrays.createIntArray(it.connection, entitySet.partitions)
@@ -198,6 +199,7 @@ class BackgroundIndexedEntitiesDeletionService(
             """.trimIndent()
 
     private fun deleteFromSyncIds(entitySetId: UUID, entityKeyIds: Set<UUID>) {
+        val hds = dataSourceResolver.resolve(entitySetId)
         hds.connection.use { conn ->
             conn.prepareStatement(deleteFromSyncIdsSql).use { ps ->
                 ps.setObject(1, entitySetId)
