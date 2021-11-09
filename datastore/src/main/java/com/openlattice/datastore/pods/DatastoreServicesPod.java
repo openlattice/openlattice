@@ -344,7 +344,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public IndexingMetadataManager indexingMetadataManager() {
-        return new IndexingMetadataManager( hikariDataSource, partitionManager() );
+        return new IndexingMetadataManager( dataSourceResolver(), partitionManager() );
     }
 
     @Bean
