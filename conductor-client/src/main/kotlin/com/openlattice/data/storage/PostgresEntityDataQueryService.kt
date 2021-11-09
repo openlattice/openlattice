@@ -431,7 +431,7 @@ class PostgresEntityDataQueryService(
 
             //Make data visible by marking new version in ids table.
 
-            val updatedEntities = dataSourceResolver.getDataSource(DEFAULT_DATASOURCE).connection.use { idsConnection ->
+            val updatedEntities = hds.connection.use { idsConnection ->
                 val ps = idsConnection.prepareStatement(updateEntitySql)
 
                 entities.keys.sorted().forEach { entityKeyId ->
@@ -885,7 +885,7 @@ class PostgresEntityDataQueryService(
     ): BasePostgresIterable<UUID> {
         val partitions = partitionManager.getEntitySetPartitions(entitySetId)
         val hds =
-            dataSourceResolver.getDataSource(DEFAULT_DATASOURCE) //This query hits the ids table which is still centralized.
+            dataSourceResolver.resolve(entitySetId) //This query hits the ids table which is still centralized.
 
         return BasePostgresIterable(
             PreparedStatementHolderSupplier(hds, getExpiringEntitiesUsingIdsQuery(expirationPolicy)) { ps ->
