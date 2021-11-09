@@ -431,21 +431,19 @@ class PostgresEntityDataQueryService(
 
             //Make data visible by marking new version in ids table.
 
-            val updatedEntities = hds.connection.use { idsConnection ->
-                val ps = idsConnection.prepareStatement(updateEntitySql)
+            val ps = connection.prepareStatement(updateEntitySql)
 
-                entities.keys.sorted().forEach { entityKeyId ->
-                    ps.setArray(1, versionsArrays)
-                    ps.setObject(2, version)
-                    ps.setObject(3, version)
-                    ps.setObject(4, entitySetId)
-                    ps.setObject(5, entityKeyId)
-                    ps.setInt(6, partition)
-                    ps.addBatch()
-                }
-
-                ps.executeBatch().sum()
+            entities.keys.sorted().forEach { entityKeyId ->
+                ps.setArray(1, versionsArrays)
+                ps.setObject(2, version)
+                ps.setObject(3, version)
+                ps.setObject(4, entitySetId)
+                ps.setObject(5, entityKeyId)
+                ps.setInt(6, partition)
+                ps.addBatch()
             }
+
+            val updatedEntities = ps.executeBatch().sum()
 
             logger.debug("Updated $updatedEntities entities as part of insert.")
             return@use updatedPropertyCounts
