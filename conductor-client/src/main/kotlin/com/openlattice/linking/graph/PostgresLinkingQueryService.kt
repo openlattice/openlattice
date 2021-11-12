@@ -328,8 +328,6 @@ class PostgresLinkingQueryService(
         return BasePostgresIterable(PreparedStatementHolderSupplier(hds, ENTITY_KEY_IDS_OF_LINKING_IDS_SQL) { ps ->
 
             val linkingIdsArray = PostgresArrays.createUuidArray(ps.connection, linkingIds)
-            /* Note: this inclusion may or may not speed up the function, depending how many partitions are
-               covered by all the normal entity sets requested */
 
             ps.setArray(1, linkingIdsArray)
             ps.setArray(2, PostgresArrays.createUuidArray(ps.connection, normalEntitySetIds))
