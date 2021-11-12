@@ -87,7 +87,6 @@ class PostgresEntityDataQueryServiceTest {
                         mapOf(),
                         EnumSet.of(MetadataOption.ENTITY_KEY_IDS),
                         entitySetIds = setOf(),
-                        partitions = setOf(),
                         entityKeyIds = setOf(),
                         linking = true
                 ).first

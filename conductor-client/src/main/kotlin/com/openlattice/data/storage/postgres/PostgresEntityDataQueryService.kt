@@ -750,7 +750,6 @@ class PostgresEntityDataQueryService(
      * @param entitySetId The entity set id for which to tombstone entries
      * @param entities The entities with their properties for which to tombstone entries.
      * @param version The version to use to tombstone.
-     * @param partitions Contains the partition info for the entity set of the entities.
      *
      * @return A write event object containing a summary of the operation useful for auditing purposes.
      *

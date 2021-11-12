@@ -67,8 +67,6 @@ class PostgresEntityKeyIdServiceTest : TestServer() {
 
             }
 
-
-//            Mockito.doReturn((0 until 257).toSet()).`when`(partMgr).getEntitySetPartitions(UUID.randomUUID())
             Mockito.`when`(partMgr.getEntitySetPartitions(UUID.randomUUID())).then {
                 (0 until 257).toSet()
             }
@@ -91,39 +89,32 @@ class PostgresEntityKeyIdServiceTest : TestServer() {
     fun testLocking() {
         val entitySetId = UUID.randomUUID()
         //            Mockito.doReturn((0 until 257).toSet()).`when`(partMgr).getEntitySetPartitions(UUID.randomUUID())
-        Mockito.`when`(partMgr.getEntitySetPartitions(entitySetId)).then {
-            (0 until 257).toSet()
-        }
         val ids = postgresEntityKeyIdService.reserveIds(entitySetId, 65536)
-        val partitions = (0 until 257).toList().toIntArray()
 
         logger.info("Fanning out to lock ids and execute.")
         val futures = (0 until 32).map {
             executor.submit<Int> {
-                val partitionsMap = ids
+                val entityKeyIds = ids
                         .shuffled()
                         .take(4096)
-                        .groupBy { getPartition(it, partitions) }
+                        .toSortedSet()
                 hds.connection.use { connection ->
                     connection.autoCommit = false
                     val ps = connection.prepareStatement(upsertEntitiesSql)
-                    val s = partitionsMap.map { (partition, entityKeyIds) ->
-                        val inner = lockIdsAndExecute(connection, entitySetId, partition, entityKeyIds) {
-                            val version = System.currentTimeMillis()
-                            ps.setObject(1, PostgresArrays.createLongArray(connection, version))
-                            ps.setObject(2, version)
-                            ps.setObject(3, version)
-                            ps.setObject(4, entitySetId)
-                            ps.setArray(5, PostgresArrays.createUuidArray(connection, entityKeyIds))
-                            ps.setInt(6, partition)
-                            val updateCount = ps.executeUpdate()
-                            updateCount
-                        }
-                        connection.commit()
-                        logger.info("Completed partition $partition of size ${entityKeyIds.size} for job $it with $inner updates")
-                        inner
-                    }.sum()
-                    logger.info("Completed job $it with $s updates")
+
+                    val s = lockIdsAndExecute(connection, entitySetId, entityKeyIds) {
+                        val version = System.currentTimeMillis()
+                        ps.setObject(1, PostgresArrays.createLongArray(connection, version))
+                        ps.setObject(2, version)
+                        ps.setObject(3, version)
+                        ps.setObject(4, entitySetId)
+                        ps.setArray(5, PostgresArrays.createUuidArray(connection, entityKeyIds))
+                        val updateCount = ps.executeUpdate()
+                        updateCount
+                    }
+                    connection.commit()
+                    logger.info("Completed ${entityKeyIds.size} for job $it with $s updates")
+
                     it
                 }
             }

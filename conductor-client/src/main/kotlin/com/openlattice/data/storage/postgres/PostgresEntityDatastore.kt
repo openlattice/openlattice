@@ -44,7 +44,6 @@ class PostgresEntityDatastore(
         private val eventBus: EventBus,
         private val feedbackQueryService: PostgresLinkingFeedbackService,
         private val linkingQueryService: LinkingQueryService,
-        private val partitionManager: PartitionManager
 ) : EntityDatastore {
 
     companion object {

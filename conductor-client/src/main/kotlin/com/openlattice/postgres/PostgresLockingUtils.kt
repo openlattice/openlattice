@@ -23,9 +23,7 @@ private val logger = LoggerFactory.getLogger(PostgresLockingUtils::class.java)
  * @param connection The Hikari connection that will be used to execute the transaction
  * @param query The SQL query that will be executed once the locks have been acquired
  * @param entitySetId The entity set id that will be updated
- * @param entityKeyIdsByPartition A map from partition to a collection of entityKeyIds on that partition to
- * update. If the query operates on an entire entity set (as opposed to specific entity key ids) the values
- * in this map will be ignored.
+ * @param entityKeyIdss A collection of entity key ids to operate on
  * @param shouldLockEntireEntitySet A boolean indicating whether the locks should operate on an entire entity
  * set, or whether they should apply a filter on the id values in [entityKeyIdsByPartition]. Defaults to false.
  * @param bindPreparedStatementFn A function that binds any remaining PreparedStatement parameters. This function
@@ -38,8 +36,7 @@ private val logger = LoggerFactory.getLogger(PostgresLockingUtils::class.java)
 fun lockIdsAndExecute(
         connection: Connection,
         entitySetId: UUID,
-        partition: Int,
-        entityKeyIds: Collection<UUID> = listOf(),
+        entityKeyIds: SortedSet<UUID> = sortedSetOf(),
         shouldLockEntireEntitySet: Boolean = false,
         execute: () -> Int
 ): Int {
@@ -54,13 +51,13 @@ fun lockIdsAndExecute(
 
     return try {
         if (shouldLockEntireEntitySet) {
-            lockEntitySet(lock, entitySetId, partition)
+            lockEntitySet(lock, entitySetId)
         } else {
-            batchLockIds(lock, entitySetId, partition, entityKeyIds)
+            batchLockIds(lock, entitySetId, entityKeyIds)
         }
 
         val lockCount = lock.executeBatch().sum()
-        logger.debug("Locked $lockCount entity key ids for entity set $entitySetId and partition $partition")
+        logger.debug("Locked $lockCount entity key ids for entity set $entitySetId ")
         execute()
     } catch (ex: Exception) {
         connection.rollback()

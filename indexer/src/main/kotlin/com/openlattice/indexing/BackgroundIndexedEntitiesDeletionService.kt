@@ -137,7 +137,7 @@ class BackgroundIndexedEntitiesDeletionService(
         var deleteCount = 0
 
         while (deletableIds.isNotEmpty()) {
-            deleteCount += dataQueryService.deleteEntities(entitySet.id, deletableIds, entitySet.partitions).numUpdates
+            deleteCount += dataQueryService.deleteEntities(entitySet.id, deletableIds).numUpdates
             deleteFromSyncIds(entitySet.id, deletableIds)
             deletableIds = getDeletedIdsBatch(entitySet, isCurrentEntitySet).toSet()
         }
