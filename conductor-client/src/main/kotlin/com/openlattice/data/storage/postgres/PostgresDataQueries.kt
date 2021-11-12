@@ -9,7 +9,6 @@ import com.openlattice.data.PropertyUpdateType
 import com.openlattice.data.storage.BindDetails
 import com.openlattice.data.storage.MetadataOption
 import com.openlattice.data.storage.SqlBinder
-import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.edm.PostgresEdmTypeConverter
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.*
