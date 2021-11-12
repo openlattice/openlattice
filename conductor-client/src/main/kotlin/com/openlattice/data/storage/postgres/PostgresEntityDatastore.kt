@@ -203,8 +203,7 @@ class PostgresEntityDatastore(
         val writeEvent = dataQueryService.clearEntityData(
                 entitySetId,
                 entityKeyIds,
-                authorizedPropertyTypes,
-                partitionManager.getEntitySetPartitions(entitySetId).toSet()
+                authorizedPropertyTypes
         )
         // same as if we updated the entities
         signalCreatedEntities(entitySetId, entityKeyIds)
