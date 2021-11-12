@@ -213,17 +213,4 @@ interface EntitySetsApi {
             @Path(ID) entitySetId: UUID,
             @Body dateTime: String
     ): Set<UUID>
-
-    /**
-     * Used to repartition an entity set. This will shuffle corresponding ids, edges, and data table rows
-     * for the entity set.
-     *
-     * This API requires admin privileges.
-     *
-     * @param entitySetId The id of the entity set to update.
-     * @param partitions The partitions to set.
-     * @return The job id for the repartioning job.
-     */
-    @PUT(BASE + ID_PATH + PARTITIONS_PATH)
-    fun repartitionEntitySet(@Path(ID) entitySetId: UUID, @Body partitions: Set<Int>): UUID
 }

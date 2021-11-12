@@ -55,7 +55,6 @@ import com.openlattice.data.storage.DataSourceResolver;
 import com.openlattice.data.storage.EntityDatastore;
 import com.openlattice.data.storage.postgres.PostgresEntityDataQueryService;
 import com.openlattice.data.storage.postgres.PostgresEntityDatastore;
-import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datasets.DataSetService;
 import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
@@ -220,11 +219,6 @@ public class IndexerServicesPod {
     }
 
     @Bean
-    public PartitionManager partitionManager() {
-        return new PartitionManager( hazelcastInstance, hikariDataSource );
-    }
-
-    @Bean
     public PhoneNumberService phoneNumberService() {
         return new PhoneNumberService( hazelcastInstance );
     }
@@ -262,7 +256,6 @@ public class IndexerServicesPod {
                 authorizationManager(),
                 securePrincipalsManager(),
                 phoneNumberService(),
-                partitionManager(),
                 assembler(),
                 collaborationService()
         );
@@ -317,7 +310,6 @@ public class IndexerServicesPod {
                 eventBus,
                 aclKeyReservationService(),
                 authorizationManager(),
-                partitionManager(),
                 dataModelService(),
                 hikariDataSource,
                 dataSetService(),
@@ -334,16 +326,15 @@ public class IndexerServicesPod {
     public EntityKeyIdService idService() {
         return new PostgresEntityKeyIdService(
                 dataSourceResolver(),
-                idGeneration(),
-                partitionManager() );
+                idGeneration()
+        );
     }
 
     @Bean
     public PostgresEntityDataQueryService dataQueryService() {
         return new PostgresEntityDataQueryService(
                 dataSourceResolver(),
-                byteBlobDataManager,
-                partitionManager()
+                byteBlobDataManager
         );
     }
 
@@ -365,7 +356,6 @@ public class IndexerServicesPod {
         return new Graph(
                 dataSourceResolver(),
                 entitySetManager(),
-                partitionManager(),
                 dataQueryService(),
                 idService(),
                 metricRegistry
@@ -412,14 +402,13 @@ public class IndexerServicesPod {
                 authorizationManager(),
                 entityDatastore(),
                 graphApi(),
-                jobService(),
-                partitionManager()
+                jobService()
         );
     }
 
     @Bean
     public LinkingQueryService lqs() {
-        return new PostgresLinkingQueryService( hikariDataSource, partitionManager() );
+        return new PostgresLinkingQueryService( hikariDataSource );
     }
 
     @Bean
