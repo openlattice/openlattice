@@ -12,7 +12,6 @@ import com.openlattice.data.events.EntitiesDeletedEvent
 import com.openlattice.data.events.EntitiesUpsertedEvent
 import com.openlattice.data.storage.EntityDatastore
 import com.openlattice.data.storage.MetadataOption
-import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.events.EntitySetDataDeletedEvent

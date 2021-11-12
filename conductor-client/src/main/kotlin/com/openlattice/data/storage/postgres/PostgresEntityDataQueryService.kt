@@ -6,8 +6,6 @@ import com.openlattice.analysis.requests.Filter
 import com.openlattice.data.*
 import com.openlattice.data.storage.*
 import com.openlattice.data.storage.PostgresEntitySetSizesInitializationTask.Companion.ENTITY_SET_SIZES_VIEW
-import com.openlattice.data.storage.partitions.PartitionManager
-import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.data.util.PostgresDataHasher
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.ExpirationBase
@@ -47,7 +45,6 @@ import kotlin.streams.asStream
 class PostgresEntityDataQueryService(
         private val dataSourceResolver: DataSourceResolver,
         private val byteBlobDataManager: ByteBlobDataManager,
-        protected val partitionManager: PartitionManager
 ) : EntityDataQueryService {
     companion object {
         private val logger = LoggerFactory.getLogger(PostgresEntityDataQueryService::class.java)
@@ -816,14 +813,12 @@ class PostgresEntityDataQueryService(
             expirationPolicy: DataExpiration,
             currentDateTime: OffsetDateTime
     ): BasePostgresIterable<UUID> {
-        val partitions = partitionManager.getEntitySetPartitions(entitySetId)
         val hds =
                 dataSourceResolver.resolve(entitySetId)
 
         return BasePostgresIterable(
                 PreparedStatementHolderSupplier(hds, getExpiringEntitiesUsingIdsQuery(expirationPolicy)) { ps ->
                     ps.setObject(1, entitySetId)
-                    ps.setArray(2, PostgresArrays.createIntArray(ps.connection, partitions))
                     bindExpirationDate(ps, 3, expirationPolicy, currentDateTime)
                 }
         ) { rs -> ResultSetAdapters.id(rs) }
@@ -835,7 +830,6 @@ class PostgresEntityDataQueryService(
             expirationPropertyType: PropertyType,
             currentDateTime: OffsetDateTime
     ): BasePostgresIterable<UUID> {
-        val partitions = partitionManager.getEntitySetPartitions(entitySetId)
         val hds = dataSourceResolver.resolve(entitySetId)
         return BasePostgresIterable(
                 PreparedStatementHolderSupplier(
@@ -844,7 +838,6 @@ class PostgresEntityDataQueryService(
                 )
                 ) { ps ->
                     ps.setObject(1, entitySetId)
-                    ps.setArray(2, PostgresArrays.createIntArray(ps.connection, partitions))
                     bindExpirationDate(ps, 3, expirationPolicy, currentDateTime, expirationPropertyType)
                     ps.setObject(4, expirationPropertyType.id)
                 }

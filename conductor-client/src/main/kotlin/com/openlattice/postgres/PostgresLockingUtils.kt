@@ -1,6 +1,5 @@
 package com.openlattice.postgres
 
-import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
 import org.slf4j.LoggerFactory
@@ -121,10 +120,6 @@ fun lockIdsAndExecute(
         connection.rollback()
         throw ex
     }
-}
-
-fun getIdsByPartition(entityKeyIds: Collection<UUID>, partitions: List<Int>): Map<Int, List<UUID>> {
-    return entityKeyIds.groupBy { getPartition(it, partitions) }
 }
 
 private val LOCK_ENTITY_SET_PARTITION = "SELECT 1" +
