@@ -33,8 +33,6 @@ import com.openlattice.data.*
 import com.openlattice.data.storage.DataSourceResolver
 import com.openlattice.data.storage.postgres.PostgresEntityDataQueryService
 import com.openlattice.data.storage.entityKeyIdColumns
-import com.openlattice.data.storage.partitions.PartitionManager
-import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.data.storage.selectEntitySetWithCurrentVersionOfPropertyTypes
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.type.PropertyType
@@ -73,10 +71,8 @@ private val logger = LoggerFactory.getLogger(Graph::class.java)
  */
 @Service
 class Graph(
-//        private val hds: HikariDataSource,
         private val dataSourceResolver: DataSourceResolver,
         private val entitySetManager: EntitySetManager,
-        private val partitionManager: PartitionManager,
         private val pgDataQueryService: PostgresEntityDataQueryService,
         private val entityKeyIdService: EntityKeyIdService,
         private val metricRegistry: MetricRegistry
@@ -85,11 +81,6 @@ class Graph(
     /* Create */
 
     override fun createEdges(keys: Set<DataEdgeKey>): WriteEvent {
-        val partitionsInfoByEntitySet = partitionManager.getPartitionsByEntitySetId(
-                keys.flatMap { listOf(it.src, it.dst, it.edge) }
-                        .map { it.entitySetId }.toSet()
-        ).mapValues { it.value.toList() }
-
         val srcEntitySetEdgeKeys = keys.groupBy { it.src.entitySetId }
         val dstEntitySetEdgeKeys = keys.groupBy { it.dst.entitySetId }
         val edgeEntitySetEdgeKeys = keys.groupBy { it.edge.entitySetId }
@@ -97,15 +88,12 @@ class Graph(
         val version = System.currentTimeMillis()
 
         val numUpdated = createEdgesForDataSource(
-                partitionsInfoByEntitySet,
                 srcEntitySetEdgeKeys,
                 version
         ) + createEdgesForDataSource(
-                partitionsInfoByEntitySet,
                 dstEntitySetEdgeKeys,
                 version
         ) + createEdgesForDataSource(
-                partitionsInfoByEntitySet,
                 edgeEntitySetEdgeKeys,
                 version
         ) //Return value not used at the moment, need to consider returning total number of writes.
@@ -114,7 +102,6 @@ class Graph(
     }
 
     private fun createEdgesForDataSource(
-            partitionsInfoByEntitySet: Map<UUID, List<Int>>,
             keyMap: Map<UUID, List<DataEdgeKey>>,
             version: Long
     ): Int {
@@ -127,7 +114,7 @@ class Graph(
 
                 ps.use {
                     keys.forEach { key ->
-                        bindColumnsForEdge(ps, key, version, versions, partitionsInfoByEntitySet)
+                        bindColumnsForEdge(ps, key, version, versions)
                     }
                     ps.executeBatch().sum()
                 }
@@ -137,11 +124,7 @@ class Graph(
 
 
     private fun addKeyIds(ps: PreparedStatement, dataEdgeKey: DataEdgeKey, startIndex: Int = 1) {
-        val edk = dataEdgeKey.src
-        val partitions = partitionManager.getEntitySetPartitions(edk.entitySetId)
-        val partition = getPartition(edk.entityKeyId, partitions.toList())
-        logger.info("Using partition {} for data edge key {}", partition, dataEdgeKey )
-        ps.setObject(startIndex, partition)
+        logger.info("Adding data edge key {}", dataEdgeKey)
         ps.setObject(startIndex + 1, dataEdgeKey.src.entityKeyId)
         ps.setObject(startIndex + 2, dataEdgeKey.dst.entityKeyId)
         ps.setObject(startIndex + 3, dataEdgeKey.edge.entityKeyId)
@@ -194,7 +177,7 @@ class Graph(
 
     /* Delete  */
 
-    @Deprecated("Redundant function call." , replaceWith = ReplaceWith("deleteEdges"))
+    @Deprecated("Redundant function call.", replaceWith = ReplaceWith("deleteEdges"))
     override fun clearEdges(keys: Iterable<DataEdgeKey>): Int {
         val version = -System.currentTimeMillis()
         return lockAndOperateOnEdges(keys, CLEAR_BY_VERTEX_SQL) { lockStmt, operationStmt, dataEdgeKey ->
@@ -205,15 +188,15 @@ class Graph(
     }
 
     override fun deleteEdges(keys: Iterable<DataEdgeKey>, deleteType: DeleteType): WriteEvent {
-        val sql = when(deleteType) {
-          DeleteType.Hard -> HARD_DELETE_EDGES_SQL
-          DeleteType.Soft -> SOFT_DELETE_EDGES_SQL
+        val sql = when (deleteType) {
+            DeleteType.Hard -> HARD_DELETE_EDGES_SQL
+            DeleteType.Soft -> SOFT_DELETE_EDGES_SQL
         }
         val version = -System.currentTimeMillis()
         val updates = lockAndOperateOnEdges(keys, sql) { lockStmt, operationStmt, dataEdgeKey ->
             var opIndex = 1
             //For soft deletes we have to bind version twice
-            if( deleteType == DeleteType.Soft) {
+            if (deleteType == DeleteType.Soft) {
                 operationStmt.setLong(opIndex++, version)
                 operationStmt.setLong(opIndex++, version)
             }
@@ -260,8 +243,6 @@ class Graph(
 
         val srcEntitySetIds = filter.srcEntitySetIds.orElse(setOf())
         val allEntitySetIds = srcEntitySetIds + entitySetIds
-        val entitySetPartitions = partitionManager.getPartitionsByEntitySetId(allEntitySetIds)
-        val srcEntitySetPartitions = srcEntitySetIds.flatMap { entitySetPartitions.getValue(it) }.toSet()
 
         /**
          * There seems to be a weird thing here where entitySetIds for which to find neighbors for are specified
@@ -279,20 +260,17 @@ class Graph(
                     BasePostgresIterable(
                             PreparedStatementHolderSupplier(
                                     dataSourceResolver.getDataSource(dataSourceName),
-                                    getFilteredNeighborhoodSql(pagedNeighborRequest, srcEntitySetPartitions)
+                                    getFilteredNeighborhoodSql(pagedNeighborRequest)
                             ) { ps ->
                                 val connection = ps.connection
                                 val idsArr = PostgresArrays.createUuidArray(connection, filter.entityKeyIds)
-                                val entitySetIdsArr = PostgresArrays.createUuidArray(connection, entitySetIdsForDataSource)
-                                val partitionsArr = PostgresArrays.createIntArray(
-                                        connection,
-                                        entitySetIdsForDataSource.flatMap { entitySetPartitions.getValue(it)
-                                })
+                                val entitySetIdsArr = PostgresArrays.createUuidArray(
+                                        connection, entitySetIdsForDataSource
+                                )
                                 ps.setArray(1, idsArr)
                                 ps.setArray(2, entitySetIdsArr)
                                 ps.setArray(3, idsArr)
                                 ps.setArray(4, entitySetIdsArr)
-                                ps.setArray(5, partitionsArr)
                             }) {
                         ResultSetAdapters.edge(it)
                     }.toList()
@@ -300,7 +278,6 @@ class Graph(
 
         return edges.stream()
     }
-
 
 
     @Timed
@@ -644,7 +621,6 @@ private val PAGED_NEIGHBOR_SEARCH_ORDER_COLS = listOf(
  */
 internal fun getFilteredNeighborhoodSql(
         pagedNeighborRequest: PagedNeighborRequest,
-        srcEntitySetPartitions: Set<Int>
 ): String {
 
     val filter = pagedNeighborRequest.filter
@@ -663,9 +639,8 @@ internal fun getFilteredNeighborhoodSql(
 
     if (filter.srcEntitySetIds.isPresent) {
         val srcEntitySetIdsSql = entitySetFilterClause(SRC_ENTITY_SET_ID, filter.srcEntitySetIds)
-        val srcPartitionsSql = "${PARTITION.name} = ANY('{${srcEntitySetPartitions.joinToString(",")}}')"
 
-        vertexAsDstSql += " AND ( $srcEntitySetIdsSql AND $srcPartitionsSql )"
+        vertexAsDstSql += " AND ( $srcEntitySetIdsSql )"
     }
 
     if (filter.associationEntitySetIds.isPresent && filter.associationEntitySetIds.get().isNotEmpty()) {
@@ -863,15 +838,9 @@ fun bindColumnsForEdge(
         dataEdgeKey: DataEdgeKey,
         version: Long,
         versions: java.sql.Array,
-        partitionsInfoByEntitySet: Map<UUID, List<Int>>
 ) {
-
-    val edk = dataEdgeKey.src
-    val partitions = partitionsInfoByEntitySet.getValue(edk.entitySetId)
-
     var index = 1
 
-    ps.setObject(index++, getPartition(edk.entityKeyId, partitions))
     ps.setObject(index++, dataEdgeKey.src.entitySetId)
     ps.setObject(index++, dataEdgeKey.src.entityKeyId)
     ps.setObject(index++, dataEdgeKey.dst.entitySetId)
