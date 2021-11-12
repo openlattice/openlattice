@@ -23,7 +23,7 @@ package com.openlattice.indexing
 import com.google.common.base.Stopwatch
 import com.hazelcast.core.HazelcastInstance
 import com.openlattice.data.storage.DataSourceResolver
-import com.openlattice.data.storage.PostgresEntityDataQueryService
+import com.openlattice.data.storage.postgres.PostgresEntityDataQueryService
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.indexing.configuration.IndexerConfiguration
 import com.openlattice.postgres.DataTables.LAST_INDEX
@@ -41,7 +41,6 @@ import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.openlattice.rhizome.DelegatedIntSet
-import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import java.util.*

@@ -24,8 +24,6 @@ package com.openlattice.graph
 import com.codahale.metrics.MetricRegistry
 import com.codahale.metrics.annotation.Timed
 import com.fasterxml.jackson.annotation.JsonIgnore
-import com.geekbeast.metrics.time
-import com.google.common.annotations.VisibleForTesting
 import com.google.common.collect.ImmutableList
 import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
@@ -33,13 +31,12 @@ import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
 import com.openlattice.analysis.requests.*
 import com.openlattice.data.*
 import com.openlattice.data.storage.DataSourceResolver
-import com.openlattice.data.storage.PostgresEntityDataQueryService
+import com.openlattice.data.storage.postgres.PostgresEntityDataQueryService
 import com.openlattice.data.storage.entityKeyIdColumns
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.data.storage.selectEntitySetWithCurrentVersionOfPropertyTypes
 import com.openlattice.datastore.services.EntitySetManager
-import com.openlattice.edm.EntitySet.Companion.DEFAULT_DATASOURCE
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.core.GraphService
 import com.openlattice.graph.core.NeighborSets
@@ -54,20 +51,12 @@ import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
-import com.openlattice.postgres.streams.StatementHolderSupplier
-import com.openlattice.search.requests.EntityNeighborsFilter
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import java.security.InvalidParameterException
 import java.sql.PreparedStatement
-import java.time.LocalDate
-import java.time.LocalTime
-import java.time.OffsetDateTime
 import java.util.*
 import java.util.stream.Stream
-import kotlin.streams.asSequence
-import kotlin.streams.toList
 
 /**
  *

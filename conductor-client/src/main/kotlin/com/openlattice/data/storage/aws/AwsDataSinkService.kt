@@ -5,10 +5,9 @@ import com.openlattice.data.PropertyUpdateType
 import com.openlattice.data.integration.S3EntityData
 import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.data.storage.DataSourceResolver
-import com.openlattice.data.storage.PostgresEntityDataQueryService
+import com.openlattice.data.storage.postgres.PostgresEntityDataQueryService
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.edm.type.PropertyType
-import com.zaxxer.hikari.HikariDataSource
 import java.util.*
 
 class AwsDataSinkService(

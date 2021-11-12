@@ -27,7 +27,7 @@ import com.openlattice.TestServer
 import com.openlattice.data.EntityKey
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.data.storage.partitions.getPartition
-import com.openlattice.data.storage.upsertEntitiesSql
+import com.openlattice.data.storage.postgres.upsertEntitiesSql
 import com.openlattice.ids.HazelcastIdGenerationService
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.lockIdsAndExecute

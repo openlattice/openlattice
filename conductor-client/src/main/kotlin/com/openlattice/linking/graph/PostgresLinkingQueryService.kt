@@ -22,11 +22,11 @@
 package com.openlattice.linking.graph
 
 import com.openlattice.data.EntityDataKey
-import com.openlattice.data.storage.createOrUpdateLinkFromEntity
+import com.openlattice.data.storage.postgres.createOrUpdateLinkFromEntity
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.data.storage.partitions.getPartition
-import com.openlattice.data.storage.tombstoneLinkForEntity
-import com.openlattice.data.storage.updateLinkingId
+import com.openlattice.data.storage.postgres.tombstoneLinkForEntity
+import com.openlattice.data.storage.postgres.updateLinkingId
 import com.openlattice.linking.EntityKeyPair
 import com.openlattice.linking.LinkingQueryService
 import com.openlattice.postgres.DataTables.LAST_INDEX

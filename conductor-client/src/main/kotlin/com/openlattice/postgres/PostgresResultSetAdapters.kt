@@ -5,8 +5,8 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.openlattice.IdConstants.LAST_WRITE_ID
 import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.data.storage.MetadataOption
-import com.openlattice.data.storage.PROPERTIES
-import com.openlattice.data.storage.VALUE
+import com.openlattice.data.storage.postgres.PROPERTIES
+import com.openlattice.data.storage.postgres.VALUE
 import com.openlattice.edm.EdmConstants.Companion.ID_FQN
 import com.openlattice.edm.EdmConstants.Companion.LAST_WRITE_FQN
 import com.openlattice.edm.type.PropertyType
@@ -173,7 +173,9 @@ fun readJsonDataColumnsWithId(
 ): MutableMap<UUID, MutableMap<UUID, MutableSet<Any>>> {
     val lastWriteIncluded = lastWrite.isPresent
 
-    val detailedEntity = mapper.readValue<MutableMap<UUID, MutableSet<MutableMap<String, Any>>>>(rs.getString(PROPERTIES))
+    val detailedEntity = mapper.readValue<MutableMap<UUID, MutableSet<MutableMap<String, Any>>>>(rs.getString(
+            PROPERTIES
+    ))
 
     val entities = mutableMapOf<UUID, MutableMap<UUID, MutableSet<Any>>>() // origin id -> property type id -> values
     detailedEntity.forEach { (propertyTypeId, details) ->

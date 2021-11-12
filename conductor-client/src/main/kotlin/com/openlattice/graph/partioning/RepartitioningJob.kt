@@ -7,8 +7,8 @@ import com.geekbeast.rhizome.jobs.JobStatus
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.map.IMap
 import com.openlattice.data.storage.DataSourceResolver
-import com.openlattice.data.storage.getDirectPartitioningSelector
-import com.openlattice.data.storage.getPartitioningSelector
+import com.openlattice.data.storage.postgres.getDirectPartitioningSelector
+import com.openlattice.data.storage.postgres.getPartitioningSelector
 import com.openlattice.edm.EntitySet
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.serializers.decorators.MetastoreAware

@@ -1,44 +1,31 @@
-package com.openlattice.postgres
+package com.openlattice.data.storage.redshift
 
 import com.google.common.cache.CacheBuilder
 import com.google.common.cache.CacheLoader
 import com.openlattice.IdConstants
 import com.openlattice.edm.PostgresEdmTypeConverter
 import com.openlattice.edm.type.PropertyType
+import com.openlattice.postgres.*
 import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.DataTables.quote
-import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
-import com.openlattice.postgres.PostgresColumn.HASH
-import com.openlattice.postgres.PostgresColumn.ID_VALUE
-import com.openlattice.postgres.PostgresColumn.LAST_PROPAGATE
-import com.openlattice.postgres.PostgresColumn.LAST_TRANSPORT
-import com.openlattice.postgres.PostgresColumn.ORIGIN_ID
-import com.openlattice.postgres.PostgresColumn.PARTITION
-import com.openlattice.postgres.PostgresColumn.PROPERTY_TYPE_ID
-import com.openlattice.postgres.PostgresColumn.VERSION
-import com.openlattice.postgres.PostgresColumn.VERSIONS
+import com.openlattice.postgres.PostgresColumn.*
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class PostgresDataTables {
+class RedshiftDataTables {
     companion object {
         private val supportedEdmPrimitiveTypeKinds = arrayOf(
                 EdmPrimitiveTypeKind.String,
-                EdmPrimitiveTypeKind.Guid,
-                EdmPrimitiveTypeKind.Byte,
                 EdmPrimitiveTypeKind.Int16,
                 EdmPrimitiveTypeKind.Int32,
-                EdmPrimitiveTypeKind.Duration,
                 EdmPrimitiveTypeKind.Int64,
                 EdmPrimitiveTypeKind.Date,
                 EdmPrimitiveTypeKind.DateTimeOffset,
                 EdmPrimitiveTypeKind.Double,
                 EdmPrimitiveTypeKind.Boolean,
-                EdmPrimitiveTypeKind.Binary,
-                EdmPrimitiveTypeKind.Guid,
                 EdmPrimitiveTypeKind.TimeOfDay
         )
 
@@ -52,19 +39,19 @@ class PostgresDataTables {
         private val btreeIndexedColumns = dataColumns.map { it.value.second }
 
         val dataTableMetadataColumns = listOf(
-                ENTITY_SET_ID,
-                ID_VALUE,
-                ORIGIN_ID,
-                PROPERTY_TYPE_ID,
-                HASH,
+                ENTITY_SET_ID_STRING,
+                ID_STRING,
+                ORIGIN_ID_STRING,
+                PROPERTY_TYPE_ID_STRING,
+                HASH_STRING,
                 LAST_WRITE,
                 LAST_PROPAGATE,
                 LAST_TRANSPORT,
                 VERSION,
                 VERSIONS
         )
-
-        val dataTableValueColumns = btreeIndexedColumns + nonIndexedColumns
+        
+        val dataTableValueColumns = nonIndexedColumns
         val dataTableColumns = dataTableMetadataColumns + dataTableValueColumns
 
         private val columnDefinitionCache = CacheBuilder.newBuilder().build(
@@ -104,7 +91,7 @@ class PostgresDataTables {
 
             val tableDefinition = CitusDistributedTableDefinition("data")
                     .addColumns(*columns)
-                    .primaryKey(ENTITY_SET_ID, ID_VALUE, PARTITION, PROPERTY_TYPE_ID, HASH)
+                    .primaryKey(ENTITY_SET_ID_STRING, ID_STRING, PROPERTY_TYPE_ID_STRING, HASH_STRING)
                     .distributionColumn(PARTITION)
 
             tableDefinition.addIndexes(
@@ -113,20 +100,15 @@ class PostgresDataTables {
 
             val prefix = tableDefinition.name
 
-            val entitySetIdIndex = PostgresColumnsIndexDefinition(tableDefinition, ENTITY_SET_ID)
-                    .name(quote(prefix + "_entity_set_id_idx"))
+            val entitySetIdIndex = PostgresColumnsIndexDefinition(tableDefinition, ENTITY_SET_ID_STRING)
+                    .name(quote(prefix + "_ENTITY_SET_ID_STRING_idx"))
                     .ifNotExists()
-            val entitySetIdAndPartitionIndex = PostgresColumnsIndexDefinition(
-                    tableDefinition, ENTITY_SET_ID, PARTITION
-            )
-                    .name(quote(prefix + "_entity_set_id_partition_idx"))
-                    .ifNotExists()
-                    .desc()
-            val idIndex = PostgresColumnsIndexDefinition(tableDefinition, ID_VALUE)
+
+            val idIndex = PostgresColumnsIndexDefinition(tableDefinition, ID_STRING)
                     .name(quote(prefix + "_id_idx"))
                     .ifNotExists()
                     .desc()
-            val originIdIndex = PostgresExpressionIndexDefinition(tableDefinition, ORIGIN_ID.name)
+            val originIdIndex = PostgresExpressionIndexDefinition(tableDefinition, ORIGIN_ID_STRING.name)
                     .name(quote(prefix + "_origin_id_idx"))
                     .ifNotExists()
             val versionIndex = PostgresColumnsIndexDefinition(tableDefinition, VERSION)
@@ -137,24 +119,24 @@ class PostgresDataTables {
                     .name(quote(prefix + "_last_write_idx"))
                     .ifNotExists()
                     .desc()
-            val propertyTypeIdIndex = PostgresColumnsIndexDefinition(tableDefinition, PROPERTY_TYPE_ID)
+            val propertyTypeIdIndex = PostgresColumnsIndexDefinition(tableDefinition, PROPERTY_TYPE_ID_STRING)
                     .name(quote(prefix + "_property_type_id_idx"))
                     .ifNotExists()
                     .desc()
 
             val currentPropertiesForEntitySetIndex = PostgresColumnsIndexDefinition(
-                    tableDefinition, ENTITY_SET_ID, VERSION
+                    tableDefinition, ENTITY_SET_ID_STRING, VERSION
             )
-                    .name(quote(prefix + "_entity_set_id_version_idx"))
+                    .name(quote(prefix + "_ENTITY_SET_ID_STRING_version_idx"))
                     .ifNotExists()
                     .desc()
 
-            val currentPropertiesForEntityIndex = PostgresColumnsIndexDefinition(tableDefinition, ID_VALUE, VERSION)
+            val currentPropertiesForEntityIndex = PostgresColumnsIndexDefinition(tableDefinition, ID_STRING, VERSION)
                     .name(quote(prefix + "_id_version_idx"))
                     .ifNotExists()
                     .desc()
 
-            val readDataIndex = PostgresExpressionIndexDefinition(tableDefinition, "(${ORIGIN_ID.name} != '${IdConstants.EMPTY_ORIGIN_ID.id}')")
+            val readDataIndex = PostgresExpressionIndexDefinition(tableDefinition, "(${ORIGIN_ID_STRING.name} != '${IdConstants.EMPTY_ORIGIN_ID.id}')")
                     .name(prefix + "_read_data_idx")
                     .ifNotExists()
 
@@ -162,7 +144,7 @@ class PostgresDataTables {
                     .name(prefix + "_last_propagate_idx")
                     .ifNotExists()
 
-            val needsTransportIndex = PostgresExpressionIndexDefinition(tableDefinition,  "${ENTITY_SET_ID.name},( abs(${VERSION.name}) > ${LAST_TRANSPORT.name})")
+            val needsTransportIndex = PostgresExpressionIndexDefinition(tableDefinition,  "${ENTITY_SET_ID_STRING.name},( abs(${VERSION.name}) > ${LAST_TRANSPORT.name})")
                     .name("data_needing_transport_idx")
                     .ifNotExists()
 
@@ -170,7 +152,6 @@ class PostgresDataTables {
                     idIndex,
                     originIdIndex,
                     entitySetIdIndex,
-                    entitySetIdAndPartitionIndex,
                     versionIndex,
                     lastWriteIndex,
                     propertyTypeIdIndex,

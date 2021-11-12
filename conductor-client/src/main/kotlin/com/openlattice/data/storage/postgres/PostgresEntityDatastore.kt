@@ -1,4 +1,4 @@
-package com.openlattice.data.storage
+package com.openlattice.data.storage.postgres
 
 import com.codahale.metrics.MetricRegistry
 import com.codahale.metrics.annotation.Timed
@@ -10,6 +10,9 @@ import com.openlattice.assembler.events.MaterializedEntitySetDataChangeEvent
 import com.openlattice.data.*
 import com.openlattice.data.events.EntitiesDeletedEvent
 import com.openlattice.data.events.EntitiesUpsertedEvent
+import com.openlattice.data.storage.EntityDatastore
+import com.openlattice.data.storage.MetadataOption
+import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.events.EntitySetDataDeletedEvent
@@ -40,7 +43,8 @@ class PostgresEntityDatastore(
         metricRegistry: MetricRegistry,
         private val eventBus: EventBus,
         private val feedbackQueryService: PostgresLinkingFeedbackService,
-        private val linkingQueryService: LinkingQueryService
+        private val linkingQueryService: LinkingQueryService,
+        private val partitionManager: PartitionManager
 ) : EntityDatastore {
 
     companion object {
@@ -72,7 +76,8 @@ class PostgresEntityDatastore(
                 entitySetId,
                 entities,
                 authorizedPropertyTypes,
-                propertyUpdateType = propertyUpdateType
+                propertyUpdateType = propertyUpdateType,
+                partitions = partitionManager.getEntitySetPartitions(entitySetId).toList()
         )
         signalCreatedEntities(entitySetId, entities.keys)
 
@@ -92,7 +97,8 @@ class PostgresEntityDatastore(
                 entitySetId,
                 entities,
                 authorizedPropertyTypes,
-                propertyUpdateType
+                propertyUpdateType,
+                partitionManager.getEntitySetPartitions(entitySetId).toList()
         )
         signalCreatedEntities(entitySetId, entities.keys)
 
@@ -108,7 +114,13 @@ class PostgresEntityDatastore(
     ): WriteEvent {
         // need to collect linking ids before writes to the entities
         val writeEvent = dataQueryService
-                .partialReplaceEntities(entitySetId, entities, authorizedPropertyTypes, propertyUpdateType)
+                .partialReplaceEntities(
+                        entitySetId,
+                        entities,
+                        authorizedPropertyTypes,
+                        propertyUpdateType,
+                        partitionManager.getEntitySetPartitions(entitySetId).toList()
+                )
 
         signalCreatedEntities(entitySetId, entities.keys)
 
@@ -191,7 +203,12 @@ class PostgresEntityDatastore(
             entityKeyIds: Set<UUID>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent {
-        val writeEvent = dataQueryService.clearEntityData(entitySetId, entityKeyIds, authorizedPropertyTypes)
+        val writeEvent = dataQueryService.clearEntityData(
+                entitySetId,
+                entityKeyIds,
+                authorizedPropertyTypes,
+                partitionManager.getEntitySetPartitions(entitySetId).toSet()
+        )
         // same as if we updated the entities
         signalCreatedEntities(entitySetId, entityKeyIds)
 
@@ -417,7 +434,12 @@ class PostgresEntityDatastore(
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent {
         val propertyWriteEvent = dataQueryService
-                .deleteEntityData(entitySetId, entityKeyIds, authorizedPropertyTypes)
+                .deleteEntityData(
+                        entitySetId,
+                        entityKeyIds,
+                        authorizedPropertyTypes,
+                        partitionManager.getEntitySetPartitions(entitySetId).toList()
+                )
 
         // same as if we updated the entities
         signalCreatedEntities(entitySetId, entityKeyIds)
