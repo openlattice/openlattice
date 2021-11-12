@@ -27,8 +27,6 @@ import com.openlattice.data.EntityKey
 import com.openlattice.data.EntityKeyIdService
 import com.openlattice.data.storage.DataSourceResolver
 import com.openlattice.data.storage.getByDataSource
-import com.openlattice.data.storage.partitions.PartitionManager
-import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.data.util.PostgresDataHasher
 import com.openlattice.ids.HazelcastIdGenerationService
 import com.openlattice.postgres.PostgresArrays
@@ -73,8 +71,7 @@ private val logger = LoggerFactory.getLogger(PostgresEntityKeyIdService::class.j
 @Service
 class PostgresEntityKeyIdService(
         private val dataSourceResolver: DataSourceResolver,
-        private val idGenerationService: HazelcastIdGenerationService,
-        protected val partitionManager: PartitionManager
+        private val idGenerationService: HazelcastIdGenerationService
 ) : EntityKeyIdService {
 
     private fun genEntityKeyIds(entityIds: Set<EntityKey>): Map<EntityKey, UUID> {
@@ -86,7 +83,6 @@ class PostgresEntityKeyIdService(
     private fun storeEntityKeyIdReservations(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
-            partitions: IntArray
     ) {
         val hds = dataSourceResolver.resolve(entitySetId)
 
@@ -95,7 +91,7 @@ class PostgresEntityKeyIdService(
             val insertToData = connection.prepareStatement(INSERT_ID_TO_DATA_SQL)
 
             entityKeyIds.forEach { entityKeyId ->
-                storeEntityKeyIdAddBatch(entitySetId, entityKeyId, insertIds, insertToData, partitions)
+                storeEntityKeyIdAddBatch(entitySetId, entityKeyId, insertIds, insertToData)
             }
 
             val totalWritten = insertIds.executeBatch().sum()
@@ -114,13 +110,9 @@ class PostgresEntityKeyIdService(
     private fun storeEntityKeyIds(entityKeyIds: Map<EntityKey, UUID>): Map<EntityKey, UUID> {
         val entityKeyIdsByDatasource = getEntityKeyIdsByDataSource(entityKeyIds)
 
-        val partitionsByEntitySet = partitionManager
-                .getPartitionsByEntitySetId(entityKeyIds.keys.map { it.entitySetId }.toSet())
-                .mapValues { it.value.toIntArray() }
-
         return entityKeyIdsByDatasource.map { (datasourceName, entityKeyIdGroup) ->
             dataSourceResolver.getDataSource(datasourceName).connection.use { connection ->
-                storeEntityKeyIds(connection, partitionsByEntitySet, entityKeyIdGroup, idGenerationService)
+                storeEntityKeyIds(connection, entityKeyIdGroup, idGenerationService)
             }
         }.flatMap { entityKeyIdGroup -> entityKeyIdGroup.entries.map { it.toPair() } }.toMap()
     }
@@ -145,8 +137,7 @@ class PostgresEntityKeyIdService(
         val ids = idGenerationService.getNextIds(count)
         storeEntityKeyIdReservations(
                 IdConstants.LINKING_ENTITY_SET_ID.id,
-                ids,
-                partitionManager.getAllPartitions().toIntArray()
+                ids
         )
         return ids.toList()
     }
@@ -155,8 +146,7 @@ class PostgresEntityKeyIdService(
         val ids = idGenerationService.getNextIds(count)
         storeEntityKeyIdReservations(
                 entitySetId,
-                ids,
-                partitionManager.getEntitySetPartitions(entitySetId).toIntArray()
+                ids
         )
         return ids.toList()
     }
@@ -266,7 +256,6 @@ internal fun loadEntityKeyIds(
 
 internal fun storeEntityKeyIds(
         connection: Connection,
-        partitionsByEntitySet: Map<UUID, IntArray>,
         entityKeyIds: Map<EntityKey, UUID>,
         idGenerationService: HazelcastIdGenerationService
 ): Map<EntityKey, UUID> {
@@ -313,7 +302,6 @@ internal fun storeEntityKeyIds(
                 entityKeyId = it.value,
                 insertIds = insertIds,
                 insertToData = insertToData,
-                partitions = partitionsByEntitySet.getValue(it.key.entitySetId)
         )
     }
 
@@ -358,20 +346,16 @@ internal fun storeEntityKeyIdAddBatch(
         entityKeyId: UUID,
         insertIds: PreparedStatement,
         insertToData: PreparedStatement,
-        partitions: IntArray
 ) {
-    val partition = getPartition(entityKeyId, partitions)
 
     insertIds.setObject(1, entitySetId)
     insertIds.setObject(2, entityKeyId)
-    insertIds.setInt(3, partition)
     insertIds.addBatch()
 
     insertToData.setObject(1, entitySetId)
     insertToData.setObject(2, entityKeyId)
-    insertToData.setInt(3, partition)
-    insertToData.setObject(4, IdConstants.ID_ID.id)
-    insertToData.setLong(5, System.currentTimeMillis())
-    insertToData.setObject(6, PostgresDataHasher.hashObject(entityKeyId, EdmPrimitiveTypeKind.Guid))
+    insertToData.setObject(3, IdConstants.ID_ID.id)
+    insertToData.setLong(4, System.currentTimeMillis())
+    insertToData.setObject(5, PostgresDataHasher.hashObject(entityKeyId, EdmPrimitiveTypeKind.Guid))
     insertToData.addBatch()
 }
