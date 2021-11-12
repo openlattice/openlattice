@@ -14,8 +14,6 @@ import com.openlattice.authorization.*
 import com.openlattice.authorization.mapstores.PrincipalMapstore
 import com.openlattice.collaborations.CollaborationService
 import com.openlattice.collections.mapstores.EntitySetCollectionMapstore
-import com.openlattice.controllers.exceptions.ResourceNotFoundException
-import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.notifications.sms.PhoneNumberService
 import com.openlattice.notifications.sms.SmsEntitySetInformation
@@ -67,7 +65,6 @@ class HazelcastOrganizationService(
     private val authorizations: AuthorizationManager,
     private val securePrincipalsManager: SecurePrincipalsManager,
     private val phoneNumbers: PhoneNumberService,
-    private val partitionManager: PartitionManager,
     private val assembler: Assembler,
     private val collaborationService: CollaborationService
 ) {
@@ -170,10 +167,6 @@ class HazelcastOrganizationService(
 
     private fun initializeOrganization(organization: Organization) {
         val organizationId = organization.securablePrincipal.id
-        if (organization.partitions.isEmpty()) {
-            organization.partitions.addAll(partitionManager.allocateDefaultOrganizationPartitions(organizationId))
-        }
-
         organizations.set(organizationId, organization)
     }
 
@@ -577,12 +570,6 @@ class HazelcastOrganizationService(
                     organizationId, UpdateOrganizationSmsEntitySetInformationEntryProcessor(entitySetInfoList)
             )
         }.forEach { it.toCompletableFuture().get() }
-    }
-
-    @Timed
-    fun getDefaultPartitions(organizationId: UUID): List<Int> {
-        //TODO: This is mainly a pass through for convenience, but could get messy.
-        return partitionManager.getDefaultPartitions(organizationId)
     }
 
     @Timed

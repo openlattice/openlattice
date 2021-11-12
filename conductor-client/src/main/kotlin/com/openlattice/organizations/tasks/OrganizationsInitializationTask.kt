@@ -52,9 +52,7 @@ class OrganizationsInitializationTask : HazelcastInitializationTask<Organization
         logger.info("Running bootstrap process for organizations.")
         val sw = Stopwatch.createStarted()
         val organizationService = dependencies.organizationService
-        val partitionManager = dependencies.partitionManager
         val globalOrg = organizationService.maybeGetOrganization(GLOBAL_ORG_PRINCIPAL)
-        val defaultPartitions = partitionManager.getAllPartitions()
 
         if (globalOrg.isPresent) {
             val orgPrincipal = globalOrg.get()
@@ -75,7 +73,7 @@ class OrganizationsInitializationTask : HazelcastInitializationTask<Organization
                 "Mismatch in expected global org id and read global org id"
             }
         } else {
-            val org = createGlobalOrg(defaultPartitions)
+            val org = createGlobalOrg()
             mergeGrants(org)
             dependencies.configuration.connection.ifPresent { org.connections.addAll(it) }
             organizationService.createOrganization(GLOBAL_ADMIN_ROLE.principal, org)
@@ -129,7 +127,7 @@ class OrganizationsInitializationTask : HazelcastInitializationTask<Organization
     }
 
     companion object {
-        private fun createGlobalOrg(partitions: List<Int>): Organization {
+        private fun createGlobalOrg(): Organization {
             val id = GLOBAL_ORGANIZATION_ID.id
             val title = "Global Organization"
             return Organization(
@@ -143,7 +141,6 @@ class OrganizationsInitializationTask : HazelcastInitializationTask<Organization
                     members = mutableSetOf(),
                     roles = mutableSetOf(),
                     smsEntitySetInfo = mutableSetOf(),
-                    partitions = partitions.toMutableList()
             )
         }
 
