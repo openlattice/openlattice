@@ -13,7 +13,6 @@ import com.openlattice.data.DeleteType
 import com.openlattice.data.WriteEvent
 import com.openlattice.data.jobs.DataDeletionJob
 import com.openlattice.data.jobs.DataDeletionJobState
-import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.edm.type.PropertyType
@@ -47,7 +46,6 @@ class DataDeletionService(
         private val eds: EntityDatastore,
         private val graphService: GraphService,
         private val jobService: HazelcastJobService,
-        private val partitionManager: PartitionManager
 ) : DataDeletionManager {
 
     companion object {
@@ -64,24 +62,20 @@ class DataDeletionService(
 
     @Timed
     override fun clearOrDeleteEntitySet(entitySetId: UUID, deleteType: DeleteType): UUID {
-        val partitions = partitionManager.getEntitySetPartitions(entitySetId)
 
         return jobService.submitJob(DataDeletionJob(DataDeletionJobState(
                 entitySetId,
                 deleteType,
-                partitions
         )))
 
     }
 
     @Timed
     override fun clearOrDeleteEntities(entitySetId: UUID, entityKeyIds: MutableSet<UUID>, deleteType: DeleteType): UUID {
-        val partitions = partitionManager.getEntitySetPartitions(entitySetId)
 
         return jobService.submitJob(DataDeletionJob(DataDeletionJobState(
                 entitySetId,
                 deleteType,
-                partitions,
                 entityKeyIds
         )))
     }

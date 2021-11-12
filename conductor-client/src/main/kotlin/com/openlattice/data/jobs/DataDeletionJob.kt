@@ -8,14 +8,12 @@ import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.map.IMap
 import com.openlattice.data.*
 import com.openlattice.data.storage.*
-import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.data.storage.postgres.getMergedDataColumnName
 import com.openlattice.data.storage.postgres.selectEntitiesTextProperties
 import com.openlattice.data.storage.postgres.updateVersionsForEntitiesInEntitySet
 import com.openlattice.data.storage.postgres.zeroVersionsForEntitiesInEntitySet
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.processors.GetEntityTypeFromEntitySetEntryProcessor
-import com.openlattice.edm.processors.GetPartitionsFromEntitySetEntryProcessor
 import com.openlattice.edm.processors.GetPropertiesFromEntityTypeEntryProcessor
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
@@ -32,7 +30,6 @@ import com.openlattice.postgres.PostgresColumn.EDGE_ENTITY_KEY_ID
 import com.openlattice.postgres.PostgresColumn.EDGE_ENTITY_SET_ID
 import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
 import com.openlattice.postgres.PostgresColumn.ID
-import com.openlattice.postgres.PostgresColumn.PARTITION
 import com.openlattice.postgres.PostgresColumn.SRC_ENTITY_KEY_ID
 import com.openlattice.postgres.PostgresColumn.SRC_ENTITY_SET_ID
 import com.openlattice.postgres.PostgresColumn.VERSION
@@ -50,19 +47,19 @@ import java.sql.PreparedStatement
 import java.util.*
 
 class DataDeletionJob(
-    state: DataDeletionJobState
+        state: DataDeletionJobState
 ) : AbstractDistributedJob<Long, DataDeletionJobState>(state),
     LateInitAware {
 
     @JsonCreator
     constructor(
-        id: UUID?,
-        taskId: Long?,
-        status: JobStatus,
-        progress: Byte,
-        hasWorkRemaining: Boolean,
-        result: Long?,
-        state: DataDeletionJobState
+            id: UUID?,
+            taskId: Long?,
+            status: JobStatus,
+            progress: Byte,
+            hasWorkRemaining: Boolean,
+            result: Long?,
+            state: DataDeletionJobState
     ) : this(state) {
         initialize(id, taskId, status, progress, hasWorkRemaining, result)
     }
@@ -159,7 +156,6 @@ class DataDeletionJob(
 
         return BasePostgresIterable(PreparedStatementHolderSupplier(hds, getIdsBatchSql()) {
             it.setObject(1, state.entitySetId)
-            it.setArray(2, PostgresArrays.createIntArray(it.connection, state.partitions))
         }) {
             ResultSetAdapters.entityDataKey(it)
         }.toSet()
@@ -179,36 +175,36 @@ class DataDeletionJob(
      */
     private fun getBatchOfEdgesForIds(edks: Set<EntityDataKey>): Set<DataEdgeKey> {
         return edks
-            .groupBy { lateInitProvider.resolver.getDataSourceName(it.entitySetId) }
-            .flatMap { (dataSourceName, entityDataKeysForDataSource) ->
-                val hds = lateInitProvider.resolver.getDataSource(dataSourceName)
-                BasePostgresIterable(PreparedStatementHolderSupplier(hds, getEdgesBatchSql()) {
-                    val entityKeyIdsArr = PostgresArrays.createUuidArray(
-                        it.connection,
-                        entityDataKeysForDataSource.map { edk -> edk.entityKeyId }
-                    )
-                    it.setObject(1, state.entitySetId)
-                    it.setArray(2, entityKeyIdsArr)
-                    it.setObject(3, state.entitySetId)
-                    it.setArray(4, entityKeyIdsArr)
-                    it.setObject(5, state.entitySetId)
-                    it.setArray(6, entityKeyIdsArr)
-                }) {
-                    DataEdgeKey(
-                        ResultSetAdapters.srcEntityDataKey(it),
-                        ResultSetAdapters.dstEntityDataKey(it),
-                        ResultSetAdapters.edgeEntityDataKey(it)
-                    )
-                }
-            }.toSet()
+                .groupBy { lateInitProvider.resolver.getDataSourceName(it.entitySetId) }
+                .flatMap { (dataSourceName, entityDataKeysForDataSource) ->
+                    val hds = lateInitProvider.resolver.getDataSource(dataSourceName)
+                    BasePostgresIterable(PreparedStatementHolderSupplier(hds, getEdgesBatchSql()) {
+                        val entityKeyIdsArr = PostgresArrays.createUuidArray(
+                                it.connection,
+                                entityDataKeysForDataSource.map { edk -> edk.entityKeyId }
+                        )
+                        it.setObject(1, state.entitySetId)
+                        it.setArray(2, entityKeyIdsArr)
+                        it.setObject(3, state.entitySetId)
+                        it.setArray(4, entityKeyIdsArr)
+                        it.setObject(5, state.entitySetId)
+                        it.setArray(6, entityKeyIdsArr)
+                    }) {
+                        DataEdgeKey(
+                                ResultSetAdapters.srcEntityDataKey(it),
+                                ResultSetAdapters.dstEntityDataKey(it),
+                                ResultSetAdapters.edgeEntityDataKey(it)
+                        )
+                    }
+                }.toSet()
     }
 
     @SuppressFBWarnings(
-        value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"],
-        justification = "This is a bug with spotbugs bytecode parsing for lateinit var."
+            value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"],
+            justification = "This is a bug with spotbugs bytecode parsing for lateinit var."
     )
     private fun deleteEntities(entityDataKeys: Set<EntityDataKey>): Int {
-        val entitySetIdToPartitions = getEntitySetPartitions(entityDataKeys)
+        val entitySetIds = entityDataKeys.map { it.entitySetId }.toSet()
 
         val (deleteFromDataSql, deleteFromIdsSql) = if (isHardDelete()) {
             HARD_DELETE_FROM_DATA_SQL to HARD_DELETE_FROM_IDS_SQL
@@ -219,62 +215,51 @@ class DataDeletionJob(
         val version = -System.currentTimeMillis()
 
         if (isHardDelete()) {
-            val esIdToBinaryPts = getBinaryPropertiesOfEntitySets(entitySetIdToPartitions.keys)
+            val esIdToBinaryPts = getBinaryPropertiesOfEntitySets(entitySetIds)
             if (esIdToBinaryPts.isNotEmpty()) {
-                val entitySetIdToPartitionToIds =
-                    entityDataKeys.groupBy { it.entitySetId }.mapValues { (entitySetId, edks) ->
-                        val partitions = entitySetIdToPartitions.getValue(entitySetId).toList()
-                        edks.map { it.entityKeyId }.groupBy { getPartition(it, partitions) }
-                    }
+                val entitySetIdToIds =
+                        entityDataKeys.groupBy ({ it.entitySetId } , {it.entityKeyId })
+
                 deletePropertyOfEntityFromS3(
-                    esIdToBinaryPts.keys,
-                    esIdToBinaryPts.keys.flatMap {
-                        entitySetIdToPartitionToIds.getValue(it).flatMap { (_, ids) -> ids }
-                    },
-                    esIdToBinaryPts.flatMap { it.value }
+                        esIdToBinaryPts.keys,
+                        esIdToBinaryPts.keys.flatMap { esId -> entitySetIdToIds.getValue(esId) },
+                        esIdToBinaryPts.flatMap { it.value }
                 )
             }
         }
 
         return entityDataKeys.groupBy { lateInitProvider.resolver.getDataSourceName(it.entitySetId) }
-            .map { (dataSourceName, entityDataKeysForDataSource) ->
-                val dataHds = lateInitProvider.resolver.getDataSource(dataSourceName)
-//                val idsHds = lateInitProvider.resolver.getDefaultDataSource()
-                val entitySetIdToPartitionToIds = entityDataKeysForDataSource
-                    .groupBy { edkForDataSource -> edkForDataSource.entitySetId }
-                    .mapValues { (entitySetId, edks) ->
-                        val partitions = entitySetIdToPartitions.getValue(entitySetId).toList()
-                        edks.map { edk -> edk.entityKeyId }.groupBy { id -> getPartition(id, partitions) }
-                    }
+                .map { (dataSourceName, entityDataKeysForDataSource) ->
+                    val dataHds = lateInitProvider.resolver.getDataSource(dataSourceName)
+                    val entitySetIdToIds = entityDataKeysForDataSource
+                            .groupBy({ edkForDataSource -> edkForDataSource.entitySetId }, { it.entityKeyId })
 
-                dataHds.connection.use {
-                    it.prepareStatement(deleteFromDataSql).use { ps ->
+                    dataHds.connection.use {
+                        it.prepareStatement(deleteFromDataSql).use { ps ->
+                            entitySetIdToIds.forEach { (entitySetId, ids) ->
+                                bindEntityDelete(ps, entitySetId, ids, version)
+                            }
 
-                        entitySetIdToPartitionToIds.forEach { (entitySetId, partitionToIds) ->
-                            partitionToIds.forEach { (partition, ids) ->
-                                bindEntityDelete(ps, entitySetId, partition, ids, version)
+                            ps.executeBatch()
+                        }.sum() + it.prepareStatement(deleteFromIdsSql).use { ps ->
+                            entitySetIdToIds.forEach { (entitySetId, ids) ->
+                                bindEntityDelete(ps, entitySetId, ids, version)
                             }
+                            ps.executeBatch().sum()
                         }
-                        ps.executeBatch()
-                    }.sum() + it.prepareStatement(deleteFromIdsSql).use { ps ->
-                        entitySetIdToPartitionToIds.forEach { (entitySetId, partitionToIds) ->
-                            partitionToIds.forEach { (partition, ids) ->
-                                bindEntityDelete(ps, entitySetId, partition, ids, version)
-                            }
-                        }
-                        ps.executeBatch().sum()
                     }
-                }
-            }.sum()
+                }.sum()
     }
 
     @JsonIgnore
     private fun getBinaryPropertiesOfEntitySets(entitySetIds: Set<UUID>): Map<UUID, List<UUID>> {
         val entitySetToEntityType = entitySets.executeOnKeys(entitySetIds, GetEntityTypeFromEntitySetEntryProcessor())
         val entityTypeToProperties =
-            entityTypes.executeOnKeys(entitySetToEntityType.values.toSet(), GetPropertiesFromEntityTypeEntryProcessor())
+                entityTypes.executeOnKeys(
+                        entitySetToEntityType.values.toSet(), GetPropertiesFromEntityTypeEntryProcessor()
+                )
         val binaryPropertyTypeIds = propertyTypes.getAll(entityTypeToProperties.flatMap { it.value }.toSet()).values
-            .filter { it.datatype == EdmPrimitiveTypeKind.Binary }.mapTo(mutableSetOf()) { it.id }
+                .filter { it.datatype == EdmPrimitiveTypeKind.Binary }.mapTo(mutableSetOf()) { it.id }
 
         return entitySetToEntityType.mapNotNull { (entitySetId, entityTypeId) ->
             val binaryPts = entityTypeToProperties[entityTypeId]?.filter { binaryPropertyTypeIds.contains(it) }
@@ -282,28 +267,11 @@ class DataDeletionJob(
         }.toMap()
     }
 
-    @JsonIgnore
-    private fun getEntitySetPartitions(entityDataKeys: Set<EntityDataKey>): Map<UUID, Iterable<Int>> {
-        val entitySetIds = entityDataKeys.mapTo(mutableSetOf()) { it.entitySetId }
-        val esToPartitions = entitySets.executeOnKeys(entitySetIds, GetPartitionsFromEntitySetEntryProcessor())
-
-        return entitySetIds.associateWith {
-            esToPartitions[it]?.let { partitions ->
-                if (partitions.isNotEmpty()) {
-                    return@associateWith partitions
-                }
-            }
-
-            ALL_PARTITIONS
-        }
-    }
-
     private fun bindEntityDelete(
-        ps: PreparedStatement,
-        entitySetId: UUID,
-        partition: Int,
-        ids: Collection<UUID>,
-        version: Long
+            ps: PreparedStatement,
+            entitySetId: UUID,
+            ids: Collection<UUID>,
+            version: Long
     ) {
         var index = 1
         if (!isHardDelete()) {
@@ -312,13 +280,14 @@ class DataDeletionJob(
             ps.setLong(index++, version)
         }
         ps.setObject(index++, entitySetId)
-        ps.setInt(index++, partition)
         ps.setArray(index, PostgresArrays.createUuidArray(ps.connection, ids))
 
         ps.addBatch()
     }
 
-    private fun deleteEdges(edgeBatch: Set<DataEdgeKey>) : WriteEvent = lateInitProvider.dataGraphService.deleteAssociations(
+    private fun deleteEdges(
+            edgeBatch: Set<DataEdgeKey>
+    ): WriteEvent = lateInitProvider.dataGraphService.deleteAssociations(
             edgeBatch,
             state.deleteType
     )
@@ -335,34 +304,40 @@ class DataDeletionJob(
     }
 
     @SuppressFBWarnings(
-        value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"],
-        justification = "This is a bug with spotbugs bytecode parsing for lateinit var."
+            value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"],
+            justification = "This is a bug with spotbugs bytecode parsing for lateinit var."
     )
     //TODO: entity key ids should be paired with their entity set ids :-/
     @JsonIgnore
     private fun deletePropertyOfEntityFromS3(
-        entitySetIds: Collection<UUID>,
-        entityKeyIds: Collection<UUID>,
-        propertyTypeIds: Collection<UUID>
+            entitySetIds: Collection<UUID>,
+            entityKeyIds: Collection<UUID>,
+            propertyTypeIds: Collection<UUID>
     ) {
 
         val s3Keys =
-            entitySetIds
-                .groupBy(lateInitProvider.resolver::getDataSourceName)
-                .flatMap { (dataSourceName, entitySetIdsForDataSource) ->
-                    val hds = lateInitProvider.resolver.getDataSource(dataSourceName)
-                    BasePostgresIterable<String>(
-                        PreparedStatementHolderSupplier(hds, selectEntitiesTextProperties, FETCH_SIZE) { ps ->
-                            val connection = ps.connection
-                            val entitySetIdsArr = PostgresArrays.createUuidArray(connection, entitySetIdsForDataSource)
-                            val propertyTypeIdsArr = PostgresArrays.createUuidArray(connection, propertyTypeIds)
-                            val entityKeyIdsArr = PostgresArrays.createUuidArray(connection, entityKeyIds)
-                            ps.setArray(1, entitySetIdsArr)
-                            ps.setArray(2, propertyTypeIdsArr)
-                            ps.setArray(3, entityKeyIdsArr)
+                entitySetIds
+                        .groupBy(lateInitProvider.resolver::getDataSourceName)
+                        .flatMap { (dataSourceName, entitySetIdsForDataSource) ->
+                            val hds = lateInitProvider.resolver.getDataSource(dataSourceName)
+                            BasePostgresIterable<String>(
+                                    PreparedStatementHolderSupplier(
+                                            hds, selectEntitiesTextProperties, FETCH_SIZE
+                                    ) { ps ->
+                                        val connection = ps.connection
+                                        val entitySetIdsArr = PostgresArrays.createUuidArray(
+                                                connection, entitySetIdsForDataSource
+                                        )
+                                        val propertyTypeIdsArr = PostgresArrays.createUuidArray(
+                                                connection, propertyTypeIds
+                                        )
+                                        val entityKeyIdsArr = PostgresArrays.createUuidArray(connection, entityKeyIds)
+                                        ps.setArray(1, entitySetIdsArr)
+                                        ps.setArray(2, propertyTypeIdsArr)
+                                        ps.setArray(3, entityKeyIdsArr)
+                                    }
+                            ) { it.getString(getMergedDataColumnName(PostgresDatatype.TEXT)) }
                         }
-                    ) { it.getString(getMergedDataColumnName(PostgresDatatype.TEXT)) }
-                }
 
 
         if (s3Keys.isNotEmpty()) {
@@ -370,10 +345,10 @@ class DataDeletionJob(
                 lateInitProvider.byteBlobDataManager.deleteObjects(s3Keys)
             } catch (e: Exception) {
                 logger.error(
-                    "Unable to delete object from s3 for entity sets {} with ids {}",
-                    entitySetIds,
-                    entityKeyIds,
-                    e
+                        "Unable to delete object from s3 for entity sets {} with ids {}",
+                        entitySetIds,
+                        entityKeyIds,
+                        e
                 )
             }
         }
@@ -415,7 +390,6 @@ class DataDeletionJob(
      * PreparedStatement bind order:
      *
      * 1) entitySetId
-     * 2) partitions
      */
     @JsonIgnore
     private fun getIdsBatchSql(): String {
@@ -423,7 +397,6 @@ class DataDeletionJob(
             SELECT ${ENTITY_SET_ID.name}, ${ID.name}
             FROM ${IDS.name}
             WHERE ${ENTITY_SET_ID.name} = ?
-            AND ${PARTITION.name} = ANY(?)
             ${excludeClearedIfSoftDeleteSql()}
             LIMIT $BATCH_SIZE
         """.trimIndent()
@@ -442,9 +415,9 @@ class DataDeletionJob(
     @JsonIgnore
     private fun getEdgesBatchSql(): String {
         val entityMatches = listOf(
-            SRC_ENTITY_SET_ID to SRC_ENTITY_KEY_ID,
-            EDGE_ENTITY_SET_ID to EDGE_ENTITY_KEY_ID,
-            DST_ENTITY_SET_ID to DST_ENTITY_KEY_ID
+                SRC_ENTITY_SET_ID to SRC_ENTITY_KEY_ID,
+                EDGE_ENTITY_SET_ID to EDGE_ENTITY_KEY_ID,
+                DST_ENTITY_SET_ID to DST_ENTITY_KEY_ID
         ).joinToString(" OR ") { (entitySetIdCol, entityKeyIdCol) ->
             "( ${entitySetIdCol.name} = ? AND ${entityKeyIdCol.name} = ANY(?) )"
         }
@@ -467,8 +440,7 @@ class DataDeletionJob(
      * 2. version
      * 3. version
      * 4. entitySetId
-     * 5. partition
-     * 6. entityKeyIds
+     * 5. entityKeyIds
      */
     @JsonIgnore
     private val SOFT_DELETE_FROM_DATA_SQL = """
@@ -484,7 +456,6 @@ class DataDeletionJob(
           ${LAST_WRITE.name} = 'now()'
         WHERE
           ${ENTITY_SET_ID.name} = ?
-          AND ${PARTITION.name} = ?
           AND ${ID.name} = ANY(?)
             
     """.trimIndent()
@@ -493,15 +464,13 @@ class DataDeletionJob(
      * PreparedStatement bind order:
      *
      * 1. entitySetId
-     * 2. partition
-     * 3. entityKeyIds
+     * 2. entityKeyIds
      */
     @JsonIgnore
     private val HARD_DELETE_FROM_DATA_SQL = """
         DELETE FROM ${DATA.name}
         WHERE
           ${ENTITY_SET_ID.name} = ?
-          AND ${PARTITION.name} = ?
           AND ${ID.name} = ANY(?)
     """.trimIndent()
 
@@ -509,8 +478,7 @@ class DataDeletionJob(
      * PreparedStatement bind order:
      *
      * 1. entitySetId
-     * 2. partition
-     * 3. entityKeyIds
+     * 2. entityKeyIds
      */
     @JsonIgnore
     private val HARD_DELETE_FROM_IDS_SQL = zeroVersionsForEntitiesInEntitySet
@@ -520,8 +488,7 @@ class DataDeletionJob(
      * 2. version
      * 3. version
      * 4. entitySetId
-     * 5. partition
-     * 6. entityKeyIds
+     * 5. entityKeyIds
      */
     @JsonIgnore
     private val SOFT_DELETE_FROM_IDS_SQL = updateVersionsForEntitiesInEntitySet
