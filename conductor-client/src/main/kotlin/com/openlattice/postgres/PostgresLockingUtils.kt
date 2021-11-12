@@ -68,16 +68,14 @@ fun lockIdsAndExecute(
     }
 }
 
-private fun lockEntitySet(lock: PreparedStatement, entitySetId: UUID, partition: Int) {
+private fun lockEntitySet(lock: PreparedStatement, entitySetId: UUID) {
     lock.setObject(1, entitySetId)
-    lock.setInt(2, partition)
 }
 
-private fun batchLockIds(lock: PreparedStatement, entitySetId: UUID, partition: Int, entityKeyIds: Collection<UUID>) {
+private fun batchLockIds(lock: PreparedStatement, entitySetId: UUID, entityKeyIds: Collection<UUID>) {
     entityKeyIds.sorted().forEach { entityKeyId ->
         lock.setObject(1, entitySetId)
-        lock.setInt(2, partition)
-        lock.setObject(3, entityKeyId)
+        lock.setObject(2, entityKeyId)
         lock.addBatch()
     }
 }
@@ -86,13 +84,13 @@ fun lockIdsAndExecute(
         connection: Connection,
         query: String,
         entitySetId: UUID,
-        idsByPartition: Map<Int, Collection<UUID>>,
+        entityKeyIds: SortedSet<UUID>,
         shouldLockEntireEntitySet: Boolean = false,
         batch: Boolean = false,
-        execute: (PreparedStatement, Int, Collection<UUID>) -> Unit
+        execute: (PreparedStatement, Collection<UUID>) -> Unit
 ): Int {
 
-    if (idsByPartition.isEmpty() && !shouldLockEntireEntitySet) {
+    if (entityKeyIds.isEmpty() && !shouldLockEntireEntitySet) {
         return 0
     }
     val ac = connection.autoCommit
@@ -101,27 +99,24 @@ fun lockIdsAndExecute(
     val lock = connection.prepareStatement(lockSql)
     val ps = connection.prepareStatement(query)
     return try {
-        val updates = idsByPartition.toSortedMap().map { (partition, entityKeyIds) ->
+
 
             if (shouldLockEntireEntitySet) {
-                lockEntitySet(lock, entitySetId, partition)
+                lockEntitySet(lock, entitySetId)
             } else {
-                batchLockIds(lock, entitySetId, partition, entityKeyIds)
+                batchLockIds(lock, entitySetId, entityKeyIds)
             }
 
             val lockCount = lock.executeBatch().sum()
-            logger.debug("Locked $lockCount entity key ids for entity set $entitySetId and partition $partition")
+            logger.debug("Locked $lockCount entity key ids for entity set $entitySetId")
 
-            execute(ps, partition, entityKeyIds)
+            execute(ps, entityKeyIds)
+
             if (batch) {
                 ps.addBatch()
-                0
-            } else {
-                ps.executeUpdate()
             }
-        }
 
-        val count = if (batch) ps.executeBatch().sum() else updates.sum()
+        val count = if (batch) ps.executeBatch().sum() else ps.executeUpdate()
         connection.commit()
         connection.autoCommit = ac
         count

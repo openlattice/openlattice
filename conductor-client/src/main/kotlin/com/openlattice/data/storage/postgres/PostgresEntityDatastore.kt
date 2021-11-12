@@ -76,8 +76,7 @@ class PostgresEntityDatastore(
                 entitySetId,
                 entities,
                 authorizedPropertyTypes,
-                propertyUpdateType = propertyUpdateType,
-                partitions = partitionManager.getEntitySetPartitions(entitySetId).toList()
+                propertyUpdateType = propertyUpdateType
         )
         signalCreatedEntities(entitySetId, entities.keys)
 
@@ -97,8 +96,7 @@ class PostgresEntityDatastore(
                 entitySetId,
                 entities,
                 authorizedPropertyTypes,
-                propertyUpdateType,
-                partitionManager.getEntitySetPartitions(entitySetId).toList()
+                propertyUpdateType
         )
         signalCreatedEntities(entitySetId, entities.keys)
 
@@ -118,8 +116,7 @@ class PostgresEntityDatastore(
                         entitySetId,
                         entities,
                         authorizedPropertyTypes,
-                        propertyUpdateType,
-                        partitionManager.getEntitySetPartitions(entitySetId).toList()
+                        propertyUpdateType
                 )
 
         signalCreatedEntities(entitySetId, entities.keys)
@@ -437,8 +434,7 @@ class PostgresEntityDatastore(
                 .deleteEntityData(
                         entitySetId,
                         entityKeyIds,
-                        authorizedPropertyTypes,
-                        partitionManager.getEntitySetPartitions(entitySetId).toList()
+                        authorizedPropertyTypes
                 )
 
         // same as if we updated the entities

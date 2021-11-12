@@ -97,7 +97,6 @@ interface EntityDataQueryService {
      * @param authorizedPropertyTypes The authorized property types for the insertion.
      * @param awsPassthrough True if the data will be stored directly in AWS via another means and all that is being
      * provided is the s3 prefix and key.
-     * @param partitions Contains the partition information for the requested entity set.
      *
      * @return A write event summarizing the results of performing this operation.
      */
@@ -108,7 +107,6 @@ interface EntityDataQueryService {
             authorizedPropertyTypes: Map<UUID, PropertyType>,
             awsPassthrough: Boolean = false,
             propertyUpdateType: PropertyUpdateType,
-            partitions: List<Int>
     ): WriteEvent
 
     /**
@@ -118,7 +116,6 @@ interface EntityDataQueryService {
      * @param entities The entities to update or insert.
      * @param authorizedPropertyTypes The authorized property types for the insertion.
      * @param version The version to use for upserting.
-     * @param partitions Contains the partition information for the requested entity set.
      * @param awsPassthrough True if the data will be stored directly in AWS via another means and all that is being
      * provided is the s3 prefix and key.
      *
@@ -130,7 +127,6 @@ interface EntityDataQueryService {
             entities: Map<UUID, Map<UUID, Set<Any>>>, // ekids ->
             authorizedPropertyTypes: Map<UUID, PropertyType>,
             version: Long,
-            partitions: List<Int>,
             awsPassthrough: Boolean = false,
             propertyUpdateType: PropertyUpdateType
     ): WriteEvent
@@ -140,7 +136,6 @@ interface EntityDataQueryService {
             entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
             version: Long,
-            partition: Int,
             awsPassthrough: Boolean,
             propertyUpdateType: PropertyUpdateType
     ): Int
@@ -160,7 +155,6 @@ interface EntityDataQueryService {
             entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
             propertyUpdateType: PropertyUpdateType,
-            partitions: List<Int>
     ): WriteEvent
 
     @Timed
@@ -169,7 +163,6 @@ interface EntityDataQueryService {
             entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
             propertyUpdateType: PropertyUpdateType,
-            partitions: List<Int>
     ): WriteEvent
 
     @Timed
@@ -189,13 +182,11 @@ interface EntityDataQueryService {
      * @param authorizedPropertyTypes The property types the user is requested and is allowed to tombstone. We assume
      * that authorization checks are enforced at a higher level and that this just streamlines issuing the necessary
      * queries.
-     * @param partitions Contains the partition information for the requested entity set.
      */
     fun clearEntityData(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
-            partitions: Set<Int>
     ): WriteEvent
 
     /**
@@ -205,7 +196,6 @@ interface EntityDataQueryService {
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
-            partitions: List<Int>
     ): WriteEvent
 
     /**
@@ -215,7 +205,6 @@ interface EntityDataQueryService {
             entitySetId: UUID,
             entities: Collection<UUID>,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
-            partition: Int
     ): Int
 
     fun deletePropertyOfEntityFromS3(
@@ -227,7 +216,7 @@ interface EntityDataQueryService {
     /**
      * Deletes entities from [IDS] table.
      */
-    fun deleteEntities(entitySetId: UUID, entityKeyIds: Set<UUID>, partitions: Set<Int>): WriteEvent
+    fun deleteEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): WriteEvent
 
     /**
      * Tombstones the provided set of property types for each provided entity key.
@@ -239,7 +228,6 @@ interface EntityDataQueryService {
      * @param entityKeyIds The entity key ids for which to tombstone entries.
      * @param propertyTypesToTombstone A collection of property types to tombstone
      * @param version Version to be used for tombstoning.
-     * @param partitions Contains the partition info for the requested entity set.
      *
      * @return A write event object containing a summary of the operation useful for auditing purposes.
      */
@@ -247,8 +235,7 @@ interface EntityDataQueryService {
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
             propertyTypesToTombstone: Collection<PropertyType>,
-            version: Long,
-            partitions: List<Int>
+            version: Long
     ): WriteEvent
 
     /**
@@ -261,7 +248,6 @@ interface EntityDataQueryService {
      * @param entitySetId The entity set id for which to tombstone entries
      * @param entities The entities with their properties for which to tombstone entries.
      * @param version The version to use to tombstone.
-     * @param partitions Contains the partition info for the entity set of the entities.
      *
      * @return A write event object containing a summary of the operation useful for auditing purposes.
      *
@@ -269,8 +255,7 @@ interface EntityDataQueryService {
     fun tombstoneEntityPropertyHashes(
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Map<ByteBuffer, Any>>>>,
-            version: Long,
-            partitions: List<Int>
+            version: Long
     ): WriteEvent
 
     fun getExpiringEntitiesFromEntitySetUsingIds(
@@ -298,20 +283,19 @@ interface EntityDataQueryService {
      * PreparedStatement bind order:
      *
      * 1) entitySetId
-     * 2) partitions
-     * 3) expiration date(time)
-     * 4) propertyTypeId
+     * 2) expiration date(time)
+     * 3) propertyTypeId
      */
     fun getExpiringEntitiesUsingDataQuery(
-            expirationPropertyType: PropertyType, deleteType: DeleteType
+            expirationPropertyType: PropertyType,
+            deleteType: DeleteType
     ): String
 
     /**
      * PreparedStatement bind order:
      *
      * 1) entitySetId
-     * 2) partitions
-     * 3) expiration datetime
+     * 2) expiration datetime
      */
     fun getExpiringEntitiesUsingIdsQuery(expirationPolicy: DataExpiration): String
 }
