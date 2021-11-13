@@ -581,7 +581,7 @@ private val SRC_IDS_SQL = "${SRC_ENTITY_KEY_ID.name} = ANY(?) AND ${SRC_ENTITY_S
 private val EDGE_IDS_SQL = "${EDGE_ENTITY_KEY_ID.name} = ANY(?) AND ${EDGE_ENTITY_SET_ID.name} = ?"
 private val DST_IDS_SQL = "${DST_ENTITY_KEY_ID.name} = ANY(?) AND ${DST_ENTITY_SET_ID.name} = ?"
 
-private val DEFAULT_NEIGHBORHOOD_SRC_FILTER = "${SRC_ENTITY_KEY_ID.name} = ANY(?) AND ${SRC_ENTITY_SET_ID.name} = ANY(?) AND ${PARTITION.name} = ANY(?)"
+private val DEFAULT_NEIGHBORHOOD_SRC_FILTER = "${SRC_ENTITY_KEY_ID.name} = ANY(?) AND ${SRC_ENTITY_SET_ID.name} = ANY(?) "
 private val DEFAULT_NEIGHBORHOOD_DST_FILTER = "${DST_ENTITY_KEY_ID.name} = ANY(?) AND ${DST_ENTITY_SET_ID.name} = ANY(?)"
 
 //private val REPARTITION_SQL = "INSERT INTO ${E.name} SELECT $REPARTITION_COLUMNS FROM ${E.name} INNER JOIN (select id as entity_set_id, partitions from entity_sets) as es using (entity_set_id) WHERE entity_set_id = ? AND "
@@ -867,7 +867,6 @@ private val SOFT_DELETE_EDGES_SQL = """
               ${VERSION.name} = ?,
               ${VERSIONS.name} = ${VERSIONS.name} || ?
             WHERE
-              ${PARTITION.name} = ? AND
               ${SRC_ENTITY_KEY_ID.name} = ? AND
               ${DST_ENTITY_KEY_ID.name} = ? AND
               ${EDGE_ENTITY_KEY_ID.name} = ? 
@@ -883,7 +882,6 @@ private val SOFT_DELETE_EDGES_SQL = """
 private val HARD_DELETE_EDGES_SQL = """
             DELETE FROM ${E.name}
             WHERE
-              ${PARTITION.name} = ? AND
               ${SRC_ENTITY_KEY_ID.name} = ? AND
               ${DST_ENTITY_KEY_ID.name} = ? AND
               ${EDGE_ENTITY_KEY_ID.name} = ? 

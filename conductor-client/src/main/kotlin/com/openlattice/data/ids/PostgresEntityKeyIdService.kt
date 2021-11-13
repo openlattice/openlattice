@@ -50,14 +50,13 @@ private val linkedEntityKeyIdsSql = "SELECT ${ID.name},${LINKING_ID.name} as $EN
 
 //Only update ids the need updating to minimize i/o
 private val UPDATE_ID_WRITTEN = "UPDATE ${SYNC_IDS.name} SET ${ID_WRITTEN.name} = TRUE WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} = ? AND NOT ${ID_WRITTEN.name}"
-private val INSERT_SQL = "INSERT INTO ${IDS.name} (${ENTITY_SET_ID.name},${ID.name},${PARTITION.name}) VALUES(?,?,?) ON CONFLICT DO NOTHING"
+private val INSERT_SQL = "INSERT INTO ${IDS.name} (${ENTITY_SET_ID.name},${ID.name}) VALUES(?,?) ON CONFLICT DO NOTHING"
 private val INSERT_ID_TO_DATA_SQL = "INSERT INTO ${DATA.name} (" +
         "${ENTITY_SET_ID.name}," +
         "${ID.name}," +
-        "${PARTITION.name}," +
         "${PROPERTY_TYPE_ID.name}," +
         "${VERSION.name}," +
-        "${HASH.name}) VALUES (?,?,?,?,?,?) " +
+        "${HASH.name}) VALUES (?,?,?,?,?) " +
         "ON CONFLICT DO NOTHING"
 internal val INSERT_SYNC_SQL = "INSERT INTO ${SYNC_IDS.name} (${ENTITY_SET_ID.name},${ENTITY_ID.name},${ID.name}) VALUES(?,?,?) ON CONFLICT DO NOTHING"
 

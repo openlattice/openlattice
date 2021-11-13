@@ -125,14 +125,12 @@ fun lockIdsAndExecute(
 private val LOCK_ENTITY_SET_PARTITION = "SELECT 1" +
         "  FROM ${IDS.name} " +
         "    WHERE ${ENTITY_SET_ID.name} = ? " +
-        "    AND ${PARTITION.name} = ? " +
         "  ORDER BY ${ID.name} " +
         "  FOR UPDATE "
 
 private val LOCKING_WITH_ID = "SELECT 1" +
         "  FROM ${IDS.name} " +
         "    WHERE ${ENTITY_SET_ID.name} = ? " +
-        "    AND ${PARTITION.name} = ? " +
         "    AND ${ID.name} = ? " +
         "  ORDER BY ${ID.name} " +
         "  FOR UPDATE "

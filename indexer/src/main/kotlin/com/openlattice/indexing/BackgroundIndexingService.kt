@@ -162,7 +162,6 @@ class BackgroundIndexingService(
 
         return "SELECT ${ID.name}, ${LAST_WRITE.name} FROM ${IDS.name} " +
                 "WHERE ${ENTITY_SET_ID.name} = ? " +
-                "AND ${PARTITION.name} = ANY(?) " +
                 "AND $versionsClause " +
                 dirtyIdsClause
     }

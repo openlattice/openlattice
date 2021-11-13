@@ -102,10 +102,9 @@ class PostgresDataTables {
         fun buildDataTableDefinition(): PostgresTableDefinition {
             val columns = dataTableColumns.toTypedArray()
 
-            val tableDefinition = CitusDistributedTableDefinition("data")
+            val tableDefinition = PostgresTableDefinition("data")
                     .addColumns(*columns)
-                    .primaryKey(ENTITY_SET_ID, ID_VALUE, PARTITION, PROPERTY_TYPE_ID, HASH)
-                    .distributionColumn(PARTITION)
+                    .primaryKey(ENTITY_SET_ID, ID_VALUE, PROPERTY_TYPE_ID, HASH)
 
             tableDefinition.addIndexes(
                     *btreeIndexedColumns.map { buildBtreeIndexDefinition(tableDefinition, it) }.toTypedArray()
@@ -116,12 +115,6 @@ class PostgresDataTables {
             val entitySetIdIndex = PostgresColumnsIndexDefinition(tableDefinition, ENTITY_SET_ID)
                     .name(quote(prefix + "_entity_set_id_idx"))
                     .ifNotExists()
-            val entitySetIdAndPartitionIndex = PostgresColumnsIndexDefinition(
-                    tableDefinition, ENTITY_SET_ID, PARTITION
-            )
-                    .name(quote(prefix + "_entity_set_id_partition_idx"))
-                    .ifNotExists()
-                    .desc()
             val idIndex = PostgresColumnsIndexDefinition(tableDefinition, ID_VALUE)
                     .name(quote(prefix + "_id_idx"))
                     .ifNotExists()
@@ -170,7 +163,6 @@ class PostgresDataTables {
                     idIndex,
                     originIdIndex,
                     entitySetIdIndex,
-                    entitySetIdAndPartitionIndex,
                     versionIndex,
                     lastWriteIndex,
                     propertyTypeIdIndex,

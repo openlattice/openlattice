@@ -173,7 +173,6 @@ class BackgroundIndexedEntitiesDeletionService(
         FROM ${IDS.name}
         WHERE
           ${ENTITY_SET_ID.name} = ?
-          AND ${PARTITION.name} = ANY(?)
         LIMIT $DELETE_SIZE
     """.trimIndent()
 
@@ -187,7 +186,6 @@ class BackgroundIndexedEntitiesDeletionService(
                 FROM ${IDS.name}
                 WHERE
                   ${ENTITY_SET_ID.name} = ? AND
-                  ${PARTITION.name} = ANY(?) AND
                   ${VERSION.name} = 0 AND
                   (
                     (${LAST_INDEX.name} >= ${LAST_WRITE.name})

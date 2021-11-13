@@ -889,7 +889,6 @@ class PostgresEntityDataQueryService(
         return """
             SELECT DISTINCT ${ID.name} FROM ${DATA.name}
             WHERE ${ENTITY_SET_ID.name} = ?
-            AND ${PARTITION.name} = ANY(?)
             AND $expirationColumnName <= ?
             AND ${PROPERTY_TYPE_ID.name} = ?
             $clearedEntitiesClause
@@ -919,7 +918,6 @@ class PostgresEntityDataQueryService(
         return """
             SELECT ${ID.name} FROM ${IDS.name}
             WHERE ${ENTITY_SET_ID.name} = ?
-            AND ${PARTITION.name} = ANY(?)
             AND $expirationField <= ?
             $clearedEntitiesClause
             LIMIT $EXPIRED_DATA_BATCH_SIZE
