@@ -26,6 +26,7 @@ import com.google.common.collect.Iterables
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicates
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
+import com.openlattice.data.storage.DataSourceResolver
 import com.openlattice.data.storage.IndexingMetadataManager
 import com.openlattice.data.storage.MetadataOption
 import com.openlattice.data.storage.PostgresEntityDataQueryService
@@ -69,7 +70,7 @@ const val INDEX_SIZE = 1_000
 class BackgroundIndexingService(
         hazelcastInstance: HazelcastInstance,
         private val indexerConfiguration: IndexerConfiguration,
-        private val hds: HikariDataSource,
+        private val resolver: DataSourceResolver,
         private val dataQueryService: PostgresEntityDataQueryService,
         private val elasticsearchApi: ConductorElasticsearchApi,
         private val dataManager: IndexingMetadataManager
@@ -172,6 +173,7 @@ class BackgroundIndexingService(
             reindexAll: Boolean = false,
             getTombstoned: Boolean = false
     ): BasePostgresIterable<Pair<UUID, OffsetDateTime>> {
+        val hds = resolver.resolve(entitySet.id)
         return BasePostgresIterable(
                 PreparedStatementHolderSupplier(hds, getEntityDataKeysQuery(reindexAll, getTombstoned), FETCH_SIZE) {
                     it.setObject(1, entitySet.id)
