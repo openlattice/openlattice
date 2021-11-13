@@ -124,7 +124,7 @@ fun buildPreparableFiltersSql(
         $prefix
         SELECT
           ${ENTITY_SET_ID.name},
-          ${ID_VALUE.name},
+          ${ID_VALUE.name}
           $metadataOptionColumnsSql,
           jsonb_object_agg(${PROPERTY_TYPE_ID.name}, $PROPERTIES) as $PROPERTIES
         FROM ($innerSql) entities
