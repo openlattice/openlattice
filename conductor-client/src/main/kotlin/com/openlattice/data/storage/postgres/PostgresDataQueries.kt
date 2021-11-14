@@ -58,6 +58,72 @@ val primaryKeyColumnNamesAsString = PostgresDataTables.buildDataTableDefinition(
 ) { it.name }
 
 
+fun buildRedshiftPreparableFiltersSql(
+    propertyTypes: Map<UUID, PropertyType>,
+    propertyTypeFilters: Map<UUID, Set<Filter>>,
+    metadataOptions: Set<MetadataOption>,
+    linking: Boolean,
+    entitySetIds: Set<UUID>,
+    entityKeyIds: Set<UUID>,
+    detailed: Boolean = false,
+    filteredDataPageDefinition: FilteredDataPageDefinition? = null
+): Pair<String, Set<SqlBinder>> {
+    var index = 1
+    val binders = mutableSetOf<SqlBinder>()
+
+    val (sqlClauses, filterBinders, nextIndex) = filteredDataPagePrefixAndSuffix(
+        index,
+        filteredDataPageDefinition,
+        propertyTypes,
+        entitySetIds,
+        entityKeyIds
+    )
+    binders.addAll(filterBinders)
+    index = nextIndex
+    val (prefix, filterIdsOnCTEClause, suffix) = sqlClauses
+
+    binders.add(SqlBinder(SqlBindInfo(index++, entitySetIds), ::doBind))
+    if (entityKeyIds.isNotEmpty()) {
+        binders.add(SqlBinder(SqlBindInfo(index++, entityKeyIds), ::doBind))
+    }
+
+    val (filterClauseSql, filterClauseBinders) = buildPreparableFiltersClause(index, propertyTypes, propertyTypeFilters)
+    val filtersClause = if (filterClauseSql.isNotEmpty()) " AND $filterClauseSql " else ""
+    binders.addAll(filterClauseBinders)
+
+    val metadataOptionColumns = metadataOptions.associateWith(::mapOuterMetaDataToColumnSql)
+    val metadataOptionColumnsSql = metadataOptionColumns.values.joinToString("")
+
+    val innerGroupBy = if (linking) groupBy(ESID_ORIGINID_PART_PTID) else groupBy(ESID_EKID_PART_PTID)
+    val outerGroupBy = if (metadataOptions.contains(MetadataOption.ENTITY_KEY_IDS)) groupBy(
+        ESID_EKID_PART_PTID
+    ) else groupBy(
+        ESID_EKID_PART
+    )
+
+    val linkingClause = if (linking) " AND ${ORIGIN_ID.name} != '${IdConstants.EMPTY_ORIGIN_ID.id}' " else ""
+
+    val innerSql = selectEntitiesGroupedByIdAndPropertyTypeId(
+        metadataOptions,
+        idsPresent = entityKeyIds.isNotEmpty(),
+        detailed = detailed,
+        linking = linking
+    ) + linkingClause + filtersClause + filterIdsOnCTEClause + innerGroupBy
+
+    val sql = """
+        $prefix
+        SELECT
+          ${ENTITY_SET_ID.name},
+          ${ID_VALUE.name}
+          $metadataOptionColumnsSql,
+          jsonb_object_agg(${PROPERTY_TYPE_ID.name}, $PROPERTIES) as $PROPERTIES
+        FROM ($innerSql) entities
+        $outerGroupBy
+        $suffix
+    """.trimIndent()
+
+    return sql to binders
+}
 /**
  * Builds a preparable SQL query for reading filterable data.
  *
@@ -68,7 +134,7 @@ val primaryKeyColumnNamesAsString = PostgresDataTables.buildDataTableDefinition(
  * 2. entity key ids (array)
  *
  */
-fun buildPreparableFiltersSql(
+fun buildPostgresPreparableFiltersSql(
         propertyTypes: Map<UUID, PropertyType>,
         propertyTypeFilters: Map<UUID, Set<Filter>>,
         metadataOptions: Set<MetadataOption>,

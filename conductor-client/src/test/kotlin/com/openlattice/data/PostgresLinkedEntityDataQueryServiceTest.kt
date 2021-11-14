@@ -22,7 +22,7 @@
 package com.openlattice.data
 
 import com.openlattice.data.storage.*
-import com.openlattice.data.storage.postgres.buildPreparableFiltersSql
+import com.openlattice.data.storage.postgres.buildPostgresPreparableFiltersSql
 import com.openlattice.edm.type.PropertyType
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -67,8 +67,8 @@ class PostgresLinkedEntityDataQueryServiceTest {
         )
 
         logger.info(
-                "Linking entity set query:\n{}",
-                buildPreparableFiltersSql(
+            "Linking entity set query:\n{}",
+            buildPostgresPreparableFiltersSql(
                         propertyTypes.associateBy { it.id },
                         mapOf(),
                         EnumSet.of( MetadataOption.ENTITY_KEY_IDS),
