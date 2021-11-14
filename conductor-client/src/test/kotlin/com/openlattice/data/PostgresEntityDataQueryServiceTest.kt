@@ -21,6 +21,9 @@
 
 package com.openlattice.data
 
+import com.openlattice.analysis.requests.Filter
+import com.openlattice.analysis.requests.RangeFilter
+import com.openlattice.analysis.requests.StringValueFilter
 import com.openlattice.data.storage.*
 import com.openlattice.data.storage.postgres.buildPostgresPreparableFiltersSql
 import com.openlattice.edm.type.PropertyType
@@ -88,7 +91,12 @@ class PostgresEntityDataQueryServiceTest {
                         EnumSet.of(MetadataOption.ENTITY_KEY_IDS),
                         entitySetIds = setOf(),
                         entityKeyIds = setOf(),
-                        linking = true
+                        linking = true,
+                        filteredDataPageDefinition = FilteredDataPageDefinition(
+                            UUID.fromString("c270d705-3616-4abc-b16e-f891e264b784"),
+                            StringValueFilter(setOf("foo")),
+                            bookmarkId = UUID.randomUUID()
+                        )
                 ).first
         )
     }

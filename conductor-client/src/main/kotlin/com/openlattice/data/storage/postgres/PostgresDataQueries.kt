@@ -53,6 +53,8 @@ val valuesColumnsSql = "COALESCE( " + dataTableValueColumns.joinToString(",") {
 } + ") as $PROPERTIES"
 // @formatter:on
 
+val redshiftColumnsSql = dataTableValueColumns.joinToString (",") { it.name }
+
 val primaryKeyColumnNamesAsString = PostgresDataTables.buildDataTableDefinition().primaryKey.joinToString(
         ","
 ) { it.name }
@@ -103,7 +105,7 @@ fun buildRedshiftPreparableFiltersSql(
 
     val linkingClause = if (linking) " AND ${ORIGIN_ID.name} != '${IdConstants.EMPTY_ORIGIN_ID.id}' " else ""
 
-    val innerSql = selectEntitiesGroupedByIdAndPropertyTypeId(
+    val innerSql = selectEntities(
         metadataOptions,
         idsPresent = entityKeyIds.isNotEmpty(),
         detailed = detailed,
@@ -114,9 +116,9 @@ fun buildRedshiftPreparableFiltersSql(
         $prefix
         SELECT
           ${ENTITY_SET_ID.name},
-          ${ID_VALUE.name}
+          ${ID_VALUE.name},
+          ${PROPERTY_TYPE_ID.name},
           $metadataOptionColumnsSql,
-          jsonb_object_agg(${PROPERTY_TYPE_ID.name}, $PROPERTIES) as $PROPERTIES
         FROM ($innerSql) entities
         $outerGroupBy
         $suffix
@@ -256,6 +258,30 @@ internal fun filteredDataPagePrefixAndSuffix(
 
     val sqlClauses = listOf(prefix, filterClause, suffix)
     return Triple(sqlClauses, sqlBinders, nextIndex)
+}
+
+
+internal fun selectEntities(
+    metadataOptions: Set<MetadataOption>,
+    idsPresent: Boolean = true,
+    entitySetsPresent: Boolean = true,
+    detailed: Boolean = false,
+    linking: Boolean = false
+): String {
+    //Already have the comma prefix
+    val metadataOptionsSql = metadataOptions.joinToString("") { mapMetaDataToSelector(it) }
+    val columnsSql = redshiftColumnsSql
+    val idColumn = if (linking) ORIGIN_ID.name else ID_VALUE.name
+    return """
+        SELECT
+          ${ENTITY_SET_ID.name},
+          $idColumn as ${ID_VALUE.name},
+          ${PROPERTY_TYPE_ID.name}
+          $metadataOptionsSql,
+          $columnsSql
+        FROM ${DATA.name}
+        ${optionalWhereClauses(idsPresent, entitySetsPresent, linking)}
+    """.trimIndent()
 }
 
 internal fun selectEntitiesGroupedByIdAndPropertyTypeId(
