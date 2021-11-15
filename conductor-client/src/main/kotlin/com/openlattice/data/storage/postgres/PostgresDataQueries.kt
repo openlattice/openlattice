@@ -114,13 +114,7 @@ fun buildRedshiftPreparableFiltersSql(
 
     val sql = """
         $prefix
-        SELECT
-          ${ENTITY_SET_ID.name},
-          ${ID_VALUE.name},
-          ${PROPERTY_TYPE_ID.name},
-          $metadataOptionColumnsSql,
-        FROM ($innerSql) entities
-        $outerGroupBy
+        $innerSql
         $suffix
     """.trimIndent()
 
@@ -252,7 +246,7 @@ internal fun filteredDataPagePrefixAndSuffix(
         )
     """.trimIndent()
 
-    val filterClause = " AND ${ID.name} IN (SELECT ${ID.name} FROM $PAGED_IDS_CTE_NAME)"
+    val filterClause = " AND ${ID.name} IN (SELECT ${ID.name} FROM $PAGED_IDS_CTE_NAME) "
 
     val suffix = " ORDER BY ${ID.name}"
 
@@ -334,6 +328,17 @@ private fun mapMetaDataToColumnName(metadataOption: MetadataOption): String {
  * Returns the select sql snippet for the requested metadata option.
  */
 private fun mapMetaDataToSelector(metadataOption: MetadataOption): String {
+    return when (metadataOption) {
+        MetadataOption.LAST_WRITE -> ",max(${LAST_WRITE.name}) AS ${mapMetaDataToColumnName(metadataOption)}"
+        MetadataOption.ENTITY_KEY_IDS -> ",${ID_VALUE.name} as ${ORIGIN_ID.name}" //Adapter for queries for now.
+        else -> throw UnsupportedOperationException("No implementation yet for metadata option $metadataOption")
+    }
+}
+
+/**
+ * Returns the select sql snippet for the requested metadata option.
+ */
+private fun redshiftMapMetaDataToSelector(metadataOption: MetadataOption): String {
     return when (metadataOption) {
         MetadataOption.LAST_WRITE -> ",max(${LAST_WRITE.name}) AS ${mapMetaDataToColumnName(metadataOption)}"
         MetadataOption.ENTITY_KEY_IDS -> ",${ID_VALUE.name} as ${ORIGIN_ID.name}" //Adapter for queries for now.
