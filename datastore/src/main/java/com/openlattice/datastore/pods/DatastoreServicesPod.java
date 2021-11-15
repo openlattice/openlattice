@@ -69,11 +69,10 @@ import com.openlattice.data.storage.DataDeletionService;
 import com.openlattice.data.storage.DataSourceResolver;
 import com.openlattice.data.storage.EntityDatastore;
 import com.openlattice.data.storage.IndexingMetadataManager;
-import com.openlattice.data.storage.PostgresEntityDataQueryService;
-import com.openlattice.data.storage.PostgresEntityDatastore;
+import com.openlattice.data.storage.postgres.PostgresEntityDataQueryService;
+import com.openlattice.data.storage.postgres.PostgresEntityDatastore;
 import com.openlattice.data.storage.PostgresEntitySetSizesTaskDependency;
 import com.openlattice.data.storage.aws.AwsDataSinkService;
-import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datasets.DataSetService;
 import com.openlattice.datastore.configuration.DatastoreConfiguration;
 import com.openlattice.datastore.configuration.ReadonlyDatasourceSupplier;
@@ -296,11 +295,6 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    PartitionManager partitionManager() {
-        return new PartitionManager( hazelcastInstance, hikariDataSource );
-    }
-
-    @Bean
     DataSetService dataSetService() {
         return new DataSetService( hazelcastInstance, elasticsearchApi() );
     }
@@ -324,7 +318,6 @@ public class DatastoreServicesPod {
                 eventBus,
                 aclKeyReservationService(),
                 authorizationManager(),
-                partitionManager(),
                 dataModelService(),
                 hikariDataSource,
                 dataSetService(),
@@ -344,7 +337,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public IndexingMetadataManager indexingMetadataManager() {
-        return new IndexingMetadataManager( dataSourceResolver(), partitionManager() );
+        return new IndexingMetadataManager( dataSourceResolver() );
     }
 
     @Bean
@@ -431,7 +424,6 @@ public class DatastoreServicesPod {
                 authorizationManager(),
                 securePrincipalsManager(),
                 phoneNumberService(),
-                partitionManager(),
                 assembler(),
                 collaborationService()
         );
@@ -469,7 +461,6 @@ public class DatastoreServicesPod {
     public GraphService graphApi() {
         return new Graph( dataSourceResolver(),
                 entitySetManager(),
-                partitionManager(),
                 dataQueryService(),
                 idService(),
                 metricRegistry );
@@ -493,8 +484,8 @@ public class DatastoreServicesPod {
     public EntityKeyIdService idService() {
         return new PostgresEntityKeyIdService(
                 dataSourceResolver(),
-                idGenerationService(),
-                partitionManager() );
+                idGenerationService()
+        );
     }
 
     @Bean
@@ -544,7 +535,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public ConductorElasticsearchApi elasticsearchApi() {
-        return new DatastoreKotlinElasticsearchImpl(  datastoreConfiguration.getSearchConfiguration() );
+        return new DatastoreKotlinElasticsearchImpl( datastoreConfiguration.getSearchConfiguration() );
     }
 
     @Bean
@@ -585,8 +576,7 @@ public class DatastoreServicesPod {
     public PostgresEntityDataQueryService dataQueryService() {
         return new PostgresEntityDataQueryService(
                 dataSourceResolver(),
-                byteBlobDataManager,
-                partitionManager()
+                byteBlobDataManager
         );
     }
 
@@ -597,7 +587,6 @@ public class DatastoreServicesPod {
 
     @Bean AwsDataSinkService awsDataSinkService() {
         return new AwsDataSinkService(
-                partitionManager(),
                 byteBlobDataManager,
                 dataSourceResolver()
         );
@@ -610,7 +599,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public LinkingQueryService lqs() {
-        return new PostgresLinkingQueryService( hikariDataSource, partitionManager() );
+        return new PostgresLinkingQueryService( hikariDataSource );
     }
 
     @Bean
@@ -666,8 +655,7 @@ public class DatastoreServicesPod {
                 authorizationManager(),
                 entityDatastore(),
                 graphApi(),
-                jobService(),
-                partitionManager()
+                jobService()
         );
     }
 

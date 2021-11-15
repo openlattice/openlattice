@@ -1,6 +1,5 @@
 package com.openlattice.postgres
 
-import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
 import org.slf4j.LoggerFactory
@@ -23,9 +22,7 @@ private val logger = LoggerFactory.getLogger(PostgresLockingUtils::class.java)
  * @param connection The Hikari connection that will be used to execute the transaction
  * @param query The SQL query that will be executed once the locks have been acquired
  * @param entitySetId The entity set id that will be updated
- * @param entityKeyIdsByPartition A map from partition to a collection of entityKeyIds on that partition to
- * update. If the query operates on an entire entity set (as opposed to specific entity key ids) the values
- * in this map will be ignored.
+ * @param entityKeyIdss A collection of entity key ids to operate on
  * @param shouldLockEntireEntitySet A boolean indicating whether the locks should operate on an entire entity
  * set, or whether they should apply a filter on the id values in [entityKeyIdsByPartition]. Defaults to false.
  * @param bindPreparedStatementFn A function that binds any remaining PreparedStatement parameters. This function
@@ -38,8 +35,7 @@ private val logger = LoggerFactory.getLogger(PostgresLockingUtils::class.java)
 fun lockIdsAndExecute(
         connection: Connection,
         entitySetId: UUID,
-        partition: Int,
-        entityKeyIds: Collection<UUID> = listOf(),
+        entityKeyIds: SortedSet<UUID> = sortedSetOf(),
         shouldLockEntireEntitySet: Boolean = false,
         execute: () -> Int
 ): Int {
@@ -54,13 +50,13 @@ fun lockIdsAndExecute(
 
     return try {
         if (shouldLockEntireEntitySet) {
-            lockEntitySet(lock, entitySetId, partition)
+            lockEntitySet(lock, entitySetId)
         } else {
-            batchLockIds(lock, entitySetId, partition, entityKeyIds)
+            batchLockIds(lock, entitySetId, entityKeyIds)
         }
 
         val lockCount = lock.executeBatch().sum()
-        logger.debug("Locked $lockCount entity key ids for entity set $entitySetId and partition $partition")
+        logger.debug("Locked $lockCount entity key ids for entity set $entitySetId ")
         execute()
     } catch (ex: Exception) {
         connection.rollback()
@@ -68,16 +64,14 @@ fun lockIdsAndExecute(
     }
 }
 
-private fun lockEntitySet(lock: PreparedStatement, entitySetId: UUID, partition: Int) {
+private fun lockEntitySet(lock: PreparedStatement, entitySetId: UUID) {
     lock.setObject(1, entitySetId)
-    lock.setInt(2, partition)
 }
 
-private fun batchLockIds(lock: PreparedStatement, entitySetId: UUID, partition: Int, entityKeyIds: Collection<UUID>) {
+private fun batchLockIds(lock: PreparedStatement, entitySetId: UUID, entityKeyIds: Collection<UUID>) {
     entityKeyIds.sorted().forEach { entityKeyId ->
         lock.setObject(1, entitySetId)
-        lock.setInt(2, partition)
-        lock.setObject(3, entityKeyId)
+        lock.setObject(2, entityKeyId)
         lock.addBatch()
     }
 }
@@ -86,13 +80,13 @@ fun lockIdsAndExecute(
         connection: Connection,
         query: String,
         entitySetId: UUID,
-        idsByPartition: Map<Int, Collection<UUID>>,
+        entityKeyIds: SortedSet<UUID>,
         shouldLockEntireEntitySet: Boolean = false,
         batch: Boolean = false,
-        execute: (PreparedStatement, Int, Collection<UUID>) -> Unit
+        execute: (PreparedStatement, Collection<UUID>) -> Unit
 ): Int {
 
-    if (idsByPartition.isEmpty() && !shouldLockEntireEntitySet) {
+    if (entityKeyIds.isEmpty() && !shouldLockEntireEntitySet) {
         return 0
     }
     val ac = connection.autoCommit
@@ -101,27 +95,24 @@ fun lockIdsAndExecute(
     val lock = connection.prepareStatement(lockSql)
     val ps = connection.prepareStatement(query)
     return try {
-        val updates = idsByPartition.toSortedMap().map { (partition, entityKeyIds) ->
+
 
             if (shouldLockEntireEntitySet) {
-                lockEntitySet(lock, entitySetId, partition)
+                lockEntitySet(lock, entitySetId)
             } else {
-                batchLockIds(lock, entitySetId, partition, entityKeyIds)
+                batchLockIds(lock, entitySetId, entityKeyIds)
             }
 
             val lockCount = lock.executeBatch().sum()
-            logger.debug("Locked $lockCount entity key ids for entity set $entitySetId and partition $partition")
+            logger.debug("Locked $lockCount entity key ids for entity set $entitySetId")
 
-            execute(ps, partition, entityKeyIds)
+            execute(ps, entityKeyIds)
+
             if (batch) {
                 ps.addBatch()
-                0
-            } else {
-                ps.executeUpdate()
             }
-        }
 
-        val count = if (batch) ps.executeBatch().sum() else updates.sum()
+        val count = if (batch) ps.executeBatch().sum() else ps.executeUpdate()
         connection.commit()
         connection.autoCommit = ac
         count
@@ -131,21 +122,15 @@ fun lockIdsAndExecute(
     }
 }
 
-fun getIdsByPartition(entityKeyIds: Collection<UUID>, partitions: List<Int>): Map<Int, List<UUID>> {
-    return entityKeyIds.groupBy { getPartition(it, partitions) }
-}
-
 private val LOCK_ENTITY_SET_PARTITION = "SELECT 1" +
         "  FROM ${IDS.name} " +
         "    WHERE ${ENTITY_SET_ID.name} = ? " +
-        "    AND ${PARTITION.name} = ? " +
         "  ORDER BY ${ID.name} " +
         "  FOR UPDATE "
 
 private val LOCKING_WITH_ID = "SELECT 1" +
         "  FROM ${IDS.name} " +
         "    WHERE ${ENTITY_SET_ID.name} = ? " +
-        "    AND ${PARTITION.name} = ? " +
         "    AND ${ID.name} = ? " +
         "  ORDER BY ${ID.name} " +
         "  FOR UPDATE "

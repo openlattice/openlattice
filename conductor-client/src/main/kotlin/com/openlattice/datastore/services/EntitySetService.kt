@@ -44,7 +44,6 @@ import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.authorization.securable.SecurableObjectType.PropertyTypeInEntitySet
 import com.openlattice.controllers.exceptions.ResourceNotFoundException
 import com.openlattice.data.storage.PostgresEntitySetSizesInitializationTask
-import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datasets.DataSetService
 import com.openlattice.datasets.SecurableObjectMetadata
 import com.openlattice.datasets.SecurableObjectMetadataUpdate
@@ -92,7 +91,6 @@ class EntitySetService(
     private val eventBus: EventBus,
     private val aclKeyReservations: HazelcastAclKeyReservationService,
     private val authorizations: AuthorizationManager,
-    private val partitionManager: PartitionManager,
     private val edm: EdmManager,
     private val hds: HikariDataSource,
     private val dataSetService: DataSetService,
@@ -102,7 +100,6 @@ class EntitySetService(
     private val aresManager = AuditRecordEntitySetsManager(
             AuditingTypes(edm, auditingConfiguration),
             this,
-            partitionManager,
             authorizations,
             hazelcastInstance
     )
@@ -133,10 +130,6 @@ class EntitySetService(
             else -> {
                 Principals.ensureUser(principal)
             }
-        }
-
-        if (entitySet.partitions.isEmpty()) {
-            partitionManager.allocateEntitySetPartitions(entitySet)
         }
 
         val entityType = entityTypes.getValue(entitySet.entityTypeId)

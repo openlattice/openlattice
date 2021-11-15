@@ -25,11 +25,10 @@ import com.google.common.base.Suppliers
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicates
 import com.openlattice.data.EntityDataKey
-import com.openlattice.data.storage.PostgresEntityDataQueryService
+import com.openlattice.data.storage.postgres.PostgresEntityDataQueryService
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.linking.util.PersonProperties
 import com.openlattice.postgres.mapstores.EntityTypeMapstore
-import com.openlattice.postgres.streams.BasePostgresIterable
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import java.util.Optional
 import java.util.UUID
