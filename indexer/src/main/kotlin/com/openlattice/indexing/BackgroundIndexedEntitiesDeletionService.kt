@@ -23,7 +23,7 @@ package com.openlattice.indexing
 import com.google.common.base.Stopwatch
 import com.hazelcast.core.HazelcastInstance
 import com.openlattice.data.storage.DataSourceResolver
-import com.openlattice.data.storage.PostgresEntityDataQueryService
+import com.openlattice.data.storage.postgres.PostgresEntityDataQueryService
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.indexing.configuration.IndexerConfiguration
 import com.openlattice.postgres.DataTables.LAST_INDEX
@@ -41,7 +41,6 @@ import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.openlattice.rhizome.DelegatedIntSet
-import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import java.util.*
@@ -138,7 +137,7 @@ class BackgroundIndexedEntitiesDeletionService(
         var deleteCount = 0
 
         while (deletableIds.isNotEmpty()) {
-            deleteCount += dataQueryService.deleteEntities(entitySet.id, deletableIds, entitySet.partitions).numUpdates
+            deleteCount += dataQueryService.deleteEntities(entitySet.id, deletableIds).numUpdates
             deleteFromSyncIds(entitySet.id, deletableIds)
             deletableIds = getDeletedIdsBatch(entitySet, isCurrentEntitySet).toSet()
         }
@@ -174,7 +173,6 @@ class BackgroundIndexedEntitiesDeletionService(
         FROM ${IDS.name}
         WHERE
           ${ENTITY_SET_ID.name} = ?
-          AND ${PARTITION.name} = ANY(?)
         LIMIT $DELETE_SIZE
     """.trimIndent()
 
@@ -188,7 +186,6 @@ class BackgroundIndexedEntitiesDeletionService(
                 FROM ${IDS.name}
                 WHERE
                   ${ENTITY_SET_ID.name} = ? AND
-                  ${PARTITION.name} = ANY(?) AND
                   ${VERSION.name} = 0 AND
                   (
                     (${LAST_INDEX.name} >= ${LAST_WRITE.name})

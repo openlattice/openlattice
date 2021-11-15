@@ -112,7 +112,6 @@ import static com.openlattice.postgres.PostgresColumn.ORDINAL_POSITION;
 import static com.openlattice.postgres.PostgresColumn.ORGANIZATION;
 import static com.openlattice.postgres.PostgresColumn.ORGANIZATION_ID;
 import static com.openlattice.postgres.PostgresColumn.ORGANIZATION_IDS;
-import static com.openlattice.postgres.PostgresColumn.PARTITION;
 import static com.openlattice.postgres.PostgresColumn.PARTITIONS;
 import static com.openlattice.postgres.PostgresColumn.PARTITION_INDEX;
 import static com.openlattice.postgres.PostgresColumn.PERMISSION;
@@ -218,9 +217,8 @@ public final class PostgresTable {
             "deleted_entity_sets" )
             .addColumns( ID, PARTITIONS );
     public static final PostgresTableDefinition E                           =
-            new CitusDistributedTableDefinition( "e" )
+            new PostgresTableDefinition( "e" )
                     .addColumns(
-                            PARTITION,
                             SRC_ENTITY_SET_ID,
                             SRC_ENTITY_KEY_ID,
                             DST_ENTITY_SET_ID,
@@ -230,11 +228,9 @@ public final class PostgresTable {
                             VERSION,
                             VERSIONS,
                             LAST_TRANSPORT )
-                    .primaryKey( PARTITION,
-                            SRC_ENTITY_KEY_ID,
+                    .primaryKey( SRC_ENTITY_KEY_ID,
                             DST_ENTITY_KEY_ID,
-                            EDGE_ENTITY_KEY_ID )
-                    .distributionColumn( PARTITION );
+                            EDGE_ENTITY_KEY_ID );
     public static final PostgresTableDefinition ENTITY_SETS                 =
             new PostgresTableDefinition( "entity_sets" )
                     .addColumns(
@@ -336,8 +332,7 @@ public final class PostgresTable {
                     .primaryKey( USERNAME, DATABASE, CONNECTION_TYPE, IP_ADDRESS );
     public static final PostgresTableDefinition IDS                        =
             new CitusDistributedTableDefinition( "ids" )
-                    .addColumns( PARTITION,
-                            ENTITY_SET_ID,
+                    .addColumns( ENTITY_SET_ID,
                             ID_VALUE,
                             LINKING_ID,
                             VERSION,
@@ -349,8 +344,7 @@ public final class PostgresTable {
                             LAST_MIGRATE,
                             LAST_LINK_INDEX,
                             LAST_TRANSPORT )
-                    .primaryKey( ID_VALUE, PARTITION )
-                    .distributionColumn( PARTITION );
+                    .primaryKey( ID_VALUE );
     public static final PostgresTableDefinition ID_GENERATION              =
             new PostgresTableDefinition( "id_gen" )
                     .primaryKey( PARTITION_INDEX )

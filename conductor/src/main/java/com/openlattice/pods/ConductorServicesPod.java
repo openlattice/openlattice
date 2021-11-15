@@ -48,7 +48,16 @@ import com.openlattice.auditing.pods.AuditingConfigurationPod;
 import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.auth0.AwsAuth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
-import com.openlattice.authorization.*;
+import com.openlattice.authorization.AuthorizationManager;
+import com.openlattice.authorization.DbCredentialService;
+import com.openlattice.authorization.EdmAuthorizationHelper;
+import com.openlattice.authorization.HazelcastAclKeyReservationService;
+import com.openlattice.authorization.HazelcastAuthorizationService;
+import com.openlattice.authorization.HazelcastPrincipalsMapManager;
+import com.openlattice.authorization.HazelcastSecurableObjectResolveTypeService;
+import com.openlattice.authorization.Principals;
+import com.openlattice.authorization.PrincipalsMapManager;
+import com.openlattice.authorization.SecurableObjectResolveTypeService;
 import com.openlattice.authorization.initializers.AuthorizationInitializationDependencies;
 import com.openlattice.authorization.initializers.AuthorizationInitializationTask;
 import com.openlattice.authorization.mapstores.ResolvedPrincipalTreesMapLoader;
@@ -70,11 +79,10 @@ import com.openlattice.data.storage.DataDeletionService;
 import com.openlattice.data.storage.DataSourceResolver;
 import com.openlattice.data.storage.EntityDatastore;
 import com.openlattice.data.storage.IndexingMetadataManager;
-import com.openlattice.data.storage.PostgresEntityDataQueryService;
-import com.openlattice.data.storage.PostgresEntityDatastore;
 import com.openlattice.data.storage.PostgresEntitySetSizesInitializationTask;
 import com.openlattice.data.storage.PostgresEntitySetSizesTaskDependency;
-import com.openlattice.data.storage.partitions.PartitionManager;
+import com.openlattice.data.storage.postgres.PostgresEntityDataQueryService;
+import com.openlattice.data.storage.postgres.PostgresEntityDatastore;
 import com.openlattice.datasets.DataSetService;
 import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
@@ -305,7 +313,6 @@ public class ConductorServicesPod {
     public OrganizationsInitializationDependencies organizationBootstrapDependencies() {
         return new OrganizationsInitializationDependencies( organizationsManager(),
                 securePrincipalsManager(),
-                partitionManager(),
                 conductorConfiguration() );
     }
 
@@ -362,7 +369,6 @@ public class ConductorServicesPod {
                 securePrincipalsManager(),
                 entitySetManager(),
                 authorizationManager(),
-                partitionManager(),
                 organizationsManager()
         );
     }
@@ -415,7 +421,6 @@ public class ConductorServicesPod {
                 authorizationManager(),
                 securePrincipalsManager(),
                 phoneNumberService(),
-                partitionManager(),
                 assembler(),
                 collaborationService()
         );
@@ -522,14 +527,8 @@ public class ConductorServicesPod {
     public PostgresEntityDataQueryService dataQueryService() {
         return new PostgresEntityDataQueryService(
                 dataSourceResolver(),
-                byteBlobDataManager,
-                partitionManager()
+                byteBlobDataManager
         );
-    }
-
-    @Bean
-    PartitionManager partitionManager() {
-        return new PartitionManager( hazelcastInstance, hikariDataSource );
     }
 
     @Bean
@@ -561,7 +560,6 @@ public class ConductorServicesPod {
                 eventBus,
                 aclKeyReservationService(),
                 authorizationManager(),
-                partitionManager(),
                 dataModelService(),
                 hikariDataSource,
                 dataSetService(),
@@ -574,7 +572,6 @@ public class ConductorServicesPod {
         return new Graph(
                 dataSourceResolver(),
                 entitySetManager(),
-                partitionManager(),
                 dataQueryService(),
                 idService(),
                 metricRegistry
@@ -598,13 +595,13 @@ public class ConductorServicesPod {
     public EntityKeyIdService idService() {
         return new PostgresEntityKeyIdService(
                 dataSourceResolver(),
-                idGenerationService(),
-                partitionManager() );
+                idGenerationService()
+        );
     }
 
     @Bean
     public IndexingMetadataManager indexingMetadataManager() {
-        return new IndexingMetadataManager( dataSourceResolver(), partitionManager() );
+        return new IndexingMetadataManager( dataSourceResolver() );
     }
 
     @Bean
@@ -629,7 +626,7 @@ public class ConductorServicesPod {
 
     @Bean
     public LinkingQueryService lqs() {
-        return new PostgresLinkingQueryService( hikariDataSource, partitionManager() );
+        return new PostgresLinkingQueryService( hikariDataSource );
     }
 
     @Bean
@@ -732,8 +729,7 @@ public class ConductorServicesPod {
                 authorizationManager(),
                 entityDatastore(),
                 graphService(),
-                jobService(),
-                partitionManager()
+                jobService()
         );
     }
 

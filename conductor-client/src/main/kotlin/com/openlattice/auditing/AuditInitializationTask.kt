@@ -88,7 +88,6 @@ class AuditInitializationTask(
                         contacts = mutableSetOf(),
                         organizationId = IdConstants.GLOBAL_ORGANIZATION_ID.id,
                         flags = EnumSet.of(EntitySetFlag.AUDIT),
-                        partitions = LinkedHashSet(dependencies.partitionManager.getAllPartitions())
                 )
 
                 dependencies.entitySetManager.createEntitySet(adminRolePrincipal, edmAuditEntitySet)
