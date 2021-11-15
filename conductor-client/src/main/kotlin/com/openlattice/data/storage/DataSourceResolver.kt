@@ -43,4 +43,5 @@ open class DataSourceResolver @JvmOverloads constructor(
 
     fun getDataSource(dataSourceName: String): HikariDataSource = dataSourceManager.getDataSource(dataSourceName)
     fun getDefaultDataSource(): HikariDataSource = dataSourceManager.getDefaultDataSource()
+    fun getAllDataSources(): Collection<HikariDataSource> = dataSourceManager.dataSources.values
 }

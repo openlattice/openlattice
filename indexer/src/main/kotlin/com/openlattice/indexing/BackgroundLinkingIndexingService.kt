@@ -29,6 +29,7 @@ import com.hazelcast.map.listener.EntryEvictedListener
 import com.hazelcast.query.Predicates
 import com.hazelcast.spi.exception.DistributedObjectDestroyedException
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
+import com.openlattice.data.storage.DataSourceResolver
 import com.openlattice.data.storage.EntityDatastore
 import com.openlattice.data.storage.IndexingMetadataManager
 import com.openlattice.data.storage.MetadataOption
@@ -61,7 +62,7 @@ internal const val LINKING_INDEX_QUERY_LIMIT = 3000
 class BackgroundLinkingIndexingService(
         hazelcastInstance: HazelcastInstance,
         private val executor: ListeningExecutorService,
-        private val hds: HikariDataSource,
+        private val dataSourceResolver: DataSourceResolver,
         private val elasticsearchApi: ConductorElasticsearchApi,
         private val dataManager: IndexingMetadataManager,
         private val dataStore: EntityDatastore,
@@ -101,13 +102,13 @@ class BackgroundLinkingIndexingService(
      * Queue containing linking ids, which need to be re-indexed in elasticsearch.
      */
     private val indexCandidates =
-            HazelcastQueue.LINKING_INDEXING.getQueue( hazelcastInstance )
+            HazelcastQueue.LINKING_INDEXING.getQueue(hazelcastInstance)
 
     /**
      * Queue containing linking ids, which need to be un-indexed (deleted) from elasticsearch.
      */
     private val unIndexCandidates =
-            HazelcastQueue.LINKING_UNINDEXING.getQueue( hazelcastInstance )
+            HazelcastQueue.LINKING_UNINDEXING.getQueue(hazelcastInstance)
 
 
     @Suppress("UNUSED")
@@ -366,17 +367,19 @@ class BackgroundLinkingIndexingService(
      * origin ids as a list of arrays with 2 elements.
      * Either because of property change or because of partial entity deletion(soft or hard) from the cluster.
      */
-    private fun getDirtyLinkingIds(): BasePostgresIterable<Triple<List<Array<UUID>>, UUID, OffsetDateTime>> {
-        return BasePostgresIterable(
-                StatementHolderSupplier(hds, selectDirtyLinkingIds, FETCH_SIZE)
-        ) { rs ->
-            val entityDataKeysRaw = PostgresArrays.getUuidArrayOfArrays(rs, ENTITY_DATA_KEY)!!.toList()
-            Triple(
-                    entityDataKeysRaw,
-                    ResultSetAdapters.linkingId(rs),
-                    ResultSetAdapters.lastWriteTyped(rs)
-            )
-        }
+    private fun getDirtyLinkingIds(): Iterable<Triple<List<Array<UUID>>, UUID, OffsetDateTime>> {
+        return dataSourceResolver.getAllDataSources().asSequence().map { hds ->
+            BasePostgresIterable(
+                    StatementHolderSupplier(hds, selectDirtyLinkingIds, FETCH_SIZE)
+            ) { rs ->
+                val entityDataKeysRaw = PostgresArrays.getUuidArrayOfArrays(rs, ENTITY_DATA_KEY)!!.toList()
+                Triple(
+                        entityDataKeysRaw,
+                        ResultSetAdapters.linkingId(rs),
+                        ResultSetAdapters.lastWriteTyped(rs)
+                )
+            }
+        }.flatten().asIterable()
     }
 
 
@@ -384,17 +387,19 @@ class BackgroundLinkingIndexingService(
      * Returns the linking ids which are needing to be un-indexed (to delete those documents) along with last_write and
      * their entity set ids and origin ids as a list of arrays with 2 elements.
      */
-    private fun getDeletedLinkingIds(): BasePostgresIterable<Triple<List<Array<UUID>>, UUID, OffsetDateTime>> {
-        return BasePostgresIterable(
-                StatementHolderSupplier(hds, selectDeletedLinkingIds, FETCH_SIZE)
-        ) { rs ->
-            val entityDataKeysRaw = PostgresArrays.getUuidArrayOfArrays(rs, ENTITY_DATA_KEY)!!.toList()
-            Triple(
-                    entityDataKeysRaw,
-                    ResultSetAdapters.linkingId(rs),
-                    ResultSetAdapters.lastWriteTyped(rs)
-            )
-        }
+    private fun getDeletedLinkingIds(): Iterable<Triple<List<Array<UUID>>, UUID, OffsetDateTime>> {
+        return dataSourceResolver.getAllDataSources().asSequence().map { hds ->
+            BasePostgresIterable(
+                    StatementHolderSupplier(hds, selectDeletedLinkingIds, FETCH_SIZE)
+            ) { rs ->
+                val entityDataKeysRaw = PostgresArrays.getUuidArrayOfArrays(rs, ENTITY_DATA_KEY)!!.toList()
+                Triple(
+                        entityDataKeysRaw,
+                        ResultSetAdapters.linkingId(rs),
+                        ResultSetAdapters.lastWriteTyped(rs)
+                )
+            }
+        }.flatten().asIterable()
     }
 }
 

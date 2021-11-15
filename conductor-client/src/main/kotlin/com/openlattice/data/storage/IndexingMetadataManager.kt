@@ -19,7 +19,9 @@ import java.time.OffsetDateTime
 import java.util.*
 
 
-class IndexingMetadataManager(private val hds: HikariDataSource, private val partitionManager: PartitionManager) {
+class IndexingMetadataManager(
+        private val dataSourceResolver: DataSourceResolver, private val partitionManager: PartitionManager
+) {
 
     /**
      * Marks entities as indexed by setting last_index = last_write.
@@ -31,29 +33,34 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
         val entitySetPartitions = partitionManager
                 .getPartitionsByEntitySetId(entityKeyIdsWithLastWrite.keys)
                 .mapValues { it.value.toList() }
-        return hds.connection.use { connection ->
-            val ps = connection.prepareStatement(updateLastIndexSql)
-            entityKeyIdsWithLastWrite.map { (entitySetId, entities) ->
-                val partitions = entitySetPartitions.getValue(entitySetId)
-                entities.entries
-                        .groupBy({ getPartition(it.key, partitions) }, { it.toPair() })
-                        .toSortedMap()
-                        .map { (partition, idsAndExpirations) ->
-                            val idsAndExpirationsMap = idsAndExpirations.toMap()
-                            prepareIndexQuery(
-                                    ps,
-                                    entitySetId,
-                                    partition,
-                                    idsAndExpirationsMap
-                            )
-                            ps.executeBatch().sum()
+        return getByDataSource(dataSourceResolver, entityKeyIdsWithLastWrite) { it }
+                .map { (dataSourceName, entityKeyIdsWithLastWriteForDataSource) ->
+                    val hds = dataSourceResolver.getDataSource(dataSourceName)
+                    hds.connection.use { connection ->
+                        val ps = connection.prepareStatement(updateLastIndexSql)
+                        entityKeyIdsWithLastWriteForDataSource.map { (entitySetId, entities) ->
+                            val partitions = entitySetPartitions.getValue(entitySetId)
+                            entities.entries
+                                    .groupBy({ getPartition(it.key, partitions) }, { it.toPair() })
+                                    .toSortedMap()
+                                    .map { (partition, idsAndExpirations) ->
+                                        val idsAndExpirationsMap = idsAndExpirations.toMap()
+                                        prepareIndexQuery(
+                                                ps,
+                                                entitySetId,
+                                                partition,
+                                                idsAndExpirationsMap
+                                        )
+                                        ps.executeBatch().sum()
+                                    }.sum()
                         }.sum()
-            }.sum()
-        }
+                    }
 
+                }.sum()
     }
 
     /**
+     * TODO: I have no idea if this still works.
      * Marks linking entities as indexed by setting last_index = last_write.
      * @param linkingIdsWithLastWrite Map of (normal) entity_set_id to origin id to linking_id to last_write.
      * @return The number of rows affected by this update: the number of normal entities associated to the provided
@@ -66,32 +73,36 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                 .getPartitionsByEntitySetId(linkingIdsWithLastWrite.keys)
                 .mapValues { it.value.toList() }
 
-        return hds.connection.use { connection ->
-            val ps = connection.prepareStatement(updateLastLinkingIndexSql)
-            linkingIdsWithLastWrite.map { (entitySetId, entities) ->
-                val partitions = entitySetPartitions.getValue(entitySetId)
-                entities.entries
-                        .groupBy({ getPartition(it.key, partitions) }, { it.value })
-                        .toSortedMap()
-                        .map { (partition, idsAndExpiration) ->
+        return getByDataSource(dataSourceResolver, linkingIdsWithLastWrite) { it }
+                .map { (dataSourceName, linkingIdsWithLastWriteForDataSource) ->
+                    val hds = dataSourceResolver.getDataSource(dataSourceName)
+                    hds.connection.use { connection ->
+                        val ps = connection.prepareStatement(updateLastLinkingIndexSql)
+                        linkingIdsWithLastWriteForDataSource.map { (entitySetId, entities) ->
+                            val partitions = entitySetPartitions.getValue(entitySetId)
+                            entities.entries
+                                    .groupBy({ getPartition(it.key, partitions) }, { it.value })
+                                    .toSortedMap()
+                                    .map { (partition, idsAndExpiration) ->
 
 
-                            val mergedLinkingIdsWithLastWrite = idsAndExpiration
-                                    .fold(mutableMapOf<UUID, OffsetDateTime>()) { acc, map ->
-                                        acc.putAll(map)
-                                        acc
-                                    }
+                                        val mergedLinkingIdsWithLastWrite = idsAndExpiration
+                                                .fold(mutableMapOf<UUID, OffsetDateTime>()) { acc, map ->
+                                                    acc.putAll(map)
+                                                    acc
+                                                }
 
-                            prepareIndexQuery(
-                                    ps,
-                                    entitySetId,
-                                    partition,
-                                    mergedLinkingIdsWithLastWrite
-                            )
-                            ps.executeBatch().sum()
+                                        prepareIndexQuery(
+                                                ps,
+                                                entitySetId,
+                                                partition,
+                                                mergedLinkingIdsWithLastWrite
+                                        )
+                                        ps.executeBatch().sum()
+                                    }.sum()
                         }.sum()
-            }.sum()
-        }
+                    }
+                }.sum()
 
     }
 
@@ -121,25 +132,29 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                 entityKeyIds.keys
         ).mapValues { it.value.toList() }
 
-        return hds.connection.use { connection ->
-            val ps = connection.prepareStatement(markLastIndexSql)
-            entityKeyIds.map { (entitySetId, entityKeyIds) ->
-                val partitions = entitySetPartitions.getValue(entitySetId)
+        return getByDataSource(dataSourceResolver, entityKeyIds) { it }
+                .map { (dataSourceName, entityKeyIdsForDataSource) ->
+                    val hds = dataSourceResolver.getDataSource(dataSourceName)
+                    hds.connection.use { connection ->
+                        val ps = connection.prepareStatement(markLastIndexSql)
+                        entityKeyIdsForDataSource.map { (entitySetId, entityKeyIdSet) ->
+                            val partitions = entitySetPartitions.getValue(entitySetId)
 
-                getIdsByPartition(entityKeyIds, partitions)
-                        .toSortedMap()
-                        .map { (partition, ids) ->
+                            getIdsByPartition(entityKeyIdSet, partitions)
+                                    .toSortedMap()
+                                    .map { (partition, ids) ->
 
-                            ids.forEach { id ->
-                                ps.setObject(1, entitySetId)
-                                ps.setObject(2, id)
-                                ps.setInt(3, partition)
-                                ps.addBatch()
-                            }
-                            ps.executeBatch().sum()
+                                        ids.forEach { id ->
+                                            ps.setObject(1, entitySetId)
+                                            ps.setObject(2, id)
+                                            ps.setInt(3, partition)
+                                            ps.addBatch()
+                                        }
+                                        ps.executeBatch().sum()
+                                    }.sum()
                         }.sum()
-            }.sum()
-        }
+                    }
+                }.sum()
     }
 
     /**
@@ -148,6 +163,7 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
      * @param entitySetId The id of the (normal) entity set id.
      */
     fun markAsUnIndexed(entitySetId: UUID): Int {
+        val hds = dataSourceResolver.resolve(entitySetId)
         return hds.connection.use { connection ->
             val ps = connection.prepareStatement(markEntitySetLastIndexSql)
             partitionManager.getEntitySetPartitions(entitySetId).sorted().map { partition ->
@@ -164,17 +180,21 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
         val entitySetPartitions = partitionManager.getPartitionsByEntitySetId(entitySetIds)
         val query = markEntitySetsAsNeedsToBeIndexedSql(linking)
 
-        return hds.connection.use { connection ->
-            val ps = connection.prepareStatement(query)
-            entitySetIds.map { entitySetId ->
-                entitySetPartitions.getValue(entitySetId).sorted().map { partition ->
-                    ps.setObject(1, entitySetId)
-                    ps.setInt(2, partition)
-                    ps.addBatch()
-                }
-                ps.executeBatch().sum()
-            }.sum()
-        }
+        return getByDataSource(dataSourceResolver, entitySetIds) { it }
+                .map { (dataSourceName, entitySetIdsForDataSource) ->
+                    val hds = dataSourceResolver.getDataSource(dataSourceName)
+                    hds.connection.use { connection ->
+                        val ps = connection.prepareStatement(query)
+                        entitySetIdsForDataSource.sumOf { entitySetId ->
+                            entitySetPartitions.getValue(entitySetId).sorted().map { partition ->
+                                ps.setObject(1, entitySetId)
+                                ps.setInt(2, partition)
+                                ps.addBatch()
+                            }
+                            ps.executeBatch().sum()
+                        }
+                    }
+                }.sum()
     }
 
     fun markAsNeedsToBeLinked(normalEntityDataKeys: Set<EntityDataKey>): Int {
@@ -185,24 +205,28 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                 normalEntityKeys.keys
         ).mapValues { it.value.toList() }
 
-        return hds.connection.use { connection ->
-            val ps = connection.prepareStatement(markAsNeedsToBeLinkedSql)
-            normalEntityKeys.map { (entitySetId, entityKeyIds) ->
+        return getByDataSource(dataSourceResolver, normalEntityKeys) { it }
+                .map { (dataSourceName, normalEntityDataKeyIdsForDataSource) ->
+                    val hds = dataSourceResolver.getDataSource(dataSourceName)
+                    hds.connection.use { connection ->
+                        val ps = connection.prepareStatement(markAsNeedsToBeLinkedSql)
+                        normalEntityDataKeyIdsForDataSource.map { (entitySetId, entityKeyIds) ->
 
-                val partitions = entitySetPartitions.getValue(entitySetId)
-                getIdsByPartition(entityKeyIds, partitions)
-                        .toSortedMap()
-                        .map { (partition, ids) ->
-                            ids.forEach { id ->
-                                ps.setObject(1, entitySetId)
-                                ps.setObject(2, id)
-                                ps.setInt(3, partition)
-                                ps.addBatch()
-                            }
-                            ps.executeBatch().sum()
+                            val partitions = entitySetPartitions.getValue(entitySetId)
+                            getIdsByPartition(entityKeyIds, partitions)
+                                    .toSortedMap()
+                                    .map { (partition, ids) ->
+                                        ids.forEach { id ->
+                                            ps.setObject(1, entitySetId)
+                                            ps.setObject(2, id)
+                                            ps.setInt(3, partition)
+                                            ps.addBatch()
+                                        }
+                                        ps.executeBatch().sum()
+                                    }.sum()
                         }.sum()
-            }.sum()
-        }
+                    }
+                }.sum()
     }
 }
 // @formatter:off
