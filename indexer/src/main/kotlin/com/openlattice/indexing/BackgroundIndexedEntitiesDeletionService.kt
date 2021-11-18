@@ -22,7 +22,8 @@ package com.openlattice.indexing
 
 import com.google.common.base.Stopwatch
 import com.hazelcast.core.HazelcastInstance
-import com.openlattice.data.storage.PostgresEntityDataQueryService
+import com.openlattice.data.storage.DataSourceResolver
+import com.openlattice.data.storage.postgres.PostgresEntityDataQueryService
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.indexing.configuration.IndexerConfiguration
 import com.openlattice.postgres.DataTables.LAST_INDEX
@@ -40,7 +41,6 @@ import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.openlattice.rhizome.DelegatedIntSet
-import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import java.util.*
@@ -57,7 +57,7 @@ const val DELETE_RATE = 30_000L
  */
 class BackgroundIndexedEntitiesDeletionService(
         hazelcastInstance: HazelcastInstance,
-        private val hds: HikariDataSource,
+        private val dataSourceResolver: DataSourceResolver,
         private val indexerConfiguration: IndexerConfiguration,
         private val dataQueryService: PostgresEntityDataQueryService
 ) {
@@ -137,7 +137,7 @@ class BackgroundIndexedEntitiesDeletionService(
         var deleteCount = 0
 
         while (deletableIds.isNotEmpty()) {
-            deleteCount += dataQueryService.deleteEntities(entitySet.id, deletableIds, entitySet.partitions).numUpdates
+            deleteCount += dataQueryService.deleteEntities(entitySet.id, deletableIds).numUpdates
             deleteFromSyncIds(entitySet.id, deletableIds)
             deletableIds = getDeletedIdsBatch(entitySet, isCurrentEntitySet).toSet()
         }
@@ -158,7 +158,7 @@ class BackgroundIndexedEntitiesDeletionService(
             isCurrentEntitySet: Boolean = true
     ): BasePostgresIterable<UUID> {
         val sql = if (isCurrentEntitySet) selectCurrentEntitySetIdsBatch else selectDeletedEntitySetIdsBatch
-
+        val hds = dataSourceResolver.resolve(entitySet.id)
         return BasePostgresIterable(
                 PreparedStatementHolderSupplier(hds, sql) {
                     val partitionsArray = PostgresArrays.createIntArray(it.connection, entitySet.partitions)
@@ -173,7 +173,6 @@ class BackgroundIndexedEntitiesDeletionService(
         FROM ${IDS.name}
         WHERE
           ${ENTITY_SET_ID.name} = ?
-          AND ${PARTITION.name} = ANY(?)
         LIMIT $DELETE_SIZE
     """.trimIndent()
 
@@ -187,7 +186,6 @@ class BackgroundIndexedEntitiesDeletionService(
                 FROM ${IDS.name}
                 WHERE
                   ${ENTITY_SET_ID.name} = ? AND
-                  ${PARTITION.name} = ANY(?) AND
                   ${VERSION.name} = 0 AND
                   (
                     (${LAST_INDEX.name} >= ${LAST_WRITE.name})
@@ -198,6 +196,7 @@ class BackgroundIndexedEntitiesDeletionService(
             """.trimIndent()
 
     private fun deleteFromSyncIds(entitySetId: UUID, entityKeyIds: Set<UUID>) {
+        val hds = dataSourceResolver.resolve(entitySetId)
         hds.connection.use { conn ->
             conn.prepareStatement(deleteFromSyncIdsSql).use { ps ->
                 ps.setObject(1, entitySetId)

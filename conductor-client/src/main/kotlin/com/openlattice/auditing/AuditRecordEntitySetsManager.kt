@@ -30,7 +30,6 @@ import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.Permission
 import com.openlattice.authorization.Principal
 import com.openlattice.authorization.PrincipalType
-import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.processors.CreateOrUpdateAuditRecordEntitySetsProcessor
@@ -58,7 +57,6 @@ private val logger = LoggerFactory.getLogger(AuditRecordEntitySetsManager::class
 class AuditRecordEntitySetsManager(
         val auditingTypes: AuditingTypes,
         private val entitySetManager: EntitySetManager,
-        private val partitionManager: PartitionManager,
         private val authorizationManager: AuthorizationManager,
         hazelcastInstance: HazelcastInstance
 
@@ -370,10 +368,6 @@ class AuditRecordEntitySetsManager(
                 partitions = partitions as LinkedHashSet<Int>
         )
 
-        if (partitions.isEmpty()) {
-            return partitionManager.allocateAllPartitions(entitySet)
-        }
-
         return entitySet
     }
 
@@ -397,10 +391,6 @@ class AuditRecordEntitySetsManager(
                 flags = EnumSet.of(EntitySetFlag.AUDIT),
                 partitions = partitions as LinkedHashSet<Int>
         )
-
-        if (partitions.isEmpty()) {
-            return partitionManager.allocateAllPartitions(entitySet)
-        }
 
         return entitySet
     }

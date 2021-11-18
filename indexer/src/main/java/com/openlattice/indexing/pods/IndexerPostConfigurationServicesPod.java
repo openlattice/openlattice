@@ -35,10 +35,10 @@ import com.openlattice.authorization.PrincipalsMapManager;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.DataDeletionManager;
 import com.openlattice.data.DataGraphManager;
+import com.openlattice.data.storage.DataSourceResolver;
 import com.openlattice.data.storage.EntityDatastore;
 import com.openlattice.data.storage.IndexingMetadataManager;
-import com.openlattice.data.storage.PostgresEntityDataQueryService;
-import com.openlattice.data.storage.partitions.PartitionManager;
+import com.openlattice.data.storage.postgres.PostgresEntityDataQueryService;
 import com.openlattice.datasets.DataSetService;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.EntitySetManager;
@@ -105,9 +105,6 @@ public class IndexerPostConfigurationServicesPod {
     @Inject
     private ExternalDatabaseConnectionManager externalDbConnMan;
 
-    // @Inject
-    // private TransporterService transporterService;
-
     @Inject
     private OrganizationExternalDatabaseConfiguration organizationExternalDatabaseConfiguration;
 
@@ -145,16 +142,14 @@ public class IndexerPostConfigurationServicesPod {
     private EdmService dataModelService;
 
     @Inject
+    private DataSourceResolver resolver;
+
+    @Inject
     private GraphService graphApi;
 
     @Bean
-    public PartitionManager partitionManager() {
-        return new PartitionManager( hazelcastInstance, hikariDataSource );
-    }
-
-    @Bean
     public IndexingMetadataManager indexingMetadataManager() {
-        return new IndexingMetadataManager( hikariDataSource, partitionManager() );
+        return new IndexingMetadataManager( resolver );
     }
 
     @Bean
@@ -162,7 +157,7 @@ public class IndexerPostConfigurationServicesPod {
         return new BackgroundIndexingService(
                 hazelcastInstance,
                 indexerConfiguration,
-                hikariDataSource,
+                resolver,
                 dataQueryService,
                 elasticsearchApi,
                 indexingMetadataManager() );
@@ -173,7 +168,7 @@ public class IndexerPostConfigurationServicesPod {
         return new BackgroundLinkingIndexingService(
                 hazelcastInstance,
                 executor,
-                hikariDataSource,
+                resolver,
                 elasticsearchApi,
                 indexingMetadataManager(),
                 entityDatastore,
@@ -184,7 +179,7 @@ public class IndexerPostConfigurationServicesPod {
     public BackgroundIndexedEntitiesDeletionService backgroundIndexedEntitiesDeletionService() {
         return new BackgroundIndexedEntitiesDeletionService(
                 hazelcastInstance,
-                hikariDataSource,
+                resolver,
                 indexerConfiguration,
                 dataQueryService
         );
@@ -204,6 +199,8 @@ public class IndexerPostConfigurationServicesPod {
 
     @Bean
     public ExternalDatabaseManagementService edms() {
+        //Hikari datasource is only used for hba record storage/retrieval, which is currently unused/untested/probably
+        //broken functionality
         return new ExternalDatabaseManagementService(
                 hazelcastInstance,
                 externalDbConnMan,
@@ -238,7 +235,6 @@ public class IndexerPostConfigurationServicesPod {
     public IndexingService indexingService() {
         return new IndexingService( hikariDataSource,
                 backgroundIndexingService(),
-                partitionManager(),
                 executor,
                 hazelcastInstance );
     }
