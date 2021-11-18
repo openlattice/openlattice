@@ -666,6 +666,23 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     }
 
     @RequestMapping(
+            path = { ENTITY_TYPES + ENTITY_TYPE_ID_PATH + COUNT },
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            method = RequestMethod.POST)
+
+    @Override
+    @Timed
+    public Long countEntitiesInSets(@PathVariable( ENTITY_TYPE_ID ) UUID entityTypeId,
+                                    @RequestBody Set<UUID> entitySetIds) {
+
+        // check entity sets as authorized
+        // ensureReadAccess
+        // check entity sets are of the provided type
+        // build CountRequest with terms "entitySetId" to the list of entitySetIds
+        return searchService.executeCount(entityTypeId, entitySetIds);
+    }
+
+    @RequestMapping(
             path = { EDM + INDEX },
             method = RequestMethod.GET )
     @Override
