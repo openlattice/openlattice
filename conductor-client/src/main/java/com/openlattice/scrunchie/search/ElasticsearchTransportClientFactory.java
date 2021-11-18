@@ -21,9 +21,13 @@
 package com.openlattice.scrunchie.search;
 
 import com.google.common.util.concurrent.RateLimiter;
+import org.apache.http.HttpHost;
 import org.elasticsearch.action.admin.cluster.state.ClusterStateRequest;
 import org.elasticsearch.action.admin.cluster.state.ClusterStateResponse;
 import org.elasticsearch.client.Client;
+import org.elasticsearch.client.Node;
+import org.elasticsearch.client.RestClient;
+import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.cluster.node.DiscoveryNode;
@@ -33,6 +37,7 @@ import org.elasticsearch.transport.client.PreBuiltTransportClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.List;
@@ -42,37 +47,40 @@ import java.util.concurrent.Future;
 public class ElasticsearchTransportClientFactory {
     public static final  Logger      logger = LoggerFactory.getLogger( ElasticsearchTransportClientFactory.class );
     private static final RateLimiter r      = RateLimiter.create( 1.0 / 30.0 );
-    private String  clientTransportHost;
+    private String clientHost;
     private Integer clientTransportPort;
+    private Integer clientRestPort;
     private String  cluster;
 
     public ElasticsearchTransportClientFactory(
-            String clientTransportHost,
+            String clientHost,
             Integer clientTransportPort,
+            Integer clientRestPort,
             String cluster ) {
-        this.clientTransportHost = clientTransportHost;
+        this.clientHost = clientHost;
         this.clientTransportPort = clientTransportPort;
+        this.clientRestPort = clientRestPort;
         this.cluster = cluster;
     }
 
     public Client getClient() {
-        if ( clientTransportHost == null ) {
+        if ( clientHost == null ) {
             logger.info( "no server passed in, logging to database" );
             return null;
         }
 
-        logger.info( "getting kindling elasticsearch client on " + clientTransportHost + ":" + clientTransportPort
+        logger.info( "getting kindling elasticsearch transport client on " + clientHost + ":" + clientTransportPort
                 + " with elasticsearch cluster " + cluster );
         System.setProperty( "es.set.netty.runtime.available.processors", "false" );
         Settings settings = Settings.builder().put( "cluster.name", cluster ).build();
         TransportClient client = new PreBuiltTransportClient( settings );
         try {
             client.addTransportAddress( new TransportAddress(
-                    InetAddress.getByName( clientTransportHost ),
+                    InetAddress.getByName(clientHost),
                     clientTransportPort )
             );
         } catch ( UnknownHostException e ) {
-            throw new IllegalStateException( "Unable to resolve elasticsearch host: " + this.clientTransportHost, e );
+            throw new IllegalStateException( "Unable to resolve elasticsearch host: " + this.clientHost, e );
         }
 
         if ( isConnected( client ) ) {
@@ -80,6 +88,51 @@ public class ElasticsearchTransportClientFactory {
         } else {
             return null;
         }
+    }
+
+    public RestHighLevelClient getRestClient() {
+        if ( clientHost == null ) {
+            logger.info( "no server passed in, logging to database" );
+            return null;
+        }
+
+        logger.info( "getting kindling elasticsearch rest client on " + clientHost + ":" + clientRestPort
+                + " with elasticsearch cluster " + cluster );
+        System.setProperty( "es.set.netty.runtime.available.processors", "false" );
+
+        try {
+            RestHighLevelClient client = new RestHighLevelClient(
+                    RestClient.builder(new HttpHost(clientHost, clientRestPort, "http"))
+            );
+            if ( isRestConnected( client.getLowLevelClient() ) ) {
+                return client;
+            } else {
+                return null;
+            }
+        } catch ( Exception e ) {
+            throw new IllegalStateException( "Unable to resolve elasticsearch host: " + this.clientHost, e );
+        }
+    }
+
+    public static boolean isRestConnected(RestClient restClient) {
+        if ( !r.tryAcquire() ) {
+            return true;
+        }
+        if ( restClient == null ) {
+            logger.info( "not connected to elasticsearch" );
+            return false;
+        }
+        List<Node> restNodes = restClient.getNodes();
+        if (restNodes.isEmpty()) {
+            try {
+                restClient.close();
+            } catch (IOException e) {
+                logger.info("no elasticsearch nodes found. connection closed.");
+                return false;
+            }
+        }
+        logger.info( "connected to elasticsearch rest nodes: " + restNodes.toString() );
+        return true;
     }
 
     public static boolean isConnected( Client someClient ) {
