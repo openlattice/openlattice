@@ -21,6 +21,7 @@
 
 package com.openlattice.data.ids
 
+import com.geekbeast.configuration.postgres.PostgresFlavor
 import com.openlattice.IdConstants
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.EntityKey
@@ -29,10 +30,9 @@ import com.openlattice.data.storage.DataSourceResolver
 import com.openlattice.data.storage.getByDataSource
 import com.openlattice.data.util.PostgresDataHasher
 import com.openlattice.ids.HazelcastIdGenerationService
-import com.openlattice.postgres.PostgresArrays
+import com.openlattice.postgres.*
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.*
-import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
@@ -43,13 +43,17 @@ import java.sql.PreparedStatement
 import java.util.*
 import kotlin.collections.HashMap
 
-internal val entityKeyIdsSqlNotIdWritten = "SELECT * FROM ${SYNC_IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} = ANY(?) AND NOT ${ID_WRITTEN.name} "
-private val entityKeyIdsSqlAny = "SELECT * FROM ${SYNC_IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} = ANY(?)"
+internal val entityKeyIdsSqlNotIdWritten =
+    "SELECT * FROM ${SYNC_IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} = ANY(?) AND NOT ${ID_WRITTEN.name} "
+private val entityKeyIdsSqlAny =
+    "SELECT * FROM ${SYNC_IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} = ANY(?)"
 private val entityKeyIdSql = "SELECT * FROM ${SYNC_IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} = ? "
-private val linkedEntityKeyIdsSql = "SELECT ${ID.name},${LINKING_ID.name} as $ENTITY_KEY_IDS_FIELD FROM ${IDS.name} WHERE ${ID.name} = ANY(?) AND ${LINKING_ID.name} IS NOT NULL"
+private val linkedEntityKeyIdsSql =
+    "SELECT ${ID.name},${LINKING_ID.name} as $ENTITY_KEY_IDS_FIELD FROM ${IDS.name} WHERE ${ID.name} = ANY(?) AND ${LINKING_ID.name} IS NOT NULL"
 
 //Only update ids the need updating to minimize i/o
-private val UPDATE_ID_WRITTEN = "UPDATE ${SYNC_IDS.name} SET ${ID_WRITTEN.name} = TRUE WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} = ? AND NOT ${ID_WRITTEN.name}"
+private val UPDATE_ID_WRITTEN =
+    "UPDATE ${SYNC_IDS.name} SET ${ID_WRITTEN.name} = TRUE WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} = ? AND NOT ${ID_WRITTEN.name}"
 private val INSERT_SQL = "INSERT INTO ${IDS.name} (${ENTITY_SET_ID.name},${ID.name}) VALUES(?,?) ON CONFLICT DO NOTHING"
 private val INSERT_ID_TO_DATA_SQL = "INSERT INTO ${DATA.name} (" +
         "${ENTITY_SET_ID.name}," +
@@ -58,7 +62,8 @@ private val INSERT_ID_TO_DATA_SQL = "INSERT INTO ${DATA.name} (" +
         "${VERSION.name}," +
         "${HASH.name}) VALUES (?,?,?,?,?) " +
         "ON CONFLICT DO NOTHING"
-internal val INSERT_SYNC_SQL = "INSERT INTO ${SYNC_IDS.name} (${ENTITY_SET_ID.name},${ENTITY_ID.name},${ID.name}) VALUES(?,?,?) ON CONFLICT DO NOTHING"
+internal val INSERT_SYNC_SQL =
+    "INSERT INTO ${SYNC_IDS.name} (${ENTITY_SET_ID.name},${ENTITY_ID.name},${ID.name}) VALUES(?,?,?) ON CONFLICT DO NOTHING"
 
 private val logger = LoggerFactory.getLogger(PostgresEntityKeyIdService::class.java)
 
@@ -69,8 +74,8 @@ private val logger = LoggerFactory.getLogger(PostgresEntityKeyIdService::class.j
  */
 @Service
 class PostgresEntityKeyIdService(
-        private val dataSourceResolver: DataSourceResolver,
-        private val idGenerationService: HazelcastIdGenerationService
+    private val dataSourceResolver: DataSourceResolver,
+    private val idGenerationService: HazelcastIdGenerationService
 ) : EntityKeyIdService {
 
     private fun genEntityKeyIds(entityIds: Set<EntityKey>): Map<EntityKey, UUID> {
@@ -80,8 +85,8 @@ class PostgresEntityKeyIdService(
     }
 
     private fun storeEntityKeyIdReservations(
-            entitySetId: UUID,
-            entityKeyIds: Set<UUID>,
+        entitySetId: UUID,
+        entityKeyIds: Set<UUID>,
     ) {
         val hds = dataSourceResolver.resolve(entitySetId)
 
@@ -110,8 +115,9 @@ class PostgresEntityKeyIdService(
         val entityKeyIdsByDatasource = getEntityKeyIdsByDataSource(entityKeyIds)
 
         return entityKeyIdsByDatasource.map { (datasourceName, entityKeyIdGroup) ->
+            val flavor = dataSourceResolver.getFlavor(datasourceName)
             dataSourceResolver.getDataSource(datasourceName).connection.use { connection ->
-                storeEntityKeyIds(connection, entityKeyIdGroup, idGenerationService)
+                storeEntityKeyIds(connection, entityKeyIdGroup, idGenerationService, flavor)
             }
         }.flatMap { entityKeyIdGroup -> entityKeyIdGroup.entries.map { it.toPair() } }.toMap()
     }
@@ -123,8 +129,8 @@ class PostgresEntityKeyIdService(
 
     override fun reserveEntityKeyIds(entityKeys: Set<EntityKey>): Set<UUID> {
         val entityIdsByEntitySet = entityKeys
-                .groupBy({ it.entitySetId }, { it.entityId })
-                .mapValues { it.value.toSet() }
+            .groupBy({ it.entitySetId }, { it.entityId })
+            .mapValues { it.value.toSet() }
         val existing = loadEntityKeyIds(entityIdsByEntitySet)
         val missing = entityKeys - existing.keys
         val missingMap = assignEntityKeyIds(missing)
@@ -135,8 +141,8 @@ class PostgresEntityKeyIdService(
     override fun reserveLinkingIds(count: Int): List<UUID> {
         val ids = idGenerationService.getNextIds(count)
         storeEntityKeyIdReservations(
-                IdConstants.LINKING_ENTITY_SET_ID.id,
-                ids
+            IdConstants.LINKING_ENTITY_SET_ID.id,
+            ids
         )
         return ids.toList()
     }
@@ -144,8 +150,8 @@ class PostgresEntityKeyIdService(
     override fun reserveIds(entitySetId: UUID, count: Int): List<UUID> {
         val ids = idGenerationService.getNextIds(count)
         storeEntityKeyIdReservations(
-                entitySetId,
-                ids
+            entitySetId,
+            ids
         )
         return ids.toList()
     }
@@ -158,7 +164,7 @@ class PostgresEntityKeyIdService(
 
     override fun getEntityKeyId(entityKey: EntityKey): UUID {
         return loadEntityKeyId(entityKey.entitySetId, entityKey.entityId) ?: storeEntityKeyIds(
-                genEntityKeyIds(setOf(entityKey))
+            genEntityKeyIds(setOf(entityKey))
         ).getValue(entityKey)
     }
 
@@ -178,12 +184,12 @@ class PostgresEntityKeyIdService(
     }
 
     private fun loadEntityKeyIds(
-            entityIds: Map<UUID, Set<String>>,
-            allIdWritten: Boolean = false
+        entityIds: Map<UUID, Set<String>>,
+        allIdWritten: Boolean = false
     ): MutableMap<EntityKey, UUID> {
         return getByDataSource(
-                dataSourceResolver,
-                entityIds
+            dataSourceResolver,
+            entityIds
         ) { it }.asSequence().flatMap { (datasourceName, entityIdGroup) ->
             dataSourceResolver.getDataSource(datasourceName).connection.use { connection ->
                 loadEntityKeyIds(connection, entityIdGroup, allIdWritten)
@@ -203,20 +209,20 @@ class PostgresEntityKeyIdService(
                 it.setArray(1, PostgresArrays.createUuidArray(it.connection, entityKeyIds))
             }) {
                 EntityDataKey(
-                        it.getObject(ENTITY_SET_ID.name, UUID::class.java),
-                        it.getObject(ID.name, UUID::class.java)
+                    it.getObject(ENTITY_SET_ID.name, UUID::class.java),
+                    it.getObject(ID.name, UUID::class.java)
                 ) to it.getObject(LINKING_ID.name, UUID::class.java)
             }
         }.toMap()
     }
 
     override fun getEntityKeyIds(
-            entityKeys: Set<EntityKey>,
-            entityKeyIds: MutableMap<EntityKey, UUID>
+        entityKeys: Set<EntityKey>,
+        entityKeyIds: MutableMap<EntityKey, UUID>
     ): MutableMap<EntityKey, UUID> {
         val entityIdsByEntitySet = entityKeys
-                .groupBy({ it.entitySetId }, { it.entityId })
-                .mapValues { it.value.toSet() }
+            .groupBy({ it.entitySetId }, { it.entityId })
+            .mapValues { it.value.toSet() }
         entityKeyIds.putAll(loadEntityKeyIds(entityIdsByEntitySet))
 
         //Making this line O(n) is why we chose to just take a set instead of a sequence (thus allowing lazy views since copy is required anyway)
@@ -231,32 +237,64 @@ class PostgresEntityKeyIdService(
     override fun getEntityKeyIds(entityKeys: Set<EntityKey>): MutableMap<EntityKey, UUID> {
         return getEntityKeyIds(entityKeys, HashMap(entityKeys.size))
     }
+
+}
+
+internal fun createRedshiftMergeTableSql(index: Long): String {
+    return PostgresTableDefinition(syncIds(index))
+        .addColumns(*SYNC_IDS.columns.toTypedArray())
+        .primaryKey(*SYNC_IDS.primaryKey.toTypedArray())
+        .temporary()
+        .createTableQuery()
+}
+
+internal fun getRedshiftInsertSyncSql(index: Long): String {
+    return "INSERT INTO ${syncIds(index)} (${ENTITY_SET_ID.name},${ENTITY_ID.name},${ID.name}) VALUES(?,?,?)"
+}
+
+internal fun deleteExistingSyncSql(index: Long): String {
+    return """
+            DELETE FROM ${syncIds(index)} USING ${SYNC_IDS.name} 
+            WHERE ${syncIds(index)}.${ENTITY_SET_ID.name} = ${SYNC_IDS.name}.${ENTITY_SET_ID.name} AND
+            ${syncIds(index)}.${ENTITY_ID.name} = ${SYNC_IDS.name}.${ENTITY_ID.name}
+        """.trimIndent()
+}
+
+internal fun insertFromTempTableSql(index: Long): String {
+    return """
+            INSERT INTO ${SYNC_IDS.name} SELECT * FROM ${syncIds(index)} 
+        """.trimIndent()
+}
+
+internal fun syncIds(index: Long): String {
+    return "sync_ids_$index"
 }
 
 internal fun loadEntityKeyIds(
-        connection: Connection,
-        entityIds: Map<UUID, Set<String>>,
-        allIdWritten: Boolean = false
+    connection: Connection,
+    entityIds: Map<UUID, Set<String>>,
+    allIdWritten: Boolean = false
 ): MutableMap<EntityKey, UUID> {
     val ids = HashMap<EntityKey, UUID>(entityIds.values.sumBy { it.size })
 
     val ps = connection.prepareStatement(if (allIdWritten) entityKeyIdsSqlAny else entityKeyIdsSqlNotIdWritten)
     entityIds
-            .forEach { (entitySetId, entityIdValues) ->
-                ps.setObject(1, entitySetId)
-                ps.setArray(2, PostgresArrays.createTextArray(connection, entityIdValues))
-                val rs = ps.executeQuery()
-                while (rs.next()) {
-                    ids[ResultSetAdapters.entityKey(rs)] = ResultSetAdapters.id(rs)
-                }
+        .forEach { (entitySetId, entityIdValues) ->
+            ps.setObject(1, entitySetId)
+            ps.setArray(2, PostgresArrays.createTextArray(connection, entityIdValues))
+            val rs = ps.executeQuery()
+            while (rs.next()) {
+                ids[ResultSetAdapters.entityKey(rs)] = ResultSetAdapters.id(rs)
             }
+        }
     return ids
 }
 
 internal fun storeEntityKeyIds(
-        connection: Connection,
-        entityKeyIds: Map<EntityKey, UUID>,
-        idGenerationService: HazelcastIdGenerationService
+    connection: Connection,
+    entityKeyIds: Map<EntityKey, UUID>,
+    idGenerationService: HazelcastIdGenerationService,
+    flavor: PostgresFlavor
 ): Map<EntityKey, UUID> {
     /**
      * The new algorithm will result in more reads, but reduce the amount of hazelcast traffic
@@ -274,6 +312,7 @@ internal fun storeEntityKeyIds(
      * of a request, retrying the request with identical entity key will successfully complete the assignment process.
      */
 
+
     val insertSyncIds = connection.prepareStatement(INSERT_SYNC_SQL)
 
     entityKeyIds.forEach {
@@ -286,8 +325,12 @@ internal fun storeEntityKeyIds(
     val totalSyncIdRowsWritten = insertSyncIds.executeBatch().sum()
 
     val syncIds = entityKeyIds.keys
-            .groupBy({ it.entitySetId }, { it.entityId })
-            .mapValues { it.value.toSet() }
+        .groupBy({ it.entitySetId }, { it.entityId })
+        .mapValues { it.value.toSet() }
+
+    /**
+     * Load all entity key ids even if assignment has been finalized.
+     */
 
     val actualEntityKeyIds = loadEntityKeyIds(connection, syncIds, true)
 
@@ -297,17 +340,17 @@ internal fun storeEntityKeyIds(
 
     actualEntityKeyIds.forEach {
         storeEntityKeyIdAddBatch(
-                it.key.entitySetId,
-                entityKeyId = it.value,
-                insertIds = insertIds,
-                insertToData = insertToData,
+            it.key.entitySetId,
+            entityKeyId = it.value,
+            insertIds = insertIds,
+            insertToData = insertToData,
         )
     }
 
     val totalWritten = insertIds.executeBatch().sum()
     val totalDataRowsWritten = insertToData.executeBatch().sum()
 
-    //Mark all the ids as updated.
+    //Mark all the ids as updated / finalized.
     syncIds.forEach { (entitySetId, entityIds) ->
         entityIds.forEach { entityId ->
             updateIdsWritten.setObject(1, entitySetId)
@@ -341,10 +384,10 @@ internal fun storeEntityKeyIds(
 }
 
 internal fun storeEntityKeyIdAddBatch(
-        entitySetId: UUID,
-        entityKeyId: UUID,
-        insertIds: PreparedStatement,
-        insertToData: PreparedStatement,
+    entitySetId: UUID,
+    entityKeyId: UUID,
+    insertIds: PreparedStatement,
+    insertToData: PreparedStatement,
 ) {
 
     insertIds.setObject(1, entitySetId)
