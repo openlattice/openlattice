@@ -30,6 +30,7 @@ import com.openlattice.auditing.AuditingManager;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.authorization.util.AuthorizationUtilsKt;
+import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.data.requests.NeighborEntityDetails;
 import com.openlattice.data.requests.NeighborEntityIds;
 import com.openlattice.datasets.DataSetSearchRequest;
@@ -668,18 +669,36 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     @RequestMapping(
             path = { ENTITY_TYPES + ENTITY_TYPE_ID_PATH + COUNT },
             consumes = MediaType.APPLICATION_JSON_VALUE,
-            method = RequestMethod.POST)
+            method = RequestMethod.POST )
 
     @Override
     @Timed
-    public Long countEntitiesInSets(@PathVariable( ENTITY_TYPE_ID ) UUID entityTypeId,
-                                    @RequestBody Set<UUID> entitySetIds) {
+    public Long countEntitiesInSets(
+            @PathVariable( ENTITY_TYPE_ID ) UUID entityTypeId,
+            @RequestBody Set<UUID> entitySetIds ) {
 
-        // check entity sets as authorized
-        // ensureReadAccess
-        // check entity sets are of the provided type
-        // build CountRequest with terms "entitySetId" to the list of entitySetIds
-        return searchService.executeCount(entityTypeId, entitySetIds);
+        // check entity sets are authorized
+        ensureReadAccess( entitySetIds.stream().map( AclKey::new ).collect( Collectors.toSet() ) );
+
+        // check entity sets match the provided type
+        Set<UUID> allEntitySetIds = entitySetManager.getEntitySetsOfType( entityTypeId ).stream()
+                .map( entitySet -> entitySet.getId() ).collect( Collectors.toSet() );
+
+        Map<Boolean, List<UUID>> matchingEntitySetIds = entitySetIds.stream().collect(
+                Collectors.partitioningBy( entitySetId -> allEntitySetIds.contains( entitySetId ) )
+        );
+
+        if ( !allEntitySetIds.containsAll( entitySetIds ) ) {
+            logger.warn(
+                    "Omitting entity sets that do not match entity type {}: {}",
+                    entityTypeId,
+                    matchingEntitySetIds.get( false )
+            );
+        }
+
+        // build CountRequest with the list of matching entitySetIds as terms for the entity type
+        Long result =  searchService.executeCount( entityTypeId, Sets.newHashSet( matchingEntitySetIds.get( true ) ) );
+        return result;
     }
 
     @RequestMapping(
