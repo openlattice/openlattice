@@ -37,6 +37,10 @@ import org.elasticsearch.action.search.MultiSearchRequest
 import org.elasticsearch.action.search.MultiSearchResponse
 import org.elasticsearch.action.update.UpdateRequest
 import org.elasticsearch.client.Client
+import org.elasticsearch.client.RequestOptions
+import org.elasticsearch.client.RestHighLevelClient
+import org.elasticsearch.client.core.CountRequest
+import org.elasticsearch.client.core.CountResponse
 import org.elasticsearch.common.geo.GeoPoint
 import org.elasticsearch.common.settings.Settings
 import org.elasticsearch.common.unit.DistanceUnit
@@ -48,6 +52,7 @@ import org.elasticsearch.index.query.*
 import org.elasticsearch.index.reindex.DeleteByQueryAction
 import org.elasticsearch.index.reindex.DeleteByQueryRequestBuilder
 import org.elasticsearch.search.SearchHit
+import org.elasticsearch.search.builder.SearchSourceBuilder
 import org.elasticsearch.search.sort.*
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
@@ -113,8 +118,10 @@ class DatastoreKotlinElasticsearchImpl(
     private val server = config.elasticsearchUrl
     private val cluster = config.elasticsearchCluster
     private val port = config.elasticsearchPort
-    private var factory = ElasticsearchTransportClientFactory(server, port, cluster)
+    private val restPort = config.elasticsearchRestPort
+    private var factory = ElasticsearchTransportClientFactory(server, port, restPort, cluster)
     private var client: Client = someClient.orElseGet { factory.client }
+    private var restClient: RestHighLevelClient = factory.restClient
 
     init {
         initializeIndices()
@@ -900,6 +907,35 @@ class DatastoreKotlinElasticsearchImpl(
         return query
     }
 
+    /*** ENTITY DATA COUNT */
+
+    private fun getQueryForEntityCount(
+        entitySetIds: Set<UUID>
+    ): TermsQueryBuilder? {
+        return QueryBuilders.termsQuery(ConductorElasticsearchApi.ENTITY_SET_ID_FIELD, entitySetIds.map { it.toString() })
+    }
+
+    override fun executeCount(entityTypeId: UUID?, entitySetIds: Set<UUID>): Long {
+        if (!verifyElasticsearchRestConnection()) {
+            return 0L
+        }
+        try {
+            val countRequest = CountRequest(getIndexName(entityTypeId))
+            val sourceBuilder = SearchSourceBuilder()
+            sourceBuilder.query(getQueryForEntityCount(entitySetIds))
+            countRequest.source(sourceBuilder)
+            val countResponse: CountResponse = restClient.count(countRequest, RequestOptions.DEFAULT)
+            return countResponse.count
+        } catch (e: IOException) {
+            logger.error(
+                "Failed to execute count of the following entity sets of type {}: {}",
+                entityTypeId,
+                entitySetIds
+            )
+        }
+        return 0L
+    }
+
     /*** ENTITY DATA SEARCH  */
     override fun executeSearch(
             searchConstraints: SearchConstraints,
@@ -1618,6 +1654,20 @@ class DatastoreKotlinElasticsearchImpl(
         } else {
             client = factory.client
             if (client != null) {
+                connected = true
+            }
+        }
+        return connected
+    }
+
+    fun verifyElasticsearchRestConnection(): Boolean {
+        if (connected) {
+            if (!ElasticsearchTransportClientFactory.isRestConnected(restClient.lowLevelClient)) {
+                connected = false
+            }
+        } else {
+            restClient = factory.restClient
+            if (restClient != null) {
                 connected = true
             }
         }

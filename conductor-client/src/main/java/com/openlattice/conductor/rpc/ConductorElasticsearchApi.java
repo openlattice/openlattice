@@ -173,6 +173,16 @@ public interface ConductorElasticsearchApi {
     boolean addPropertyTypesToEntityType( EntityType entityType, List<PropertyType> newPropertyTypes );
 
     /**
+     * Count number of entities within a provided list of entity sets ids of the same entity type
+     * @param entityTypeId
+     * @param entitySetIds
+     * @return
+     */
+    Long executeCount(
+            UUID entityTypeId,
+            Set<UUID> entitySetIds);
+
+    /**
      * Entity Data Search
      **/
 
