@@ -110,7 +110,7 @@ fun buildRedshiftPreparableFiltersSql(
         idsPresent = entityKeyIds.isNotEmpty(),
         detailed = detailed,
         linking = linking
-    ) + linkingClause + filtersClause + filterIdsOnCTEClause + innerGroupBy
+    ) + linkingClause + filtersClause + filterIdsOnCTEClause
 
     val sql = """
         $prefix
