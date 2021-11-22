@@ -681,11 +681,10 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
         ensureReadAccess( entitySetIds.stream().map( AclKey::new ).collect( Collectors.toSet() ) );
 
         // check entity sets match the provided type
-        Set<UUID> allEntitySetIds = entitySetManager.getEntitySetsOfType( entityTypeId ).stream()
-                .map( entitySet -> entitySet.getId() ).collect( Collectors.toSet() );
+        Collection<UUID> allEntitySetIds = entitySetManager.getEntitySetIdsOfType( entityTypeId );
 
         Map<Boolean, List<UUID>> matchingEntitySetIds = entitySetIds.stream().collect(
-                Collectors.partitioningBy( entitySetId -> allEntitySetIds.contains( entitySetId ) )
+                Collectors.partitioningBy( allEntitySetIds::contains )
         );
 
         if ( !allEntitySetIds.containsAll( entitySetIds ) ) {
