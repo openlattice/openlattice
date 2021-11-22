@@ -912,7 +912,9 @@ class DatastoreKotlinElasticsearchImpl(
     private fun getQueryForEntityCount(
         entitySetIds: Set<UUID>
     ): TermsQueryBuilder? {
-        return QueryBuilders.termsQuery(ConductorElasticsearchApi.ENTITY_SET_ID_FIELD, entitySetIds.map { it.toString() })
+        return QueryBuilders.termsQuery(
+            ConductorElasticsearchApi.ENTITY_SET_ID_FIELD,
+            entitySetIds.map { it.toString() })
     }
 
     override fun executeCount(entityTypeId: UUID?, entitySetIds: Set<UUID>): Long {

@@ -969,28 +969,29 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
     /*** ENTITY SET COUNT ***/
 
-    private TermsQueryBuilder getQueryForEntityCount(
-            Set<UUID> entitySetIds ) {
-        TermsQueryBuilder query = QueryBuilders.termsQuery(ENTITY_SET_ID_FIELD, entitySetIds.stream().map(id -> id.toString()));
-        return query;
+    private TermsQueryBuilder getQueryForEntityCount( Set<UUID> entitySetIds ) {
+        return QueryBuilders.termsQuery( ENTITY_SET_ID_FIELD,
+                entitySetIds.stream().map( UUID::toString ) );
     }
 
     @Override
     public Long executeCount(
             UUID entityTypeId,
-            Set<UUID> entitySetIds) {
+            Set<UUID> entitySetIds ) {
         if ( !verifyElasticsearchConnection() ) {
             return 0L;
         }
         try {
-            CountRequest countRequest = new CountRequest(getIndexName(entityTypeId));
+            CountRequest countRequest = new CountRequest( getIndexName( entityTypeId ) );
             SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
-            sourceBuilder.query(getQueryForEntityCount(entitySetIds));
-            countRequest.source(sourceBuilder);
-            CountResponse countResponse = restClient.count(countRequest, RequestOptions.DEFAULT);
+            sourceBuilder.query( getQueryForEntityCount( entitySetIds ) );
+            countRequest.source( sourceBuilder );
+            CountResponse countResponse = restClient.count( countRequest, RequestOptions.DEFAULT );
             return countResponse.getCount();
-        } catch (IOException e) {
-            logger.error("Failed to execute count of the following entity sets of type {}: {}", entityTypeId, entitySetIds);
+        } catch ( IOException e ) {
+            logger.error( "Failed to execute count of the following entity sets of type {}: {}",
+                    entityTypeId,
+                    entitySetIds );
         }
         return 0L;
     }
