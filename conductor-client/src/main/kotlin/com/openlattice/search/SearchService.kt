@@ -201,7 +201,6 @@ class SearchService(
     @Timed
     fun executeCount(entityTypeId: UUID, entitySetIds: Set<UUID>): Long {
         return elasticsearchApi.executeCount(entityTypeId, entitySetIds)
-
     }
 
     @Timed
