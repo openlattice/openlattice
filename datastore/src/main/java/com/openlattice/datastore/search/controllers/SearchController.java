@@ -697,8 +697,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
         }
 
         // build CountRequest with the list of matching entitySetIds as terms for the entity type
-        Long result =  searchService.executeCount( entityTypeId, Sets.newHashSet( matchingEntitySetIds.get( true ) ) );
-        return result;
+        return searchService.executeCount( entityTypeId, Sets.newHashSet( matchingEntitySetIds.get( true ) ) );
     }
 
     @RequestMapping(
