@@ -49,6 +49,7 @@ class LinkingConfigurationTest : AbstractJacksonYamlSerializationTest<LinkingCon
                         TestDataFactory.randomAlphabetic(5),
                         TestDataFactory.randomAlphabetic(5),
                         RandomUtils.nextInt(),
+                        RandomUtils.nextInt(),
                         Optional.empty(),
                         Optional.empty()
                 ),
@@ -89,6 +90,7 @@ class LinkingConfigurationTest : AbstractJacksonYamlSerializationTest<LinkingCon
                 && a.searchConfiguration.elasticsearchUrl == b.searchConfiguration.elasticsearchUrl
                 && a.searchConfiguration.elasticsearchCluster == b.searchConfiguration.elasticsearchCluster
                 && a.searchConfiguration.elasticsearchPort == b.searchConfiguration.elasticsearchPort
+                && a.searchConfiguration.elasticsearchRestPort == b.searchConfiguration.elasticsearchRestPort
     }
 
     override fun logResult(result: SerializationResult<LinkingConfiguration?>) {

@@ -7,6 +7,7 @@ searchConfiguration:
   elasticsearchUrl: localhost
   elasticsearchCluster: openlattice
   elasticsearchPort: 9300
+  elasticsearchRestPort: 9200
 
 bootstrap-connection:
   - "Username-Password-Authentication"

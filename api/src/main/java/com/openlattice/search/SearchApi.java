@@ -18,6 +18,7 @@
 
 package com.openlattice.search;
 
+import com.google.common.collect.Multimap;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.data.requests.NeighborEntityDetails;
 import com.openlattice.data.requests.NeighborEntityIds;
@@ -46,6 +47,7 @@ public interface SearchApi {
      * Normal params
      */
     String ORGANIZATIONS     = "/organizations";
+    String COUNT             = "/count";
     String DATASETS          = "/datasets";
     String ENTITY_SETS       = "/entity_sets";
     String ENTITY_TYPES      = "/entity_types";
@@ -61,7 +63,7 @@ public interface SearchApi {
     String INDEX             = "/index";
     String IDS               = "/ids";
     String KEYWORD           = "kw";
-    String ENTITY_TYPE_ID    = "eid";
+    String ENTITY_TYPE_ID    = "entityTypeId";
     String PROPERTY_TYPE_ID  = "pid";
 
     String ENTITY_SET_ID   = "entitySetId";
@@ -71,6 +73,7 @@ public interface SearchApi {
     String START           = "start";
 
     String ENTITY_SET_ID_PATH   = "/{" + ENTITY_SET_ID + "}";
+    String ENTITY_TYPE_ID_PATH  = "/{" + ENTITY_TYPE_ID + "}";
     String ORGANIZATION_ID_PATH = "/{" + ORGANIZATION_ID + "}";
     String NUM_RESULTS_PATH     = "/{" + NUM_RESULTS + "}";
     String ENTITY_KEY_ID_PATH   = "/{" + ENTITY_KEY_ID + "}";
@@ -320,6 +323,18 @@ public interface SearchApi {
     Map<UUID, Map<UUID, SetMultimap<UUID, NeighborEntityIds>>> executeFilteredEntityNeighborIdsSearch(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Body EntityNeighborsFilter filter );
+
+    /**
+     * Count the number of entities in entity sets of a singular type.
+     *
+     * @param entityTypeId The entity type id
+     * @param entitySetIds List of entity set ids of the same provided entity type to count from
+     * @return Total number of entities in the provided sets
+     */
+    @POST ( BASE + ENTITY_TYPES + ENTITY_TYPE_ID_PATH + COUNT )
+    Long countEntitiesInSets(
+            @Path( ENTITY_TYPE_ID ) UUID entityTypeId,
+            @Body Set<UUID> entitySetIds);
 
     @GET( BASE + EDM + INDEX )
     Void triggerEdmIndex();
