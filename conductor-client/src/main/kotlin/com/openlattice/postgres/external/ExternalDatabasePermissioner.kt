@@ -43,7 +43,6 @@ class ExternalDatabasePermissioner(
     private val propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap(hazelcastInstance)
     private val externalColumns = HazelcastMap.EXTERNAL_COLUMNS.getMap(hazelcastInstance)
     private val externalTables = HazelcastMap.EXTERNAL_TABLES.getMap(hazelcastInstance)
-    private val externalRoleNames = HazelcastMap.EXTERNAL_PERMISSION_ROLES.getMap(hazelcastInstance)
 
     companion object {
         private val logger = LoggerFactory.getLogger(ExternalDatabasePermissioner::class.java)
@@ -231,27 +230,6 @@ class ExternalDatabasePermissioner(
     }
 
     /**
-     * Create all postgres roles to apply to [entitySetId] and [propertyTypes]
-     * Adds permissions on [EdmConstants.ID_FQN] to each of the above roles
-     */
-    override fun initializeAssemblyPermissions(
-            orgDatasource: HikariDataSource,
-            entitySetId: UUID,
-            entitySetName: String,
-            propertyTypesIdToFqn: Set<PropertyTypeIdFqn>
-    ) {
-        // note: orgDatasource is unused, but left it in to ensure build go green without fiddling with mechanic
-        val propertyTypesAclKeyToFqn = propertyTypesIdToFqn.associate { (id, fqn) ->
-            AclKey(entitySetId, id) to fqn.toString()
-        }
-
-        initializePermissionSetForExternalTable(
-                columnAclKeyToName = propertyTypesAclKeyToFqn,
-                permissions = allViewPermissions
-        )
-    }
-
-    /**
      * Updates permissions on [propertyTypes] for [entitySet] in org database for [organizationId]
      */
     override fun updateAssemblyPermissions(
@@ -285,57 +263,6 @@ class ExternalDatabasePermissioner(
     }
 
     /**
-     * Create all postgres roles to apply to [table] and [columns] in [organizationId] database
-     */
-    override fun initializeExternalTablePermissions(
-            table: ExternalTable,
-            columns: Set<ExternalColumn>
-    ) {
-        val columnAclKeyToName = columns.associate {
-            AclKey(it.tableId, it.id) to it.name
-        }
-
-        initializePermissionSetForExternalTable(
-                columnAclKeyToName = columnAclKeyToName,
-                permissions = allTablePermissions
-        )
-    }
-
-    /**
-     * Create all postgres roles to apply to [table] and [columns] in [organizationId] database
-     */
-    override fun initializeProjectedTableViewPermissions(
-            schema: String,
-            table: ExternalTable,
-            columns: Set<ExternalColumn>
-    ) {
-        val columnAclKeyToName = columns.associate {
-            AclKey(it.tableId, it.id) to it.name
-        }
-
-        initializePermissionSetForExternalTable(
-                columnAclKeyToName = columnAclKeyToName,
-                permissions = allViewPermissions
-        )
-    }
-
-    private fun initializePermissionSetForExternalTable(
-            columnAclKeyToName: Map<AclKey, String>,
-            permissions: Set<Permission>
-    ) {
-        permissions.forEach { permission ->
-            columnAclKeyToName.forEach {
-                val at = AccessTarget(it.key, permission)
-                if (!externalRoleNames.containsKey(at)) {
-                    val newRoleId = UUID.randomUUID()
-                    // insert column name into external_permission_roles as (column_name, role_id)
-                    externalRoleNames.put(at, Pair(it.value,  newRoleId))
-                }
-            }
-        }
-    }
-
-    /**
      * Updates permissions on [columns] for [table] in org database for [organizationId]
      */
     override fun updateExternalTablePermissions(
@@ -344,19 +271,6 @@ class ExternalDatabasePermissioner(
             columnsById: Map<AclKey, TableColumn>
     ) {
         updateTablePermissions(action, SecurableObjectType.OrganizationExternalDatabaseColumn, columnAcls, columnsById, TableType.TABLE)
-    }
-
-    override fun destroyExternalTablePermissions(
-            tablesToColumnIds: Map<UUID, Set<UUID>>
-    ) {
-        tablesToColumnIds.forEach { (tableId, columnIds) ->
-            columnIds.forEach { columnId ->
-                val aclKey = AclKey(tableId, columnId)
-                allTablePermissions.map { permission ->
-                    externalRoleNames.delete(AccessTarget(aclKey, permission))
-                }
-            }
-        }
     }
 
     private fun updateTablePermissions(
@@ -368,7 +282,7 @@ class ExternalDatabasePermissioner(
     ) {
 
         when (action) {
-            Action.ADD, Action.REMOVE, Action.DROP, Action.SET -> {
+            Action.ADD, Action.REMOVE, Action.SET -> {
             }
             else -> {
                 logger.error("Action $action passed through to updateTablePermissions is unhandled. Doing no operations")
@@ -446,14 +360,6 @@ class ExternalDatabasePermissioner(
                                         columnName,
                                         requestedPermissions
                                     ))
-                            }
-                            Action.DROP -> {
-                                // temp migration action
-                                orgRemoves.addAll(acePermissions.mapNotNull {
-                                    externalRoleNames[AccessTarget(columnAcl.aclKey, it)]
-                                }.map {
-                                    revokeRoleSql(it.second.toString(), setOf(userRole))
-                                })
                             }
                             Action.SET -> {
                                 val allColPermissions = allPermissions.flatMap { permission ->
