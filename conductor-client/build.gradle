@@ -188,6 +188,10 @@ dependencies {
         exclude module: 'slf4j-log4j12'
     }
 
+    api("org.elasticsearch.client:elasticsearch-rest-high-level-client:${elastic_version}") {
+        exclude module: 'slf4j-log4j12'
+    }
+
     /*
      * TESTING
      */

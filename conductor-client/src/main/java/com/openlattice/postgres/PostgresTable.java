@@ -312,11 +312,6 @@ public final class PostgresTable {
                             ANALYZER,
                             MULTI_VALUED,
                             INDEX_TYPE );
-    public static final PostgresTableDefinition EXTERNAL_PERMISSION_ROLES     =
-            new PostgresTableDefinition( "external_permission_roles" )
-                    .addColumns( ACL_KEY, PERMISSION, COLUMN_NAME, ROLE_ID  )
-                    .primaryKey( ACL_KEY, PERMISSION );
-
     public static final PostgresTableDefinition GRAPH_QUERIES              =
             new PostgresTableDefinition( "graph_queries" )
                     .addColumns( QUERY_ID, QUERY, STATE, START_TIME )
@@ -381,17 +376,6 @@ public final class PostgresTable {
                             ID_MAP,
                             VERSION )
                     .distributionColumn( LINKING_ID );
-    // needed for migration
-    public static final  PostgresTableDefinition LEGACY_PERMISSIONS        =
-            new PostgresTableDefinition("legacy_permissions")
-                    .addColumns(
-                        ACL_KEY,
-                        PRINCIPAL_TYPE,
-                        PRINCIPAL_ID,
-                        PostgresColumn.PERMISSIONS,
-                        EXPIRATION_DATE,
-                        SECURABLE_OBJECT_TYPE)
-                    .primaryKey(ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID);
     public static final PostgresTableDefinition MATCHED_ENTITIES                      =
             new CitusDistributedTableDefinition( "matched_entities" )
                     .addColumns( LINKING_ID,
