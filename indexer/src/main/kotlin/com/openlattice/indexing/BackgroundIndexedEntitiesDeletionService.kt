@@ -92,7 +92,7 @@ class BackgroundIndexedEntitiesDeletionService(
             //We shuffle entity sets to make sure we have a chance to work share and index everything
             val totalCurrentEntitySetUpdates = entitySets.values
                     .filter { !it.isAudit }
-                    .map { EntitySetForDeletion(it.id, it.name, it.partitions) }
+                    .map { EntitySetForDeletion(it.id, it.name) }
                     .shuffled()
                     .map {
                         try {
@@ -104,7 +104,7 @@ class BackgroundIndexedEntitiesDeletionService(
                     }.sum()
 
             val totalDeletedEntitySetUpdates = (deletedEntitySets as Map<UUID, DelegatedIntSet>)
-                    .map { (id, partitions) -> EntitySetForDeletion(id, "Deleted entity set [$id]", partitions) }
+                    .map { (id) -> EntitySetForDeletion(id, "Deleted entity set [$id]") }
                     .shuffled()
                     .map {
                         try {
@@ -161,9 +161,7 @@ class BackgroundIndexedEntitiesDeletionService(
         val hds = dataSourceResolver.resolve(entitySet.id)
         return BasePostgresIterable(
                 PreparedStatementHolderSupplier(hds, sql) {
-                    val partitionsArray = PostgresArrays.createIntArray(it.connection, entitySet.partitions)
                     it.setObject(1, entitySet.id)
-                    it.setArray(2, partitionsArray)
                 }
         ) { rs -> ResultSetAdapters.id(rs) }
     }
@@ -222,6 +220,5 @@ class BackgroundIndexedEntitiesDeletionService(
     data class EntitySetForDeletion(
             val id: UUID,
             val name: String,
-            val partitions: Set<Int>
     )
 }

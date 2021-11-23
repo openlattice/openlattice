@@ -149,8 +149,6 @@ class BackgroundIndexingService(
      * Preparable sql statement to select entity key ids (with last write) of an entity set for indexing.
      * Bind order is the following:
      * 1. entity set id
-     * 2. partition (array)
-     * 3. partition version
      */
     private fun getEntityDataKeysQuery(reindexAll: Boolean = false, getTombstoned: Boolean = false): String {
         val dirtyIdsClause = if (!reindexAll) {
@@ -175,7 +173,6 @@ class BackgroundIndexingService(
         return BasePostgresIterable(
                 PreparedStatementHolderSupplier(hds, getEntityDataKeysQuery(reindexAll, getTombstoned), FETCH_SIZE) {
                     it.setObject(1, entitySet.id)
-                    it.setArray(2, PostgresArrays.createIntArray(it.connection, *entitySet.partitions))
                 }
         ) { ResultSetAdapters.id(it) to ResultSetAdapters.lastWriteTyped(it) }
     }
