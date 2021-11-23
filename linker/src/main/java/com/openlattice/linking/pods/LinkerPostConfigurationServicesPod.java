@@ -38,9 +38,8 @@ import com.openlattice.data.storage.ByteBlobDataManager;
 import com.openlattice.data.storage.DataSourceResolver;
 import com.openlattice.data.storage.EntityDatastore;
 import com.openlattice.data.storage.IndexingMetadataManager;
-import com.openlattice.data.storage.PostgresEntityDataQueryService;
-import com.openlattice.data.storage.PostgresEntityDatastore;
-import com.openlattice.data.storage.partitions.PartitionManager;
+import com.openlattice.data.storage.postgres.PostgresEntityDataQueryService;
+import com.openlattice.data.storage.postgres.PostgresEntityDatastore;
 import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EntitySetManager;
@@ -102,9 +101,6 @@ public class LinkerPostConfigurationServicesPod {
     private ConductorElasticsearchApi elasticsearchApi;
 
     @Inject
-    private PartitionManager partitionManager;
-
-    @Inject
     private EntitySetManager entitySetManager;
 
     @Inject
@@ -137,14 +133,15 @@ public class LinkerPostConfigurationServicesPod {
     public EntityKeyIdService idService() {
         return new PostgresEntityKeyIdService(
                 dataSourceResolver(),
-                idGeneration(),
-                partitionManager );
+                idGeneration() );
     }
 
     @Bean
     public DataSourceResolver dataSourceResolver() {
         dataSourceManager.registerTablesWithAllDatasources( PostgresTable.E );
         dataSourceManager.registerTablesWithAllDatasources( PostgresTable.DATA );
+        dataSourceManager.registerTablesWithAllDatasources( PostgresTable.IDS );
+        dataSourceManager.registerTablesWithAllDatasources( PostgresTable.SYNC_IDS );
         return new DataSourceResolver( hazelcastInstance, dataSourceManager );
     }
 
@@ -154,8 +151,7 @@ public class LinkerPostConfigurationServicesPod {
         //TODO: fix it to use read replica
         return new PostgresEntityDataQueryService(
                 dataSourceResolver(),
-                byteBlobDataManager,
-                partitionManager
+                byteBlobDataManager
         );
     }
 
@@ -175,7 +171,7 @@ public class LinkerPostConfigurationServicesPod {
 
     @Bean
     public LinkingQueryService lqs() {
-        return new PostgresLinkingQueryService( hikariDataSource, partitionManager );
+        return new PostgresLinkingQueryService( hikariDataSource );
     }
 
     @Bean
@@ -195,7 +191,6 @@ public class LinkerPostConfigurationServicesPod {
     public GraphService graphService() {
         return new Graph( dataSourceResolver(),
                 entitySetManager,
-                partitionManager,
                 dataQueryService(),
                 idService(),
                 metricRegistry );
@@ -213,7 +208,7 @@ public class LinkerPostConfigurationServicesPod {
 
     @Bean
     public IndexingMetadataManager indexingMetadataManager() {
-        return new IndexingMetadataManager( hikariDataSource, partitionManager );
+        return new IndexingMetadataManager( dataSourceResolver() );
     }
 
     @Bean

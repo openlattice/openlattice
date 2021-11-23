@@ -26,16 +26,11 @@ import com.geekbeast.rhizome.jobs.HazelcastJobService
 import com.google.common.base.Stopwatch
 import com.google.common.collect.ListMultimap
 import com.google.common.collect.Multimaps
-import com.google.common.collect.SetMultimap
-import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
-import com.openlattice.analysis.requests.AggregationResult
-import com.openlattice.analysis.requests.FilteredNeighborsRankingAggregation
 import com.openlattice.data.storage.EntityDatastore
 import com.openlattice.data.storage.MetadataOption
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.core.GraphService
 import com.openlattice.graph.core.NeighborSets
-import com.openlattice.graph.partioning.RepartitioningJob
 import com.openlattice.postgres.streams.BasePostgresIterable
 import org.apache.commons.lang3.NotImplementedException
 import org.apache.commons.lang3.tuple.Pair
@@ -46,7 +41,6 @@ import java.nio.ByteBuffer
 import java.time.OffsetDateTime
 import java.util.*
 import java.util.concurrent.TimeUnit
-import java.util.stream.Stream
 
 /**
  *
@@ -138,14 +132,6 @@ class DataGraphService(
 
     override fun getEdgeEntitySetsConnectedToEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): Set<UUID> {
         return graphService.getEdgeEntitySetsConnectedToEntities(entitySetId, entityKeyIds)
-    }
-
-    override fun repartitionEntitySet(
-            entitySetId: UUID,
-            oldPartitions: Set<Int>,
-            newPartitions: Set<Int>
-    ): UUID {
-        return jobService.submitJob(RepartitioningJob(entitySetId, oldPartitions.toList(), newPartitions))
     }
 
     /* Create */
@@ -250,36 +236,6 @@ class DataGraphService(
     @Timed
     override fun deleteAssociations(associations: Set<DataEdgeKey>, deleteType: DeleteType): WriteEvent {
         return graphService.deleteEdges(associations, deleteType)
-    }
-
-    /* Top utilizers */
-    @Timed
-    override fun getFilteredRankings(
-            entitySetIds: Set<UUID>,
-            numResults: Int,
-            filteredRankings: List<AuthorizedFilteredNeighborsRanking>,
-            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
-            linked: Boolean,
-            linkingEntitySetId: Optional<UUID>
-    ): AggregationResult {
-        return graphService.computeTopEntities(
-                numResults,
-                entitySetIds,
-                authorizedPropertyTypes,
-                filteredRankings,
-                linked,
-                linkingEntitySetId
-        )
-
-    }
-
-    override fun getTopUtilizers(
-            entitySetId: UUID,
-            filteredNeighborsRankingList: List<FilteredNeighborsRankingAggregation>,
-            numResults: Int,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Stream<SetMultimap<FullQualifiedName, Any>> {
-        return Stream.empty()
     }
 
     override fun getExpiringEntitiesFromEntitySet(

@@ -26,9 +26,10 @@ import com.google.common.collect.Iterables
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicates
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
+import com.openlattice.data.storage.DataSourceResolver
 import com.openlattice.data.storage.IndexingMetadataManager
 import com.openlattice.data.storage.MetadataOption
-import com.openlattice.data.storage.PostgresEntityDataQueryService
+import com.openlattice.data.storage.postgres.PostgresEntityDataQueryService
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.edm.type.PropertyType
@@ -47,7 +48,6 @@ import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.mapstores.EntitySetMapstore
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
-import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
@@ -69,7 +69,7 @@ const val INDEX_SIZE = 1_000
 class BackgroundIndexingService(
         hazelcastInstance: HazelcastInstance,
         private val indexerConfiguration: IndexerConfiguration,
-        private val hds: HikariDataSource,
+        private val resolver: DataSourceResolver,
         private val dataQueryService: PostgresEntityDataQueryService,
         private val elasticsearchApi: ConductorElasticsearchApi,
         private val dataManager: IndexingMetadataManager
@@ -149,8 +149,6 @@ class BackgroundIndexingService(
      * Preparable sql statement to select entity key ids (with last write) of an entity set for indexing.
      * Bind order is the following:
      * 1. entity set id
-     * 2. partition (array)
-     * 3. partition version
      */
     private fun getEntityDataKeysQuery(reindexAll: Boolean = false, getTombstoned: Boolean = false): String {
         val dirtyIdsClause = if (!reindexAll) {
@@ -162,7 +160,6 @@ class BackgroundIndexingService(
 
         return "SELECT ${ID.name}, ${LAST_WRITE.name} FROM ${IDS.name} " +
                 "WHERE ${ENTITY_SET_ID.name} = ? " +
-                "AND ${PARTITION.name} = ANY(?) " +
                 "AND $versionsClause " +
                 dirtyIdsClause
     }
@@ -172,10 +169,10 @@ class BackgroundIndexingService(
             reindexAll: Boolean = false,
             getTombstoned: Boolean = false
     ): BasePostgresIterable<Pair<UUID, OffsetDateTime>> {
+        val hds = resolver.resolve(entitySet.id)
         return BasePostgresIterable(
                 PreparedStatementHolderSupplier(hds, getEntityDataKeysQuery(reindexAll, getTombstoned), FETCH_SIZE) {
                     it.setObject(1, entitySet.id)
-                    it.setArray(2, PostgresArrays.createIntArray(it.connection, *entitySet.partitions))
                 }
         ) { ResultSetAdapters.id(it) to ResultSetAdapters.lastWriteTyped(it) }
     }

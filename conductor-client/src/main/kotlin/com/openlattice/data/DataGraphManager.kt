@@ -126,22 +126,6 @@ interface DataGraphManager {
             authorizedPropertiesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>
     ): Map<UUID, CreateAssociationEvent>
 
-    fun getTopUtilizers(
-            entitySetId: UUID,
-            filteredNeighborsRankingList: List<FilteredNeighborsRankingAggregation>,
-            numResults: Int,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Stream<SetMultimap<FullQualifiedName, Any>>
-
-    fun getFilteredRankings(
-            entitySetIds: Set<UUID>,
-            numResults: Int,
-            filteredRankings: List<AuthorizedFilteredNeighborsRanking>,
-            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
-            linked: Boolean,
-            linkingEntitySetId: Optional<UUID>
-    ): AggregationResult
-
     fun getNeighborEntitySets(entitySetIds: Set<UUID>): List<NeighborSets>
 
     fun mergeEntities(
@@ -169,22 +153,6 @@ interface DataGraphManager {
     ): BasePostgresIterable<UUID>
 
     fun getEdgeEntitySetsConnectedToEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): Set<UUID>
-
-    /**
-     * Re-partitions the data for an entity set.
-     *
-     * NOTE: This function is a bit of a layer violation. It only migrates data from the provided partitions, which
-     * must be known by the caller. It assumes that new partitions have been properly assigned to the entity set and
-     * have been persisted to the database by the caller.
-     *
-     * @param entitySetId The id of the entity set to repartition
-     * @param oldPartitions The previous data partitions for the entity set.
-     */
-    fun repartitionEntitySet(
-            entitySetId: UUID,
-            oldPartitions: Set<Int>,
-            newPartitions: Set<Int>
-    ): UUID
 
     /**
      * Deletes a set of edges from the graph.

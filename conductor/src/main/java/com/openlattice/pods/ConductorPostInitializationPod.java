@@ -30,7 +30,6 @@ import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.conductor.rpc.MapboxConfiguration;
 import com.openlattice.data.storage.EntityDatastore;
 import com.openlattice.data.storage.IndexingMetadataManager;
-import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datasets.DataSetService;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EntitySetManager;
@@ -85,9 +84,6 @@ public class ConductorPostInitializationPod {
 
     @Inject
     private MailServiceClient mailServiceClient;
-
-    @Inject
-    private PartitionManager partitionManager;
 
     @Inject
     private IndexingMetadataManager indexingMetadataManager;

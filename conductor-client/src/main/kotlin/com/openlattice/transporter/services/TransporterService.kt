@@ -3,7 +3,6 @@ package com.openlattice.transporter.services
 import com.google.common.eventbus.EventBus
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
-import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.transporter.types.TransporterDatastore
@@ -13,7 +12,6 @@ import org.springframework.stereotype.Service
 final class TransporterService(
         eventBus: EventBus,
         private val dataModelService: EdmManager,
-        private val partitionManager: PartitionManager,
         private val entitySetService: EntitySetManager,
         private val executor: ListeningExecutorService,
         hazelcastInstance: HazelcastInstance,

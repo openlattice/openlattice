@@ -21,32 +21,18 @@
 
 package com.openlattice.data.ids
 
-import com.geekbeast.hazelcast.HazelcastClientProvider
 import com.geekbeast.hazelcast.IHazelcastClientProvider
 import com.hazelcast.core.HazelcastInstance
-import com.kryptnostic.rhizome.configuration.RhizomeConfiguration
-import com.kryptnostic.rhizome.configuration.hazelcast.HazelcastConfiguration
-import com.kryptnostic.rhizome.configuration.hazelcast.HazelcastConfigurationContainer
 import com.openlattice.TestServer
-import com.openlattice.authorization.SystemRole
-import com.openlattice.data.EntityDataKey
 import com.openlattice.data.EntityKey
-import com.openlattice.data.storage.lockEntitiesInIdsTable
-import com.openlattice.data.storage.partitions.PartitionManager
-import com.openlattice.data.storage.partitions.getPartition
-import com.openlattice.data.storage.upsertEntitiesSql
-import com.openlattice.edm.EntitySet
-import com.openlattice.hazelcast.HazelcastClient
-import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.data.storage.postgres.upsertEntitiesSql
 import com.openlattice.ids.HazelcastIdGenerationService
-import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.lockIdsAndExecute
 import org.apache.commons.lang3.RandomStringUtils
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
-import org.mockito.Matchers.any
 import org.mockito.Matchers.anySet
 import org.mockito.Mockito
 import org.slf4j.LoggerFactory
@@ -54,7 +40,6 @@ import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
 import java.util.concurrent.locks.ReentrantLock
-import javax.mail.Part
 
 /**
  *
@@ -67,7 +52,6 @@ class PostgresEntityKeyIdServiceTest : TestServer() {
         private lateinit var idGenService: HazelcastIdGenerationService
         private val logger = LoggerFactory.getLogger(PostgresEntityKeyIdServiceTest::class.java)
         private val executor = Executors.newFixedThreadPool(NUM_THREADS)
-        private val partMgr = Mockito.mock(PartitionManager::class.java)
 
         @BeforeClass
         @JvmStatic
@@ -80,21 +64,10 @@ class PostgresEntityKeyIdServiceTest : TestServer() {
 
             }
 
-
-//            Mockito.doReturn((0 until 257).toSet()).`when`(partMgr).getEntitySetPartitions(UUID.randomUUID())
-            Mockito.`when`(partMgr.getEntitySetPartitions(UUID.randomUUID())).then {
-                (0 until 257).toSet()
-            }
-            Mockito.doAnswer {
-                val entitySetIds = it.arguments[0] as Set<UUID>
-                entitySetIds.associateWith { (0 until 257).toSet() }
-            }.`when`(partMgr).getPartitionsByEntitySetId(anySet() as Set<UUID>)
-
             idGenService = HazelcastIdGenerationService(hzClientProvider, true)
             postgresEntityKeyIdService = PostgresEntityKeyIdService(
                     dsr,
-                    idGenService,
-                    partMgr
+                    idGenService
             )
 
         }
@@ -104,39 +77,32 @@ class PostgresEntityKeyIdServiceTest : TestServer() {
     fun testLocking() {
         val entitySetId = UUID.randomUUID()
         //            Mockito.doReturn((0 until 257).toSet()).`when`(partMgr).getEntitySetPartitions(UUID.randomUUID())
-        Mockito.`when`(partMgr.getEntitySetPartitions(entitySetId)).then {
-            (0 until 257).toSet()
-        }
         val ids = postgresEntityKeyIdService.reserveIds(entitySetId, 65536)
-        val partitions = (0 until 257).toList().toIntArray()
 
         logger.info("Fanning out to lock ids and execute.")
         val futures = (0 until 32).map {
             executor.submit<Int> {
-                val partitionsMap = ids
+                val entityKeyIds = ids
                         .shuffled()
                         .take(4096)
-                        .groupBy { getPartition(it, partitions) }
+                        .toSortedSet()
                 hds.connection.use { connection ->
                     connection.autoCommit = false
                     val ps = connection.prepareStatement(upsertEntitiesSql)
-                    val s = partitionsMap.map { (partition, entityKeyIds) ->
-                        val inner = lockIdsAndExecute(connection, entitySetId, partition, entityKeyIds) {
-                            val version = System.currentTimeMillis()
-                            ps.setObject(1, PostgresArrays.createLongArray(connection, version))
-                            ps.setObject(2, version)
-                            ps.setObject(3, version)
-                            ps.setObject(4, entitySetId)
-                            ps.setArray(5, PostgresArrays.createUuidArray(connection, entityKeyIds))
-                            ps.setInt(6, partition)
-                            val updateCount = ps.executeUpdate()
-                            updateCount
-                        }
-                        connection.commit()
-                        logger.info("Completed partition $partition of size ${entityKeyIds.size} for job $it with $inner updates")
-                        inner
-                    }.sum()
-                    logger.info("Completed job $it with $s updates")
+
+                    val s = lockIdsAndExecute(connection, entitySetId, entityKeyIds) {
+                        val version = System.currentTimeMillis()
+                        ps.setObject(1, PostgresArrays.createLongArray(connection, version))
+                        ps.setObject(2, version)
+                        ps.setObject(3, version)
+                        ps.setObject(4, entitySetId)
+                        ps.setArray(5, PostgresArrays.createUuidArray(connection, entityKeyIds))
+                        val updateCount = ps.executeUpdate()
+                        updateCount
+                    }
+                    connection.commit()
+                    logger.info("Completed ${entityKeyIds.size} for job $it with $s updates")
+
                     it
                 }
             }
@@ -169,8 +135,8 @@ class PostgresEntityKeyIdServiceTest : TestServer() {
             hds.connection.use {
                 storeEntityKeyIds(
                         it,
-                        mapOf(entitySetId to (0 until 1024).toList().toIntArray()),
-                        largeBatch.associateWith { UUID.randomUUID() }, idGenService
+                        largeBatch.associateWith { UUID.randomUUID() },
+                        idGenService
                 )
             }
         }
@@ -179,8 +145,8 @@ class PostgresEntityKeyIdServiceTest : TestServer() {
             hds.connection.use {
                 storeEntityKeyIds(
                         it,
-                        mapOf(entitySetId to (0 until 1024).toList().toIntArray()),
-                        medBatch.associateWith { UUID.randomUUID() }, idGenService
+                        medBatch.associateWith { UUID.randomUUID() },
+                        idGenService
                 )
             }
         }
@@ -189,8 +155,8 @@ class PostgresEntityKeyIdServiceTest : TestServer() {
             hds.connection.use {
                 storeEntityKeyIds(
                         it,
-                        mapOf(entitySetId to (0 until 1024).toList().toIntArray()),
-                        smallBatch.associateWith { UUID.randomUUID() }, idGenService
+                        smallBatch.associateWith { UUID.randomUUID() },
+                        idGenService
                 )
             }
         }
@@ -199,8 +165,8 @@ class PostgresEntityKeyIdServiceTest : TestServer() {
                     hds.connection.use {
                         storeEntityKeyIds(
                                 it,
-                                mapOf(entitySetId to (0 until 1024).toList().toIntArray()),
-                                largeBatch.associateWith { UUID.randomUUID() }, idGenService
+                                largeBatch.associateWith { UUID.randomUUID() },
+                                idGenService
                         )
                     }
                 },
@@ -209,8 +175,8 @@ class PostgresEntityKeyIdServiceTest : TestServer() {
                     hds.connection.use {
                         storeEntityKeyIds(
                                 it,
-                                mapOf(entitySetId to (0 until 1024).toList().toIntArray()),
-                                medBatch.associateWith { UUID.randomUUID() }, idGenService
+                                medBatch.associateWith { UUID.randomUUID() },
+                                idGenService
                         )
                     }
                 },
@@ -219,8 +185,8 @@ class PostgresEntityKeyIdServiceTest : TestServer() {
                     hds.connection.use {
                         storeEntityKeyIds(
                                 it,
-                                mapOf(entitySetId to (0 until 1024).toList().toIntArray()),
-                                smallBatch.associateWith { UUID.randomUUID() }, idGenService
+                                smallBatch.associateWith { UUID.randomUUID() },
+                                idGenService
                         )
                     }
                 })

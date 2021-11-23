@@ -27,7 +27,7 @@ import com.openlattice.analysis.requests.Filter
 import com.openlattice.data.DataEdgeKey
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.storage.MetadataOption
-import com.openlattice.data.storage.PostgresEntityDataQueryService
+import com.openlattice.data.storage.postgres.PostgresEntityDataQueryService
 import com.openlattice.data.storage.selectEntitySetWithCurrentVersionOfPropertyTypes
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EntitySet

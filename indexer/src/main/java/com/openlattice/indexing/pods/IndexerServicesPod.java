@@ -53,9 +53,8 @@ import com.openlattice.data.storage.ByteBlobDataManager;
 import com.openlattice.data.storage.DataDeletionService;
 import com.openlattice.data.storage.DataSourceResolver;
 import com.openlattice.data.storage.EntityDatastore;
-import com.openlattice.data.storage.PostgresEntityDataQueryService;
-import com.openlattice.data.storage.PostgresEntityDatastore;
-import com.openlattice.data.storage.partitions.PartitionManager;
+import com.openlattice.data.storage.postgres.PostgresEntityDataQueryService;
+import com.openlattice.data.storage.postgres.PostgresEntityDatastore;
 import com.openlattice.datasets.DataSetService;
 import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
@@ -80,6 +79,7 @@ import com.openlattice.organizations.OrganizationExternalDatabaseConfiguration;
 import com.openlattice.organizations.pods.OrganizationExternalDatabaseConfigurationPod;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
+import com.openlattice.postgres.PostgresTable;
 import com.openlattice.postgres.external.DatabaseQueryManager;
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager;
 import com.openlattice.postgres.external.ExternalDatabasePermissioner;
@@ -219,11 +219,6 @@ public class IndexerServicesPod {
     }
 
     @Bean
-    public PartitionManager partitionManager() {
-        return new PartitionManager( hazelcastInstance, hikariDataSource );
-    }
-
-    @Bean
     public PhoneNumberService phoneNumberService() {
         return new PhoneNumberService( hazelcastInstance );
     }
@@ -261,7 +256,6 @@ public class IndexerServicesPod {
                 authorizationManager(),
                 securePrincipalsManager(),
                 phoneNumberService(),
-                partitionManager(),
                 assembler(),
                 collaborationService()
         );
@@ -316,7 +310,6 @@ public class IndexerServicesPod {
                 eventBus,
                 aclKeyReservationService(),
                 authorizationManager(),
-                partitionManager(),
                 dataModelService(),
                 hikariDataSource,
                 dataSetService(),
@@ -333,16 +326,15 @@ public class IndexerServicesPod {
     public EntityKeyIdService idService() {
         return new PostgresEntityKeyIdService(
                 dataSourceResolver(),
-                idGeneration(),
-                partitionManager() );
+                idGeneration()
+        );
     }
 
     @Bean
     public PostgresEntityDataQueryService dataQueryService() {
         return new PostgresEntityDataQueryService(
                 dataSourceResolver(),
-                byteBlobDataManager,
-                partitionManager()
+                byteBlobDataManager
         );
     }
 
@@ -364,7 +356,6 @@ public class IndexerServicesPod {
         return new Graph(
                 dataSourceResolver(),
                 entitySetManager(),
-                partitionManager(),
                 dataQueryService(),
                 idService(),
                 metricRegistry
@@ -411,14 +402,13 @@ public class IndexerServicesPod {
                 authorizationManager(),
                 entityDatastore(),
                 graphApi(),
-                jobService(),
-                partitionManager()
+                jobService()
         );
     }
 
     @Bean
     public LinkingQueryService lqs() {
-        return new PostgresLinkingQueryService( hikariDataSource, partitionManager() );
+        return new PostgresLinkingQueryService( hikariDataSource );
     }
 
     @Bean
@@ -428,6 +418,10 @@ public class IndexerServicesPod {
 
     @Bean
     public DataSourceResolver dataSourceResolver() {
+        dataSourceManager.registerTablesWithAllDatasources( PostgresTable.DATA );
+        dataSourceManager.registerTablesWithAllDatasources( PostgresTable.E );
+        dataSourceManager.registerTablesWithAllDatasources( PostgresTable.IDS );
+        dataSourceManager.registerTablesWithAllDatasources( PostgresTable.SYNC_IDS );
         return new DataSourceResolver( hazelcastInstance, dataSourceManager );
     }
 

@@ -16,31 +16,33 @@ import java.util.concurrent.TimeUnit
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 open class DataSourceResolver @JvmOverloads constructor(
-    hazelcastInstance: HazelcastInstance,
-    val dataSourceManager: DataSourceManager,
-    val defaultOnMissingEntitySet: Boolean = false
+        hazelcastInstance: HazelcastInstance,
+        val dataSourceManager: DataSourceManager,
+        val defaultOnMissingEntitySet: Boolean = false
 ) {
     private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
     private val resolverCache = CacheBuilder
-        .newBuilder()
-        .concurrencyLevel(Runtime.getRuntime().availableProcessors() - 1)
-        .expireAfterAccess(5, TimeUnit.MINUTES)
-        .maximumSize(8192)
-        .build(if (defaultOnMissingEntitySet) {
-            CacheLoader.from { entitySetId: UUID? ->
-                entitySets[entitySetId]?.datastore ?: DataSourceManager.DEFAULT_DATASOURCE
-            }
-        } else {
-            CacheLoader.from { entitySetId: UUID? ->
-                entitySets.getValue(entitySetId).datastore //TODO: Replace with an entry processor read
-            }
-        })
+            .newBuilder()
+            .concurrencyLevel(Runtime.getRuntime().availableProcessors() - 1)
+            .expireAfterAccess(5, TimeUnit.MINUTES)
+            .maximumSize(8192)
+            .build(if (defaultOnMissingEntitySet) {
+                CacheLoader.from { entitySetId: UUID? ->
+                    entitySets[entitySetId]?.datastore ?: DataSourceManager.DEFAULT_DATASOURCE
+                }
+            } else {
+                CacheLoader.from { entitySetId: UUID? ->
+                    entitySets.getValue(entitySetId).datastore //TODO: Replace with an entry processor read
+                }
+            })
 
     fun resolve(entitySetId: UUID): HikariDataSource = dataSourceManager.getDataSource(getDataSourceName(entitySetId))
     fun getDataSourceName(entitySetId: UUID): String = if (entitySetId == IdConstants.LINKING_ENTITY_SET_ID.id) {
         DataSourceManager.DEFAULT_DATASOURCE
     } else resolverCache.get(entitySetId)
 
+    fun getFlavor(dataSourceName: String) = dataSourceManager.getFlavor(dataSourceName)
     fun getDataSource(dataSourceName: String): HikariDataSource = dataSourceManager.getDataSource(dataSourceName)
     fun getDefaultDataSource(): HikariDataSource = dataSourceManager.getDefaultDataSource()
+    fun getAllDataSources(): Collection<HikariDataSource> = dataSourceManager.dataSources.values
 }

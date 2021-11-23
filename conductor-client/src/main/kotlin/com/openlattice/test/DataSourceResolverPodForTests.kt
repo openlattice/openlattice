@@ -24,6 +24,8 @@ class DataSourceResolverPodForTests {
     fun resolver(): DataSourceResolver {
         dataSourceManager.registerTablesWithAllDatasources(PostgresTable.E)
         dataSourceManager.registerTablesWithAllDatasources(PostgresTable.DATA)
+        dataSourceManager.registerTablesWithAllDatasources(PostgresTable.IDS)
+        dataSourceManager.registerTablesWithAllDatasources(PostgresTable.SYNC_IDS)
         return DataSourceResolver(hazelcastInstance, dataSourceManager, true)
     }
 }

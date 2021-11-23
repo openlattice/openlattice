@@ -36,7 +36,6 @@ import com.openlattice.collaborations.CollaborationDatabaseManager;
 import com.openlattice.collaborations.CollaborationService;
 import com.openlattice.collaborations.PostgresCollaborationDatabaseService;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
-import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datasets.DataSetService;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EdmService;
@@ -135,11 +134,6 @@ public class LinkerServicesPod {
     }
 
     @Bean
-    public PartitionManager partitionManager() {
-        return new PartitionManager( hazelcastInstance, hikariDataSource );
-    }
-
-    @Bean
     public ConductorElasticsearchApi elasticsearchApi() {
         return new ConductorElasticsearchImpl( linkingConfiguration.getSearchConfiguration() );
     }
@@ -230,7 +224,6 @@ public class LinkerServicesPod {
                 authorizationManager(),
                 principalService(),
                 phoneNumberService(),
-                partitionManager(),
                 assembler(),
                 collaborationService()
         );
@@ -288,7 +281,6 @@ public class LinkerServicesPod {
                 eventBus,
                 aclKeyReservationService(),
                 authorizationManager(),
-                partitionManager(),
                 dataModelService(),
                 hikariDataSource,
                 dataSetService(),
