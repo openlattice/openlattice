@@ -13,7 +13,7 @@ import com.openlattice.authorization.Principal
 import com.openlattice.authorization.Principals
 import com.openlattice.data.DataGraphManager
 import com.openlattice.data.storage.MetadataOption
-import com.openlattice.data.storage.PostgresEntityDataQueryService
+import com.openlattice.data.storage.postgres.PostgresEntityDataQueryService
 import com.openlattice.data.storage.selectEntitySetWithCurrentVersionOfPropertyTypes
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager

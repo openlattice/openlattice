@@ -153,8 +153,8 @@ public final class PostgresColumn {
                     DATASTORE_FIELD,
                     TEXT
             )
-            .notNull()
-            .withDefault( "'" + EntitySet.DEFAULT_DATASOURCE + "'" );
+                    .notNull()
+                    .withDefault( "'" + EntitySet.DEFAULT_DATASOURCE + "'" );
     public static final String                   DATATYPE_FIELD                    = "datatype";
     public static final PostgresColumnDefinition DATATYPE                          =
             new PostgresColumnDefinition( DATATYPE_FIELD, TEXT ).notNull();
@@ -214,6 +214,8 @@ public final class PostgresColumn {
     public static final String                   ENTITY_SET_ID_FIELD               = "entity_set_id";
     public static final PostgresColumnDefinition ENTITY_SET_ID                     =
             new PostgresColumnDefinition( ENTITY_SET_ID_FIELD, UUID ).notNull();
+    public static final PostgresColumnDefinition ENTITY_SET_ID_STRING              =
+            new PostgresColumnDefinition( ENTITY_SET_ID_FIELD, TEXT ).notNull();
     public static final String                   ENTITY_SET_NAME_FIELD             = "entity_set_name";
     public static final PostgresColumnDefinition ENTITY_SET_NAME                   =
             new PostgresColumnDefinition( ENTITY_SET_NAME_FIELD, UUID ).notNull();
@@ -257,12 +259,16 @@ public final class PostgresColumn {
     public static final String                   HASH_FIELD                        = "hash";
     public static final PostgresColumnDefinition HASH                              =
             new PostgresColumnDefinition( HASH_FIELD, BYTEA ).notNull();
+    public static final PostgresColumnDefinition HASH_STRING                       =
+            new PostgresColumnDefinition( HASH_FIELD, TEXT ).notNull();
     public static final String                   ID_FIELD                          = "id";
     public static final PostgresColumnDefinition ID                                =
             new PostgresColumnDefinition( ID_FIELD, UUID ).primaryKey().notNull();
     public static final String                   ID_MAP_FIELD                      = "ids_map";
     public static final PostgresColumnDefinition ID_MAP                            =
             new PostgresColumnDefinition( ID_MAP_FIELD, JSONB );
+    public static final PostgresColumnDefinition ID_STRING                         =
+            new PostgresColumnDefinition( ID_FIELD, TEXT );
     public static final PostgresColumnDefinition ID_VALUE                          =
             new PostgresColumnDefinition( ID_FIELD, UUID );
     public static final String                   ID_WRITTEN_FIELD                  = "id_written";
@@ -405,6 +411,9 @@ public final class PostgresColumn {
     public static final PostgresColumnDefinition ORIGIN_ID                         =
             new PostgresColumnDefinition( ORIGIN_ID_FIELD, UUID )
                     .withDefault( "'" + IdConstants.EMPTY_ORIGIN_ID.getId() + "'" );
+    public static final PostgresColumnDefinition ORIGIN_ID_STRING                  =
+            new PostgresColumnDefinition( ORIGIN_ID_FIELD, TEXT )
+                    .withDefault( "'" + IdConstants.EMPTY_ORIGIN_ID.getId() + "'" );
     public static final String                   PARTITIONS_FIELD                  = "partitions";
     public static final PostgresColumnDefinition PARTITIONS                        = new PostgresColumnDefinition(
             PARTITIONS_FIELD,
@@ -452,6 +461,8 @@ public final class PostgresColumn {
             new PostgresColumnDefinition( PROPERTY_TYPE_ID_FIELD, UUID ).notNull();
     public static final PostgresColumnDefinition DST_PROPERTY_TYPE_ID              =
             new PostgresColumnDefinition( PROPERTY_TYPE_ID_FIELD, UUID ).notNull();
+    public static final PostgresColumnDefinition PROPERTY_TYPE_ID_STRING           =
+            new PostgresColumnDefinition( PROPERTY_TYPE_ID_FIELD, TEXT ).notNull();
     public static final String                   QUERY_FIELD                       = "query";
     public static final PostgresColumnDefinition QUERY                             =
             new PostgresColumnDefinition( QUERY_FIELD, TEXT ).notNull();
@@ -594,8 +605,8 @@ public final class PostgresColumn {
     public static final String                   VERTEX_ID_FIELD                   = "vertex_id";
     public static final PostgresColumnDefinition VERTEX_ID                         =
             new PostgresColumnDefinition( VERTEX_ID_FIELD, UUID );
-    public static final String                  WAREHOUSE_FIELD                    = "warehouse";
-    public static final PostgresColumnDefinition WAREHOUSE                      = new PostgresColumnDefinition(
+    public static final String                   WAREHOUSE_FIELD                   = "warehouse";
+    public static final PostgresColumnDefinition WAREHOUSE                         = new PostgresColumnDefinition(
             WAREHOUSE_FIELD,
             JSONB ).notNull();
 

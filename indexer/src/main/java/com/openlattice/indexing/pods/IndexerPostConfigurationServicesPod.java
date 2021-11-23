@@ -38,8 +38,7 @@ import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.storage.DataSourceResolver;
 import com.openlattice.data.storage.EntityDatastore;
 import com.openlattice.data.storage.IndexingMetadataManager;
-import com.openlattice.data.storage.PostgresEntityDataQueryService;
-import com.openlattice.data.storage.partitions.PartitionManager;
+import com.openlattice.data.storage.postgres.PostgresEntityDataQueryService;
 import com.openlattice.datasets.DataSetService;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.EntitySetManager;
@@ -149,14 +148,8 @@ public class IndexerPostConfigurationServicesPod {
     private GraphService graphApi;
 
     @Bean
-    public PartitionManager partitionManager() {
-        //Uses default datasource (metadata home).
-        return new PartitionManager( hazelcastInstance, hikariDataSource );
-    }
-
-    @Bean
     public IndexingMetadataManager indexingMetadataManager() {
-        return new IndexingMetadataManager( resolver, partitionManager() );
+        return new IndexingMetadataManager( resolver );
     }
 
     @Bean
@@ -242,7 +235,6 @@ public class IndexerPostConfigurationServicesPod {
     public IndexingService indexingService() {
         return new IndexingService( hikariDataSource,
                 backgroundIndexingService(),
-                partitionManager(),
                 executor,
                 hazelcastInstance );
     }
