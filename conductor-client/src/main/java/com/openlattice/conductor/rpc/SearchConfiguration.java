@@ -30,12 +30,13 @@ import java.util.Optional;
 import javax.xml.bind.annotation.XmlType.DEFAULT;
 
 public class SearchConfiguration implements Serializable {
-    private static final long   serialVersionUID      = 1018452800248369401L;
-    private static final String ELASTICSEARCH_URL     = "elasticsearchUrl";
-    private static final String ELASTICSEARCH_CLUSTER = "elasticsearchCluster";
-    private static final String ELASTICSEARCH_PORT    = "elasticsearchPort";
-    private static final String NUM_REPLICAS          = "numReplicas";
-    private static final String NUM_SHARDS            = "numShards";
+    private static final long   serialVersionUID        = 1018452800248369401L;
+    private static final String ELASTICSEARCH_URL       = "elasticsearchUrl";
+    private static final String ELASTICSEARCH_CLUSTER   = "elasticsearchCluster";
+    private static final String ELASTICSEARCH_PORT      = "elasticsearchPort";
+    private static final String ELASTICSEARCH_REST_PORT = "elasticsearchRestPort";
+    private static final String NUM_REPLICAS            = "numReplicas";
+    private static final String NUM_SHARDS              = "numShards";
 
     private static final int    DEFAULT_NUM_REPLICAS  = 2;
     private static final int    DEFAULT_NUM_SHARDS    = 5;
@@ -43,6 +44,7 @@ public class SearchConfiguration implements Serializable {
     private final String elasticsearchUrl;
     private final String elasticsearchCluster;
     private final int    elasticsearchPort;
+    private final int    elasticsearchRestPort;
     private final int    numReplicas;
     private final int    numShards;
 
@@ -51,11 +53,13 @@ public class SearchConfiguration implements Serializable {
             @JsonProperty( ELASTICSEARCH_URL ) String elasticsearchUrl,
             @JsonProperty( ELASTICSEARCH_CLUSTER ) String elasticsearchCluster,
             @JsonProperty( ELASTICSEARCH_PORT ) int elasticsearchPort,
+            @JsonProperty( ELASTICSEARCH_REST_PORT ) int elasticsearchRestPort,
             @JsonProperty( NUM_REPLICAS ) Optional<Integer> numReplicas,
             @JsonProperty( NUM_SHARDS ) Optional<Integer> numShards ) {
         this.elasticsearchUrl = elasticsearchUrl;
         this.elasticsearchCluster = elasticsearchCluster;
         this.elasticsearchPort = elasticsearchPort;
+        this.elasticsearchRestPort = elasticsearchRestPort;
         this.numReplicas = numReplicas.orElse( DEFAULT_NUM_REPLICAS );
         this.numShards = numShards.orElse( DEFAULT_NUM_SHARDS );
     }
@@ -73,6 +77,11 @@ public class SearchConfiguration implements Serializable {
     @JsonProperty( ELASTICSEARCH_PORT )
     public int getElasticsearchPort() {
         return elasticsearchPort;
+    }
+
+    @JsonProperty( ELASTICSEARCH_REST_PORT )
+    public int getElasticsearchRestPort() {
+        return elasticsearchRestPort;
     }
 
     @JsonProperty( NUM_REPLICAS )

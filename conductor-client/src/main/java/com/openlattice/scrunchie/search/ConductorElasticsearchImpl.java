@@ -69,6 +69,10 @@ import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.client.Client;
+import org.elasticsearch.client.RequestOptions;
+import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.client.core.CountRequest;
+import org.elasticsearch.client.core.CountResponse;
 import org.elasticsearch.common.geo.GeoPoint;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.DistanceUnit;
@@ -76,17 +80,12 @@ import org.elasticsearch.common.unit.Fuzziness;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.MatchQueryBuilder;
-import org.elasticsearch.index.query.Operator;
-import org.elasticsearch.index.query.QueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.index.query.QueryStringQueryBuilder;
-import org.elasticsearch.index.query.RangeQueryBuilder;
+import org.elasticsearch.index.query.*;
 import org.elasticsearch.index.reindex.BulkByScrollResponse;
 import org.elasticsearch.index.reindex.DeleteByQueryAction;
 import org.elasticsearch.index.reindex.DeleteByQueryRequestBuilder;
 import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.sort.FieldSortBuilder;
 import org.elasticsearch.search.sort.GeoDistanceSortBuilder;
 import org.elasticsearch.search.sort.NestedSortBuilder;
@@ -161,11 +160,13 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     private       Client                              client;
+    private       RestHighLevelClient                 restClient;
     private       ElasticsearchTransportClientFactory factory;
     private       boolean                             connected = true;
     private       String                              server;
     private       String                              cluster;
     private       int                                 port;
+    private       int                                 restPort;
     private       int                                 defaultNumReplicas;
     private       int                                 defaultNumShards;
     // @formatter:on
@@ -179,6 +180,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             Optional<Client> someClient ) {
         init( config );
         client = someClient.orElseGet( factory::getClient );
+        restClient = factory.getRestClient();
         initializeIndices();
     }
 
@@ -186,7 +188,8 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         server = config.getElasticsearchUrl();
         cluster = config.getElasticsearchCluster();
         port = config.getElasticsearchPort();
-        factory = new ElasticsearchTransportClientFactory( server, port, cluster );
+        restPort = config.getElasticsearchRestPort();
+        factory = new ElasticsearchTransportClientFactory( server, port, restPort, cluster );
         defaultNumReplicas = config.getNumReplicas();
         defaultNumShards = config.getNumShards();
     }
@@ -962,6 +965,35 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         query.must( QueryBuilders.nestedQuery( ENTITY, entitySetQuery, ScoreMode.Max ) );
 
         return query;
+    }
+
+    /*** ENTITY SET COUNT ***/
+
+    private TermsQueryBuilder getQueryForEntityCount( Set<UUID> entitySetIds ) {
+        return QueryBuilders.termsQuery( ENTITY_SET_ID_FIELD,
+                entitySetIds.stream().map( UUID::toString ) );
+    }
+
+    @Override
+    public Long executeCount(
+            UUID entityTypeId,
+            Set<UUID> entitySetIds ) {
+        if ( !verifyElasticsearchConnection() ) {
+            return 0L;
+        }
+        try {
+            CountRequest countRequest = new CountRequest( getIndexName( entityTypeId ) );
+            SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
+            sourceBuilder.query( getQueryForEntityCount( entitySetIds ) );
+            countRequest.source( sourceBuilder );
+            CountResponse countResponse = restClient.count( countRequest, RequestOptions.DEFAULT );
+            return countResponse.getCount();
+        } catch ( IOException e ) {
+            logger.error( "Failed to execute count of the following entity sets of type {}: {}",
+                    entityTypeId,
+                    entitySetIds );
+        }
+        return 0L;
     }
 
     /*** ENTITY DATA SEARCH ***/

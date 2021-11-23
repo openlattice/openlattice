@@ -12,3 +12,4 @@ searchConfiguration:
   elasticsearchUrl: localhost
   elasticsearchCluster: openlattice
   elasticsearchPort: 9300
+  elasticsearchRestPort: 9200
