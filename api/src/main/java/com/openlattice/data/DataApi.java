@@ -24,7 +24,15 @@ import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
 import com.openlattice.search.requests.EntityNeighborsFilter;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
-import retrofit2.http.*;
+import retrofit2.http.Body;
+import retrofit2.http.DELETE;
+import retrofit2.http.GET;
+import retrofit2.http.HTTP;
+import retrofit2.http.PATCH;
+import retrofit2.http.POST;
+import retrofit2.http.PUT;
+import retrofit2.http.Path;
+import retrofit2.http.Query;
 
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -187,10 +195,10 @@ public interface DataApi {
     /**
      * Deletes the entities matching the given entity ids and all of its neighbor entities provided in the filter.
      *
-     * @param entitySetId          The id of the EntitySet to delete from.
-     * @param filter               EntityNeighboursFilter containing which ids of entities to delete and entity set ids of neighbours
-     *                             to delete from.
-     * @param deleteType           The delete type to perform (soft or hard delete).
+     * @param entitySetId The id of the EntitySet to delete from.
+     * @param filter      EntityNeighboursFilter containing which ids of entities to delete and entity set ids of neighbours
+     *                    to delete from.
+     * @param deleteType  The delete type to perform (soft or hard delete).
      */
     @HTTP( method = "DELETE", path = BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + NEIGHBORS, hasBody = true )
     UUID deleteEntitiesAndNeighbors(

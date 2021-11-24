@@ -10,7 +10,8 @@ import com.openlattice.data.DataEdgeKey
 import com.openlattice.data.DeleteType
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.WriteEvent
-import com.openlattice.data.storage.*
+import com.openlattice.data.storage.FETCH_SIZE
+import com.openlattice.data.storage.PostgresEntitySetSizesInitializationTask
 import com.openlattice.data.storage.postgres.getMergedDataColumnName
 import com.openlattice.data.storage.postgres.selectEntitiesTextProperties
 import com.openlattice.data.storage.postgres.updateVersionsForEntitiesInEntitySet
@@ -26,9 +27,23 @@ import com.openlattice.ioc.providers.LateInitProvider
 import com.openlattice.linking.graph.PostgresLinkingQueryService
 import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresArrays
-import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresColumn.COUNT
+import com.openlattice.postgres.PostgresColumn.DST_ENTITY_KEY_ID
+import com.openlattice.postgres.PostgresColumn.DST_ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.EDGE_ENTITY_KEY_ID
+import com.openlattice.postgres.PostgresColumn.EDGE_ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID_FIELD
+import com.openlattice.postgres.PostgresColumn.ID
+import com.openlattice.postgres.PostgresColumn.ID_FIELD
+import com.openlattice.postgres.PostgresColumn.SRC_ENTITY_KEY_ID
+import com.openlattice.postgres.PostgresColumn.SRC_ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.VERSION
+import com.openlattice.postgres.PostgresColumn.VERSIONS
 import com.openlattice.postgres.PostgresDatatype
-import com.openlattice.postgres.PostgresTable.*
+import com.openlattice.postgres.PostgresTable.DATA
+import com.openlattice.postgres.PostgresTable.E
+import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
@@ -331,7 +346,7 @@ class DataDeletionJob(
             val esIdToBinaryPts = getBinaryPropertiesOfEntitySets(entitySetIds)
             if (esIdToBinaryPts.isNotEmpty()) {
                 val entitySetIdToIds =
-                        entityDataKeys.groupBy ({ it.entitySetId } , {it.entityKeyId })
+                        entityDataKeys.groupBy({ it.entitySetId }, { it.entityKeyId })
 
                 deletePropertyOfEntityFromS3(
                         esIdToBinaryPts.keys,
@@ -506,7 +521,7 @@ class DataDeletionJob(
             (${SRC_ENTITY_SET_ID.name} = ANY(?) AND ${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} = ANY(?))
         """.trimIndent()
 
-        val filter = listOf(dstFilter, srcFilter).filter { it.isNotEmpty() }.joinToString( " OR ")
+        val filter = listOf(dstFilter, srcFilter).filter { it.isNotEmpty() }.joinToString(" OR ")
 
         return """
             SELECT COUNT(*)
