@@ -819,7 +819,7 @@ class PostgresEntityDataQueryService(
         return BasePostgresIterable(
                 PreparedStatementHolderSupplier(hds, getExpiringEntitiesUsingIdsQuery(expirationPolicy)) { ps ->
                     ps.setObject(1, entitySetId)
-                    bindExpirationDate(ps, 3, expirationPolicy, currentDateTime)
+                    bindExpirationDate(ps, 2, expirationPolicy, currentDateTime)
                 }
         ) { rs -> ResultSetAdapters.id(rs) }
     }
@@ -838,8 +838,8 @@ class PostgresEntityDataQueryService(
                 )
                 ) { ps ->
                     ps.setObject(1, entitySetId)
-                    bindExpirationDate(ps, 3, expirationPolicy, currentDateTime, expirationPropertyType)
-                    ps.setObject(4, expirationPropertyType.id)
+                    bindExpirationDate(ps, 2, expirationPolicy, currentDateTime, expirationPropertyType)
+                    ps.setObject(3, expirationPropertyType.id)
                 }
         ) { rs -> ResultSetAdapters.id(rs) }
     }

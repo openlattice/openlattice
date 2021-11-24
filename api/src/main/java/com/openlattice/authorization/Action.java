@@ -22,7 +22,5 @@ public enum Action {
     ADD,
     REMOVE,
     SET,
-    REQUEST,
-    // temp action for migration
-    DROP
+    REQUEST
 }

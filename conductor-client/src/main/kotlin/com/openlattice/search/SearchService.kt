@@ -199,6 +199,11 @@ class SearchService(
     }
 
     @Timed
+    fun executeCount(entityTypeId: UUID, entitySetIds: Set<UUID>): Long {
+        return elasticsearchApi.executeCount(entityTypeId, entitySetIds)
+    }
+
+    @Timed
     fun executeSearch(
             searchConstraints: SearchConstraints,
             authorizedPropertyTypesByEntitySet: Map<UUID, Map<UUID, PropertyType>>

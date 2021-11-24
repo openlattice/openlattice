@@ -275,13 +275,6 @@ class TransporterDatastore(
             columnAcls: List<Acl>,
             columnsById: Map<AclKey, TableColumn>
     ) {
-        exDbPermMan.initializeAssemblyPermissions(
-                orgDatasource,
-                entitySetId,
-                entitySetName,
-                ptIdToFqnColumns.toSet()
-        )
-
         exDbPermMan.updateAssemblyPermissions(
                 Action.SET,
                 columnAcls,
