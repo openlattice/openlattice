@@ -320,7 +320,7 @@ constructor(
 
         deletionManager.authCheckForEntitySetsAndNeighbors(setOf(entitySetId), deleteType, Principals.getCurrentPrincipals())
         logger.info(
-            "deleteEntitySet - deletionManager.authCheckForEntitySetAndItsNeighbors took {} ms - entity set {}",
+            "deleteEntitySet - deletionManager.authCheckForEntitySetsAndNeighbors took {} ms - entity set {}",
             timer.elapsed(TimeUnit.MILLISECONDS),
             entitySetId
         )
