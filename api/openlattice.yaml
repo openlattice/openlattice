@@ -2146,7 +2146,7 @@ paths:
               schema:
                 type: integer
   /datastore/data/set/{entitySetId}/neighbors:
-    post:
+    delete:
       summary: Deletes the entities matching the given entity ids and all of its neighbor entities provided in the filter.
       operationId: deleteEntitiesAndNeighbors
       parameters:
