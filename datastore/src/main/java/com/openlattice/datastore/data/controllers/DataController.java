@@ -797,7 +797,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                 deleteType,
                 Principals.getCurrentPrincipals(), entityKeyIds );
         logger.info(
-                "deleteEntities - deletionManager.authCheckForEntitySetAndItsNeighbors took {} ms - entity set {} entities {}",
+                "deleteEntities - deletionManager.authCheckForEntitySetsAndNeighbors took {} ms - entity set {} entities {}",
                 timer.elapsed( TimeUnit.MILLISECONDS ),
                 entitySetId,
                 entityKeyIds.size()
