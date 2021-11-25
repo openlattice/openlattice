@@ -2177,11 +2177,11 @@ paths:
         - http_auth: []
       responses:
         "200":
-          description: "A long"
+          description: "Delete Job ID"
           content:
             application/json:
               schema:
-                type: integer
+                type: uuid
   /datastore/data/set/:
     post:
       summary: Creates a new set of entities.
