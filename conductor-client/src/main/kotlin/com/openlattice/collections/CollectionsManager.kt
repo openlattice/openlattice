@@ -236,7 +236,7 @@ class CollectionsManager(
 
         // filter out collections which do not have PrincipalType.User as user
         val collectionsToOmit = entitySetCollectionsToUpdate.filterNot { entitySetCollectionOwners.get(AclKey(it.key)).any { p -> p.type == PrincipalType.USER } }
-        logger.info("Cannot create entity sets for entity set collections ${collectionsToOmit.values} because they lack an owner of type PrincipalType.User")
+        logger.info("Cannot create entity sets for entity set collections ${collectionsToOmit.values} because they lack PrincipalType.User owner")
         entitySetCollectionsToUpdate -= collectionsToOmit.keys
 
         val entitySetsCreated = entitySetCollectionsToUpdate.values.associate {
