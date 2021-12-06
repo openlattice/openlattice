@@ -9,5 +9,7 @@ data class DataDeletionJobState(
         val deleteType: DeleteType,
         val entityKeyIds: MutableSet<UUID>? = null,
         internal var totalToDelete: Long = 0,
-        var numDeletes: Long = 0
+        var numDeletes: Long = 0,
+        val neighborSrcEntitySetIds: Set<UUID> = setOf(),
+        val neighborDstEntitySetIds: Set<UUID> = setOf()
 ) : JobState
