@@ -3,6 +3,7 @@ package com.openlattice.data
 import com.openlattice.authorization.Principal
 import com.openlattice.controllers.exceptions.ForbiddenException
 import com.openlattice.edm.type.PropertyType
+import com.openlattice.search.requests.EntityNeighborsFilter
 import java.util.*
 
 interface DataDeletionManager {
@@ -44,11 +45,22 @@ interface DataDeletionManager {
      * Performs auth checks for [principals] in order to delete entities from entity set [entitySetId], throwing
      * a [ForbiddenException] if the user does not have required permissions for a delete of type [deleteType].
      */
-    fun authCheckForEntitySetAndItsNeighbors(
-            entitySetId: UUID,
+    fun authCheckForEntitySetsAndNeighbors(
+            entitySetIds: Set<UUID>,
             deleteType: DeleteType,
             principals: Set<Principal>,
             entityKeyIds: Set<UUID>? = null
     )
 
+    /**
+     * Clears or deletes the specified entity key ids and their neighboring entities, as well as any edges and associations
+     * entities
+     */
+    fun clearOrDeleteEntitiesAndNeighbors(
+            entitySetIdEntityKeyIds: Map<UUID, Set<UUID>>,
+            entitySetId: UUID,
+            allEntitySetIds: Set<UUID>,
+            filter: EntityNeighborsFilter,
+            deleteType: DeleteType
+    ): UUID
 }

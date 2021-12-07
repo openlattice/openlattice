@@ -20,13 +20,6 @@
 
 package com.openlattice.datastore.data.controllers;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
-import static com.google.common.collect.Maps.transformValues;
-import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
-import static com.openlattice.authorization.EdmAuthorizationHelper.WRITE_PERMISSION;
-import static com.openlattice.authorization.EdmAuthorizationHelper.aclKeysForAccessCheck;
-
 import com.auth0.spring.security.api.authentication.PreAuthenticatedAuthenticationJsonWebToken;
 import com.codahale.metrics.annotation.Timed;
 import com.geekbeast.rhizome.jobs.HazelcastJobService;
@@ -89,26 +82,6 @@ import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.search.requests.EntityNeighborsFilter;
 import com.openlattice.web.mediatypes.CustomMediaType;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.net.URL;
-import java.nio.ByteBuffer;
-import java.time.Instant;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
-import java.util.Collection;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import javax.inject.Inject;
-import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.tuple.Triple;
@@ -131,6 +104,34 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import javax.inject.Inject;
+import javax.servlet.http.HttpServletResponse;
+import java.net.URL;
+import java.nio.ByteBuffer;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.Maps.transformValues;
+import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
+import static com.openlattice.authorization.EdmAuthorizationHelper.WRITE_PERMISSION;
+import static com.openlattice.authorization.EdmAuthorizationHelper.aclKeysForAccessCheck;
 
 @SuppressFBWarnings(
         value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE",
@@ -394,7 +395,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             @RequestBody Map<UUID, Map<UUID, Set<Map<ByteBuffer, Object>>>> entities,
             @RequestParam( value = PROPERTY_UPDATE_TYPE, defaultValue = "Versioned" )
                     PropertyUpdateType propertyUpdateType ) {
-        final var entitySetAclKey = new AclKey(entitySetId);
+        final var entitySetAclKey = new AclKey( entitySetId );
         ensureReadAccess( entitySetAclKey );
         if ( propertyUpdateType == PropertyUpdateType.Unversioned ) {
             ensureIntegrateAccess( entitySetAclKey );
@@ -641,7 +642,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             @RequestParam( value = PROPERTY_UPDATE_TYPE, defaultValue = "Versioned" )
                     PropertyUpdateType propertyUpdateType ) {
         associations.keySet().forEach( entitySetId -> {
-            final var entitySetAclKey = new AclKey(entitySetId);
+            final var entitySetAclKey = new AclKey( entitySetId );
             ensureReadAccess( entitySetAclKey );
             if ( propertyUpdateType == PropertyUpdateType.Unversioned ) {
                 ensureIntegrateAccess( entitySetAclKey );
@@ -730,10 +731,9 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             @RequestParam( value = TYPE ) DeleteType deleteType ) {
         ensureEntitySetCanBeWritten( entitySetId );
 
-        deletionManager.authCheckForEntitySetAndItsNeighbors( entitySetId,
+        deletionManager.authCheckForEntitySetsAndNeighbors( Set.of( entitySetId ),
                 deleteType,
-                Principals.getCurrentPrincipals(),
-                null );
+                Principals.getCurrentPrincipals(), null );
 
         UUID deletionJobId = deletionManager.clearOrDeleteEntitySet( entitySetId, deleteType );
 
@@ -786,21 +786,19 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         ensureEntitySetCanBeWritten( entitySetId );
         logger.info(
                 "deleteEntities - ensureEntitySetCanBeWritten took {} ms - entity set {} entities {}",
-                timer.elapsed( TimeUnit.MILLISECONDS),
+                timer.elapsed( TimeUnit.MILLISECONDS ),
                 entitySetId,
                 entityKeyIds.size()
         );
         timer.reset().start();
 
-        deletionManager.authCheckForEntitySetAndItsNeighbors(
-                entitySetId,
+        deletionManager.authCheckForEntitySetsAndNeighbors(
+                Set.of( entitySetId ),
                 deleteType,
-                Principals.getCurrentPrincipals(),
-                entityKeyIds
-        );
+                Principals.getCurrentPrincipals(), entityKeyIds );
         logger.info(
-                "deleteEntities - deletionManager.authCheckForEntitySetAndItsNeighbors took {} ms - entity set {} entities {}",
-                timer.elapsed( TimeUnit.MILLISECONDS),
+                "deleteEntities - deletionManager.authCheckForEntitySetsAndNeighbors took {} ms - entity set {} entities {}",
+                timer.elapsed( TimeUnit.MILLISECONDS ),
                 entitySetId,
                 entityKeyIds.size()
         );
@@ -809,7 +807,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         UUID deletionJobId = deletionManager.clearOrDeleteEntities( entitySetId, entityKeyIds, deleteType );
         logger.info(
                 "deleteEntities - deletionManager.clearOrDeleteEntities took {} ms - entity set {} entities {}",
-                timer.elapsed( TimeUnit.MILLISECONDS),
+                timer.elapsed( TimeUnit.MILLISECONDS ),
                 entitySetId,
                 entityKeyIds.size()
         );
@@ -827,7 +825,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         ) );
         logger.info(
                 "deleteEntities - recording audit event DELETE_ENTITIES took {} ms - entity set {} entities {}",
-                timer.elapsed(TimeUnit.MILLISECONDS),
+                timer.elapsed( TimeUnit.MILLISECONDS ),
                 entitySetId,
                 entityKeyIds.size()
         );
@@ -907,10 +905,10 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     }
 
     @Timed
-    @RequestMapping(
-            path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + NEIGHBORS },
-            method = RequestMethod.POST )
-    public Long deleteEntitiesAndNeighbors(
+    @Override
+    @DeleteMapping(
+            path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + NEIGHBORS } )
+    public UUID deleteEntitiesAndNeighbors(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @RequestBody EntityNeighborsFilter filter,
             @RequestParam( value = TYPE ) DeleteType deleteType ) {
@@ -918,24 +916,42 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         // (along with associations connected to all of them), not associations.
         // If called with an association entity set, it will simplify down to a basic delete call.
 
-        ensureEntitySetCanBeWritten( entitySetId );
+        Set<UUID> dstEntitySetIds = filter.getDstEntitySetIds().orElse( Set.of() );
+        Set<UUID> srcEntitySetIds = filter.getSrcEntitySetIds().orElse( Set.of() );
+        Set<UUID> allEntitySetIds = Sets.union( srcEntitySetIds, dstEntitySetIds );
+        allEntitySetIds = Sets.union( allEntitySetIds, Set.of( entitySetId ) );
 
-        WriteEvent writeEvent = new WriteEvent( 0, 0 );
+        ensureEntitySetsCanBeWritten( allEntitySetIds );
+
+        Map<UUID, Set<UUID>> entitySetIdEntityKeyIds = Maps.newHashMap();
+        entitySetIdEntityKeyIds.put( entitySetId, filter.getEntityKeyIds() );
+
+        // verify permission to delete
+        deletionManager.authCheckForEntitySetsAndNeighbors(
+                allEntitySetIds,
+                deleteType,
+                Principals.getCurrentPrincipals(), filter.getEntityKeyIds() );
+
+        UUID deletionJobId = deletionManager.clearOrDeleteEntitiesAndNeighbors(
+                entitySetIdEntityKeyIds,
+                entitySetId,
+                allEntitySetIds,
+                filter,
+                deleteType );
 
         recordEvent( new AuditableEvent(
                 spm.getCurrentUserId(),
                 new AclKey( entitySetId ),
                 AuditEventType.DELETE_ENTITY_AND_NEIGHBORHOOD,
-                "Entities and all neighbors deleted using delete type " + deleteType.toString() +
+                "Entities and neighbors deleted using delete type " + deleteType +
                         " through DataApi.clearEntityAndNeighborEntities",
                 Optional.of( filter.getEntityKeyIds() ),
                 ImmutableMap.of(),
-                getDateTimeFromLong( writeEvent.getVersion() ),
+                OffsetDateTime.now(),
                 Optional.empty()
         ) );
 
-        return (long) writeEvent.getNumUpdates();
-
+        return deletionJobId;
     }
 
     @Timed
@@ -949,7 +965,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             @RequestBody Map<UUID, Set<Object>> entity,
             @RequestParam( value = PROPERTY_UPDATE_TYPE, defaultValue = "Versioned" )
                     PropertyUpdateType propertyUpdateType ) {
-        final var entitySetAclKey = new AclKey(entitySetId);
+        final var entitySetAclKey = new AclKey( entitySetId );
         ensureReadAccess( entitySetAclKey );
         if ( propertyUpdateType == PropertyUpdateType.Unversioned ) {
             ensureIntegrateAccess( entitySetAclKey );

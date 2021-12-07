@@ -22,6 +22,7 @@
 package com.openlattice.data
 
 import com.openlattice.data.storage.*
+import com.openlattice.data.storage.postgres.buildPreparableFiltersSql
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.PostgresTable
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
@@ -86,7 +87,6 @@ class PostgresEntityDataQueryServiceTest {
                         mapOf(),
                         EnumSet.of(MetadataOption.ENTITY_KEY_IDS),
                         entitySetIds = setOf(),
-                        partitions = setOf(),
                         entityKeyIds = setOf(),
                         linking = true
                 ).first

@@ -31,6 +31,7 @@ import com.openlattice.edm.schemas.manager.HazelcastSchemaManager
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.hazelcast.HazelcastMap
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.util.*
 
@@ -46,6 +47,7 @@ class CollectionsManager(
         private val eventBus: EventBus
 
 ) {
+    private val logger = LoggerFactory.getLogger(CollectionsManager::class.java)
 
     private val entityTypeCollections = HazelcastMap.ENTITY_TYPE_COLLECTIONS.getMap(hazelcast)
     private val entitySetCollections = HazelcastMap.ENTITY_SET_COLLECTIONS.getMap(hazelcast)
@@ -226,11 +228,17 @@ class CollectionsManager(
                 entityTypeCollectionIdPredicate(
                         entityTypeCollectionId
                 )
-        ).associateBy { it.id }
+        ).associateBy { it.id }.toMutableMap()
 
         val entitySetCollectionOwners = authorizations.getOwnersForSecurableObjects(entitySetCollectionsToUpdate.keys.map {
             AclKey(it)
         }.toSet())
+
+        // filter out collections which do not have PrincipalType.User as user
+        val collectionsToOmit = entitySetCollectionsToUpdate.filterNot { entitySetCollectionOwners.get(AclKey(it.key)).any { p -> p.type == PrincipalType.USER } }
+        logger.info("Cannot create entity sets for entity set collections ${collectionsToOmit.values} because they lack PrincipalType.User owner")
+        entitySetCollectionsToUpdate -= collectionsToOmit.keys
+
         val entitySetsCreated = entitySetCollectionsToUpdate.values.associate {
             it.id to generateEntitySet(
                     it,

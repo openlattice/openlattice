@@ -42,7 +42,6 @@ import com.openlattice.controllers.util.ApiExceptions
 import com.openlattice.data.DataDeletionManager
 import com.openlattice.data.DataGraphManager
 import com.openlattice.data.DeleteType
-import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EntitySet
@@ -95,8 +94,7 @@ constructor(
         private val spm: SecurePrincipalsManager,
         private val authzHelper: EdmAuthorizationHelper,
         private val deletionManager: DataDeletionManager,
-        private val entitySetManager: EntitySetManager,
-        private val partitionManager: PartitionManager
+        private val entitySetManager: EntitySetManager
 ) : EntitySetsApi, AuthorizingComponent, AuditingComponent {
 
     companion object {
@@ -320,9 +318,9 @@ constructor(
         )
         timer.reset().start()
 
-        deletionManager.authCheckForEntitySetAndItsNeighbors(entitySetId, deleteType, Principals.getCurrentPrincipals())
+        deletionManager.authCheckForEntitySetsAndNeighbors(setOf(entitySetId), deleteType, Principals.getCurrentPrincipals())
         logger.info(
-            "deleteEntitySet - deletionManager.authCheckForEntitySetAndItsNeighbors took {} ms - entity set {}",
+            "deleteEntitySet - deletionManager.authCheckForEntitySetsAndNeighbors took {} ms - entity set {}",
             timer.elapsed(TimeUnit.MILLISECONDS),
             entitySetId
         )
@@ -715,15 +713,6 @@ constructor(
         }
 
         return entitySet
-    }
-
-    @Timed
-    @PutMapping(value = [ID_PATH + PARTITIONS_PATH])
-    override fun repartitionEntitySet(@PathVariable(ID) entitySetId: UUID, @RequestBody partitions: Set<Int>): UUID {
-        ensureAdminAccess()
-        require ( entitySetManager.exists( entitySetId ) ) { "Entity set must exist."}
-        val oldPartitions = partitionManager.getEntitySetPartitions(entitySetId)
-        return dgm.repartitionEntitySet(entitySetId, oldPartitions, partitions)
     }
 
     override fun getAuthorizationManager(): AuthorizationManager {

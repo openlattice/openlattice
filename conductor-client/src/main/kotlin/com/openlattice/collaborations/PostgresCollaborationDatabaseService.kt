@@ -152,7 +152,6 @@ class PostgresCollaborationDatabaseService(
     override fun initializeTableProjection(collaborationId: UUID, organizationId: UUID, tableId: UUID) {
         val collaborationHds = externalDbConnMan.connectToOrg(collaborationId)
         val table = externalTables.getValue(tableId)
-        val columns = externalColumns.values(Predicates.equal(TABLE_ID_INDEX, tableId)).sortedBy { it.ordinalPosition }.toSet()
 
         val foreignSchema = table.schema
         val foreignName = table.name
@@ -178,12 +177,6 @@ class PostgresCollaborationDatabaseService(
                 sourceTableName = intermediateName,
                 viewSchema = viewSchema,
                 viewName = viewName
-        )
-
-        externalDbPermissioner.initializeProjectedTableViewPermissions(
-                viewSchema,
-                table,
-                columns
         )
     }
 

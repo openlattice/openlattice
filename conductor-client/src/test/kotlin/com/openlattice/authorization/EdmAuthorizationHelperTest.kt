@@ -24,7 +24,6 @@ import com.google.common.eventbus.EventBus
 import com.openlattice.auditing.AuditingConfiguration
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.conductor.rpc.ConductorConfiguration
-import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datasets.DataSetService
 import com.openlattice.datastore.services.EdmService
 import com.openlattice.datastore.services.EntitySetService
@@ -61,7 +60,6 @@ class EdmAuthorizationHelperTest : HzAuthzTest() {
                 eventBus,
                 HazelcastAclKeyReservationService(hazelcastInstance),
                 hzAuthz,
-                PartitionManager(hazelcastInstance, hds),
                 edmManager,
                 hds,
                 dataSetService,
