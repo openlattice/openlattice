@@ -510,7 +510,7 @@ class ExternalDatabasePermissioner(
                     SELECT
                     FROM   pg_catalog.pg_roles
                     WHERE  rolname = '$dbRole') THEN
-                    CREATE ROLE ${quote(dbRole)} NOCREATEDB NOCREATEROLE INHERIT NOLOGIN ENCRYPTED PASSWORD '$dbUserPassword';
+                    CREATE ROLE ${quote(dbRole)} NOCREATEDB NOCREATEROLE INHERIT NOLOGIN;
                 END IF;
             END
             ${'$'}do${'$'};
@@ -526,7 +526,7 @@ class ExternalDatabasePermissioner(
                     SELECT
                     FROM   pg_catalog.pg_roles
                     WHERE  rolname = '$dbUser') THEN
-                    CREATE ROLE ${quote(dbUser)} NOSUPERUSER NOCREATEDB NOCREATEROLE INHERIT LOGIN;
+                    CREATE ROLE ${quote(dbUser)} NOSUPERUSER NOCREATEDB NOCREATEROLE INHERIT LOGIN ENCRYPTED PASSWORD '$dbUserPassword';
                 END IF;
             END
             ${'$'}do${'$'};
