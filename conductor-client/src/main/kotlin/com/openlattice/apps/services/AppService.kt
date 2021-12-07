@@ -242,13 +242,13 @@ class AppService(
 
         val appConfigKey = AppConfigKey(appId, organizationId)
         Preconditions.checkArgument(!appConfigs.containsKey(appConfigKey),
-                "App {} is already installed for organization {}",
+                "App %s is already installed for organization %s",
                 appId,
                 organizationId)
 
         val nonexistentKeys = Sets.difference(settings.keys, app.defaultSettings.keys)
         Preconditions.checkArgument(nonexistentKeys.isEmpty(),
-                "Cannot create app {} in organization {} with settings containing keys that do not exist: {}",
+                "Cannot create app %s in organization %s with settings containing keys that do not exist: %s",
                 appId,
                 organizationId,
                 nonexistentKeys)
@@ -370,7 +370,7 @@ class AppService(
                 entityTypeCollections.getValue(app.entityTypeCollectionId).template.map { it.id }.toSet())
 
         Preconditions.checkState(nonexistentTemplateTypeIds.isEmpty(),
-                "Could not update role {} permissions for app {} because the following templateTypeIds are not present in the EntityTypeCollection: ",
+                "Could not update role %s permissions for app %s because the following templateTypeIds are not present in the EntityTypeCollection: %s",
                 roleId,
                 appId,
                 nonexistentTemplateTypeIds)
@@ -427,13 +427,13 @@ class AppService(
 
         val appConfigKey = AppConfigKey(appId, organizationId)
         Preconditions.checkArgument(appConfigs.containsKey(appConfigKey),
-                "App {} is not installed for organization {}.",
+                "App %s is not installed for organization %s.",
                 appId,
                 organizationId)
 
         val nonexistentKeys = Sets.difference(newAppSettings.keys, app.defaultSettings.keys)
         Preconditions.checkArgument(nonexistentKeys.isEmpty(),
-                "Cannot update app {} in organization {} with settings containing keys that do not exist: {}",
+                "Cannot update app %s in organization %s with settings containing keys that do not exist: %s",
                 appId,
                 organizationId,
                 nonexistentKeys)
@@ -468,7 +468,7 @@ class AppService(
     private fun ensureAppRolesExist(app: App, roleIds: Set<UUID>) {
         val missingRoleIds = roleIds - app.appRoles.map { it.id }
         Preconditions.checkState(missingRoleIds.isEmpty(),
-                "App {} does not contain roles with ids {}.",
+                "App %s does not contain roles with ids %s.",
                 app.id,
                 missingRoleIds)
     }
