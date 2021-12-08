@@ -991,7 +991,8 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         } catch ( IOException e ) {
             logger.error( "Failed to execute count of the following entity sets of type {}: {}",
                     entityTypeId,
-                    entitySetIds );
+                    entitySetIds,
+                    e );
         }
         return 0L;
     }
