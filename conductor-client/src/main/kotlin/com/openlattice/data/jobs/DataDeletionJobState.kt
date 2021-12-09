@@ -1,9 +1,11 @@
 package com.openlattice.data.jobs
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.geekbeast.rhizome.jobs.JobState
 import com.openlattice.data.DeleteType
 import java.util.*
 
+@JsonIgnoreProperties(value = ["partitions"])
 data class DataDeletionJobState(
         val entitySetId: UUID,
         val deleteType: DeleteType,

@@ -125,9 +125,9 @@ class Graph(
 
     private fun addKeyIds(ps: PreparedStatement, dataEdgeKey: DataEdgeKey, startIndex: Int = 1) {
         logger.info("Adding data edge key {}", dataEdgeKey)
-        ps.setObject(startIndex + 1, dataEdgeKey.src.entityKeyId)
-        ps.setObject(startIndex + 2, dataEdgeKey.dst.entityKeyId)
-        ps.setObject(startIndex + 3, dataEdgeKey.edge.entityKeyId)
+        ps.setObject(startIndex, dataEdgeKey.src.entityKeyId)
+        ps.setObject(startIndex + 1, dataEdgeKey.dst.entityKeyId)
+        ps.setObject(startIndex + 2, dataEdgeKey.edge.entityKeyId)
         ps.addBatch()
     }
 
