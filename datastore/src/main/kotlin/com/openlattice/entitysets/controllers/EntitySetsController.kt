@@ -297,7 +297,8 @@ constructor(
         @RequestParam( value = DELETE_TYPE, defaultValue = "Soft") deleteType: DeleteType
     ): UUID {
 
-        logger.info("deleteEntitySet - attempting to delete entity set {}", entitySetId)
+        val user = Principals.getCurrentUser()
+        logger.info("deleteEntitySet - {} is attempting to delete entity set {}", user.id, entitySetId)
 
         val funTimer = Stopwatch.createStarted()
         val timer = Stopwatch.createStarted()
@@ -371,17 +372,6 @@ constructor(
 
         logger.info(
             "deleteEntitySet - deleting entity set took {} ms - entity set {}",
-            funTimer.elapsed(TimeUnit.MILLISECONDS),
-            entitySetId
-        )
-        logger.info(
-            "recording audit event DELETE_ENTITY_SET took {} ms - entity set {}",
-            timer.elapsed(TimeUnit.MILLISECONDS),
-            entitySetId
-        )
-
-        logger.info(
-            "deleting entity set took {} ms - entity set {}",
             funTimer.elapsed(TimeUnit.MILLISECONDS),
             entitySetId
         )
