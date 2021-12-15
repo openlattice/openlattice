@@ -59,12 +59,7 @@ class SocratesMatcher(
                         .build()
 
     override fun updateMatchingModel(model: MultiLayerNetwork) {
-        localModel.shutdown()
-        localModel = ParallelInference.Builder(model)
-            .inferenceMode(InferenceMode.SEQUENTIAL)
-            // .batchLimit(32)
-            .workers(Runtime.getRuntime().availableProcessors())
-            .build()
+        localModel.updateModel(model)
     }
 
     /**
