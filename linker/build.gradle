@@ -60,6 +60,7 @@ apply plugin: 'license-report'
 
 def LINKER_XMS = "$System.env.LINKER_XMS"
 def LINKER_XMX = "$System.env.LINKER_XMX"
+def LINKER_OFFHEAP = "$System.env.LINKER_OFFHEAP"
 def L_ARGS = "$System.env.LINKER_ARGS"
 def PARALLEL = "$System.env.PARALLELISM"
 def GC = "$System.env.GC"
@@ -69,7 +70,11 @@ if (LINKER_XMS == 'null' || LINKER_XMS == null || LINKER_XMS == "") {
 }
 
 if (LINKER_XMX == 'null' || LINKER_XMX == null || LINKER_XMX == "") {
-    LINKER_XMX = '-Xms4g'
+    LINKER_XMX = '-Xmx4g'
+}
+
+if (LINKER_OFFHEAP == 'null' || LINKER_OFFHEAP == null || LINKER_OFFHEAP == "") {
+    LINKER_OFFHEAP = '-Dorg.bytedeco.javacpp.maxbytes=2g'
 }
 
 if (L_ARGS == 'null' || L_ARGS == null || L_ARGS == "") {
@@ -91,7 +96,7 @@ java {
 }
 
 mainClassName = "com.openlattice.linking.Linker"
-applicationDefaultJvmArgs = [LINKER_XMS, LINKER_XMX, "-server", GC, PARALLEL]
+applicationDefaultJvmArgs = [LINKER_XMS, LINKER_XMX, LINKER_OFFHEAP, "-server", GC, PARALLEL]
 applicationDefaultJvmArgs += ["--add-modules", "java.se",
                               "--add-exports", "java.base/jdk.internal.ref=ALL-UNNAMED",
                               "--add-opens", "java.base/java.lang=ALL-UNNAMED",
