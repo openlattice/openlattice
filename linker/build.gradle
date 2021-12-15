@@ -178,6 +178,10 @@ dependencies {
         exclude module: 'guava'
     }
 
+    implementation("org.deeplearning4j:deeplearning4j-parallel-wrapper:${deeplearning4j}") {
+        exclude module: 'guava'
+    }
+
     implementation("org.nd4j:nd4j-native-platform:${deeplearning4j}") {
         exclude module: 'guava'
     }
