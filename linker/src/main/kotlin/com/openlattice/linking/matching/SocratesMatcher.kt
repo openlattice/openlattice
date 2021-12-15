@@ -31,6 +31,8 @@ import com.openlattice.linking.util.PersonMetric
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
+import org.deeplearning4j.parallelism.ParallelInference
+import org.deeplearning4j.parallelism.inference.InferenceMode
 import org.nd4j.linalg.factory.Nd4j
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -50,10 +52,19 @@ class SocratesMatcher(
         private val linkingFeedbackService: PostgresLinkingFeedbackService
 ) : Matcher {
 
-    private var localModel = ThreadLocal.withInitial { model.clone() }
+    private var localModel = ParallelInference.Builder(model)
+                        .inferenceMode(InferenceMode.SEQUENTIAL)
+                        // .batchLimit(32)
+                        .workers(Runtime.getRuntime().availableProcessors())
+                        .build()
 
     override fun updateMatchingModel(model: MultiLayerNetwork) {
-        localModel = ThreadLocal.withInitial { model.clone() }
+        localModel.shutdown()
+        localModel = ParallelInference.Builder(model)
+            .inferenceMode(InferenceMode.SEQUENTIAL)
+            // .batchLimit(32)
+            .workers(Runtime.getRuntime().availableProcessors())
+            .build()
     }
 
     /**
@@ -62,9 +73,7 @@ class SocratesMatcher(
      * @return block The resulting block around the entity data key in block.first
      */
     @Timed
-    override fun initialize( block: Block): PairwiseMatch {
-        val model = localModel.get()
-
+    override fun initialize(block: Block): PairwiseMatch {
         val entityDataKey = block.entityDataKey
         // negative feedbacks are already filtered out when blocking
         val entities = block.entities
@@ -78,7 +87,7 @@ class SocratesMatcher(
 
         // transform features to matrix and compute scores
         val featureMatrix = extractedFeatures.values.toTypedArray()
-        val scores = computeScore(model, featureMatrix).asIterable()
+        val scores = computeScore(localModel, featureMatrix).asIterable()
 
         val matchedEntities = extractedFeatures.keys.zip(scores).toMap(mutableMapOf())
         val initializedBlock = PairwiseMatch(entityDataKey, mutableMapOf(entityDataKey to matchedEntities))
@@ -95,7 +104,7 @@ class SocratesMatcher(
      * @return All pairs of entities in the block scored by the current model.
      */
     @Timed
-    override fun match( block: Block): PairwiseMatch {
+    override fun match(block: Block): PairwiseMatch {
         val sw = Stopwatch.createStarted()
 
         val positiveFeedbacks = mutableSetOf<EntityKeyPair>()
