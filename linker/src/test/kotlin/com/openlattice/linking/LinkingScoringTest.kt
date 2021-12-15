@@ -56,7 +56,7 @@ open class LinkingScoringTest {
 
             // compute score
             val cleanFeatures = arrayOf(distance.toDoubleArray())
-            val score = model.getModelScore(cleanFeatures ).get(0)
+            val score = localModel.getModelScore(cleanFeatures ).get(0)
             Assert.assertEquals(comparison.score, score, 0.00001)
 
         }
