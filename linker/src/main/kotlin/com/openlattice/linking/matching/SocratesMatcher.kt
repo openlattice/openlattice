@@ -52,7 +52,7 @@ class SocratesMatcher(
         private val linkingFeedbackService: PostgresLinkingFeedbackService
 ) : Matcher {
 
-    private var localModel = ParallelInference.Builder(model)
+    private val localModel = ParallelInference.Builder(model)
                         .inferenceMode(InferenceMode.SEQUENTIAL)
                         // .batchLimit(32)
                         .workers(Runtime.getRuntime().availableProcessors())

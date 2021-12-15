@@ -7,6 +7,7 @@ import com.openlattice.linking.util.PersonMetric
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.deeplearning4j.nn.modelimport.keras.KerasModelImport
+import org.deeplearning4j.parallelism.ParallelInference
 import org.junit.Assert
 import org.junit.Test
 import org.nd4j.linalg.io.ClassPathResource
@@ -34,6 +35,7 @@ open class LinkingScoringTest {
         // load model
         val simpleMlp = ClassPathResource("model_2019-01-30.h5").file.path
         val model = KerasModelImport.importKerasSequentialModelAndWeights( simpleMlp )
+        val localModel = ParallelInference.Builder(model).build()
 
         // load input/output
         val configFile = ClassPathResource("scoringTest.yaml").file.path
