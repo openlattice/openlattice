@@ -203,7 +203,7 @@ class SocratesMatcher(
         val featureExtractionSW = sw.elapsed(TimeUnit.MILLISECONDS)
 
         // get scores from matrix
-        val scores = computeScore(localModel.get(), featureMatrix)
+        val scores = computeScore(localModel, featureMatrix)
 
         // collect and combine keys and scores
         val results = scores.zip(featureKeys).map {
@@ -226,7 +226,7 @@ class SocratesMatcher(
     }
 
     private fun computeScore(
-            model: MultiLayerNetwork,
+            model: ParallelInference,
             features: Array<DoubleArray>
     ): DoubleArray {
         val sw = Stopwatch.createStarted()
@@ -269,7 +269,7 @@ class SocratesMatcher(
     }
 }
 
-fun MultiLayerNetwork.getModelScore(features: Array<DoubleArray>): DoubleArray {
+fun ParallelInference.getModelScore(features: Array<DoubleArray>): DoubleArray {
     return try {
         output(Nd4j.create(features)).toDoubleVector()
     } catch (ex: Exception) {
