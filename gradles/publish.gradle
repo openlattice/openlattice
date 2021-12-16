@@ -90,7 +90,7 @@ if ( ( bambooUsername != null)  && ( System.getenv("bamboo_ARTIFACTORY_PASSWORD"
         sign configurations.pom
     }
     
-    if ( branch == "main" ) {
+    if ( branch == "develop" ) {
         publishing {
             repositories {
                 maven {
@@ -154,7 +154,7 @@ if ( ( bambooUsername != null)  && ( System.getenv("bamboo_ARTIFACTORY_PASSWORD"
             sign publishing.publications.mavenJava
         }
     } 
-    else if ( branch.startsWith("release/") && !version.contains('-SNAPSHOT') ) {
+    else if ( ( branch.startsWith("release/") || branch == "main" || branch == "master" ) && !version.contains('-SNAPSHOT') ) {
         publishing {
             repositories {
                 // maven {
