@@ -53,8 +53,7 @@ class SocratesMatcher(
 ) : Matcher {
 
     private val localModel = ParallelInference.Builder(model)
-                        .inferenceMode(InferenceMode.SEQUENTIAL)
-                        // .batchLimit(32)
+                        .inferenceMode(InferenceMode.INPLACE)
                         .workers(Runtime.getRuntime().availableProcessors())
                         .build()
 
