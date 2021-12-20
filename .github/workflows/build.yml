@@ -30,4 +30,4 @@ jobs:
           cache: 'gradle'
 
       - name: gradlew clean build
-        run: ./gradlew clean build
+        run: ./gradlew clean build --stacktrace --info
