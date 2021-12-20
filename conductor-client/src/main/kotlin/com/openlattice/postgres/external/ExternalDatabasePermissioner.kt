@@ -259,7 +259,8 @@ class ExternalDatabasePermissioner(
             completedColumnAcls.add(Acl(internalIdAclKey, readAces))
         }
 
-        updateTablePermissions(action, SecurableObjectType.PropertyTypeInEntitySet, completedColumnAcls, completedColumnsById, TableType.VIEW)
+        logger.info("Permissioning for entity-sets in atlas currently disabled.")
+        //updateTablePermissions(action, SecurableObjectType.PropertyTypeInEntitySet, completedColumnAcls, completedColumnsById, TableType.VIEW)
     }
 
     /**

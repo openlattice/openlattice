@@ -527,7 +527,7 @@ internal val zeroVersionsForEntitySet = "UPDATE ${IDS.name} " +
             "${VERSION.name} = 0, " +
             "${LAST_WRITE.name} = 'now()' " +
         "WHERE " +
-            "${ENTITY_SET_ID.name} = ? AND "
+            "${ENTITY_SET_ID.name} = ? "
 // @formatter:on
 
 
