@@ -28,7 +28,10 @@ jobs:
           cache: 'gradle'
 
       - name: initialize superproject
-        run: git fetch --tags
+        run: |
+          git fetch --tags
+          git submodule init
+          git submodule update
 
       - name: gradlew clean build
         run: ./gradlew clean build
