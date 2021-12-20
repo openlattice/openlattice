@@ -27,5 +27,8 @@ jobs:
           distribution: 'temurin'
           cache: 'gradle'
 
+      - name: initialize superproject
+        run: git fetch --tags
+
       - name: gradlew clean build
         run: ./gradlew clean build
