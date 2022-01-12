@@ -97,7 +97,8 @@ java {
 
 mainClassName = "com.openlattice.linking.Linker"
 applicationDefaultJvmArgs = [LINKER_XMS, LINKER_XMX, LINKER_OFFHEAP, "-server", GC, PARALLEL]
-applicationDefaultJvmArgs += ["--add-modules", "java.se",
+applicationDefaultJvmArgs += ["--add-modules", "java.base",
+                              "--add-modules", "java.se",
                               "--add-exports", "java.base/jdk.internal.ref=ALL-UNNAMED",
                               "--add-opens", "java.base/java.lang=ALL-UNNAMED",
                               "--add-opens", "java.base/java.nio=ALL-UNNAMED",
@@ -217,11 +218,13 @@ eclipse {
 eclipse.classpath.plusConfigurations += [configurations.provided]
 
 tasks.withType(JavaCompile) {
-    options.compilerArgs+= [ "--add-modules", "java.se"]
+    options.compilerArgs+= [ "--add-modules", "java.base",
+                             "--add-modules", "java.se"]
 }
 
 tasks.withType(Test) {
-    jvmArgs += ["--add-modules", "java.se",
+    jvmArgs += ["--add-modules", "java.base",
+                "--add-modules", "java.se",
                 "--add-exports", "java.base/jdk.internal.ref=ALL-UNNAMED",
                 "--add-opens", "java.base/java.lang=ALL-UNNAMED",
                 "--add-opens", "java.base/java.nio=ALL-UNNAMED",
@@ -232,7 +235,7 @@ tasks.withType(Test) {
 
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "11"
         freeCompilerArgs += '-Xjvm-default=compatibility'
     }
 }

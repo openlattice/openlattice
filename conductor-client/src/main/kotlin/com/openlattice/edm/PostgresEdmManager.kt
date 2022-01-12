@@ -63,7 +63,7 @@ class PostgresEdmManager(private val hds: HikariDataSource) {
         }
     }
 
-    fun countEntitySetsOfEntityTypes(entityTypeIds: Set<UUID?>?): Map<UUID, Long> {
+    fun countEntitySetsOfEntityTypes(entityTypeIds: Set<UUID>): Map<UUID, Long> {
         val query = """
             SELECT ${ENTITY_TYPE_ID.name}, COUNT(*)
             FROM ${ENTITY_SETS.name}

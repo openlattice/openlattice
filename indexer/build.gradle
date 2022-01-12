@@ -86,7 +86,14 @@ if (GC == 'null' || GC == null || GC == "") {
 
 mainClassName = "com.openlattice.indexing.Indexer"
 applicationDefaultJvmArgs = [INDEXER_XMS, INDEXER_XMX, "-server", GC, PARALLEL]
-
+applicationDefaultJvmArgs += [ "--add-modules", "java.base",
+                               "--add-modules", "java.se",
+                               "--add-exports","java.base/jdk.internal.ref=ALL-UNNAMED",
+                               "--add-opens","java.base/java.lang=ALL-UNNAMED",
+                               "--add-opens","java.base/java.nio=ALL-UNNAMED",
+                               "--add-opens","java.base/sun.nio.ch=ALL-UNNAMED",
+                               "--add-opens","java.management/sun.management=ALL-UNNAMED",
+                               "--add-opens","jdk.management/com.sun.management.internal=ALL-UNNAMED"]
 sourceCompatibility = JavaVersion.VERSION_11
 targetCompatibility = JavaVersion.VERSION_11
 
@@ -107,6 +114,7 @@ checkstyle {
   showViolations = false
     config project.resources.text.fromUri(rootProject.file('gradles/checkstyle.xml').toURI())
 }
+
 tasks.withType(Checkstyle) {
     reports {
         xml.enabled = false
@@ -173,7 +181,6 @@ dependencies {
      */
     testImplementation "junit:junit:${junit_version}"
     testImplementation "org.mockito:mockito-all:${mockito_version}"
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 }
 
 eclipse {
@@ -187,12 +194,14 @@ eclipse {
 eclipse.classpath.plusConfigurations += [configurations.provided]
 
 tasks.withType(JavaCompile) {
-    options.compilerArgs+= [ "--add-modules", "java.se",
+    options.compilerArgs+= [ "--add-modules", "java.base",
+                             "--add-modules", "java.se",
                              "--add-exports","java.base/jdk.internal.ref=ALL-UNNAMED"]
 }
 
 tasks.withType(Test) {
-    jvmArgs += [ "--add-modules", "java.se",
+    jvmArgs += [ "--add-modules", "java.base",
+                 "--add-modules", "java.se",
                  "--add-exports","java.base/jdk.internal.ref=ALL-UNNAMED",
                  "--add-opens","java.base/java.lang=ALL-UNNAMED",
                  "--add-opens","java.base/java.nio=ALL-UNNAMED",
@@ -203,7 +212,7 @@ tasks.withType(Test) {
 
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "11"
         freeCompilerArgs += '-Xjvm-default=compatibility'
     }
 }

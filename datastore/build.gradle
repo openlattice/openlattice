@@ -197,12 +197,14 @@ eclipse {
 
 
 tasks.withType(JavaCompile) {
-    options.compilerArgs+= [ "--add-modules", "java.se",
+    options.compilerArgs+= [ "--add-modules", "java.base",
+                             "--add-modules", "java.se",
                              "--add-exports","java.base/jdk.internal.ref=ALL-UNNAMED"]
 }
 
 tasks.withType(Test) {
-    jvmArgs += [ "--add-modules", "java.se",
+    jvmArgs += [ "--add-modules", "java.base",
+                 "--add-modules", "java.se",
                  "--add-exports","java.base/jdk.internal.ref=ALL-UNNAMED",
                  "--add-opens","java.base/java.lang=ALL-UNNAMED",
                  "--add-opens","java.base/java.nio=ALL-UNNAMED",
@@ -214,7 +216,7 @@ tasks.withType(Test) {
 
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "11"
         freeCompilerArgs += '-Xjvm-default=compatibility'
     }
 }

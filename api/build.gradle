@@ -39,15 +39,12 @@ ext.developerConnectionUrl = 'scm:git:https://github.com/openlattice/api.git'
 apply from: "../gradles/openlattice.gradle"
 apply plugin: 'org.openapi.generator'
 
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(11)
-    }
-}
+sourceCompatibility = JavaVersion.VERSION_11
+targetCompatibility = JavaVersion.VERSION_11
 
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "11"
         freeCompilerArgs += '-Xjvm-default=compatibility'
     }
 }
