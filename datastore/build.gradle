@@ -77,12 +77,14 @@ if (GC == 'null' || GC == null || GC == "") {
 println "Using java args for running ${projectName}: Xms=" + DS_XMS + ",Xmx=" + DS_XMX + " -server"
 
 applicationDefaultJvmArgs = [DS_XMS, DS_XMX, "-server", GC, PARALLEL]
-applicationDefaultJvmArgs += [ "--add-modules", "java.se",
+applicationDefaultJvmArgs += [ "--add-modules", "java.base",
+                               "--add-modules", "java.se",
                                "--add-exports","java.base/jdk.internal.ref=ALL-UNNAMED",
                                "--add-opens","java.base/java.lang=ALL-UNNAMED",
                                "--add-opens","java.base/java.nio=ALL-UNNAMED",
                                "--add-opens","java.base/sun.nio.ch=ALL-UNNAMED",
                                "--add-opens","java.management/sun.management=ALL-UNNAMED",
+                               "--add-opens", "jdk.management/com.ibm.lang.management.internal=ALL-UNNAMED",
                                "--add-opens","jdk.management/com.sun.management.internal=ALL-UNNAMED"]
 
 sourceCompatibility = JavaVersion.VERSION_11
@@ -195,24 +197,23 @@ eclipse {
     ext.targetCompatibility = JavaVersion.VERSION_11
 }
 
-
 tasks.withType(JavaCompile) {
-    options.compilerArgs+= [ "--add-modules", "java.base",
-                             "--add-modules", "java.se",
-                             "--add-exports","java.base/jdk.internal.ref=ALL-UNNAMED"]
+    options.compilerArgs+= ["--add-modules", "java.base",
+                            "--add-modules", "java.se",
+                            "--add-exports","java.base/jdk.internal.ref=ALL-UNNAMED"]
 }
 
 tasks.withType(Test) {
-    jvmArgs += [ "--add-modules", "java.base",
-                 "--add-modules", "java.se",
-                 "--add-exports","java.base/jdk.internal.ref=ALL-UNNAMED",
-                 "--add-opens","java.base/java.lang=ALL-UNNAMED",
-                 "--add-opens","java.base/java.nio=ALL-UNNAMED",
-                 "--add-opens","java.base/sun.nio.ch=ALL-UNNAMED",
-                 "--add-opens","java.management/sun.management=ALL-UNNAMED",
-                 "--add-opens","jdk.management/com.sun.management.internal=ALL-UNNAMED"]
+    jvmArgs += ["--add-modules", "java.base",
+                "--add-modules", "java.se",
+                "--add-exports","java.base/jdk.internal.ref=ALL-UNNAMED",
+                "--add-opens","java.base/java.lang=ALL-UNNAMED",
+                "--add-opens","java.base/java.nio=ALL-UNNAMED",
+                "--add-opens","java.base/sun.nio.ch=ALL-UNNAMED",
+                "--add-opens","java.management/sun.management=ALL-UNNAMED",
+                "--add-opens", "jdk.management/com.ibm.lang.management.internal=ALL-UNNAMED",
+                "--add-opens","jdk.management/com.sun.management.internal=ALL-UNNAMED"]
 }
-
 
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
     kotlinOptions {
@@ -220,7 +221,6 @@ tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
         freeCompilerArgs += '-Xjvm-default=compatibility'
     }
 }
-
 
 jar {
     doFirst {
