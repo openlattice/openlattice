@@ -39,15 +39,12 @@ ext.developerConnectionUrl = 'scm:git:https://github.com/openlattice/api.git'
 apply from: "../gradles/openlattice.gradle"
 apply plugin: 'org.openapi.generator'
 
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(11)
-    }
-}
+sourceCompatibility = JavaVersion.VERSION_11
+targetCompatibility = JavaVersion.VERSION_11
 
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "11"
         freeCompilerArgs += '-Xjvm-default=compatibility'
     }
 }
@@ -226,7 +223,6 @@ dependencies {
     implementation "com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:${jackson_version}"
     implementation "com.fasterxml.jackson.datatype:jackson-datatype-joda:${jackson_version}"
     implementation "org.yaml:snakeyaml:${snakeyaml_version}"
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     implementation "com.auth0:auth0:${project.auth0_version}"
 
@@ -248,6 +244,13 @@ dependencies {
     testImplementation("org.mockito:mockito-all:${mockito_version}") {
         exclude module: 'hamcrest'
         exclude module: 'hamcrest-core'
+    }
+}
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
+    kotlinOptions {
+        jvmTarget = "11"
+        freeCompilerArgs += '-Xjvm-default=compatibility'
     }
 }
 
