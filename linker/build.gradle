@@ -60,6 +60,7 @@ apply plugin: 'license-report'
 
 def LINKER_XMS = "$System.env.LINKER_XMS"
 def LINKER_XMX = "$System.env.LINKER_XMX"
+def LINKER_OFFHEAP = "$System.env.LINKER_OFFHEAP"
 def L_ARGS = "$System.env.LINKER_ARGS"
 def PARALLEL = "$System.env.PARALLELISM"
 def GC = "$System.env.GC"
@@ -69,7 +70,11 @@ if (LINKER_XMS == 'null' || LINKER_XMS == null || LINKER_XMS == "") {
 }
 
 if (LINKER_XMX == 'null' || LINKER_XMX == null || LINKER_XMX == "") {
-    LINKER_XMX = '-Xms4g'
+    LINKER_XMX = '-Xmx4g'
+}
+
+if (LINKER_OFFHEAP == 'null' || LINKER_OFFHEAP == null || LINKER_OFFHEAP == "") {
+    LINKER_OFFHEAP = '-Dorg.bytedeco.javacpp.maxbytes=2g'
 }
 
 if (L_ARGS == 'null' || L_ARGS == null || L_ARGS == "") {
@@ -91,14 +96,16 @@ java {
 }
 
 mainClassName = "com.openlattice.linking.Linker"
-applicationDefaultJvmArgs = [LINKER_XMS, LINKER_XMX, "-server", GC, PARALLEL]
-applicationDefaultJvmArgs += ["--add-modules", "java.se",
-                              "--add-exports", "java.base/jdk.internal.ref=ALL-UNNAMED",
-                              "--add-opens", "java.base/java.lang=ALL-UNNAMED",
-                              "--add-opens", "java.base/java.nio=ALL-UNNAMED",
-                              "--add-opens", "java.base/sun.nio.ch=ALL-UNNAMED",
-                              "--add-opens", "java.management/sun.management=ALL-UNNAMED",
-                              "--add-opens", "jdk.management/com.sun.management.internal=ALL-UNNAMED"]
+applicationDefaultJvmArgs = [LINKER_XMS, LINKER_XMX, LINKER_OFFHEAP, "-server", GC, PARALLEL]
+applicationDefaultJvmArgs += ["--add-modules", "java.base",
+                              "--add-modules", "java.se",
+                              "--add-exports","java.base/jdk.internal.ref=ALL-UNNAMED",
+                              "--add-opens","java.base/java.lang=ALL-UNNAMED",
+                              "--add-opens","java.base/java.nio=ALL-UNNAMED",
+                              "--add-opens","java.base/sun.nio.ch=ALL-UNNAMED",
+                              "--add-opens","java.management/sun.management=ALL-UNNAMED",
+                              "--add-opens", "jdk.management/com.ibm.lang.management.internal=ALL-UNNAMED",
+                              "--add-opens","jdk.management/com.sun.management.internal=ALL-UNNAMED"]
 
 println "Using java args for running ${projectName}: " + Arrays.toString(applicationDefaultJvmArgs)
 
@@ -173,6 +180,10 @@ dependencies {
         exclude module: 'guava'
     }
 
+    implementation("org.deeplearning4j:deeplearning4j-parallel-wrapper:${deeplearning4j}") {
+        exclude module: 'guava'
+    }
+
     implementation("org.nd4j:nd4j-native-platform:${deeplearning4j}") {
         exclude module: 'guava'
     }
@@ -208,22 +219,26 @@ eclipse {
 eclipse.classpath.plusConfigurations += [configurations.provided]
 
 tasks.withType(JavaCompile) {
-    options.compilerArgs+= [ "--add-modules", "java.se"]
+    options.compilerArgs+= ["--add-modules", "java.base",
+                            "--add-modules", "java.se",
+                            "--add-exports","java.base/jdk.internal.ref=ALL-UNNAMED"]
 }
 
 tasks.withType(Test) {
-    jvmArgs += ["--add-modules", "java.se",
-                "--add-exports", "java.base/jdk.internal.ref=ALL-UNNAMED",
-                "--add-opens", "java.base/java.lang=ALL-UNNAMED",
-                "--add-opens", "java.base/java.nio=ALL-UNNAMED",
-                "--add-opens", "java.base/sun.nio.ch=ALL-UNNAMED",
-                "--add-opens", "java.management/sun.management=ALL-UNNAMED",
-                "--add-opens", "jdk.management/com.sun.management.internal=ALL-UNNAMED"]
+    jvmArgs += ["--add-modules", "java.base",
+                "--add-modules", "java.se",
+                "--add-exports","java.base/jdk.internal.ref=ALL-UNNAMED",
+                "--add-opens","java.base/java.lang=ALL-UNNAMED",
+                "--add-opens","java.base/java.nio=ALL-UNNAMED",
+                "--add-opens","java.base/sun.nio.ch=ALL-UNNAMED",
+                "--add-opens","java.management/sun.management=ALL-UNNAMED",
+                "--add-opens", "jdk.management/com.ibm.lang.management.internal=ALL-UNNAMED",
+                "--add-opens","jdk.management/com.sun.management.internal=ALL-UNNAMED"]
 }
 
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "11"
         freeCompilerArgs += '-Xjvm-default=compatibility'
     }
 }

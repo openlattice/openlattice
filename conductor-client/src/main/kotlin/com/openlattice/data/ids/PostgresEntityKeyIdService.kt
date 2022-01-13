@@ -199,8 +199,8 @@ class PostgresEntityKeyIdService(
     override fun getLinkingEntityKeyIds(ids: Map<UUID, Set<UUID>>): Map<EntityDataKey, UUID> {
         return ids.asSequence().flatMap { (entitySetId, entityKeyIds) ->
             val hds = dataSourceResolver.resolve(entitySetId)
-            BasePostgresIterable(PreparedStatementHolderSupplier(hds, linkedEntityKeyIdsSql) {
-                it.setArray(1, PostgresArrays.createUuidArray(it.connection, entityKeyIds))
+            BasePostgresIterable(PreparedStatementHolderSupplier(hds, linkedEntityKeyIdsSql) { ps ->
+                ps.setArray(1, PostgresArrays.createUuidArray(ps.connection, entityKeyIds))
             }) {
                 EntityDataKey(
                         it.getObject(ENTITY_SET_ID.name, UUID::class.java),

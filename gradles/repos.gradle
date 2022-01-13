@@ -7,7 +7,19 @@ repositories {
   maven {
     url 'https://artifactory.openlattice.com/artifactory/libs-release/'
   }
-
+  
+  maven {
+    url 'https://artifactory.openlattice.com/artifactory/gradle-release/'
+  }
+  
+  maven {
+    url 'https://artifactory.openlattice.com/artifactory/gradle-plugins/'
+  }
+  
+  maven {
+    url 'https://artifactory.openlattice.com/artifactory/jcenter/'
+  }
+  
   //Hit our snapshots
   maven {
     url 'https://artifactory.openlattice.com/artifactory/libs-snapshot/'
