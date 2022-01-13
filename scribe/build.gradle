@@ -41,8 +41,9 @@ ext.developerConnectionUrl = 'scm:git:https://github.com/openlattice/scribe.git'
 
 apply from: "../gradles/openlattice.gradle"
 apply plugin: 'kotlin'
+
 sourceCompatibility=JavaVersion.VERSION_11
-ext.targetCompatibility = JavaVersion.VERSION_11
+targetCompatibility = JavaVersion.VERSION_11
 
 checkstyle {
     toolVersion = '7.4'
@@ -124,7 +125,6 @@ dependencies {
         exclude module : 'hamcrest'
         exclude module : 'hamcrest-core'
     }
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 }
 
 eclipse {
@@ -135,11 +135,11 @@ eclipse {
 
 compileKotlin {
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "11"
     }
 }
 compileTestKotlin {
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "11"
     }
 }

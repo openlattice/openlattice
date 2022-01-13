@@ -154,13 +154,13 @@ class DataDeletionJob(
                 if (state.neighborDstEntitySetIds.isNotEmpty()) {
                     ps.setArray(++index, PostgresArrays.createUuidArray(connection, state.neighborDstEntitySetIds))
                     ps.setObject(++index, state.entitySetId)
-                    ps.setArray(++index, PostgresArrays.createUuidArray(connection, state.entityKeyIds))
+                    ps.setArray(++index, PostgresArrays.createUuidArray(connection, state.entityKeyIds!!))
                 }
 
                 if (state.neighborSrcEntitySetIds.isNotEmpty()) {
                     ps.setArray(++index, PostgresArrays.createUuidArray(connection, state.neighborSrcEntitySetIds))
                     ps.setObject(++index, state.entitySetId)
-                    ps.setArray(++index, PostgresArrays.createUuidArray(connection, state.entityKeyIds))
+                    ps.setArray(++index, PostgresArrays.createUuidArray(connection, state.entityKeyIds!!))
                 }
 
                 ps.executeQuery().use { rs ->
