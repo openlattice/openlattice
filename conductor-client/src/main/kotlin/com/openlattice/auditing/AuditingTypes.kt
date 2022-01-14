@@ -15,7 +15,10 @@ import java.util.concurrent.locks.ReentrantLock
  *
  *
  */
-@SuppressFBWarnings(value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"], justification = "Ignore internal kotlin redundant nullchecks")
+@SuppressFBWarnings(
+    value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE", "NP_NONNULL_RETURN_VIOLATION"],
+    justification = "Ignore internal kotlin redundant nullchecks"
+)
 class AuditingTypes(
         private val edm: EdmManager,
         private val auditingConfiguration: AuditingConfiguration
