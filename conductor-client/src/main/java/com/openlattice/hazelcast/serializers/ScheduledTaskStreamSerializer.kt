@@ -33,7 +33,7 @@ class ScheduledTaskStreamSerializer : TestableSelfRegisteringStreamSerializer<Sc
 
     override fun write(out: ObjectDataOutput, `object`: ScheduledTask) {
         UUIDStreamSerializerUtils.serialize(out, `object`.id)
-        OffsetDateTimeStreamSerializer.serialize(out, `object`.scheduledDateTime)
+        Jdk8StreamSerializers.AbstractOffsetDateTimeStreamSerializer.serialize(out, `object`.scheduledDateTime)
 
         out.writeUTF(`object`.task.javaClass.name)
         out.writeUTF(mapper.writeValueAsString(`object`.task))
@@ -42,7 +42,7 @@ class ScheduledTaskStreamSerializer : TestableSelfRegisteringStreamSerializer<Sc
 
     override fun read(`in`: ObjectDataInput): ScheduledTask {
         val id = UUIDStreamSerializerUtils.deserialize(`in`)
-        val scheduledDateTime = OffsetDateTimeStreamSerializer.deserialize(`in`)
+        val scheduledDateTime = Jdk8StreamSerializers.AbstractOffsetDateTimeStreamSerializer.deserialize(`in`)
 
         val clazz = Class.forName(`in`.readString()!!) as Class<out RunnableTask>
         val task = mapper.readValue(`in`.readString()!!, clazz)
