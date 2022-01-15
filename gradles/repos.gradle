@@ -1,8 +1,4 @@
 repositories {
-
-  // Hit the local maven repo
-  mavenLocal()
-
   //Hit our releases
   maven {
     url 'https://artifactory.openlattice.com/artifactory/libs-release/'
@@ -19,7 +15,7 @@ repositories {
   maven {
     url 'https://artifactory.openlattice.com/artifactory/jcenter/'
   }
-  
+
   //Hit our snapshots
   maven {
     url 'https://artifactory.openlattice.com/artifactory/libs-snapshot/'
@@ -46,7 +42,7 @@ repositories {
   }
 
   // Hit mavencentral
-  mavenCentral()
+
   // For cascading hadoop jar
   maven {
     url "https://conjars.org/repo/"
