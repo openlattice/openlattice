@@ -50,13 +50,13 @@ public class PermissionMergerStreamSerializer implements SelfRegisteringStreamSe
             ObjectDataOutput out, PermissionMerger object ) throws IOException {
         serialize( out, object.getBackingCollection() );
         AceValueStreamSerializer.serialize( out, object.getSecurableObjectType() );
-        OffsetDateTimeStreamSerializer.serialize(out, object.getExpirationDate());
+        Jdk8StreamSerializers.AbstractOffsetDateTimeStreamSerializer.serialize(out, object.getExpirationDate());
     }
 
     @Override public PermissionMerger read( ObjectDataInput in ) throws IOException {
         EnumSet<Permission> ps = deserialize( in );
         SecurableObjectType securableObjectType = AceValueStreamSerializer.deserialize( in );
-        OffsetDateTime expirationDate = OffsetDateTimeStreamSerializer.deserialize( in );
+        OffsetDateTime expirationDate = Jdk8StreamSerializers.AbstractOffsetDateTimeStreamSerializer.deserialize( in );
         return new PermissionMerger( ps, securableObjectType, expirationDate );
     }
 
