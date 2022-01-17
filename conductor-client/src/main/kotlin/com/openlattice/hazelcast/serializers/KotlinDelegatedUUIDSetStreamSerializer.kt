@@ -5,7 +5,7 @@ import com.google.common.collect.Sets
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.openlattice.hazelcast.StreamSerializerTypeIds
-import com.openlattice.rhizome.KotlinDelegatedUUIDSet
+import com.geekbeast.rhizome.KotlinDelegatedUUIDSet
 import org.springframework.stereotype.Component
 import java.util.*
 

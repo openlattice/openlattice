@@ -45,8 +45,7 @@ import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.mapstores.EntityTypeMapstore
 import com.geekbeast.postgres.streams.BasePostgresIterable
 import com.geekbeast.postgres.streams.StatementHolderSupplier
-import com.openlattice.rhizome.hazelcast.ChunkedQueueSequence
-import com.zaxxer.hikari.HikariDataSource
+import com.geekbeast.hazelcast.ChunkedQueueSequence
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.time.Instant

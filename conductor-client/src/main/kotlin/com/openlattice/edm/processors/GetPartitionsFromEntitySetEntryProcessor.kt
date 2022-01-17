@@ -1,7 +1,7 @@
 package com.openlattice.edm.processors
 
 import com.openlattice.edm.EntitySet
-import com.openlattice.rhizome.DelegatedIntSet
+import com.geekbeast.rhizome.DelegatedIntSet
 import com.geekbeast.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
 import java.util.*
 

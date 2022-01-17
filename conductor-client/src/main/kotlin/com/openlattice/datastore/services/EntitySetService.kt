@@ -76,7 +76,7 @@ import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.mapstores.EntitySetMapstore
 import com.geekbeast.postgres.streams.BasePostgresIterable
 import com.geekbeast.postgres.streams.StatementHolderSupplier
-import com.openlattice.rhizome.DelegatedIntSet
+import com.geekbeast.rhizome.DelegatedIntSet
 import com.geekbeast.hazelcast.DelegatedUUIDSet
 import com.openlattice.search.requests.EntityNeighborsFilter
 import com.zaxxer.hikari.HikariDataSource

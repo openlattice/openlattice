@@ -5,7 +5,7 @@ import com.geekbeast.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.ResultSetAdapters
 import com.geekbeast.postgres.mapstores.AbstractBasePostgresMapstore
-import com.openlattice.rhizome.DelegatedIntSet
+import com.geekbeast.rhizome.DelegatedIntSet
 import com.zaxxer.hikari.HikariDataSource
 import java.sql.PreparedStatement
 import java.sql.ResultSet

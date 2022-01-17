@@ -40,7 +40,7 @@ import com.openlattice.postgres.PostgresTable.SYNC_IDS
 import com.openlattice.postgres.ResultSetAdapters
 import com.geekbeast.postgres.streams.BasePostgresIterable
 import com.geekbeast.postgres.streams.PreparedStatementHolderSupplier
-import com.openlattice.rhizome.DelegatedIntSet
+import com.geekbeast.rhizome.DelegatedIntSet
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import java.util.*

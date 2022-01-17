@@ -1,7 +1,7 @@
 package com.openlattice.transporter.processors
 
 import com.hazelcast.core.Offloadable
-import com.openlattice.rhizome.KotlinDelegatedUUIDSet
+import com.geekbeast.rhizome.KotlinDelegatedUUIDSet
 import com.geekbeast.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
 import com.openlattice.transporter.types.TransporterColumnSet
 import org.slf4j.LoggerFactory

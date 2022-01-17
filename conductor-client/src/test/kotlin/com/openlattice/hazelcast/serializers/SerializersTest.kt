@@ -5,7 +5,7 @@ import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuil
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.openlattice.TestServer.Companion.testServer
-import com.openlattice.rhizome.KotlinDelegatedUUIDSet
+import com.geekbeast.rhizome.KotlinDelegatedUUIDSet
 import org.junit.Assert
 import org.junit.Test
 import org.junit.runner.RunWith

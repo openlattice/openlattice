@@ -63,7 +63,7 @@ import com.openlattice.organizations.OrganizationDatabase
 import com.openlattice.organizations.SortedPrincipalSet
 import com.geekbeast.postgres.mapstores.TypedMapIdentifier
 import com.openlattice.requests.Status
-import com.openlattice.rhizome.DelegatedIntSet
+import com.geekbeast.rhizome.DelegatedIntSet
 import com.geekbeast.hazelcast.DelegatedStringSet
 import com.geekbeast.hazelcast.DelegatedUUIDSet
 import com.openlattice.scheduling.ScheduledTask
