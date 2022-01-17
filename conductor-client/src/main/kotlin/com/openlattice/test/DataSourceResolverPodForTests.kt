@@ -2,7 +2,7 @@ package com.openlattice.test
 
 import com.hazelcast.core.HazelcastInstance
 import com.openlattice.data.storage.DataSourceResolver
-import com.openlattice.jdbc.DataSourceManager
+import com.geekbeast.jdbc.DataSourceManager
 import com.openlattice.postgres.PostgresTable
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.springframework.context.annotation.Bean
