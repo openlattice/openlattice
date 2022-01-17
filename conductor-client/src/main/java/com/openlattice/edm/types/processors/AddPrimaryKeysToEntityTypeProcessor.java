@@ -21,7 +21,7 @@
 package com.openlattice.edm.types.processors;
 
 import com.openlattice.edm.type.EntityType;
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor;
+import com.geekbeast.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor;
 
 import java.util.Map;
 import java.util.Set;

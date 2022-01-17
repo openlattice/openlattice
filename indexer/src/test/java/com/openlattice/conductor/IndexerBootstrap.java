@@ -22,7 +22,7 @@
 package com.openlattice.conductor;
 
 import com.geekbeast.rhizome.NetworkUtils;
-import com.kryptnostic.rhizome.configuration.ConfigurationConstants;
+import com.geekbeast.rhizome.configuration.ConfigurationConstants;
 import com.openlattice.auditing.AuditingProfiles;
 import com.openlattice.datastore.constants.DatastoreProfiles;
 import com.openlattice.indexing.Indexer;

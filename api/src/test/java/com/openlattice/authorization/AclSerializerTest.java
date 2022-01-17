@@ -20,7 +20,7 @@ package com.openlattice.authorization;
 
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.mapstores.TestDataFactory;
-import com.openlattice.serializer.AbstractJacksonSerializationTest;
+import com.geekbeast.serializer.serializer.AbstractJacksonSerializationTest;
 import org.junit.BeforeClass;
 
 public class AclSerializerTest extends AbstractJacksonSerializationTest<Acl> {

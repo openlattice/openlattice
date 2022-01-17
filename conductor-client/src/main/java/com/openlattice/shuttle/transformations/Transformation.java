@@ -21,7 +21,7 @@
 
 package com.openlattice.shuttle.transformations;
 
-import com.dataloom.mappers.ObjectMappers;
+import com.geekbeast.mappers.mappers.ObjectMappers;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.As;

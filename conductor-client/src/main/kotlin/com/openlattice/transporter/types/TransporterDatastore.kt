@@ -1,6 +1,6 @@
 package com.openlattice.transporter.types
 
-import com.kryptnostic.rhizome.configuration.RhizomeConfiguration
+import com.geekbeast.rhizome.configuration.RhizomeConfiguration
 import com.openlattice.assembler.AssemblerConfiguration
 import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService
@@ -13,10 +13,10 @@ import java.util.*
  */
 @Component
 class TransporterDatastore(
-        private val assemblerConfiguration: AssemblerConfiguration,
-        rhizome: RhizomeConfiguration,
-        private val exConnMan: ExternalDatabaseConnectionManager,
-        private val exDbPermMan: ExternalDatabasePermissioningService
+    private val assemblerConfiguration: AssemblerConfiguration,
+    rhizome: RhizomeConfiguration,
+    private val exConnMan: ExternalDatabaseConnectionManager,
+    private val exDbPermMan: ExternalDatabasePermissioningService
 ) {
     /*
     companion object {

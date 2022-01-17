@@ -1,6 +1,6 @@
 package com.openlattice.datasets
 
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
+import com.geekbeast.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.authorization.AclKey
 
 data class SecurableObjectMetadataUpdateEntryProcessor(

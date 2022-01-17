@@ -40,7 +40,7 @@ import com.openlattice.postgres.PostgresColumn.SRC_ENTITY_KEY_ID
 import com.openlattice.postgres.PostgresColumn.SRC_ENTITY_SET_ID
 import com.openlattice.postgres.PostgresColumn.VERSION
 import com.openlattice.postgres.PostgresColumn.VERSIONS
-import com.openlattice.postgres.PostgresDatatype
+import com.geekbeast.postgres.PostgresDatatype
 import com.openlattice.postgres.PostgresTable.DATA
 import com.openlattice.postgres.PostgresTable.E
 import com.openlattice.postgres.PostgresTable.IDS

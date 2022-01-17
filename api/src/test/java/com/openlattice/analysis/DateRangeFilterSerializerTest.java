@@ -22,7 +22,7 @@
 package com.openlattice.analysis;
 
 import com.openlattice.analysis.requests.DateRangeFilter;
-import com.openlattice.serializer.AbstractJacksonSerializationTest;
+import com.geekbeast.serializer.serializer.AbstractJacksonSerializationTest;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.Optional;

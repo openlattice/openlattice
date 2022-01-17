@@ -21,7 +21,7 @@
 package com.openlattice.authorization.mapstores;
 
 import com.auth0.json.mgmt.users.User;
-import com.dataloom.mappers.ObjectMappers;
+import com.geekbeast.mappers.mappers.ObjectMappers;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;

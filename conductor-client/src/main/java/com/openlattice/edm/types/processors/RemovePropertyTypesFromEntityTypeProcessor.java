@@ -27,7 +27,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import com.openlattice.edm.type.EntityType;
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor;
+import com.geekbeast.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor;
 
 public class RemovePropertyTypesFromEntityTypeProcessor
         extends AbstractRhizomeEntryProcessor<UUID, EntityType, Object> {

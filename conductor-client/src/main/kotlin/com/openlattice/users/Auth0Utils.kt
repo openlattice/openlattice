@@ -7,7 +7,7 @@ import com.auth0.json.mgmt.users.User
 import com.auth0.json.mgmt.users.UsersPage
 import com.auth0.jwt.algorithms.Algorithm
 import com.geekbeast.auth0.*
-import com.openlattice.authentication.Auth0AuthenticationConfiguration
+import com.geekbeast.authentication.Auth0AuthenticationConfiguration
 import java.security.InvalidAlgorithmParameterException
 import java.time.Instant
 

@@ -2,13 +2,12 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
-import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
+import com.geekbeast.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
 import com.openlattice.organizations.JdbcConnectionParameters
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.mapstores.TestDataFactory
 import org.springframework.stereotype.Component
 import java.util.Properties;
-import java.util.Optional;
 
 /**
  * @author Andrew Carter andrew@openlattice.com

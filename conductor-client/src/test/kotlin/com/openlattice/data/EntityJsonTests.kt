@@ -21,9 +21,7 @@
 
 package com.openlattice.data
 
-import com.dataloom.mappers.ObjectMappers
-import com.google.common.base.Predicate
-import com.google.common.base.Predicates
+import com.geekbeast.mappers.mappers.ObjectMappers
 import com.google.common.collect.ImmutableMap
 import com.openlattice.data.integration.Entity
 import com.openlattice.edm.type.PropertyType

@@ -24,8 +24,7 @@ package com.openlattice.linking
 import com.openlattice.conductor.rpc.SearchConfiguration
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer
 import com.openlattice.mapstores.TestDataFactory
-import com.openlattice.serializer.AbstractJacksonYamlSerializationTest
-import com.openlattice.serializer.AbstractJacksonYamlSerializationTest.registerModule
+import com.geekbeast.serializer.serializer.AbstractJacksonYamlSerializationTest
 import org.apache.commons.lang3.RandomUtils
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.junit.BeforeClass

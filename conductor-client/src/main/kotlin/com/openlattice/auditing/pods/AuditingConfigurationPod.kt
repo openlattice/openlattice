@@ -22,7 +22,7 @@
 package com.openlattice.auditing.pods
 
 import com.kryptnostic.rhizome.pods.ConfigurationLoader
-import com.openlattice.ResourceConfigurationLoader
+import com.geekbeast.ResourceConfigurationLoader
 import com.openlattice.auditing.AuditingConfiguration
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer
 import org.springframework.context.annotation.Bean

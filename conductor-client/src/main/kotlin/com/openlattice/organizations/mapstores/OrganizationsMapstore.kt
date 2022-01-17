@@ -1,6 +1,6 @@
 package com.openlattice.organizations.mapstores
 
-import com.dataloom.mappers.ObjectMappers
+import com.geekbeast.mappers.mappers.ObjectMappers
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.hazelcast.config.InMemoryFormat
 import com.hazelcast.config.IndexConfig

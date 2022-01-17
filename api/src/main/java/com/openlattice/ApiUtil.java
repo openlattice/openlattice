@@ -18,7 +18,7 @@
 
 package com.openlattice;
 
-import com.dataloom.mappers.ObjectMappers;
+import com.geekbeast.mappers.mappers.ObjectMappers;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Preconditions;
 import org.slf4j.Logger;

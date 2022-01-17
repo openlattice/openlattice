@@ -1,6 +1,6 @@
 package com.openlattice.hazelcast.serializers;
 
-import com.dataloom.mappers.ObjectMappers;
+import com.geekbeast.mappers.mappers.ObjectMappers;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.Serializer;
 import com.esotericsoftware.kryo.io.Input;
@@ -8,7 +8,6 @@ import com.esotericsoftware.kryo.io.Output;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;

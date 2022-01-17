@@ -20,6 +20,7 @@
 
 package com.openlattice.postgres;
 
+import com.geekbeast.postgres.PostgresDatatype;
 import com.openlattice.ApiHelpers;
 import com.openlattice.edm.PostgresEdmTypeConverter;
 import com.openlattice.edm.type.PropertyType;
@@ -27,7 +28,7 @@ import com.openlattice.edm.type.PropertyType;
 import java.util.UUID;
 
 import static com.openlattice.postgres.PostgresColumn.*;
-import static com.openlattice.postgres.PostgresDatatype.TIMESTAMPTZ;
+import static com.geekbeast.postgres.PostgresDatatype.TIMESTAMPTZ;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;

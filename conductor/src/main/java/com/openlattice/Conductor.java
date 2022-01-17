@@ -20,8 +20,8 @@
 
 package com.openlattice;
 
-import com.dataloom.mappers.ObjectMappers;
-import com.kryptnostic.rhizome.core.RhizomeApplicationServer;
+import com.geekbeast.mappers.mappers.ObjectMappers;
+import com.geekbeast.rhizome.core.RhizomeApplicationServer;
 import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.aws.AwsS3Pod;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;

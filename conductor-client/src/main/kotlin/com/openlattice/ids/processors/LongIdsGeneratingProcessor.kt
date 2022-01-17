@@ -1,7 +1,7 @@
 package com.openlattice.ids.processors
 
 import com.hazelcast.core.Offloadable
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
+import com.geekbeast.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 
 /**
  * Used to increment base ids.

@@ -1,6 +1,6 @@
 package com.openlattice.authorization.processors
 
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
+import com.geekbeast.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.authorization.AccessTarget
 import java.util.*
 

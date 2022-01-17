@@ -1,6 +1,6 @@
 package com.openlattice.postgres
 
-import com.dataloom.mappers.ObjectMappers
+import com.geekbeast.mappers.mappers.ObjectMappers
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.openlattice.IdConstants.LAST_WRITE_ID
 import com.openlattice.data.storage.ByteBlobDataManager

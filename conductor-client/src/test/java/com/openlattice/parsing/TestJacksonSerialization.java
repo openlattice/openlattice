@@ -21,10 +21,9 @@
 
 package com.openlattice.parsing;
 
-import com.dataloom.mappers.ObjectMappers;
+import com.geekbeast.mappers.mappers.ObjectMappers;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.SetMultimap;
 import com.openlattice.data.integration.Entity;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.mapstores.TestDataFactory;

@@ -1,5 +1,7 @@
 package com.openlattice.data.storage.redshift
 
+import com.geekbeast.postgres.IndexType
+import com.geekbeast.postgres.PostgresDatatype
 import com.google.common.cache.CacheBuilder
 import com.google.common.cache.CacheLoader
 import com.openlattice.IdConstants

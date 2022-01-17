@@ -22,11 +22,11 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
+import com.geekbeast.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
+import com.geekbeast.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.data.TicketKey;
 import java.io.IOException;
 import java.util.UUID;

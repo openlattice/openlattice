@@ -1,6 +1,6 @@
 package com.openlattice.collections.mapstores
 
-import com.dataloom.mappers.ObjectMappers
+import com.geekbeast.mappers.mappers.ObjectMappers
 import com.openlattice.collections.EntityTypeCollection
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.mapstores.TestDataFactory

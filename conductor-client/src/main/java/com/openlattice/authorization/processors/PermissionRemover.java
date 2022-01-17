@@ -24,7 +24,7 @@ package com.openlattice.authorization.processors;
 
 import com.openlattice.authorization.AceKey;
 import com.openlattice.authorization.Permission;
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRemover;
+import com.geekbeast.rhizome.hazelcast.processors.AbstractRemover;
 import com.openlattice.authorization.AceValue;
 
 public class PermissionRemover extends AbstractRemover<AceKey, AceValue, Permission> {

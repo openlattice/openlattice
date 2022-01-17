@@ -20,7 +20,7 @@
 
 package com.openlattice.organizations.processors;
 
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRemover;
+import com.geekbeast.rhizome.hazelcast.processors.AbstractRemover;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AclKeySet;
 

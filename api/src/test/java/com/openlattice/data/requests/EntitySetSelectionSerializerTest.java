@@ -22,7 +22,7 @@
 package com.openlattice.data.requests;
 
 import com.google.common.collect.ImmutableSet;
-import com.openlattice.serializer.AbstractJacksonSerializationTest;
+import com.geekbeast.serializer.serializer.AbstractJacksonSerializationTest;
 import java.util.Optional;
 import java.util.UUID;
 

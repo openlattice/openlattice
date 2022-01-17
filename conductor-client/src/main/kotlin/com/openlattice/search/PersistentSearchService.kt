@@ -1,6 +1,6 @@
 package com.openlattice.search
 
-import com.dataloom.mappers.ObjectMappers
+import com.geekbeast.mappers.mappers.ObjectMappers
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.Principals

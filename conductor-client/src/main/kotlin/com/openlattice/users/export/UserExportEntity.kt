@@ -21,7 +21,7 @@
 package com.openlattice.users.export
 
 import com.auth0.json.mgmt.jobs.Job
-import com.dataloom.mappers.ObjectMappers
+import com.geekbeast.mappers.mappers.ObjectMappers
 import okhttp3.*
 import org.slf4j.LoggerFactory
 

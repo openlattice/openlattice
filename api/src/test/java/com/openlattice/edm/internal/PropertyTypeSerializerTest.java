@@ -21,7 +21,7 @@ package com.openlattice.edm.internal;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.mapstores.TestDataFactory;
-import com.openlattice.serializer.AbstractJacksonSerializationTest;
+import com.geekbeast.serializer.serializer.AbstractJacksonSerializationTest;
 import org.junit.BeforeClass;
 
 public class PropertyTypeSerializerTest extends AbstractJacksonSerializationTest<PropertyType> {

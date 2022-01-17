@@ -1,7 +1,7 @@
 package com.openlattice.data.storage.postgres
 
 import com.codahale.metrics.annotation.Timed
-import com.geekbeast.configuration.postgres.PostgresFlavor
+import com.geekbeast.postgres.PostgresDatatype
 import com.openlattice.analysis.requests.Filter
 import com.openlattice.data.*
 import com.openlattice.data.storage.*
@@ -13,7 +13,6 @@ import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.*
 import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
 import com.openlattice.postgres.PostgresColumn.ID
-import com.openlattice.postgres.PostgresColumn.PARTITION
 import com.openlattice.postgres.PostgresColumn.PROPERTY_TYPE_ID
 import com.openlattice.postgres.PostgresColumn.VERSION
 import com.openlattice.postgres.PostgresColumn.VERSIONS

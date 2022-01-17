@@ -23,8 +23,8 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
-import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
+import com.geekbeast.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
+import com.geekbeast.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.organizations.events.MembersAddedToOrganizationEvent
 import org.springframework.stereotype.Component
@@ -40,8 +40,8 @@ class MembersAddedToOrganizationEventStreamSerializer
 
     override fun read(input: ObjectDataInput): MembersAddedToOrganizationEvent {
         return MembersAddedToOrganizationEvent(
-                UUIDStreamSerializerUtils.deserialize(input),
-                SecurablePrincipalListStreamSerializer().read(input))
+            UUIDStreamSerializerUtils.deserialize(input),
+            SecurablePrincipalListStreamSerializer().read(input))
     }
 
     override fun getTypeId(): Int {

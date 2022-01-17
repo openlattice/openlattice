@@ -1,6 +1,6 @@
 package com.openlattice.shuttle
 
-import com.dataloom.mappers.ObjectMappers
+import com.geekbeast.mappers.mappers.ObjectMappers
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.openlattice.client.serialization.SerializationConstants
 import java.net.URL

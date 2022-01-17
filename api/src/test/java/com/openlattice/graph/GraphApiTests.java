@@ -21,19 +21,6 @@
 
 package com.openlattice.graph;
 
-import com.dataloom.mappers.ObjectMappers;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.openlattice.graph.query.ComparisonClause;
-import com.openlattice.graph.query.ComparisonClause.ComparisonOp;
-import com.openlattice.graph.query.EntitySetQuery;
-import com.openlattice.mapstores.TestDataFactory;
-import java.io.IOException;
-import java.util.Optional;
-import java.util.UUID;
-import org.apache.commons.lang3.RandomUtils;
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
-import org.junit.Assert;
-import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

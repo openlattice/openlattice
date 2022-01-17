@@ -1,11 +1,11 @@
 package com.openlattice.hazelcast.serializers
 
 import com.auth0.json.mgmt.users.User
-import com.dataloom.mappers.ObjectMappers
+import com.geekbeast.mappers.mappers.ObjectMappers
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
+import com.geekbeast.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import org.springframework.stereotype.Component
 

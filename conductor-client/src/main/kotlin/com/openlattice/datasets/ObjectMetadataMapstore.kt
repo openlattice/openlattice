@@ -1,6 +1,6 @@
 package com.openlattice.datasets
 
-import com.dataloom.mappers.ObjectMappers
+import com.geekbeast.mappers.mappers.ObjectMappers
 import com.hazelcast.config.InMemoryFormat
 import com.hazelcast.config.IndexConfig
 import com.hazelcast.config.IndexType

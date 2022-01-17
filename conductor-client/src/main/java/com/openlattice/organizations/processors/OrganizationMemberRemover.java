@@ -23,7 +23,7 @@ package com.openlattice.organizations.processors;
 import com.openlattice.authorization.Principal;
 import com.openlattice.organizations.PrincipalSet;
 import com.openlattice.rhizome.hazelcast.SetProxy;
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRemover;
+import com.geekbeast.rhizome.hazelcast.processors.AbstractRemover;
 
 import java.util.Map;
 import java.util.UUID;

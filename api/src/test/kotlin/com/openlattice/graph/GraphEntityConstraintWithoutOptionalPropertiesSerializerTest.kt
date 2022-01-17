@@ -21,7 +21,7 @@
 
 package com.openlattice.graph
 
-import com.openlattice.serializer.AbstractJacksonSerializationTest
+import com.geekbeast.serializer.serializer.AbstractJacksonSerializationTest
 
 /**
  *

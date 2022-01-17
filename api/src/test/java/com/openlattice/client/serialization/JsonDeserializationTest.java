@@ -21,9 +21,7 @@
 
 package com.openlattice.client.serialization;
 
-import com.dataloom.mappers.ObjectMappers;
-import com.esotericsoftware.kryo.util.ObjectMap;
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.geekbeast.mappers.mappers.ObjectMappers;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableMap;
 import java.io.IOException;

@@ -3,8 +3,8 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
-import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers
-import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
+import com.geekbeast.rhizome.hazelcast.serializers.SetStreamSerializers
+import com.geekbeast.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
 import com.openlattice.codex.Base64Media
 import com.openlattice.codex.MessageRequest
 import com.openlattice.hazelcast.StreamSerializerTypeIds

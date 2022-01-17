@@ -20,7 +20,7 @@
  */
 package com.openlattice.scheduling.mapstores
 
-import com.dataloom.mappers.ObjectMappers
+import com.geekbeast.mappers.mappers.ObjectMappers
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.hazelcast.config.InMemoryFormat
 import com.hazelcast.config.IndexConfig

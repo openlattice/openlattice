@@ -2,9 +2,9 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
-import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers
-import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
+import com.geekbeast.rhizome.hazelcast.serializers.SetStreamSerializers
+import com.geekbeast.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
+import com.geekbeast.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.hazelcast.serializers.StreamSerializers.Companion.deserializeMapMap
 import com.openlattice.hazelcast.serializers.StreamSerializers.Companion.serializeMapMap
@@ -37,9 +37,9 @@ class OrganizationStreamSerializer : SelfRegisteringStreamSerializer<Organizatio
             SetStreamSerializers.fastStringSetSerialize(out, obj.connections)
 
             serializeMapMap(out, obj.grants,
-                    { key: UUID -> UUIDStreamSerializerUtils.serialize(out, key) },
-                    { subKey: GrantType -> GrantTypeStreamSerializer.serialize(out, subKey) },
-                    { `val`: Grant -> GrantStreamSerializer.serialize(out, `val`) })
+                            { key: UUID -> UUIDStreamSerializerUtils.serialize(out, key) },
+                            { subKey: GrantType -> GrantTypeStreamSerializer.serialize(out, subKey) },
+                            { `val`: Grant -> GrantStreamSerializer.serialize(out, `val`) })
         }
 
         @JvmStatic
@@ -61,10 +61,10 @@ class OrganizationStreamSerializer : SelfRegisteringStreamSerializer<Organizatio
             val connections = SetStreamSerializers.fastStringSetDeserialize(input)
 
             val grants = deserializeMapMap(input,
-                    mutableMapOf(),
-                    { UUIDStreamSerializerUtils.deserialize(input) },
-                    { GrantTypeStreamSerializer.deserialize(input) },
-                    { GrantStreamSerializer.deserialize(input) })
+                                           mutableMapOf(),
+                                           { UUIDStreamSerializerUtils.deserialize(input) },
+                                           { GrantTypeStreamSerializer.deserialize(input) },
+                                           { GrantStreamSerializer.deserialize(input) })
             return Organization(
                     op,
                     adminRoleAclKey,

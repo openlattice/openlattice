@@ -21,14 +21,14 @@
 package com.openlattice.indexing.pods;
 
 import com.codahale.metrics.MetricRegistry;
-import com.dataloom.mappers.ObjectMappers;
+import com.geekbeast.mappers.mappers.ObjectMappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.geekbeast.hazelcast.HazelcastClientProvider;
 import com.geekbeast.rhizome.jobs.HazelcastJobService;
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
-import com.kryptnostic.rhizome.configuration.ConfigurationConstants;
+import com.geekbeast.rhizome.configuration.ConfigurationConstants;
 import com.openlattice.assembler.Assembler;
 import com.openlattice.assembler.AssemblerConfiguration;
 import com.openlattice.assembler.pods.AssemblerConfigurationPod;

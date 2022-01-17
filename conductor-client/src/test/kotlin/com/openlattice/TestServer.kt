@@ -22,9 +22,9 @@ package com.openlattice
 
 import com.google.common.eventbus.EventBus
 import com.hazelcast.core.HazelcastInstance
-import com.kryptnostic.rhizome.configuration.ConfigurationConstants
-import com.kryptnostic.rhizome.core.RhizomeApplicationServer
-import com.kryptnostic.rhizome.pods.ConfigurationLoaderPod
+import com.geekbeast.rhizome.configuration.ConfigurationConstants
+import com.geekbeast.rhizome.core.RhizomeApplicationServer
+import com.geekbeast.rhizome.pods.ConfigurationLoaderPod
 import com.openlattice.assembler.pods.AssemblerConfigurationPod
 import com.openlattice.auditing.pods.AuditingConfigurationPod
 import com.openlattice.auth0.Auth0Pod
@@ -72,8 +72,9 @@ open class TestServer {
         val dsr: DataSourceResolver
 
         init {
-            testServer.sprout(ConfigurationConstants.Profiles.LOCAL_CONFIGURATION_PROFILE, PostgresPod.PROFILE,
-                    DatastoreProfiles.MEDIA_LOCAL_PROFILE)
+            testServer.sprout(
+                ConfigurationConstants.Profiles.LOCAL_CONFIGURATION_PROFILE, PostgresPod.PROFILE,
+                DatastoreProfiles.MEDIA_LOCAL_PROFILE)
 
             hazelcastInstance = testServer.context.getBean(HazelcastInstance::class.java)
             //This should work as tests aren't sharded all will all share the default datasource

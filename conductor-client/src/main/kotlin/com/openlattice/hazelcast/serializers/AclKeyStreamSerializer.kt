@@ -2,7 +2,7 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
-import com.kryptnostic.rhizome.hazelcast.serializers.ListStreamSerializers
+import com.geekbeast.rhizome.hazelcast.serializers.ListStreamSerializers
 import com.openlattice.authorization.AclKey
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.mapstores.TestDataFactory

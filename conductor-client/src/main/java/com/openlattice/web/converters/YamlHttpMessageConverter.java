@@ -20,7 +20,7 @@
 
 package com.openlattice.web.converters;
 
-import com.dataloom.mappers.ObjectMappers;
+import com.geekbeast.mappers.mappers.ObjectMappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Multimap;
 import com.openlattice.web.mediatypes.CustomMediaType;

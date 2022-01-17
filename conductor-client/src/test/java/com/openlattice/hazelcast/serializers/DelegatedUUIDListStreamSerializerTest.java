@@ -25,7 +25,7 @@ package com.openlattice.hazelcast.serializers;
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.mapstores.TestDataFactory;
-import com.openlattice.rhizome.hazelcast.DelegatedUUIDList;
+import com.geekbeast.hazelcast.DelegatedUUIDList;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;

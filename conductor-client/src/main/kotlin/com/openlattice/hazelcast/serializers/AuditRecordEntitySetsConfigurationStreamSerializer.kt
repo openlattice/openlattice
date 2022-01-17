@@ -23,10 +23,10 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
-import com.kryptnostic.rhizome.hazelcast.serializers.ListStreamSerializers
-import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers
-import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
+import com.geekbeast.rhizome.hazelcast.serializers.ListStreamSerializers
+import com.geekbeast.rhizome.hazelcast.serializers.SetStreamSerializers
+import com.geekbeast.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
+import com.geekbeast.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.auditing.AuditRecordEntitySetConfiguration
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import org.springframework.stereotype.Component
@@ -36,7 +36,8 @@ import org.springframework.stereotype.Component
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 @Component
-class AuditRecordEntitySetsConfigurationStreamSerializer : SelfRegisteringStreamSerializer<AuditRecordEntitySetConfiguration> {
+class AuditRecordEntitySetsConfigurationStreamSerializer :
+    SelfRegisteringStreamSerializer<AuditRecordEntitySetConfiguration> {
     override fun getTypeId(): Int {
         return StreamSerializerTypeIds.AUDIT_RECORD_ENTITY_SET_CONFIGURATION.ordinal
     }

@@ -1,7 +1,7 @@
 package com.openlattice.indexing.pods;
 
 import com.google.common.collect.Lists;
-import com.kryptnostic.rhizome.configuration.servlets.DispatcherServletConfiguration;
+import com.geekbeast.rhizome.configuration.servlets.DispatcherServletConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 

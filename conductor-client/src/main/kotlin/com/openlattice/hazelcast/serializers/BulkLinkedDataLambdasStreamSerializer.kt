@@ -1,6 +1,6 @@
 package com.openlattice.hazelcast.serializers
 
-import com.dataloom.mappers.ObjectMappers
+import com.geekbeast.mappers.mappers.ObjectMappers
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input

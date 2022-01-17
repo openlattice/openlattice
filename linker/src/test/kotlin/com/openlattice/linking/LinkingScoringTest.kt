@@ -1,6 +1,6 @@
 package com.openlattice.linking;
 
-import com.dataloom.mappers.ObjectMappers
+import com.geekbeast.mappers.mappers.ObjectMappers
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.openlattice.linking.matching.getModelScore
 import com.openlattice.linking.util.PersonMetric

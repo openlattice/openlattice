@@ -1,6 +1,8 @@
 package com.openlattice.data.storage.postgres
 
 
+import com.geekbeast.postgres.IndexType
+import com.geekbeast.postgres.PostgresDatatype
 import com.openlattice.IdConstants
 import com.openlattice.analysis.SqlBindInfo
 import com.openlattice.analysis.requests.Filter
@@ -719,17 +721,17 @@ internal val deleteEntityKeys =
  */
 internal val selectEntitySetTextProperties = "SELECT COALESCE(${
     getSourceDataColumnName(
-            PostgresDatatype.TEXT, IndexType.NONE
+        PostgresDatatype.TEXT, IndexType.NONE
     )
 },${getSourceDataColumnName(PostgresDatatype.TEXT, IndexType.BTREE)}) AS ${
     getMergedDataColumnName(
-            PostgresDatatype.TEXT
+        PostgresDatatype.TEXT
     )
 } " +
         "FROM ${DATA.name} " +
         "WHERE (${
             getSourceDataColumnName(
-                    PostgresDatatype.TEXT, IndexType.NONE
+                PostgresDatatype.TEXT, IndexType.NONE
             )
         } IS NOT NULL OR ${getSourceDataColumnName(PostgresDatatype.TEXT, IndexType.BTREE)} IS NOT NULL) AND " +
         "${ENTITY_SET_ID.name} = ANY(?) AND ${PROPERTY_TYPE_ID.name} = ANY(?) "

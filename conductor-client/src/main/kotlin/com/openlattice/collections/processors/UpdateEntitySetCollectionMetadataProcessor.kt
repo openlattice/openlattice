@@ -1,12 +1,12 @@
 package com.openlattice.collections.processors
 
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
+import com.geekbeast.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.collections.EntitySetCollection
 import com.openlattice.edm.requests.MetadataUpdate
 import java.util.*
 
 class UpdateEntitySetCollectionMetadataProcessor(val update: MetadataUpdate):
-        AbstractRhizomeEntryProcessor<UUID, EntitySetCollection, EntitySetCollection?>() {
+    AbstractRhizomeEntryProcessor<UUID, EntitySetCollection, EntitySetCollection?>() {
 
     override fun process(entry: MutableMap.MutableEntry<UUID, EntitySetCollection>): EntitySetCollection? {
         val collection = entry.value

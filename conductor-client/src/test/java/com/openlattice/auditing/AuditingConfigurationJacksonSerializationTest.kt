@@ -1,8 +1,8 @@
 package com.openlattice.auditing
 
-import com.openlattice.aws.AwsS3ClientConfiguration
+import com.geekbeast.aws.AwsS3ClientConfiguration
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer
-import com.openlattice.serializer.AbstractJacksonYamlSerializationTest
+import com.geekbeast.serializer.serializer.AbstractJacksonYamlSerializationTest
 import org.junit.BeforeClass
 import java.util.*
 

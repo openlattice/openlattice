@@ -20,9 +20,11 @@
 
 package com.openlattice.postgres;
 
-import com.dataloom.mappers.ObjectMappers;
+import com.geekbeast.mappers.mappers.ObjectMappers;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.geekbeast.postgres.IndexType;
+import com.geekbeast.postgres.PostgresDatatype;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;

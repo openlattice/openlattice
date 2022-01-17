@@ -30,7 +30,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.map.IMap;
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor;
 import com.openlattice.authorization.securable.AbstractSchemaAssociatedSecurableType;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.edm.Schema;

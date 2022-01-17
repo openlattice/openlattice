@@ -21,7 +21,7 @@ package com.openlattice.edm.internal;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.mapstores.TestDataFactory;
-import com.openlattice.serializer.AbstractJacksonSerializationTest;
+import com.geekbeast.serializer.serializer.AbstractJacksonSerializationTest;
 import java.io.IOException;
 import org.junit.Assert;
 import org.junit.BeforeClass;

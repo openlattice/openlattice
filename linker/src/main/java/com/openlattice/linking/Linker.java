@@ -20,10 +20,10 @@
 
 package com.openlattice.linking;
 
-import com.dataloom.mappers.ObjectMappers;
-import com.kryptnostic.rhizome.configuration.websockets.BaseRhizomeServer;
-import com.kryptnostic.rhizome.core.RhizomeApplicationServer;
-import com.kryptnostic.rhizome.hazelcast.serializers.RhizomeUtils.Pods;
+import com.geekbeast.mappers.mappers.ObjectMappers;
+import com.geekbeast.rhizome.configuration.websockets.BaseRhizomeServer;
+import com.geekbeast.rhizome.core.RhizomeApplicationServer;
+import com.geekbeast.rhizome.hazelcast.serializers.RhizomeUtils.Pods;
 import com.openlattice.auditing.pods.AuditingConfigurationPod;
 import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.aws.AwsS3Pod;
@@ -39,7 +39,6 @@ import com.openlattice.linking.pods.LinkerServicesPod;
 import com.openlattice.linking.pods.LinkerServletsPod;
 import com.openlattice.linking.pods.PlasmaCoupling;
 import com.openlattice.postgres.PostgresPod;
-import com.openlattice.postgres.PostgresTablesPod;
 import com.openlattice.postgres.pods.ExternalDatabaseConnectionManagerPod;
 import com.openlattice.tasks.pods.TaskSchedulerPod;
 

@@ -1,6 +1,6 @@
 package com.openlattice.collections.processors
 
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
+import com.geekbeast.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.collections.EntitySetCollection
 import java.util.*
 

@@ -2,7 +2,7 @@ package com.openlattice.postgres.mapstores;
 
 import static com.openlattice.postgres.PostgresTable.ENTITY_TYPES;
 
-import com.dataloom.mappers.ObjectMappers;
+import com.geekbeast.mappers.mappers.ObjectMappers;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hazelcast.config.IndexConfig;

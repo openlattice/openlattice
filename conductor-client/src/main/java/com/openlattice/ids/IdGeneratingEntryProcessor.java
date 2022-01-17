@@ -21,7 +21,7 @@
 package com.openlattice.ids;
 
 import com.hazelcast.core.Offloadable;
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor;
+import com.geekbeast.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor;
 import java.util.Map.Entry;
 import java.util.UUID;
 

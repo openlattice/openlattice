@@ -1,6 +1,6 @@
 package com.openlattice.hazelcast.serializers.shuttle
 
-import com.dataloom.mappers.ObjectMappers
+import com.geekbeast.mappers.mappers.ObjectMappers
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.openlattice.hazelcast.StreamSerializerTypeIds

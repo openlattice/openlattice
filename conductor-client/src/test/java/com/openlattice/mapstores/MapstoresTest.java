@@ -23,7 +23,7 @@
 package com.openlattice.mapstores;
 
 import com.google.common.collect.ImmutableSet;
-import com.kryptnostic.rhizome.mapstores.TestableSelfRegisteringMapStore;
+import com.geekbeast.rhizome.mapstores.TestableSelfRegisteringMapStore;
 import com.openlattice.authorization.AceKey;
 import com.openlattice.authorization.AceValue;
 import com.openlattice.authorization.HzAuthzTest;

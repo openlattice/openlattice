@@ -20,8 +20,8 @@
 
 package com.openlattice.scrunchie.search;
 
-import com.dataloom.mappers.ObjectMappers;
-import com.dataloom.streams.StreamUtil;
+import com.geekbeast.mappers.mappers.ObjectMappers;
+import com.geekbeast.streams.StreamUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;

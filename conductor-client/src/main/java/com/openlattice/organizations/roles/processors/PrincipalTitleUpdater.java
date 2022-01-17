@@ -20,12 +20,10 @@
 
 package com.openlattice.organizations.roles.processors;
 
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor;
+import com.geekbeast.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.SecurablePrincipal;
-import java.util.List;
 import java.util.Map.Entry;
-import java.util.UUID;
 
 public class PrincipalTitleUpdater extends AbstractRhizomeEntryProcessor<AclKey, SecurablePrincipal, Object> {
     private static final long serialVersionUID = -717197511031518227L;

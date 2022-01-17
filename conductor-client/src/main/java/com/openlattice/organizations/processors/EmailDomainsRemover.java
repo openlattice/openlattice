@@ -27,7 +27,7 @@ import java.util.UUID;
 
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import com.openlattice.rhizome.hazelcast.SetProxy;
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRemover;
+import com.geekbeast.rhizome.hazelcast.processors.AbstractRemover;
 
 public class EmailDomainsRemover extends AbstractRemover<UUID, DelegatedStringSet, String> {
 
