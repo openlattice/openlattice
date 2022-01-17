@@ -22,10 +22,11 @@ class UpdateSmsInformationLastSyncEntryProcessorStreamSerializer : TestableSelfR
     }
 
     override fun write(out: ObjectDataOutput, `object`: UpdateSmsInformationLastSyncEntryProcessor) {
-        OffsetDateTimeStreamSerializer.serialize(out, `object`.lastSync)
+        Jdk8StreamSerializers.AbstractOffsetDateTimeStreamSerializer.serialize(out, `object`.lastSync)
     }
 
     override fun read(`in`: ObjectDataInput): UpdateSmsInformationLastSyncEntryProcessor {
-        return UpdateSmsInformationLastSyncEntryProcessor(OffsetDateTimeStreamSerializer.deserialize(`in`))
+
+        return UpdateSmsInformationLastSyncEntryProcessor(Jdk8StreamSerializers.AbstractOffsetDateTimeStreamSerializer.deserialize(`in`))
     }
 }

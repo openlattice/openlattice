@@ -26,7 +26,7 @@ class MessageRequestStreamSerializer : TestableSelfRegisteringStreamSerializer<M
             out.writeBoolean(`object`.attachment != null)
             `object`.attachment?.let { Base64MediaStreamSerializer.serialize(out, it) }
 
-            OffsetDateTimeStreamSerializer.serialize(out, `object`.scheduledDateTime)
+            Jdk8StreamSerializers.AbstractOffsetDateTimeStreamSerializer.serialize(out, `object`.scheduledDateTime)
         }
 
         fun deserialize(`in`: ObjectDataInput): MessageRequest {
@@ -36,7 +36,7 @@ class MessageRequestStreamSerializer : TestableSelfRegisteringStreamSerializer<M
             val phoneNumbers = SetStreamSerializers.fastStringSetDeserialize(`in`)
             val senderId = `in`.readString()!!
             val attachment: Base64Media? = if (`in`.readBoolean()) Base64MediaStreamSerializer.deserialize(`in`) else null
-            val scheduledDateTime = OffsetDateTimeStreamSerializer.deserialize(`in`)
+            val scheduledDateTime = Jdk8StreamSerializers.AbstractOffsetDateTimeStreamSerializer.deserialize(`in`)
 
             return MessageRequest(organizationId, messageEntitySetId, messageContents, phoneNumbers, senderId, attachment, scheduledDateTime)
         }

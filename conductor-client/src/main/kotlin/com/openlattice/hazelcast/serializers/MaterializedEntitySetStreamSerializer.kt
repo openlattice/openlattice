@@ -54,7 +54,7 @@ class MaterializedEntitySetStreamSerializer : SelfRegisteringStreamSerializer<Ma
             out.writeInt(it.ordinal)
         }
 
-        OffsetDateTimeStreamSerializer.serialize(out, obj.lastRefresh)
+        Jdk8StreamSerializers.AbstractOffsetDateTimeStreamSerializer.serialize(out, obj.lastRefresh)
     }
 
     override fun read(input: ObjectDataInput): MaterializedEntitySet {
@@ -71,7 +71,7 @@ class MaterializedEntitySetStreamSerializer : SelfRegisteringStreamSerializer<Ma
             flags.add(entitySetFlags[input.readInt()])
         }
 
-        val lastRefresh = OffsetDateTimeStreamSerializer.deserialize(input)
+        val lastRefresh = Jdk8StreamSerializers.AbstractOffsetDateTimeStreamSerializer.deserialize(input)
 
 
         return MaterializedEntitySet(key, refreshRate, flags, lastRefresh)

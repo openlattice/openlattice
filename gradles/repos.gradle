@@ -30,7 +30,11 @@ repositories {
   maven {
     url "https://maven.springframework.org/snapshot"
   }
-  
+
+  maven {
+    url = "https://plugins.gradle.org/m2/"
+  }
+
   maven {
     url "https://maven.springframework.org/milestone"
   }
