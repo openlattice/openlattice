@@ -12,8 +12,8 @@ import com.openlattice.edm.tasks.EdmSyncInitializerTask
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organizations.tasks.OrganizationsInitializationTask
 import com.geekbeast.tasks.HazelcastInitializationTask
-import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask
-import com.openlattice.tasks.Task
+import com.geekbeast.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask
+import com.geekbeast.tasks.Task
 import com.openlattice.users.Auth0SyncInitializationTask
 import org.slf4j.LoggerFactory
 import java.util.*

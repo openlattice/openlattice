@@ -24,8 +24,8 @@ package com.openlattice.users
 import com.openlattice.assembler.tasks.UsersAndRolesInitializationTask
 import com.openlattice.organizations.tasks.OrganizationsInitializationTask
 import com.geekbeast.tasks.HazelcastInitializationTask
-import com.openlattice.tasks.PostConstructInitializerTaskDependencies
-import com.openlattice.tasks.Task.AUTH0_SYNC_INITIALIZATION_TASK
+import com.geekbeast.tasks.PostConstructInitializerTaskDependencies
+import com.geekbeast.tasks.Task.AUTH0_SYNC_INITIALIZATION_TASK
 
 /**
  * This is the auth0 synchronization initialization task that loads all users on startup from auth0.

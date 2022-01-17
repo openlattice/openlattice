@@ -35,8 +35,8 @@ import com.openlattice.organizations.Grant
 import com.openlattice.organizations.GrantType
 import com.openlattice.organizations.Organization
 import com.geekbeast.tasks.HazelcastInitializationTask
-import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask
-import com.openlattice.tasks.Task
+import com.geekbeast.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask
+import com.geekbeast.tasks.Task
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.TimeUnit

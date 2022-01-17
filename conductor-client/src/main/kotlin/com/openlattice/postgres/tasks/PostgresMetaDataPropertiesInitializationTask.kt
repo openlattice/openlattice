@@ -22,7 +22,7 @@ package com.openlattice.postgres.tasks
 
 import com.openlattice.postgres.PostgresMetaDataProperties
 import com.geekbeast.tasks.HazelcastInitializationTask
-import com.openlattice.tasks.Task
+import com.geekbeast.tasks.Task
 
 class PostgresMetaDataPropertiesInitializationTask
     : HazelcastInitializationTask<PostgresMetaDataPropertiesInitializationDependency> {

@@ -19,9 +19,9 @@ import com.openlattice.search.requests.DataSearchResult
 import com.openlattice.search.requests.EntityNeighborsFilter
 import com.openlattice.search.requests.PersistentSearch
 import com.openlattice.search.requests.SearchConstraints
-import com.openlattice.tasks.HazelcastFixedRateTask
+import com.geekbeast.tasks.HazelcastFixedRateTask
 import com.geekbeast.tasks.HazelcastTaskDependencies
-import com.openlattice.tasks.Task
+import com.geekbeast.tasks.Task
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import java.time.OffsetDateTime

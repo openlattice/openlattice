@@ -11,8 +11,8 @@ import com.openlattice.edm.EdmApi
 import com.openlattice.edm.EntityDataModel
 import com.openlattice.hazelcast.HazelcastMap
 import com.geekbeast.tasks.HazelcastInitializationTask
-import com.openlattice.tasks.PostConstructInitializerTaskDependencies
-import com.openlattice.tasks.Task
+import com.geekbeast.tasks.PostConstructInitializerTaskDependencies
+import com.geekbeast.tasks.Task
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory

@@ -60,8 +60,8 @@ import com.openlattice.postgres.mapstores.OrganizationAssemblyMapstore
 import com.openlattice.postgres.mapstores.OrganizationAssemblyMapstore.INITIALIZED_INDEX
 import com.geekbeast.tasks.HazelcastInitializationTask
 import com.geekbeast.tasks.HazelcastTaskDependencies
-import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask
-import com.openlattice.tasks.Task
+import com.geekbeast.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask
+import com.geekbeast.tasks.Task
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.stream.Collectors

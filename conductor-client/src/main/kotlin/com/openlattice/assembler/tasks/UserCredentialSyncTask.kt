@@ -24,8 +24,8 @@ package com.openlattice.assembler.tasks
 import com.openlattice.assembler.UserRoleSyncTaskDependencies
 import com.openlattice.postgres.DataTables
 import com.geekbeast.tasks.HazelcastInitializationTask
-import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask
-import com.openlattice.tasks.Task
+import com.geekbeast.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask
+import com.geekbeast.tasks.Task
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
 

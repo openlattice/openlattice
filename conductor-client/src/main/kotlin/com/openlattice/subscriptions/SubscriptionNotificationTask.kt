@@ -5,7 +5,7 @@ import com.openlattice.authorization.Principals
 import com.openlattice.graph.NeighborhoodQuery
 import com.openlattice.mail.RenderableEmailRequest
 import com.openlattice.notifications.sms.SubscriptionNotification
-import com.openlattice.tasks.HazelcastFixedRateTask
+import com.geekbeast.tasks.HazelcastFixedRateTask
 import com.geekbeast.tasks.HazelcastTaskDependencies
 import java.util.*
 import java.util.concurrent.TimeUnit

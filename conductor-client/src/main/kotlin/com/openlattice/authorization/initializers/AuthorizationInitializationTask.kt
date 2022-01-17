@@ -25,7 +25,7 @@ import com.openlattice.authorization.SystemRole
 import com.openlattice.IdConstants.GLOBAL_ORGANIZATION_ID
 import com.openlattice.organization.roles.Role
 import com.geekbeast.tasks.HazelcastInitializationTask
-import com.openlattice.tasks.Task
+import com.geekbeast.tasks.Task
 import java.util.*
 import java.util.concurrent.TimeUnit
 

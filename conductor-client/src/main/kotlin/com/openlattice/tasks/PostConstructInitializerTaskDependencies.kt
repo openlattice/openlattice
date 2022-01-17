@@ -19,7 +19,7 @@
  *
  */
 
-package com.openlattice.tasks
+package com.geekbeast.tasks
 
 import com.geekbeast.tasks.HazelcastInitializationTask
 import com.geekbeast.tasks.HazelcastTaskDependencies

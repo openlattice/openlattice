@@ -22,7 +22,7 @@
 package com.openlattice.ids.tasks
 
 import com.geekbeast.tasks.HazelcastInitializationTask
-import com.openlattice.tasks.Task
+import com.geekbeast.tasks.Task
 
 /**
  *
