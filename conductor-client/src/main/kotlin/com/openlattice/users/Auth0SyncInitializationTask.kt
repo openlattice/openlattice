@@ -23,14 +23,15 @@ package com.openlattice.users
 
 import com.openlattice.assembler.tasks.UsersAndRolesInitializationTask
 import com.openlattice.organizations.tasks.OrganizationsInitializationTask
-import com.openlattice.tasks.HazelcastInitializationTask
+import com.geekbeast.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies
 import com.openlattice.tasks.Task.AUTH0_SYNC_INITIALIZATION_TASK
 
 /**
  * This is the auth0 synchronization initialization task that loads all users on startup from auth0.
  */
-class Auth0SyncInitializationTask<T : Auth0SyncTask>(private val clazz: Class<T>) : HazelcastInitializationTask<Auth0SyncTask> {
+class Auth0SyncInitializationTask<T : Auth0SyncTask>(private val clazz: Class<T>) :
+    HazelcastInitializationTask<Auth0SyncTask> {
 
     override fun getInitialDelay(): Long {
         return 0L

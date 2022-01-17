@@ -1,10 +1,10 @@
 package com.openlattice.entitysets
 
 import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.postgres.PostgresArrays
+import com.geekbeast.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.ResultSetAdapters
-import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore
+import com.geekbeast.postgres.mapstores.AbstractBasePostgresMapstore
 import com.openlattice.rhizome.DelegatedIntSet
 import com.zaxxer.hikari.HikariDataSource
 import java.sql.PreparedStatement

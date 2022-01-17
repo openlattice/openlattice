@@ -23,7 +23,7 @@ package com.openlattice.assembler.tasks
 
 import com.openlattice.assembler.UserRoleSyncTaskDependencies
 import com.openlattice.authorization.initializers.AuthorizationInitializationTask
-import com.openlattice.tasks.HazelcastInitializationTask
+import com.geekbeast.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.Task
 import java.util.concurrent.TimeUnit
 

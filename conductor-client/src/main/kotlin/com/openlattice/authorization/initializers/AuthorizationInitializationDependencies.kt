@@ -22,7 +22,7 @@
 package com.openlattice.authorization.initializers
 
 import com.openlattice.organizations.roles.SecurePrincipalsManager
-import com.openlattice.tasks.HazelcastTaskDependencies
+import com.geekbeast.tasks.HazelcastTaskDependencies
 
 /**
  *

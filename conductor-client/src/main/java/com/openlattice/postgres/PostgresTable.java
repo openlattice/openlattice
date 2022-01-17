@@ -20,7 +20,11 @@
 
 package com.openlattice.postgres;
 
+import com.geekbeast.postgres.CitusDistributedTableDefinition;
 import com.geekbeast.postgres.IndexType;
+import com.geekbeast.postgres.PostgresColumnsIndexDefinition;
+import com.geekbeast.postgres.PostgresExpressionIndexDefinition;
+import com.geekbeast.postgres.PostgresTableDefinition;
 import com.geekbeast.rhizome.jobs.PostgresJobsMapStore;
 
 import static com.openlattice.postgres.DataTables.LAST_INDEX;
@@ -164,11 +168,11 @@ import static com.openlattice.postgres.PostgresColumn.WAREHOUSE;
  * Tables definitions for all tables used in the OpenLattice platform.
  */
 public final class PostgresTable {
-    public static final PostgresTableDefinition ACL_KEYS                      =
+    public static final PostgresTableDefinition ACL_KEYS =
             new PostgresTableDefinition( "acl_keys" )
                     .addColumns( NAME, SECURABLE_OBJECTID )
                     .primaryKey( NAME );
-    public static final PostgresTableDefinition APPS                          =
+    public static final PostgresTableDefinition APPS     =
             new PostgresTableDefinition( "apps" )
                     .addColumns( ID, NAME, TITLE, DESCRIPTION, ENTITY_TYPE_COLLECTION_ID, URL, ROLES, SETTINGS );
     public static final PostgresTableDefinition APP_CONFIGS                   =

@@ -6,10 +6,10 @@ import com.hazelcast.config.IndexConfig
 import com.hazelcast.config.IndexType
 import com.hazelcast.config.MapConfig
 import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.postgres.PostgresArrays
+import com.geekbeast.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresTable.SMS_INFORMATION
 import com.openlattice.postgres.ResultSetAdapters
-import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore
+import com.geekbeast.postgres.mapstores.AbstractBasePostgresMapstore
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.commons.lang3.RandomStringUtils
 import org.springframework.stereotype.Component

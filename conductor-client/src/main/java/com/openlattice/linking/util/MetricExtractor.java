@@ -24,7 +24,7 @@ import java.io.Serializable;
 import java.util.Map;
 import java.util.UUID;
 
-import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
+import com.geekbeast.hazelcast.DelegatedStringSet;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 public interface MetricExtractor extends Serializable {

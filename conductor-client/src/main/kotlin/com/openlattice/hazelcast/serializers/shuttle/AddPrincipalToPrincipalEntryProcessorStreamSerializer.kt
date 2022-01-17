@@ -4,13 +4,14 @@ import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.hazelcast.serializers.AclKeyStreamSerializer
-import com.openlattice.hazelcast.serializers.TestableSelfRegisteringStreamSerializer
+import com.geekbeast.hazelcast.serializers.TestableSelfRegisteringStreamSerializer
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.principals.AddPrincipalToPrincipalEntryProcessor
 import org.springframework.stereotype.Component
 
 @Component
-class AddPrincipalToPrincipalEntryProcessorStreamSerializer : TestableSelfRegisteringStreamSerializer<AddPrincipalToPrincipalEntryProcessor> {
+class AddPrincipalToPrincipalEntryProcessorStreamSerializer :
+    TestableSelfRegisteringStreamSerializer<AddPrincipalToPrincipalEntryProcessor> {
     override fun generateTestValue(): AddPrincipalToPrincipalEntryProcessor {
         return AddPrincipalToPrincipalEntryProcessor(TestDataFactory.aclKey())
     }

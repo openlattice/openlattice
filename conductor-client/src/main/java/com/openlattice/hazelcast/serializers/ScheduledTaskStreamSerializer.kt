@@ -2,9 +2,11 @@ package com.openlattice.hazelcast.serializers
 
 import com.geekbeast.mappers.mappers.ObjectMappers
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.geekbeast.hazelcast.serializers.TestableSelfRegisteringStreamSerializer
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.geekbeast.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
+import com.geekbeast.serializers.Jdk8StreamSerializers
 import com.openlattice.hazelcast.InternalTestDataFactory
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.scheduling.RunnableTask

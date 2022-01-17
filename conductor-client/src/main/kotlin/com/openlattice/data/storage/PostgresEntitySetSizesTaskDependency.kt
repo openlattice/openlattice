@@ -1,6 +1,6 @@
 package com.openlattice.data.storage
 
-import com.openlattice.tasks.HazelcastTaskDependencies
+import com.geekbeast.tasks.HazelcastTaskDependencies
 import com.zaxxer.hikari.HikariDataSource
 
 /**

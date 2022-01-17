@@ -3,7 +3,7 @@ package com.openlattice.hazelcast.serializers.shuttle
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.openlattice.hazelcast.StreamSerializerTypeIds
-import com.openlattice.hazelcast.serializers.AbstractEnumSerializer
+import com.geekbeast.hazelcast.serializers.AbstractEnumSerializer
 import com.openlattice.shuttle.IntegrationStatus
 
 class IntegrationStatusStreamSerializer : AbstractEnumSerializer<IntegrationStatus>() {

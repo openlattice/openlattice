@@ -2,7 +2,7 @@ package com.openlattice.edm.processors
 
 import com.openlattice.edm.EntitySet
 import com.openlattice.rhizome.DelegatedIntSet
-import com.openlattice.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
+import com.geekbeast.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
 import java.util.*
 
 class GetPartitionsFromEntitySetEntryProcessor : AbstractReadOnlyRhizomeEntryProcessor<UUID, EntitySet, DelegatedIntSet>() {

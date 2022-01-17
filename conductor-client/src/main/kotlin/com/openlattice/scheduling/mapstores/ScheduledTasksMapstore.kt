@@ -30,7 +30,7 @@ import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.InternalTestDataFactory
 import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.ResultSetAdapters
-import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore
+import com.geekbeast.postgres.mapstores.AbstractBasePostgresMapstore
 import com.openlattice.scheduling.ScheduledTask
 import com.zaxxer.hikari.HikariDataSource
 import java.sql.PreparedStatement

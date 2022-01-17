@@ -1,7 +1,7 @@
 package com.openlattice.assembler.processors
 
 import com.openlattice.assembler.OrganizationAssembly
-import com.openlattice.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
+import com.geekbeast.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
 import java.util.*
 
 class IsAssemblyInitializedEntryProcessor : AbstractReadOnlyRhizomeEntryProcessor<UUID, OrganizationAssembly, Boolean>() {

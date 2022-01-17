@@ -2,7 +2,7 @@ package com.openlattice.transporter.processors
 
 import com.hazelcast.core.Offloadable
 import com.openlattice.rhizome.KotlinDelegatedUUIDSet
-import com.openlattice.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
+import com.geekbeast.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
 import com.openlattice.transporter.types.TransporterColumnSet
 import org.slf4j.LoggerFactory
 import java.util.*
@@ -11,8 +11,8 @@ import java.util.*
  * @author Drew Bailey &lt;drew@openlattice.com&gt;
  */
 class GetPropertyTypesFromTransporterColumnSetEntryProcessor:
-        AbstractReadOnlyRhizomeEntryProcessor<UUID, TransporterColumnSet, Set<UUID>>(),
-        Offloadable
+    AbstractReadOnlyRhizomeEntryProcessor<UUID, TransporterColumnSet, Set<UUID>>(),
+    Offloadable
 {
     companion object {
         private val logger = LoggerFactory.getLogger(GetPropertyTypesFromTransporterColumnSetEntryProcessor::class.java)

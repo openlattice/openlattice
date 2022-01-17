@@ -30,7 +30,7 @@ import com.openlattice.auditing.AuditingManager;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.authorization.util.AuthorizationUtilsKt;
-import com.openlattice.controllers.exceptions.ForbiddenException;
+import com.geekbeast.controllers.exceptions.ForbiddenException;
 import com.openlattice.data.requests.NeighborEntityDetails;
 import com.openlattice.data.requests.NeighborEntityIds;
 import com.openlattice.datasets.DataSetSearchRequest;

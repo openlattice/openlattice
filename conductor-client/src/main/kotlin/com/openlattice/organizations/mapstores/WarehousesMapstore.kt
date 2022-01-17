@@ -9,8 +9,8 @@ import com.openlattice.organizations.JdbcConnectionParameters
 import com.openlattice.postgres.PostgresTable.WAREHOUSES
 import com.openlattice.postgres.PostgresColumn.WAREHOUSE
 import com.openlattice.postgres.ResultSetAdapters
-import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore
-import com.openlattice.postgres.PostgresColumnDefinition
+import com.geekbeast.postgres.mapstores.AbstractBasePostgresMapstore
+import com.geekbeast.postgres.PostgresColumnDefinition
 import com.zaxxer.hikari.HikariDataSource
 import org.springframework.stereotype.Component
 import com.fasterxml.jackson.databind.ObjectMapper

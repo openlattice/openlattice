@@ -5,8 +5,8 @@ import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.hazelcast.InternalTestDataFactory
-import com.openlattice.hazelcast.serializers.StreamSerializers
-import com.openlattice.hazelcast.serializers.TestableSelfRegisteringStreamSerializer
+import com.geekbeast.hazelcast.serializers.StreamSerializers
+import com.geekbeast.hazelcast.serializers.TestableSelfRegisteringStreamSerializer
 import com.openlattice.shuttle.Flight
 import com.openlattice.shuttle.FlightPlanParameters
 import org.springframework.stereotype.Component

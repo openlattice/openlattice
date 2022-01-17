@@ -27,7 +27,7 @@ import com.openlattice.TestServer
 import com.openlattice.data.EntityKey
 import com.openlattice.data.storage.postgres.upsertEntitiesSql
 import com.openlattice.ids.HazelcastIdGenerationService
-import com.openlattice.postgres.PostgresArrays
+import com.geekbeast.postgres.PostgresArrays
 import com.openlattice.postgres.lockIdsAndExecute
 import org.apache.commons.lang3.RandomStringUtils
 import org.junit.Assert

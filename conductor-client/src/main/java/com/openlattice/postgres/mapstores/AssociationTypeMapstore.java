@@ -1,12 +1,13 @@
 package com.openlattice.postgres.mapstores;
 
+import com.geekbeast.postgres.mapstores.AbstractBasePostgresMapstore;
 import com.hazelcast.config.IndexConfig;
 import com.hazelcast.config.IndexType;
 import com.hazelcast.config.MapConfig;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.google.common.collect.Sets;
-import com.openlattice.postgres.PostgresArrays;
+import com.geekbeast.postgres.PostgresArrays;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.zaxxer.hikari.HikariDataSource;
 

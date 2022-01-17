@@ -22,6 +22,7 @@ package com.openlattice.hazelcast.serializers;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.serializers.ClosureSerializer;
+import com.geekbeast.serializers.Jdk8StreamSerializers;
 import com.google.common.base.Preconditions;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -43,8 +44,8 @@ import com.openlattice.organizations.PrincipalSet;
 import com.openlattice.organizations.serializers.DelegatedStringSetKryoSerializer;
 import com.openlattice.organizations.serializers.DelegatedUUIDSetKryoSerializer;
 import com.openlattice.organizations.serializers.PrincipalSetKryoSerializer;
-import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
-import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
+import com.geekbeast.hazelcast.DelegatedStringSet;
+import com.geekbeast.hazelcast.DelegatedUUIDSet;
 import com.openlattice.search.requests.SearchConstraints;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;

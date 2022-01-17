@@ -13,14 +13,14 @@ import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.PERSISTENT_SEARCHES
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.mapstores.EntitySetMapstore
-import com.openlattice.postgres.streams.BasePostgresIterable
-import com.openlattice.postgres.streams.StatementHolderSupplier
+import com.geekbeast.postgres.streams.BasePostgresIterable
+import com.geekbeast.postgres.streams.StatementHolderSupplier
 import com.openlattice.search.requests.DataSearchResult
 import com.openlattice.search.requests.EntityNeighborsFilter
 import com.openlattice.search.requests.PersistentSearch
 import com.openlattice.search.requests.SearchConstraints
 import com.openlattice.tasks.HazelcastFixedRateTask
-import com.openlattice.tasks.HazelcastTaskDependencies
+import com.geekbeast.tasks.HazelcastTaskDependencies
 import com.openlattice.tasks.Task
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
@@ -35,7 +35,8 @@ const val ALERT_MESSENGER_INTERVAL_MILLIS = 60000L
 
 private val LOAD_ACTIVE_ALERTS_SQL = "SELECT * FROM ${PERSISTENT_SEARCHES.name} WHERE ${EXPIRATION_DATE.name} > now()"
 
-class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMessengerTaskDependencies>, HazelcastTaskDependencies {
+class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMessengerTaskDependencies>,
+                                      HazelcastTaskDependencies {
 
     override fun getInitialDelay(): Long {
         return ALERT_MESSENGER_INTERVAL_MILLIS

@@ -31,7 +31,7 @@ import com.fasterxml.jackson.module.afterburner.AfterburnerModule;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.io.Resources;
-import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
+import com.geekbeast.hazelcast.DelegatedStringSet;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;

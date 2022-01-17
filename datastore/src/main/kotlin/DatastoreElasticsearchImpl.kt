@@ -20,8 +20,8 @@ import com.openlattice.edm.type.AssociationType
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.organizations.Organization
-import com.openlattice.rhizome.hazelcast.DelegatedStringSet
-import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
+import com.geekbeast.hazelcast.DelegatedStringSet
+import com.geekbeast.hazelcast.DelegatedUUIDSet
 import com.openlattice.scrunchie.search.ElasticsearchTransportClientFactory
 import com.openlattice.search.SortDefinition
 import com.openlattice.search.SortType
@@ -941,10 +941,10 @@ class DatastoreKotlinElasticsearchImpl(
 
     /*** ENTITY DATA SEARCH  */
     override fun executeSearch(
-            searchConstraints: SearchConstraints,
-            entityTypesByEntitySetId: Map<UUID?, UUID?>,
-            authorizedPropertyTypesByEntitySet: Map<UUID, DelegatedUUIDSet>,
-            linkingEntitySets: Map<UUID?, DelegatedUUIDSet>
+        searchConstraints: SearchConstraints,
+        entityTypesByEntitySetId: Map<UUID?, UUID?>,
+        authorizedPropertyTypesByEntitySet: Map<UUID, DelegatedUUIDSet>,
+        linkingEntitySets: Map<UUID?, DelegatedUUIDSet>
     ): EntityDataKeySearchResult? {
         if (!verifyElasticsearchConnection()) {
             return EntityDataKeySearchResult(0, ImmutableList.of())
@@ -990,10 +990,10 @@ class DatastoreKotlinElasticsearchImpl(
     }
 
     override fun executeBlockingSearch(
-            entityTypeId: UUID?,
-            fieldSearches: Map<UUID?, DelegatedStringSet>,
-            size: Int,
-            explain: Boolean
+        entityTypeId: UUID?,
+        fieldSearches: Map<UUID?, DelegatedStringSet>,
+        size: Int,
+        explain: Boolean
     ): Map<UUID, Set<UUID>> {
         require(verifyElasticsearchConnection()) {
             "A connection to the search service is required."

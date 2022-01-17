@@ -26,7 +26,7 @@ import com.openlattice.authorization.AceKey;
 import com.openlattice.authorization.Principal;
 import com.geekbeast.streams.StreamUtil;
 import com.google.common.collect.Lists;
-import com.openlattice.postgres.PostgresArrays;
+import com.geekbeast.postgres.PostgresArrays;
 import com.openlattice.postgres.PostgresColumn;
 import com.openlattice.postgres.PostgresTable;
 import com.openlattice.postgres.ResultSetAdapters;

@@ -4,7 +4,7 @@ import com.geekbeast.mappers.mappers.ObjectMappers
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.openlattice.linking.matching.getModelScore
 import com.openlattice.linking.util.PersonMetric
-import com.openlattice.rhizome.hazelcast.DelegatedStringSet
+import com.geekbeast.hazelcast.DelegatedStringSet
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.deeplearning4j.nn.modelimport.keras.KerasModelImport
 import org.deeplearning4j.parallelism.ParallelInference
@@ -45,10 +45,10 @@ open class LinkingScoringTest {
         for (comparison: LinkingTestComparison in configurations.comparisons) {
 
             val lhs = configurations.people[comparison.lhs]
-                    ?.mapValues{(_, v) -> DelegatedStringSet(v)}
+                    ?.mapValues{(_, v) -> DelegatedStringSet(v) }
 
             val rhs = configurations.people[comparison.rhs]
-                    ?.mapValues{(_, v) -> DelegatedStringSet(v)}
+                    ?.mapValues{(_, v) -> DelegatedStringSet(v) }
 
             // extract features
             val distance = PersonMetric.pDistance(lhs, rhs, configurations.fqnMap).toList()

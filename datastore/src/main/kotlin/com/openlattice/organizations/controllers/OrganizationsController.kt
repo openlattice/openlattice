@@ -11,7 +11,7 @@ import com.openlattice.assembler.Assembler
 import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.authorization.util.getLastAclKeySafely
-import com.openlattice.controllers.exceptions.ForbiddenException
+import com.geekbeast.controllers.exceptions.ForbiddenException
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.organization.OrganizationEntitySetFlag

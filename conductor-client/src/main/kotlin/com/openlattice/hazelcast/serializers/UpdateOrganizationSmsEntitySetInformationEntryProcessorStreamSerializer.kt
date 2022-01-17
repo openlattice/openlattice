@@ -1,5 +1,6 @@
 package com.openlattice.hazelcast.serializers
 
+import com.geekbeast.hazelcast.serializers.TestableSelfRegisteringStreamSerializer
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.openlattice.hazelcast.StreamSerializerTypeIds
@@ -8,7 +9,8 @@ import com.openlattice.organizations.processors.UpdateOrganizationSmsEntitySetIn
 import org.springframework.stereotype.Component
 
 @Component
-class UpdateOrganizationSmsEntitySetInformationEntryProcessorStreamSerializer : TestableSelfRegisteringStreamSerializer<UpdateOrganizationSmsEntitySetInformationEntryProcessor> {
+class UpdateOrganizationSmsEntitySetInformationEntryProcessorStreamSerializer :
+    TestableSelfRegisteringStreamSerializer<UpdateOrganizationSmsEntitySetInformationEntryProcessor> {
 
     override fun getTypeId(): Int {
         return StreamSerializerTypeIds.UPDATE_ORGANIZATION_SMS_ENTITY_SET_INFORMATION_ENTRY_PROCESSOR.ordinal

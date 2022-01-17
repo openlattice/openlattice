@@ -4,7 +4,7 @@ import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Preconditions.checkState
 import com.google.common.net.InetAddresses
 import com.openlattice.authorization.*
-import com.openlattice.controllers.exceptions.ForbiddenException
+import com.geekbeast.controllers.exceptions.ForbiddenException
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.organization.*
 import com.openlattice.organizations.ExternalDatabaseManagementService

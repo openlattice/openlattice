@@ -22,7 +22,7 @@
 
 package com.openlattice.edm.schemas.processors;
 
-import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
+import com.geekbeast.hazelcast.DelegatedStringSet;
 import com.geekbeast.rhizome.hazelcast.processors.AbstractRemover;
 
 public class SchemaRemover extends AbstractRemover<String, DelegatedStringSet, String> {

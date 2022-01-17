@@ -20,12 +20,13 @@
 
 package com.openlattice.hazelcast.serializers;
 
+import com.geekbeast.hazelcast.serializers.SetStreamSerializer;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.google.common.collect.Sets;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.openlattice.mapstores.TestDataFactory;
-import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
+import com.geekbeast.hazelcast.DelegatedStringSet;
 
 import java.io.IOException;
 import java.util.Set;

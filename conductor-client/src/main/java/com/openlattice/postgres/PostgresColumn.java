@@ -20,6 +20,7 @@
 
 package com.openlattice.postgres;
 
+import com.geekbeast.postgres.PostgresColumnDefinition;
 import com.geekbeast.postgres.PostgresDatatype;
 import com.openlattice.IdConstants;
 import com.openlattice.edm.EntitySet;
@@ -42,10 +43,10 @@ import static com.geekbeast.postgres.PostgresDatatype.UUID_ARRAY;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public final class PostgresColumn {
-    public static final String                   ACL_KEY_FIELD                     = "acl_key";
-    public static final PostgresColumnDefinition ACL_KEY                           =
+    public static final String                   ACL_KEY_FIELD        = "acl_key";
+    public static final PostgresColumnDefinition ACL_KEY              =
             new PostgresColumnDefinition( ACL_KEY_FIELD, UUID_ARRAY );
-    public static final String                   ALERT_METADATA_FIELD              = "alert_metadata";
+    public static final String                   ALERT_METADATA_FIELD = "alert_metadata";
     public static final PostgresColumnDefinition ALERT_METADATA                    =
             new PostgresColumnDefinition( ALERT_METADATA_FIELD, JSONB ).notNull();
     public static final String                   ALERT_TYPE_FIELD                  = "alert_type";

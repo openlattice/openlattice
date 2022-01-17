@@ -23,7 +23,7 @@
 package com.openlattice.edm.schemas.processors;
 
 import com.google.common.collect.Sets;
-import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
+import com.geekbeast.hazelcast.DelegatedStringSet;
 import com.geekbeast.rhizome.hazelcast.processors.AbstractMerger;
 
 public class SchemaMerger extends AbstractMerger<String, DelegatedStringSet, String> {

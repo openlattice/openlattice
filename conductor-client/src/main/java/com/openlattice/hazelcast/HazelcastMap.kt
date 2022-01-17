@@ -30,7 +30,6 @@ import com.openlattice.assembler.EntitySetAssemblyKey
 import com.openlattice.assembler.MaterializedEntitySet
 import com.openlattice.assembler.OrganizationAssembly
 import com.openlattice.auditing.AuditRecordEntitySetConfiguration
-import com.openlattice.authorization.AccessTarget
 import com.openlattice.authorization.AceKey
 import com.openlattice.authorization.AceValue
 import com.openlattice.authorization.AclKey
@@ -62,11 +61,11 @@ import com.openlattice.organization.ExternalTable
 import com.openlattice.organizations.Organization
 import com.openlattice.organizations.OrganizationDatabase
 import com.openlattice.organizations.SortedPrincipalSet
-import com.openlattice.postgres.mapstores.TypedMapIdentifier
+import com.geekbeast.postgres.mapstores.TypedMapIdentifier
 import com.openlattice.requests.Status
 import com.openlattice.rhizome.DelegatedIntSet
-import com.openlattice.rhizome.hazelcast.DelegatedStringSet
-import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
+import com.geekbeast.hazelcast.DelegatedStringSet
+import com.geekbeast.hazelcast.DelegatedUUIDSet
 import com.openlattice.scheduling.ScheduledTask
 import com.openlattice.shuttle.Integration
 import com.openlattice.shuttle.IntegrationJob

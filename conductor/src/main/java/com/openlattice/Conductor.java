@@ -22,23 +22,23 @@ package com.openlattice;
 
 import com.geekbeast.mappers.mappers.ObjectMappers;
 import com.geekbeast.rhizome.core.RhizomeApplicationServer;
-import com.openlattice.auth0.Auth0Pod;
-import com.openlattice.aws.AwsS3Pod;
+import com.geekbeast.auth0.Auth0Pod;
+import com.geekbeast.aws.AwsS3Pod;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.hazelcast.pods.HazelcastQueuePod;
 import com.openlattice.hazelcast.pods.MapstoresPod;
 import com.openlattice.hazelcast.pods.SharedStreamSerializersPod;
 import com.openlattice.ioc.providers.LateInitProvidersPod;
-import com.openlattice.jdbc.JdbcPod;
+import com.geekbeast.jdbc.JdbcPod;
 import com.openlattice.mail.pods.MailServicePod;
 import com.openlattice.pods.ConductorEdmSyncPod;
 import com.openlattice.pods.ConductorPostInitializationPod;
 import com.openlattice.pods.ConductorServicesPod;
-import com.openlattice.postgres.PostgresPod;
+import com.geekbeast.postgres.PostgresPod;
 import com.openlattice.postgres.PostgresTablesPod;
 import com.openlattice.postgres.pods.ExternalDatabaseConnectionManagerPod;
-import com.openlattice.tasks.pods.TaskSchedulerPod;
+import com.geekbeast.pods.TaskSchedulerPod;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;

@@ -4,7 +4,7 @@ import com.hazelcast.core.Offloadable
 import com.hazelcast.spi.impl.executionservice.ExecutionService
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
-import com.openlattice.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
+import com.geekbeast.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
 import java.util.*
 
 data class EntitySetContainsFlagEntryProcessor(val flag: EntitySetFlag)

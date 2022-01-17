@@ -40,7 +40,7 @@ import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.DbCredentialService
 import com.openlattice.authorization.EdmAuthorizationHelper
 import com.openlattice.authorization.securable.SecurableObjectType
-import com.openlattice.controllers.exceptions.ResourceNotFoundException
+import com.geekbeast.controllers.exceptions.ResourceNotFoundException
 import com.openlattice.directory.MaterializedViewAccount
 import com.openlattice.edm.events.EntitySetDeletedEvent
 import com.openlattice.edm.events.EntitySetNameUpdatedEvent
@@ -58,8 +58,8 @@ import com.openlattice.postgres.external.DatabaseQueryManager
 import com.openlattice.postgres.mapstores.MaterializedEntitySetMapStore
 import com.openlattice.postgres.mapstores.OrganizationAssemblyMapstore
 import com.openlattice.postgres.mapstores.OrganizationAssemblyMapstore.INITIALIZED_INDEX
-import com.openlattice.tasks.HazelcastInitializationTask
-import com.openlattice.tasks.HazelcastTaskDependencies
+import com.geekbeast.tasks.HazelcastInitializationTask
+import com.geekbeast.tasks.HazelcastTaskDependencies
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask
 import com.openlattice.tasks.Task
 import org.slf4j.LoggerFactory

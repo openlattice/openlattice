@@ -21,7 +21,7 @@
 package com.openlattice.hazelcast.processors;
 
 import com.geekbeast.rhizome.hazelcast.processors.AbstractMerger;
-import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
+import com.geekbeast.hazelcast.DelegatedUUIDSet;
 
 import java.util.HashSet;
 import java.util.UUID;

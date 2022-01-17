@@ -7,7 +7,7 @@ import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.Permission
 import com.openlattice.authorization.Principal
-import com.openlattice.controllers.exceptions.ForbiddenException
+import com.geekbeast.controllers.exceptions.ForbiddenException
 import com.openlattice.data.DataDeletionManager
 import com.openlattice.data.DeleteType
 import com.openlattice.data.WriteEvent

@@ -1,7 +1,6 @@
 package com.openlattice.postgres
 
-import com.geekbeast.postgres.IndexType
-import com.geekbeast.postgres.PostgresDatatype
+import com.geekbeast.postgres.*
 import com.google.common.cache.CacheBuilder
 import com.google.common.cache.CacheLoader
 import com.openlattice.IdConstants
@@ -179,8 +178,8 @@ class PostgresDataTables {
 
         @JvmStatic
         fun buildBtreeIndexDefinition(
-                tableDefinition: PostgresTableDefinition,
-                columnDefinition: PostgresColumnDefinition
+            tableDefinition: PostgresTableDefinition,
+            columnDefinition: PostgresColumnDefinition
         ): PostgresIndexDefinition {
             return PostgresColumnsIndexDefinition(tableDefinition, columnDefinition)
                     .name(buildBtreeIndexName(tableDefinition.name, columnDefinition.name))

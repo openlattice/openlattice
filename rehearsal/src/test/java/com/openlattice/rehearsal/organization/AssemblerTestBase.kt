@@ -24,7 +24,7 @@ import com.openlattice.authorization.*
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.EntityType
 import com.openlattice.organizations.Organization
-import com.openlattice.postgres.PostgresArrays
+import com.geekbeast.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn
 import com.openlattice.rehearsal.SetupTestData
 import com.zaxxer.hikari.HikariDataSource

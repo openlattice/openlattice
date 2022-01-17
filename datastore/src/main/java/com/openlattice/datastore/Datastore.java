@@ -25,8 +25,8 @@ import com.geekbeast.rhizome.configuration.websockets.BaseRhizomeServer;
 import com.geekbeast.rhizome.core.RhizomeApplicationServer;
 import com.geekbeast.rhizome.hazelcast.serializers.RhizomeUtils.Pods;
 import com.openlattice.auditing.pods.AuditingConfigurationPod;
-import com.openlattice.auth0.Auth0Pod;
-import com.openlattice.aws.AwsS3Pod;
+import com.geekbeast.auth0.Auth0Pod;
+import com.geekbeast.aws.AwsS3Pod;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.pods.DatastoreSecurityPod;
@@ -37,10 +37,10 @@ import com.openlattice.hazelcast.pods.MapstoresPod;
 import com.openlattice.hazelcast.pods.NearCachesPod;
 import com.openlattice.hazelcast.pods.SharedStreamSerializersPod;
 import com.openlattice.ioc.providers.LateInitProvidersPod;
-import com.openlattice.jdbc.JdbcPod;
-import com.openlattice.postgres.PostgresPod;
+import com.geekbeast.jdbc.JdbcPod;
+import com.geekbeast.postgres.PostgresPod;
 import com.openlattice.postgres.pods.ExternalDatabaseConnectionManagerPod;
-import com.openlattice.tasks.pods.TaskSchedulerPod;
+import com.geekbeast.pods.TaskSchedulerPod;
 
 public class Datastore extends BaseRhizomeServer {
     private static final Class<?>[] datastorePods = new Class<?>[] {

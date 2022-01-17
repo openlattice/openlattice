@@ -22,7 +22,7 @@ package com.openlattice.linking.util;
 
 import com.google.common.collect.Sets;
 import com.openlattice.data.EntityDataKey;
-import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
+import com.geekbeast.hazelcast.DelegatedStringSet;
 import org.apache.commons.codec.language.DoubleMetaphone;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.similarity.JaroWinklerDistance;

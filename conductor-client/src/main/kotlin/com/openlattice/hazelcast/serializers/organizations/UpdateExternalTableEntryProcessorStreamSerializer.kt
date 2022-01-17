@@ -5,7 +5,7 @@ import com.hazelcast.nio.ObjectDataOutput
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.hazelcast.processors.organizations.UpdateExternalTableEntryProcessor
 import com.openlattice.hazelcast.serializers.MetadataUpdateStreamSerializer
-import com.openlattice.hazelcast.serializers.TestableSelfRegisteringStreamSerializer
+import com.geekbeast.hazelcast.serializers.TestableSelfRegisteringStreamSerializer
 import com.openlattice.mapstores.TestDataFactory
 import org.springframework.stereotype.Component
 

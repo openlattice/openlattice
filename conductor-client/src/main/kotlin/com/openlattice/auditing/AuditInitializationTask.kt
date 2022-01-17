@@ -11,7 +11,7 @@ import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.edm.tasks.EdmSyncInitializerTask
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organizations.tasks.OrganizationsInitializationTask
-import com.openlattice.tasks.HazelcastInitializationTask
+import com.geekbeast.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask
 import com.openlattice.tasks.Task
 import com.openlattice.users.Auth0SyncInitializationTask

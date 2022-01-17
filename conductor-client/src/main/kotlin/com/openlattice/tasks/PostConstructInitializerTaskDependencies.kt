@@ -21,6 +21,8 @@
 
 package com.openlattice.tasks
 
+import com.geekbeast.tasks.HazelcastInitializationTask
+import com.geekbeast.tasks.HazelcastTaskDependencies
 import com.openlattice.data.DataGraphService
 import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.data.storage.DataSourceResolver

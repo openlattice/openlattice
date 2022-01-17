@@ -3,7 +3,7 @@ package com.openlattice.directory
 import com.auth0.json.mgmt.users.User
 import com.google.common.collect.ImmutableMap
 import com.hazelcast.core.HazelcastInstance
-import com.openlattice.auth0.Auth0TokenProvider
+import com.geekbeast.auth0.Auth0TokenProvider
 import com.openlattice.client.RetrofitFactory
 import com.openlattice.datastore.services.Auth0ManagementApi
 import com.openlattice.hazelcast.HazelcastMap
@@ -15,7 +15,7 @@ private val logger = LoggerFactory.getLogger(Auth0UserDirectoryService::class.ja
 
 @Service
 class Auth0UserDirectoryService(
-        auth0TokenProvider: Auth0TokenProvider, hazelcastInstance: HazelcastInstance
+    auth0TokenProvider: Auth0TokenProvider, hazelcastInstance: HazelcastInstance
 ) : UserDirectoryService {
     private val users = HazelcastMap.USERS.getMap(hazelcastInstance)
 

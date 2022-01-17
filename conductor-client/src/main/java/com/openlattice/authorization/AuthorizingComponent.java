@@ -25,7 +25,7 @@ package com.openlattice.authorization;
 import com.openlattice.IdConstants;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.controllers.exceptions.ForbiddenException;
+import com.geekbeast.controllers.exceptions.ForbiddenException;
 import com.openlattice.edm.type.PropertyType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

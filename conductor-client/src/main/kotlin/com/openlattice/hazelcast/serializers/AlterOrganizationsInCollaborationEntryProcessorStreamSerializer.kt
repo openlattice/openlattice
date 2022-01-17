@@ -1,5 +1,6 @@
 package com.openlattice.hazelcast.serializers
 
+import com.geekbeast.hazelcast.serializers.TestableSelfRegisteringStreamSerializer
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.geekbeast.rhizome.hazelcast.serializers.SetStreamSerializers
@@ -9,7 +10,8 @@ import org.springframework.stereotype.Component
 import java.util.*
 
 @Component
-class AlterOrganizationsInCollaborationEntryProcessorStreamSerializer : TestableSelfRegisteringStreamSerializer<AlterOrganizationsInCollaborationEntryProcessor> {
+class AlterOrganizationsInCollaborationEntryProcessorStreamSerializer :
+    TestableSelfRegisteringStreamSerializer<AlterOrganizationsInCollaborationEntryProcessor> {
 
     override fun generateTestValue(): AlterOrganizationsInCollaborationEntryProcessor {
         return AlterOrganizationsInCollaborationEntryProcessor(setOf(UUID.randomUUID()), true)

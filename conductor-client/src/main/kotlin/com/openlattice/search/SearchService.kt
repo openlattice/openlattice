@@ -38,7 +38,7 @@ import com.openlattice.organizations.Organization
 import com.openlattice.organizations.events.OrganizationCreatedEvent
 import com.openlattice.organizations.events.OrganizationDeletedEvent
 import com.openlattice.organizations.events.OrganizationUpdatedEvent
-import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
+import com.geekbeast.hazelcast.DelegatedUUIDSet
 import com.openlattice.search.requests.*
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory

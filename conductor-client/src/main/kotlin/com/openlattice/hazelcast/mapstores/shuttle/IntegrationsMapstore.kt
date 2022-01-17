@@ -8,10 +8,10 @@ import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.InternalTestDataFactory
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.postgres.PostgresColumn.INTEGRATION
-import com.openlattice.postgres.PostgresColumnDefinition
+import com.geekbeast.postgres.PostgresColumnDefinition
 import com.openlattice.postgres.PostgresTable.INTEGRATIONS
 import com.openlattice.postgres.ResultSetAdapters
-import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore
+import com.geekbeast.postgres.mapstores.AbstractBasePostgresMapstore
 import com.openlattice.shuttle.Integration
 import com.zaxxer.hikari.HikariDataSource
 import org.springframework.stereotype.Component

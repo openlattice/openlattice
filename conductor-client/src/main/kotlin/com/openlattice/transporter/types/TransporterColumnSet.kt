@@ -3,7 +3,7 @@ package com.openlattice.transporter.types
 import com.openlattice.ApiHelpers
 import com.openlattice.edm.PostgresEdmTypeConverter
 import com.openlattice.edm.type.PropertyType
-import com.openlattice.postgres.PostgresColumnDefinition
+import com.geekbeast.postgres.PostgresColumnDefinition
 import com.openlattice.postgres.PostgresDataTables
 import com.geekbeast.postgres.PostgresDatatype
 import java.util.UUID

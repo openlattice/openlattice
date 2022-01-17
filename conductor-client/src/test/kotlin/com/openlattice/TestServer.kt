@@ -27,7 +27,7 @@ import com.geekbeast.rhizome.core.RhizomeApplicationServer
 import com.geekbeast.rhizome.pods.ConfigurationLoaderPod
 import com.openlattice.assembler.pods.AssemblerConfigurationPod
 import com.openlattice.auditing.pods.AuditingConfigurationPod
-import com.openlattice.auth0.Auth0Pod
+import com.geekbeast.auth0.Auth0Pod
 import com.openlattice.data.storage.DataSourceResolver
 import com.openlattice.datastore.constants.DatastoreProfiles
 import com.openlattice.edm.PostgresEdmManager
@@ -36,8 +36,8 @@ import com.openlattice.hazelcast.pods.MapstoresPod
 import com.openlattice.hazelcast.pods.SharedStreamSerializersPod
 import com.openlattice.hazelcast.pods.TestPod
 import com.openlattice.ioc.providers.LateInitProvidersPod
-import com.openlattice.jdbc.JdbcPod
-import com.openlattice.postgres.PostgresPod
+import com.geekbeast.jdbc.JdbcPod
+import com.geekbeast.postgres.PostgresPod
 import com.openlattice.postgres.PostgresTablesPod
 import com.openlattice.postgres.pods.ExternalDatabaseConnectionManagerPod
 import com.zaxxer.hikari.HikariDataSource

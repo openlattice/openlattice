@@ -6,7 +6,7 @@ import com.geekbeast.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
 import com.openlattice.client.RetrofitFactory
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.hazelcast.serializers.OptionalStreamSerializers
-import com.openlattice.hazelcast.serializers.TestableSelfRegisteringStreamSerializer
+import com.geekbeast.hazelcast.serializers.TestableSelfRegisteringStreamSerializer
 import com.openlattice.shuttle.FlightPlanParametersUpdate
 import com.openlattice.shuttle.IntegrationUpdate
 import org.springframework.stereotype.Component

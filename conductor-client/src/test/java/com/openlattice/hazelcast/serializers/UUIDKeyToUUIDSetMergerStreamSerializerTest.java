@@ -23,7 +23,7 @@ package com.openlattice.hazelcast.serializers;
 import com.openlattice.hazelcast.processors.UUIDKeyToUUIDSetMerger;
 import com.google.common.collect.ImmutableSet;
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest;
-import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
+import com.geekbeast.hazelcast.DelegatedUUIDSet;
 
 import java.util.UUID;
 

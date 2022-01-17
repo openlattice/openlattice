@@ -2,6 +2,8 @@ package com.openlattice.data.storage.postgres
 
 
 import com.geekbeast.postgres.IndexType
+import com.geekbeast.postgres.PostgresArrays
+import com.geekbeast.postgres.PostgresColumnDefinition
 import com.geekbeast.postgres.PostgresDatatype
 import com.openlattice.IdConstants
 import com.openlattice.analysis.SqlBindInfo

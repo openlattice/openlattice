@@ -1,7 +1,7 @@
 package com.openlattice.data
 
 import com.openlattice.authorization.Principal
-import com.openlattice.controllers.exceptions.ForbiddenException
+import com.geekbeast.controllers.exceptions.ForbiddenException
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.search.requests.EntityNeighborsFilter
 import java.util.*

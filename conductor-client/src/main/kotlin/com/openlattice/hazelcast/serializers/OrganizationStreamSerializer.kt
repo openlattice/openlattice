@@ -1,13 +1,14 @@
 package com.openlattice.hazelcast.serializers
 
+import com.geekbeast.hazelcast.serializers.StreamSerializers
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.geekbeast.rhizome.hazelcast.serializers.SetStreamSerializers
 import com.geekbeast.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
 import com.geekbeast.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.hazelcast.StreamSerializerTypeIds
-import com.openlattice.hazelcast.serializers.StreamSerializers.Companion.deserializeMapMap
-import com.openlattice.hazelcast.serializers.StreamSerializers.Companion.serializeMapMap
+import com.geekbeast.hazelcast.serializers.StreamSerializers.Companion.deserializeMapMap
+import com.geekbeast.hazelcast.serializers.StreamSerializers.Companion.serializeMapMap
 import com.openlattice.organizations.Grant
 import com.openlattice.organizations.GrantType
 import com.openlattice.organizations.Organization

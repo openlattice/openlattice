@@ -42,7 +42,7 @@ import com.openlattice.authorization.Principal
 import com.openlattice.authorization.Principals
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.authorization.securable.SecurableObjectType.PropertyTypeInEntitySet
-import com.openlattice.controllers.exceptions.ResourceNotFoundException
+import com.geekbeast.controllers.exceptions.ResourceNotFoundException
 import com.openlattice.data.storage.PostgresEntitySetSizesInitializationTask
 import com.openlattice.datasets.DataSetService
 import com.openlattice.datasets.SecurableObjectMetadata
@@ -74,10 +74,10 @@ import com.openlattice.postgres.PostgresTable.ENTITY_SETS
 import com.openlattice.postgres.PostgresTable.PERMISSIONS
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.mapstores.EntitySetMapstore
-import com.openlattice.postgres.streams.BasePostgresIterable
-import com.openlattice.postgres.streams.StatementHolderSupplier
+import com.geekbeast.postgres.streams.BasePostgresIterable
+import com.geekbeast.postgres.streams.StatementHolderSupplier
 import com.openlattice.rhizome.DelegatedIntSet
-import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
+import com.geekbeast.hazelcast.DelegatedUUIDSet
 import com.openlattice.search.requests.EntityNeighborsFilter
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory

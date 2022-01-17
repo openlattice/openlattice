@@ -1,9 +1,9 @@
 package com.openlattice.data.storage
 
 import com.amazonaws.HttpMethod
-import com.openlattice.postgres.PostgresColumnDefinition
+import com.geekbeast.postgres.PostgresColumnDefinition
 import com.geekbeast.postgres.PostgresDatatype
-import com.openlattice.postgres.PostgresTableDefinition
+import com.geekbeast.postgres.PostgresTableDefinition
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service

@@ -20,6 +20,7 @@
 
 package com.openlattice.postgres;
 
+import com.geekbeast.postgres.PostgresColumnDefinition;
 import com.geekbeast.postgres.PostgresDatatype;
 import com.openlattice.ApiHelpers;
 import com.openlattice.edm.PostgresEdmTypeConverter;
@@ -34,12 +35,12 @@ import static com.geekbeast.postgres.PostgresDatatype.TIMESTAMPTZ;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class DataTables {
-    public static final PostgresColumnDefinition LAST_INDEX     = new PostgresColumnDefinition(
+    public static final PostgresColumnDefinition LAST_INDEX = new PostgresColumnDefinition(
             LAST_INDEX_FIELD,
             TIMESTAMPTZ )
             .withDefault( "'-infinity'" )
             .notNull();
-    public static final PostgresColumnDefinition LAST_LINK      = new PostgresColumnDefinition(
+    public static final PostgresColumnDefinition LAST_LINK  = new PostgresColumnDefinition(
             LAST_LINK_FIELD,
             TIMESTAMPTZ )
             .withDefault( "'-infinity'" )

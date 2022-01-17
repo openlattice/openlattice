@@ -10,7 +10,7 @@ import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.EdmApi
 import com.openlattice.edm.EntityDataModel
 import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.tasks.HazelcastInitializationTask
+import com.geekbeast.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies
 import com.openlattice.tasks.Task
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings

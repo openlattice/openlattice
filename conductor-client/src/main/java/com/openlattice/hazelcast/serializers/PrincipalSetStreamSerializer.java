@@ -20,6 +20,7 @@
 
 package com.openlattice.hazelcast.serializers;
 
+import com.geekbeast.hazelcast.serializers.SetStreamSerializer;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.organizations.PrincipalSet;

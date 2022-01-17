@@ -28,7 +28,7 @@ import com.openlattice.linking.EntityKeyPair
 import com.openlattice.linking.PostgresLinkingFeedbackService
 import com.openlattice.linking.Block
 import com.openlattice.linking.util.PersonMetric
-import com.openlattice.rhizome.hazelcast.DelegatedStringSet
+import com.geekbeast.hazelcast.DelegatedStringSet
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
 import org.deeplearning4j.parallelism.ParallelInference
@@ -235,22 +235,22 @@ class SocratesMatcher(
     }
 
     fun extractFeaturesBulk(
-            lhs: Map<UUID, DelegatedStringSet>,
-            rhs: Map<EntityDataKey, Map<UUID, DelegatedStringSet>>
+        lhs: Map<UUID, DelegatedStringSet>,
+        rhs: Map<EntityDataKey, Map<UUID, DelegatedStringSet>>
     ): Map<EntityDataKey, DoubleArray> {
         return PersonMetric.pDistanceBulk(lhs, rhs, fqnToIdMap)
     }
 
     override fun extractFeatures(
-            lhs: Map<UUID, DelegatedStringSet>,
-            rhs: Map<UUID, DelegatedStringSet>
+        lhs: Map<UUID, DelegatedStringSet>,
+        rhs: Map<UUID, DelegatedStringSet>
     ): DoubleArray {
         return PersonMetric.pDistance(lhs, rhs, fqnToIdMap).map { it * 100.0 }.toDoubleArray()
     }
 
     override fun extractProperties(entity: Map<UUID, Set<Any>>): Map<UUID, DelegatedStringSet> {
         return entity.mapValues { ( _, properties ) ->
-            DelegatedStringSet.wrap( properties.mapTo(mutableSetOf()) { it.toString() } )
+            DelegatedStringSet.wrap(properties.mapTo(mutableSetOf()) { it.toString() } )
         }
     }
 

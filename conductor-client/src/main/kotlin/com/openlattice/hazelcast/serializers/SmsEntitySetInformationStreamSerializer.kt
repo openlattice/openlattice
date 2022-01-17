@@ -5,6 +5,7 @@ import com.hazelcast.nio.ObjectDataOutput
 import com.geekbeast.rhizome.hazelcast.serializers.SetStreamSerializers
 import com.geekbeast.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
 import com.geekbeast.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
+import com.geekbeast.serializers.Jdk8StreamSerializers
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.notifications.sms.SmsEntitySetInformation
 import org.springframework.stereotype.Component

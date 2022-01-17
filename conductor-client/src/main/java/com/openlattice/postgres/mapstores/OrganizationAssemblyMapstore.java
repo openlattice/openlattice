@@ -21,6 +21,7 @@
 
 package com.openlattice.postgres.mapstores;
 
+import com.geekbeast.postgres.mapstores.AbstractBasePostgresMapstore;
 import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.config.IndexConfig;
 import com.hazelcast.config.IndexType;
