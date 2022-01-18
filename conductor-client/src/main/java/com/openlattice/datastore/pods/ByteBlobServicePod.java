@@ -23,7 +23,7 @@ package com.openlattice.datastore.pods;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.geekbeast.rhizome.configuration.ConfigurationConstants.Profiles;
-import com.kryptnostic.rhizome.pods.ConfigurationLoader;
+import com.geekbeast.rhizome.pods.ConfigurationLoader;
 import com.openlattice.data.storage.ByteBlobDataManager;
 import com.openlattice.data.storage.LocalBlobDataService;
 import com.openlattice.data.storage.aws.AwsBlobDataService;

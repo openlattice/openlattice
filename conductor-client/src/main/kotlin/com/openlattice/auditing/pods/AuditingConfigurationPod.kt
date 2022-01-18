@@ -21,7 +21,7 @@
 
 package com.openlattice.auditing.pods
 
-import com.kryptnostic.rhizome.pods.ConfigurationLoader
+import com.geekbeast.rhizome.pods.ConfigurationLoader
 import com.geekbeast.ResourceConfigurationLoader
 import com.openlattice.auditing.AuditingConfiguration
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer

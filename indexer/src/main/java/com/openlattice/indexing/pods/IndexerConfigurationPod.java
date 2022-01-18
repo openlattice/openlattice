@@ -21,7 +21,7 @@
 
 package com.openlattice.indexing.pods;
 
-import com.kryptnostic.rhizome.pods.ConfigurationLoader;
+import com.geekbeast.rhizome.pods.ConfigurationLoader;
 import com.openlattice.indexing.configuration.IndexerConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
