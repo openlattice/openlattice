@@ -1,7 +1,8 @@
 package com.openlattice.data.storage.postgres
 
 import com.codahale.metrics.annotation.Timed
-import com.geekbeast.configuration.postgres.PostgresFlavor
+import com.geekbeast.postgres.PostgresArrays
+import com.geekbeast.postgres.PostgresDatatype
 import com.openlattice.analysis.requests.Filter
 import com.openlattice.data.*
 import com.openlattice.data.storage.*
@@ -13,15 +14,14 @@ import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.*
 import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
 import com.openlattice.postgres.PostgresColumn.ID
-import com.openlattice.postgres.PostgresColumn.PARTITION
 import com.openlattice.postgres.PostgresColumn.PROPERTY_TYPE_ID
 import com.openlattice.postgres.PostgresColumn.VERSION
 import com.openlattice.postgres.PostgresColumn.VERSIONS
 import com.openlattice.postgres.PostgresTable.DATA
 import com.openlattice.postgres.PostgresTable.IDS
-import com.openlattice.postgres.streams.BasePostgresIterable
-import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
-import com.openlattice.postgres.streams.StatementHolderSupplier
+import com.geekbeast.postgres.streams.BasePostgresIterable
+import com.geekbeast.postgres.streams.PreparedStatementHolderSupplier
+import com.geekbeast.postgres.streams.StatementHolderSupplier
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
@@ -234,12 +234,12 @@ class PostgresEntityDataQueryService(
                     )
 
                     BasePostgresIterable(
-                            PreparedStatementHolderSupplier(
+                        PreparedStatementHolderSupplier(
                                     dataSourceResolver.getDataSource(dataSourceName),
                                     sql,
                                     FETCH_SIZE
                             ) { ps -> binders.forEach { it.bind(ps) } },
-                            adapter
+                        adapter
                     ).toList()
                 }
     }

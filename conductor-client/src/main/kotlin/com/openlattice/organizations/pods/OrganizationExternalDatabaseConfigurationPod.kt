@@ -1,6 +1,6 @@
 package com.openlattice.organizations.pods
 
-import com.kryptnostic.rhizome.pods.ConfigurationLoader
+import com.geekbeast.rhizome.pods.ConfigurationLoader
 import com.openlattice.organizations.OrganizationExternalDatabaseConfiguration
 import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Bean

@@ -1,6 +1,6 @@
 package com.openlattice.auditing
 
-import com.openlattice.controllers.exceptions.ResourceNotFoundException
+import com.geekbeast.controllers.exceptions.ResourceNotFoundException
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.type.AssociationType
 import com.openlattice.edm.type.EntityType
@@ -15,7 +15,7 @@ import java.util.concurrent.locks.ReentrantLock
  *
  *
  */
-@SuppressFBWarnings(value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"], justification = "Ignore internal kotlin redundant nullchecks")
+@SuppressFBWarnings(value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE","NP_NONNULL_RETURN_VIOLATION"], justification = "Ignore internal kotlin redundant nullchecks")
 class AuditingTypes(
         private val edm: EdmManager,
         private val auditingConfiguration: AuditingConfiguration

@@ -1,15 +1,17 @@
 package com.openlattice.hazelcast.serializers
 
+import com.geekbeast.hazelcast.serializers.TestableSelfRegisteringStreamSerializer
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
-import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers
+import com.geekbeast.rhizome.hazelcast.serializers.SetStreamSerializers
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.users.processors.aggregators.UsersWithConnectionsAggregator
 import org.springframework.stereotype.Component
 
 @Component
-class UsersWithConnectionsAggregatorStreamSerializer : TestableSelfRegisteringStreamSerializer<UsersWithConnectionsAggregator> {
+class UsersWithConnectionsAggregatorStreamSerializer :
+    TestableSelfRegisteringStreamSerializer<UsersWithConnectionsAggregator> {
     override fun generateTestValue(): UsersWithConnectionsAggregator {
         return UsersWithConnectionsAggregator(
                 setOf(TestDataFactory.randomAlphanumeric(10), TestDataFactory.randomAlphanumeric(10)),

@@ -2,8 +2,8 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
-import com.kryptnostic.rhizome.hazelcast.serializers.RhizomeUtils
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
+import com.geekbeast.rhizome.hazelcast.serializers.RhizomeUtils
+import com.geekbeast.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.edm.processors.AddFlagsOnEntitySetEntryProcessor
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.hazelcast.StreamSerializerTypeIds
@@ -11,7 +11,8 @@ import com.openlattice.hazelcast.StreamSerializerTypeIds
 /**
  * @author Drew Bailey (drew@openlattice.com)
  */
-class AddFlagsOnEntitySetEntryProcessorStreamSerializer: SelfRegisteringStreamSerializer<AddFlagsOnEntitySetEntryProcessor> {
+class AddFlagsOnEntitySetEntryProcessorStreamSerializer:
+    SelfRegisteringStreamSerializer<AddFlagsOnEntitySetEntryProcessor> {
     override fun getTypeId(): Int {
         return StreamSerializerTypeIds.ADD_ENTITY_SET_FLAGS_EP.ordinal
     }

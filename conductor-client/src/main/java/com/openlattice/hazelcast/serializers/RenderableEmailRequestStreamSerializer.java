@@ -2,9 +2,9 @@ package com.openlattice.hazelcast.serializers;
 
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.kryptnostic.rhizome.hazelcast.serializers.IoPerformingBiConsumer;
-import com.kryptnostic.rhizome.hazelcast.serializers.IoPerformingFunction;
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
+import com.geekbeast.rhizome.hazelcast.serializers.IoPerformingBiConsumer;
+import com.geekbeast.rhizome.hazelcast.serializers.IoPerformingFunction;
+import com.geekbeast.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.openlattice.mail.RenderableEmailRequest;
 import jodd.mail.EmailAttachment;

@@ -20,7 +20,7 @@
  */
 package com.openlattice.assembler.processors
 
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
+import com.geekbeast.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.assembler.OrganizationAssembly
 import java.lang.IllegalStateException
 import java.util.UUID

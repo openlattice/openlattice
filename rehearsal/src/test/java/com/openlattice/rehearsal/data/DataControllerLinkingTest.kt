@@ -32,6 +32,7 @@ import com.openlattice.edm.type.EntityType
 import com.openlattice.rehearsal.SetupTestData
 import com.openlattice.rehearsal.assertException
 import com.openlattice.rehearsal.edm.EdmTestConstants
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.commons.lang3.RandomStringUtils
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.junit.AfterClass
@@ -48,7 +49,7 @@ import java.util.*
  */
 
 private const val numberOfEntries = 10
-
+@SuppressFBWarnings(value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE","NP_NONNULL_RETURN_VIOLATION"], justification = "Ignore internal kotlin redundant nullchecks")
 class DataControllerLinkingTest : SetupTestData() {
     companion object {
         private val importedEntitySets = mapOf(

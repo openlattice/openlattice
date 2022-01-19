@@ -1,6 +1,6 @@
 package com.openlattice.data.ids
 
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
+import com.geekbeast.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.data.EntityKey
 
 /**

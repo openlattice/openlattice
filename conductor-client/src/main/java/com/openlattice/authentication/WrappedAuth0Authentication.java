@@ -26,7 +26,7 @@ import com.auth0.spring.security.api.authentication.JwtAuthentication;
 import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.PrincipalType;
 import com.openlattice.authorization.Principals;
-import com.openlattice.controllers.exceptions.ForbiddenException;
+import com.geekbeast.controllers.exceptions.ForbiddenException;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.authorization.SecurablePrincipal;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;

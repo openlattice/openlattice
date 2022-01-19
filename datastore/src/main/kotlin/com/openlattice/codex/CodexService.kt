@@ -13,7 +13,7 @@ import com.openlattice.authorization.HazelcastAclKeyReservationService
 import com.openlattice.client.serialization.SerializationConstants
 import com.openlattice.codex.controllers.CodexConstants
 import com.openlattice.collections.CollectionsManager
-import com.openlattice.controllers.exceptions.BadRequestException
+import com.geekbeast.controllers.exceptions.BadRequestException
 import com.openlattice.data.*
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.type.PropertyType
@@ -27,8 +27,8 @@ import com.openlattice.postgres.PostgresColumn.CLASS_NAME
 import com.openlattice.postgres.PostgresColumn.CLASS_PROPERTIES
 import com.openlattice.postgres.PostgresTable.SCHEDULED_TASKS
 import com.openlattice.postgres.ResultSetAdapters
-import com.openlattice.postgres.streams.BasePostgresIterable
-import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
+import com.geekbeast.postgres.streams.BasePostgresIterable
+import com.geekbeast.postgres.streams.PreparedStatementHolderSupplier
 import com.openlattice.scheduling.ScheduledTask
 import com.openlattice.search.SearchService
 import com.openlattice.search.SortDefinition

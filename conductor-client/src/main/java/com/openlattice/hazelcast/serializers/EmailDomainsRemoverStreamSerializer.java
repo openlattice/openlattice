@@ -26,8 +26,8 @@ import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.openlattice.organizations.processors.EmailDomainsRemover;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers;
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
+import com.geekbeast.rhizome.hazelcast.serializers.SetStreamSerializers;
+import com.geekbeast.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 
 import java.io.DataInput;
 import java.io.IOException;

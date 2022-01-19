@@ -6,7 +6,7 @@ import com.openlattice.hazelcast.InternalTestDataFactory
 import com.openlattice.postgres.PostgresTable.INTEGRATION_JOBS
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.ResultSetAdapters.id
-import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore
+import com.geekbeast.postgres.mapstores.AbstractBasePostgresMapstore
 import com.openlattice.shuttle.IntegrationJob
 import com.zaxxer.hikari.HikariDataSource
 import org.springframework.stereotype.Component

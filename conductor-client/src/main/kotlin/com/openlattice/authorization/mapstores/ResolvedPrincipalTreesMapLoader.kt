@@ -2,7 +2,7 @@ package com.openlattice.authorization.mapstores
 
 import com.hazelcast.config.MapConfig
 import com.hazelcast.config.MapStoreConfig
-import com.kryptnostic.rhizome.mapstores.TestableSelfRegisteringMapStore
+import com.geekbeast.rhizome.mapstores.TestableSelfRegisteringMapStore
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.organizations.SortedPrincipalSet

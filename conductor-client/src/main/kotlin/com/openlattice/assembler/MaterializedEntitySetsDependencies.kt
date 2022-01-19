@@ -24,7 +24,7 @@ import com.hazelcast.map.IMap
 import com.openlattice.authorization.EdmAuthorizationHelper
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.organizations.HazelcastOrganizationService
-import com.openlattice.tasks.HazelcastTaskDependencies
+import com.geekbeast.tasks.HazelcastTaskDependencies
 import com.zaxxer.hikari.HikariDataSource
 
 data class MaterializedEntitySetsDependencies(

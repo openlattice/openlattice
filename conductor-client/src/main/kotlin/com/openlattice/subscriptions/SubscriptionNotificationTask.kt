@@ -5,8 +5,8 @@ import com.openlattice.authorization.Principals
 import com.openlattice.graph.NeighborhoodQuery
 import com.openlattice.mail.RenderableEmailRequest
 import com.openlattice.notifications.sms.SubscriptionNotification
-import com.openlattice.tasks.HazelcastFixedRateTask
-import com.openlattice.tasks.HazelcastTaskDependencies
+import com.geekbeast.tasks.HazelcastFixedRateTask
+import com.geekbeast.tasks.HazelcastTaskDependencies
 import java.util.*
 import java.util.concurrent.TimeUnit
 
@@ -15,7 +15,8 @@ import java.util.concurrent.TimeUnit
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 
-class SubscriptionNotificationTask : HazelcastFixedRateTask<SubscriptionNotificationDependencies>, HazelcastTaskDependencies {
+class SubscriptionNotificationTask : HazelcastFixedRateTask<SubscriptionNotificationDependencies>,
+                                     HazelcastTaskDependencies {
 
     companion object {
         const val DEFAULT_MESSAGE = "One of your subscriptions was involved in an event."

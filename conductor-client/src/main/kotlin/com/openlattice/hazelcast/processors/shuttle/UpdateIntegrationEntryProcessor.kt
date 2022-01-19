@@ -1,13 +1,13 @@
 package com.openlattice.hazelcast.processors.shuttle
-import com.dataloom.mappers.ObjectMappers
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
+import com.geekbeast.mappers.mappers.ObjectMappers
+import com.geekbeast.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.shuttle.Flight
 import com.openlattice.shuttle.Integration
 import com.openlattice.shuttle.IntegrationUpdate
 import java.net.URL
 
 class UpdateIntegrationEntryProcessor(val update: IntegrationUpdate) :
-        AbstractRhizomeEntryProcessor<String, Integration, Integration>() {
+    AbstractRhizomeEntryProcessor<String, Integration, Integration>() {
 
     companion object {
         private val mapper = ObjectMappers.getYamlMapper()

@@ -4,7 +4,7 @@ import com.openlattice.ApiHelpers
 import com.openlattice.IdConstants
 import com.openlattice.edm.EdmConstants
 import com.openlattice.edm.PropertyTypeIdFqn
-import com.openlattice.postgres.PostgresArrays
+import com.geekbeast.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.DST_ENTITY_KEY_ID
 import com.openlattice.postgres.PostgresColumn.DST_ENTITY_SET_ID
 import com.openlattice.postgres.PostgresColumn.EDGE_ENTITY_KEY_ID
@@ -19,10 +19,10 @@ import com.openlattice.postgres.PostgresColumn.PROPERTY_TYPE_ID
 import com.openlattice.postgres.PostgresColumn.SRC_ENTITY_KEY_ID
 import com.openlattice.postgres.PostgresColumn.SRC_ENTITY_SET_ID
 import com.openlattice.postgres.PostgresColumn.VERSION
-import com.openlattice.postgres.PostgresColumnDefinition
-import com.openlattice.postgres.PostgresExpressionIndexDefinition
+import com.geekbeast.postgres.PostgresColumnDefinition
+import com.geekbeast.postgres.PostgresExpressionIndexDefinition
 import com.openlattice.postgres.PostgresTable
-import com.openlattice.postgres.PostgresTableDefinition
+import com.geekbeast.postgres.PostgresTableDefinition
 import com.openlattice.postgres.external.Schemas
 import com.openlattice.transporter.types.TransporterColumn
 import com.zaxxer.hikari.HikariDataSource
@@ -301,10 +301,10 @@ internal fun removeColumnsQuery(table: PostgresTableDefinition, columns: List<Po
 
 // TODO also need to refresh views when property types change (drop view, recreate view)
 fun transportTable(
-        table: PostgresTableDefinition,
-        conn: Connection,
-        logger: Logger,
-        removedColumns: List<PostgresColumnDefinition> = listOf()
+    table: PostgresTableDefinition,
+    conn: Connection,
+    logger: Logger,
+    removedColumns: List<PostgresColumnDefinition> = listOf()
 ) {
     var lastSql = ""
     try {

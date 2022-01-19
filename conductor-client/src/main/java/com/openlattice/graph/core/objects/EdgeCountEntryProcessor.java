@@ -21,7 +21,7 @@
 package com.openlattice.graph.core.objects;
 
 import com.openlattice.graph.core.Neighborhood;
-import com.openlattice.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor;
+import com.geekbeast.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor;
 
 import java.util.Map;
 import java.util.Set;

@@ -22,7 +22,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.openlattice.client.serialization.SerializationConstants;
-import com.openlattice.util.Hashcodes;
+import com.geekbeast.util.Hashcodes;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.Serializable;

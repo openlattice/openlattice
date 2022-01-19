@@ -7,7 +7,7 @@ import com.openlattice.graph.GraphQueryService
 import com.openlattice.mail.MailServiceClient
 import com.openlattice.notifications.sms.SubscriptionNotification
 import com.openlattice.organizations.roles.SecurePrincipalsManager
-import com.openlattice.tasks.HazelcastTaskDependencies
+import com.geekbeast.tasks.HazelcastTaskDependencies
 import com.zaxxer.hikari.HikariDataSource
 
 /**

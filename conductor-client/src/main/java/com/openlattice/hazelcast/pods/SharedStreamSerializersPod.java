@@ -22,7 +22,7 @@
 
 package com.openlattice.hazelcast.pods;
 
-import com.kryptnostic.rhizome.hazelcast.serializers.ListStreamSerializers.DelegatedUUIDListStreamSerializer;
+import com.geekbeast.rhizome.hazelcast.serializers.ListStreamSerializers.DelegatedUUIDListStreamSerializer;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;

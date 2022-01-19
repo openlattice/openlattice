@@ -3,7 +3,7 @@ package com.openlattice.data.requests;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Stopwatch;
 import com.openlattice.data.EntityKey;
-import com.openlattice.serializer.AbstractJacksonSerializationTest;
+import com.geekbeast.serializer.serializer.AbstractJacksonSerializationTest;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;

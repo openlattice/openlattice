@@ -23,7 +23,7 @@ package com.openlattice.organizations.processors;
 import com.openlattice.authorization.Principal;
 import com.openlattice.organizations.PrincipalSet;
 import com.google.common.collect.Sets;
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractMerger;
+import com.geekbeast.rhizome.hazelcast.processors.AbstractMerger;
 
 import java.util.UUID;
 

@@ -22,7 +22,7 @@
 package com.openlattice.linking
 
 import com.openlattice.data.EntityDataKey
-import com.openlattice.postgres.streams.BasePostgresIterable
+import com.geekbeast.postgres.streams.BasePostgresIterable
 import java.sql.Connection
 import java.util.*
 

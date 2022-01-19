@@ -21,7 +21,7 @@
 package com.openlattice.linking.pods;
 
 import com.codahale.metrics.MetricRegistry;
-import com.dataloom.mappers.ObjectMappers;
+import com.geekbeast.mappers.mappers.ObjectMappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.geekbeast.hazelcast.HazelcastClientProvider;
 import com.google.common.eventbus.EventBus;

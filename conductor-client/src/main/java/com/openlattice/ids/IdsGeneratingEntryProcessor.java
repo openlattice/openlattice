@@ -22,8 +22,8 @@ package com.openlattice.ids;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.hazelcast.core.Offloadable;
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor;
-import com.openlattice.rhizome.hazelcast.DelegatedUUIDList;
+import com.geekbeast.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor;
+import com.geekbeast.hazelcast.DelegatedUUIDList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map.Entry;

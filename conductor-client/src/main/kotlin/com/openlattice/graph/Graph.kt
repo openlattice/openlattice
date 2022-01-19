@@ -40,15 +40,15 @@ import com.openlattice.graph.core.GraphService
 import com.openlattice.graph.core.NeighborSets
 import com.openlattice.graph.edge.Edge
 import com.openlattice.postgres.DataTables.quote
-import com.openlattice.postgres.PostgresArrays
+import com.geekbeast.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.PostgresColumn.*
-import com.openlattice.postgres.PostgresColumnDefinition
+import com.geekbeast.postgres.PostgresColumnDefinition
 import com.openlattice.postgres.PostgresTable.E
 import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.ResultSetAdapters
-import com.openlattice.postgres.streams.BasePostgresIterable
-import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
+import com.geekbeast.postgres.streams.BasePostgresIterable
+import com.geekbeast.postgres.streams.PreparedStatementHolderSupplier
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -401,8 +401,8 @@ class Graph(
     }
 
     private fun entitySetClause(
-            entitySetId: UUID, entityKeyIds: Set<UUID>?, entitySetColumn: PostgresColumnDefinition,
-            entityKeyIdColumn: PostgresColumnDefinition
+        entitySetId: UUID, entityKeyIds: Set<UUID>?, entitySetColumn: PostgresColumnDefinition,
+        entityKeyIdColumn: PostgresColumnDefinition
     ): String {
         val entityKeyIdClause = if (entityKeyIds.isNullOrEmpty()) "" else {
             " AND ${entityKeyIdColumn.name} = ANY('{${entityKeyIds.joinToString()}}')"

@@ -20,7 +20,7 @@
  */
 package com.openlattice.rehearsal.application
 
-import com.kryptnostic.rhizome.configuration.ConfigurationConstants
+import com.geekbeast.rhizome.configuration.ConfigurationConstants
 import org.apache.commons.lang3.StringUtils
 import org.springframework.context.annotation.AnnotationConfigApplicationContext
 

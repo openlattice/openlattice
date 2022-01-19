@@ -1,10 +1,10 @@
 package com.openlattice.conductor.rpc
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.kryptnostic.rhizome.configuration.Configuration
-import com.kryptnostic.rhizome.configuration.ConfigurationKey
-import com.kryptnostic.rhizome.configuration.SimpleConfigurationKey
-import com.kryptnostic.rhizome.configuration.annotation.ReloadableConfiguration
+import com.geekbeast.rhizome.configuration.Configuration
+import com.geekbeast.rhizome.configuration.ConfigurationKey
+import com.geekbeast.rhizome.configuration.SimpleConfigurationKey
+import com.geekbeast.rhizome.configuration.configuration.annotation.ReloadableConfiguration
 import java.util.*
 
 /**

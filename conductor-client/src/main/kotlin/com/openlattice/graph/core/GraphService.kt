@@ -27,7 +27,7 @@ import com.openlattice.data.WriteEvent
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.PagedNeighborRequest
 import com.openlattice.graph.edge.Edge
-import com.openlattice.postgres.streams.BasePostgresIterable
+import com.geekbeast.postgres.streams.BasePostgresIterable
 import java.util.*
 import java.util.stream.Stream
 

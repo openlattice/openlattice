@@ -30,7 +30,7 @@ import com.openlattice.linking.LinkingQueryService
 import com.openlattice.postgres.DataTables.LAST_INDEX
 import com.openlattice.postgres.DataTables.LAST_LINK
 import com.openlattice.postgres.DataTables.LAST_WRITE
-import com.openlattice.postgres.PostgresArrays
+import com.geekbeast.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.DST_ENTITY_KEY_ID
 import com.openlattice.postgres.PostgresColumn.DST_ENTITY_SET_ID
 import com.openlattice.postgres.PostgresColumn.ENTITY_KEY_IDS_COL
@@ -47,13 +47,12 @@ import com.openlattice.postgres.PostgresTable.ENTITY_SETS
 import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.PostgresTable.MATCHED_ENTITIES
 import com.openlattice.postgres.ResultSetAdapters
-import com.openlattice.postgres.streams.BasePostgresIterable
-import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
-import com.openlattice.postgres.streams.StatementHolder
-import com.openlattice.postgres.streams.StatementHolderSupplier
+import com.geekbeast.postgres.streams.BasePostgresIterable
+import com.geekbeast.postgres.streams.PreparedStatementHolderSupplier
+import com.geekbeast.postgres.streams.StatementHolder
+import com.geekbeast.postgres.streams.StatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
-import java.sql.Array
 import java.sql.Connection
 import java.util.*
 

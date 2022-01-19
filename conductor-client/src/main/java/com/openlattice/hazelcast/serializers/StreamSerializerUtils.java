@@ -26,9 +26,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.kryptnostic.rhizome.hazelcast.serializers.IoPerformingConsumer;
-import com.kryptnostic.rhizome.hazelcast.serializers.IoPerformingFunction;
-import com.openlattice.authorization.Permission;
+import com.geekbeast.rhizome.hazelcast.serializers.IoPerformingConsumer;
+import com.geekbeast.rhizome.hazelcast.serializers.IoPerformingFunction;
 
 import java.io.IOException;
 import java.util.List;

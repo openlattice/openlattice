@@ -17,6 +17,7 @@ import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.rehearsal.SetupTestData
 import com.openlattice.rehearsal.edm.EdmTestConstants
 import com.openlattice.search.requests.*
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.junit.AfterClass
 import org.junit.Assert
 import org.junit.BeforeClass
@@ -25,7 +26,7 @@ import org.slf4j.LoggerFactory
 import java.lang.reflect.UndeclaredThrowableException
 import java.time.OffsetDateTime
 import java.util.*
-
+@SuppressFBWarnings(value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE","NP_NONNULL_RETURN_VIOLATION"], justification = "Ignore internal kotlin redundant nullchecks")
 class SearchLinkedEntitiesTests : SetupTestData() {
     companion object {
         private val logger = LoggerFactory.getLogger(SearchLinkedEntitiesTests::class.java)

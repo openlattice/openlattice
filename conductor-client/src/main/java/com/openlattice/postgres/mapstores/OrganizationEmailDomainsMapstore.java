@@ -1,15 +1,16 @@
 package com.openlattice.postgres.mapstores;
 
+import com.geekbeast.postgres.mapstores.AbstractBasePostgresMapstore;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.openlattice.mapstores.TestDataFactory;
-import com.openlattice.postgres.PostgresArrays;
-import com.openlattice.postgres.PostgresColumnDefinition;
+import com.geekbeast.postgres.PostgresArrays;
+import com.geekbeast.postgres.PostgresColumnDefinition;
 import com.openlattice.postgres.ResultSetAdapters;
-import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
+import com.geekbeast.hazelcast.DelegatedStringSet;
 import com.zaxxer.hikari.HikariDataSource;
 
 import java.sql.Array;

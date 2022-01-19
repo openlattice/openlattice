@@ -21,7 +21,7 @@
 
 package com.openlattice.edm.processors
 
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
+import com.geekbeast.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.auditing.AuditRecordEntitySetConfiguration
 import com.openlattice.authorization.AclKey
 import org.slf4j.LoggerFactory

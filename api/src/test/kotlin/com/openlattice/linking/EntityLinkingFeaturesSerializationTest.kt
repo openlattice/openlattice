@@ -2,7 +2,7 @@ package com.openlattice.linking
 
 import com.openlattice.data.EntityDataKey
 import com.openlattice.mapstores.TestDataFactory
-import com.openlattice.serializer.AbstractJacksonSerializationTest
+import com.geekbeast.serializer.serializer.AbstractJacksonSerializationTest
 import java.util.*
 import kotlin.random.Random
 

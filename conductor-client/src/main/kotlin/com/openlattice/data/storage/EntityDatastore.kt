@@ -3,7 +3,7 @@ package com.openlattice.data.storage
 import com.google.common.collect.SetMultimap
 import com.openlattice.data.*
 import com.openlattice.edm.type.PropertyType
-import com.openlattice.postgres.streams.BasePostgresIterable
+import com.geekbeast.postgres.streams.BasePostgresIterable
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.nio.ByteBuffer
 import java.time.OffsetDateTime

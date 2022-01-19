@@ -21,8 +21,7 @@
 
 package com.openlattice.hazelcast.pods
 
-import com.kryptnostic.rhizome.pods.ConfigurationLoader
-import com.openlattice.auditing.AuditingConfiguration
+import com.geekbeast.rhizome.pods.ConfigurationLoader
 import com.openlattice.conductor.rpc.ConductorConfiguration
 import com.openlattice.datastore.services.EdmService
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService

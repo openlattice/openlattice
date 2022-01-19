@@ -22,8 +22,8 @@ package com.openlattice.hazelcast.serializers;
 
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
+import com.geekbeast.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
+import com.geekbeast.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.edm.processors.CreateOrUpdateAuditRecordEntitySetsProcessor;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import java.io.IOException;

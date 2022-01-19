@@ -21,7 +21,7 @@
 package com.openlattice.mail;
 
 import com.google.common.collect.Maps;
-import com.openlattice.serializer.AbstractJacksonSerializationTest;
+import com.geekbeast.serializer.serializer.AbstractJacksonSerializationTest;
 import jodd.mail.EmailAttachment;
 import org.junit.Test;
 

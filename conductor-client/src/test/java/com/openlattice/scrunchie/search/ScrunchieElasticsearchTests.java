@@ -29,7 +29,7 @@ import com.google.common.collect.Sets;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.Principal;
 import com.openlattice.data.EntityDataKey;
-import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
+import com.geekbeast.hazelcast.DelegatedUUIDSet;
 import com.openlattice.search.requests.SearchConstraints;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;

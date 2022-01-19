@@ -1,6 +1,6 @@
 package com.openlattice.collaborations
 
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
+import com.geekbeast.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import java.util.*
 
 data class AlterOrganizationsInCollaborationEntryProcessor(

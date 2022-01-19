@@ -6,9 +6,9 @@ import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import com.google.common.base.Stopwatch
 import com.google.common.util.concurrent.MoreExecutors
-import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration
-import com.kryptnostic.rhizome.configuration.amazon.AwsLaunchConfiguration
-import com.openlattice.ResourceConfigurationLoader
+import com.geekbeast.rhizome.configuration.configuration.amazon.AmazonLaunchConfiguration
+import com.geekbeast.rhizome.configuration.configuration.amazon.AwsLaunchConfiguration
+import com.geekbeast.ResourceConfigurationLoader
 import com.openlattice.data.storage.BinaryObjectWithMetadata
 import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.data.storage.aws.AwsBlobDataService

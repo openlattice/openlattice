@@ -11,7 +11,7 @@ import com.openlattice.data.storage.DataSourceResolver
 import com.openlattice.edm.EntitySet
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.ioc.providers.LateInitProvider
-import com.openlattice.jdbc.DataSourceManager
+import com.geekbeast.jdbc.DataSourceManager
 import com.openlattice.mapstores.TestDataFactory
 import com.zaxxer.hikari.HikariDataSource
 import org.mockito.Mockito

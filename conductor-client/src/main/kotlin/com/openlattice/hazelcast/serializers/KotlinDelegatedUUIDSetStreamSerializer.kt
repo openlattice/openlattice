@@ -1,10 +1,11 @@
 package com.openlattice.hazelcast.serializers
 
+import com.geekbeast.hazelcast.serializers.TestableSelfRegisteringStreamSerializer
 import com.google.common.collect.Sets
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.openlattice.hazelcast.StreamSerializerTypeIds
-import com.openlattice.rhizome.KotlinDelegatedUUIDSet
+import com.geekbeast.rhizome.KotlinDelegatedUUIDSet
 import org.springframework.stereotype.Component
 import java.util.*
 
@@ -12,7 +13,7 @@ import java.util.*
  * @author Drew Bailey &lt;drew@openlattice.com&gt;
  */
 @Component
-class KotlinDelegatedUUIDSetStreamSerializer: TestableSelfRegisteringStreamSerializer<KotlinDelegatedUUIDSet>{
+class KotlinDelegatedUUIDSetStreamSerializer: TestableSelfRegisteringStreamSerializer<KotlinDelegatedUUIDSet> {
     override fun generateTestValue(): KotlinDelegatedUUIDSet {
         return KotlinDelegatedUUIDSet(
                 setOf(

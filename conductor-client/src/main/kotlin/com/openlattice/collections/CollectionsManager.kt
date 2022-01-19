@@ -18,7 +18,7 @@ import com.openlattice.collections.processors.AddPairToEntityTypeCollectionTempl
 import com.openlattice.collections.processors.RemoveKeyFromEntityTypeCollectionTemplateProcessor
 import com.openlattice.collections.processors.UpdateEntitySetCollectionMetadataProcessor
 import com.openlattice.collections.processors.UpdateEntityTypeCollectionMetadataProcessor
-import com.openlattice.controllers.exceptions.ForbiddenException
+import com.geekbeast.controllers.exceptions.ForbiddenException
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EntitySet

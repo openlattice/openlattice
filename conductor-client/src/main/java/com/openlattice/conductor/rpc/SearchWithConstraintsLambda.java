@@ -1,6 +1,6 @@
 package com.openlattice.conductor.rpc;
 
-import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
+import com.geekbeast.hazelcast.DelegatedUUIDSet;
 import com.openlattice.search.requests.EntityDataKeySearchResult;
 import com.openlattice.search.requests.SearchConstraints;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;

@@ -1,7 +1,7 @@
 package com.openlattice.organizations.processors
 
 import com.openlattice.organizations.Organization
-import com.openlattice.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
+import com.geekbeast.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
 import java.util.*
 
 /**

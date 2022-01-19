@@ -29,7 +29,7 @@ import com.esotericsoftware.kryo.serializers.ClosureSerializer;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
-import com.openlattice.hazelcast.serializers.TestableSelfRegisteringStreamSerializer;
+import com.geekbeast.hazelcast.serializers.TestableSelfRegisteringStreamSerializer;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.objenesis.strategy.StdInstantiatorStrategy;
 import org.springframework.stereotype.Component;

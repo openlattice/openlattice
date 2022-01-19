@@ -21,8 +21,8 @@
 package com.openlattice.data.storage
 
 import com.openlattice.data.storage.PostgresEntitySetSizesInitializationTask.Companion.REFRESH_ENTITY_SET_COUNTS_VIEW
-import com.openlattice.tasks.HazelcastFixedRateTask
-import com.openlattice.tasks.Task
+import com.geekbeast.tasks.HazelcastFixedRateTask
+import com.geekbeast.tasks.Task
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
 

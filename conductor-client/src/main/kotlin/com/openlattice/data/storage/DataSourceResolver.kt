@@ -5,7 +5,7 @@ import com.google.common.cache.CacheLoader
 import com.hazelcast.core.HazelcastInstance
 import com.openlattice.IdConstants
 import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.jdbc.DataSourceManager
+import com.geekbeast.jdbc.DataSourceManager
 import com.zaxxer.hikari.HikariDataSource
 import net.snowflake.client.jdbc.internal.apache.arrow.flatbuf.Bool
 import java.util.*

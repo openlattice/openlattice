@@ -2,14 +2,15 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
-import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
+import com.geekbeast.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
+import com.geekbeast.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.apps.processors.RemoveRoleFromAppConfigProcessor
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import org.springframework.stereotype.Component
 
 @Component
-class RemoveRoleFromAppConfigProcessorStreamSerializer : SelfRegisteringStreamSerializer<RemoveRoleFromAppConfigProcessor> {
+class RemoveRoleFromAppConfigProcessorStreamSerializer :
+    SelfRegisteringStreamSerializer<RemoveRoleFromAppConfigProcessor> {
 
     override fun getTypeId(): Int {
         return StreamSerializerTypeIds.REMOVE_ROLE_FROM_APP_CONFIG_PROCESSOR.ordinal

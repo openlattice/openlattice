@@ -5,6 +5,7 @@ import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
+import com.geekbeast.aws.AwsS3ClientConfiguration
 
 fun newS3Client(regionName: String, s3Credentials: AWSCredentials): AmazonS3 {
     val builder = AmazonS3ClientBuilder.standard()

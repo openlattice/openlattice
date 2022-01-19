@@ -21,7 +21,7 @@
 
 package com.openlattice.assembler.pods
 
-import com.kryptnostic.rhizome.pods.ConfigurationLoader
+import com.geekbeast.rhizome.pods.ConfigurationLoader
 import com.openlattice.assembler.AssemblerConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration

@@ -22,7 +22,7 @@
 package com.openlattice.datastore.permissions.controllers;
 
 import com.codahale.metrics.annotation.Timed;
-import com.dataloom.streams.StreamUtil;
+import com.geekbeast.streams.StreamUtil;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -31,8 +31,8 @@ import com.openlattice.auditing.AuditableEvent;
 import com.openlattice.auditing.AuditingComponent;
 import com.openlattice.auditing.AuditingManager;
 import com.openlattice.authorization.*;
-import com.openlattice.controllers.exceptions.BadRequestException;
-import com.openlattice.controllers.exceptions.ForbiddenException;
+import com.geekbeast.controllers.exceptions.BadRequestException;
+import com.geekbeast.controllers.exceptions.ForbiddenException;
 import com.openlattice.organizations.ExternalDatabaseManagementService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import org.jetbrains.annotations.NotNull;

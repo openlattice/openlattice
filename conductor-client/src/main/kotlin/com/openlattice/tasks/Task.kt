@@ -19,7 +19,7 @@
  *
  */
 
-package com.openlattice.tasks
+package com.geekbeast.tasks
 
 /**
  *

@@ -1,6 +1,6 @@
 package com.openlattice.hazelcast.processors
 
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRemover
+import com.geekbeast.rhizome.hazelcast.processors.AbstractRemover
 import com.openlattice.authorization.Principal
 import com.openlattice.authorization.PrincipalType
 import com.openlattice.organizations.PrincipalSet

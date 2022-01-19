@@ -4,7 +4,7 @@ import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
-import com.openlattice.rhizome.hazelcast.DelegatedStringSet
+import com.geekbeast.hazelcast.DelegatedStringSet
 
 class DelegatedStringSetKryoSerializer: Serializer<DelegatedStringSet>() {
 
@@ -17,7 +17,7 @@ class DelegatedStringSetKryoSerializer: Serializer<DelegatedStringSet>() {
 
     override fun read(kryo: Kryo, input: Input, type: Class<DelegatedStringSet>): DelegatedStringSet {
         val size = input.readInt()
-        val stringSet = DelegatedStringSet.wrap( HashSet<String>( size ) )
+        val stringSet = DelegatedStringSet.wrap(HashSet<String>(size ) )
         for( i in 1..size ) stringSet.add( input.readString() )
         return stringSet
     }

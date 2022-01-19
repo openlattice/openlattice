@@ -22,7 +22,7 @@
 package com.openlattice.users.export
 
 import com.openlattice.data.requests.FileType
-import com.openlattice.serializer.AbstractJacksonSerializationTest
+import com.geekbeast.serializer.serializer.AbstractJacksonSerializationTest
 import java.net.URL
 import java.util.Optional
 

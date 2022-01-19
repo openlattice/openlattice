@@ -1,12 +1,12 @@
 package com.openlattice.hazelcast.processors.organizations
 
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
+import com.geekbeast.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.organization.ExternalTable
 import java.util.*
 
 data class UpdateExternalTableEntryProcessor(val update: MetadataUpdate) :
-        AbstractRhizomeEntryProcessor<UUID, ExternalTable, ExternalTable>() {
+    AbstractRhizomeEntryProcessor<UUID, ExternalTable, ExternalTable>() {
 
     override fun process(entry: MutableMap.MutableEntry<UUID, ExternalTable>): ExternalTable {
         val table = entry.value

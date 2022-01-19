@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.google.common.base.Preconditions
 import com.openlattice.client.serialization.SerializationConstants
 import com.openlattice.data.DataExpiration
-import com.openlattice.postgres.IndexType
+import com.geekbeast.postgres.IndexType
 import org.apache.commons.lang3.StringUtils
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.util.*
@@ -16,27 +16,27 @@ import java.util.*
  */
 data class MetadataUpdate(
         // Common across property type, entity type, entity set
-        @JsonProperty(SerializationConstants.TITLE_FIELD) val title: Optional<String>,
-        @JsonProperty(SerializationConstants.DESCRIPTION_FIELD) val description: Optional<String>,
+    @JsonProperty(SerializationConstants.TITLE_FIELD) val title: Optional<String>,
+    @JsonProperty(SerializationConstants.DESCRIPTION_FIELD) val description: Optional<String>,
         // Specific to entity set
-        @JsonProperty(SerializationConstants.NAME_FIELD) val name: Optional<String>,
-        @JsonProperty(SerializationConstants.CONTACTS) val contacts: Optional<MutableSet<String>>,
+    @JsonProperty(SerializationConstants.NAME_FIELD) val name: Optional<String>,
+    @JsonProperty(SerializationConstants.CONTACTS) val contacts: Optional<MutableSet<String>>,
         // Specific to property type/entity type
-        @JsonProperty(SerializationConstants.TYPE_FIELD) val type: Optional<FullQualifiedName>,
+    @JsonProperty(SerializationConstants.TYPE_FIELD) val type: Optional<FullQualifiedName>,
         // Specific to property type
-        @JsonProperty(SerializationConstants.PII_FIELD) val pii: Optional<Boolean>,
+    @JsonProperty(SerializationConstants.PII_FIELD) val pii: Optional<Boolean>,
         // Specific to entity set property type metadata
-        @JsonProperty(SerializationConstants.DEFAULT_SHOW) val defaultShow: Optional<Boolean>,
-        @JsonProperty(SerializationConstants.URL) val url: Optional<String>,
-        @JsonProperty(SerializationConstants.PROPERTY_TAGS)
+    @JsonProperty(SerializationConstants.DEFAULT_SHOW) val defaultShow: Optional<Boolean>,
+    @JsonProperty(SerializationConstants.URL) val url: Optional<String>,
+    @JsonProperty(SerializationConstants.PROPERTY_TAGS)
         val propertyTags: Optional<LinkedHashMap<UUID, LinkedHashSet<String>>>,
-        @JsonProperty(SerializationConstants.INDEX_TYPE) val indexType: Optional<IndexType>,
-        @JsonProperty(SerializationConstants.ORGANIZATION_ID)
+    @JsonProperty(SerializationConstants.INDEX_TYPE) val indexType: Optional<IndexType>,
+    @JsonProperty(SerializationConstants.ORGANIZATION_ID)
         val organizationId: Optional<UUID>,
-        @JsonProperty(SerializationConstants.PARTITIONS)
+    @JsonProperty(SerializationConstants.PARTITIONS)
         val partitions: Optional<LinkedHashSet<Int>>,
-        @JsonProperty(SerializationConstants.EXPIRATION) val dataExpiration: Optional<DataExpiration>,
-        @JsonProperty(SerializationConstants.DATASTORE) val dataSourceName: Optional<String>
+    @JsonProperty(SerializationConstants.EXPIRATION) val dataExpiration: Optional<DataExpiration>,
+    @JsonProperty(SerializationConstants.DATASTORE) val dataSourceName: Optional<String>
 ) {
 
 

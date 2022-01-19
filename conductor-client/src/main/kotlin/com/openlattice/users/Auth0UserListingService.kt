@@ -23,7 +23,7 @@ package com.openlattice.users
 
 import com.auth0.client.mgmt.ManagementAPI
 import com.auth0.json.mgmt.users.User
-import com.dataloom.mappers.ObjectMappers
+import com.geekbeast.mappers.mappers.ObjectMappers
 import com.geekbeast.util.ExponentialBackoff
 import com.geekbeast.util.attempt
 import com.openlattice.users.export.Auth0ApiExtension

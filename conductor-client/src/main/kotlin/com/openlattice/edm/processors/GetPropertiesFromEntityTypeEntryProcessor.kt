@@ -1,8 +1,8 @@
 package com.openlattice.edm.processors
 
 import com.openlattice.edm.type.EntityType
-import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
-import com.openlattice.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
+import com.geekbeast.hazelcast.DelegatedUUIDSet
+import com.geekbeast.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
 import java.util.*
 
 class GetPropertiesFromEntityTypeEntryProcessor: AbstractReadOnlyRhizomeEntryProcessor<UUID, EntityType, DelegatedUUIDSet>() {

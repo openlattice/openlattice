@@ -21,7 +21,7 @@
 package com.openlattice.authorization.mapstores;
 
 import com.auth0.json.mgmt.users.User;
-import com.dataloom.mappers.ObjectMappers;
+import com.geekbeast.mappers.mappers.ObjectMappers;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
@@ -30,7 +30,7 @@ import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapStoreConfig;
 import com.openlattice.hazelcast.HazelcastMap;
-import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore;
+import com.geekbeast.postgres.mapstores.AbstractBasePostgresMapstore;
 import com.zaxxer.hikari.HikariDataSource;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.RandomUtils;

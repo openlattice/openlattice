@@ -26,7 +26,7 @@ import com.openlattice.ioc.providers.LateInitAware
 import com.openlattice.ioc.providers.LateInitProvider
 import com.openlattice.linking.graph.PostgresLinkingQueryService
 import com.openlattice.postgres.DataTables.LAST_WRITE
-import com.openlattice.postgres.PostgresArrays
+import com.geekbeast.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.COUNT
 import com.openlattice.postgres.PostgresColumn.DST_ENTITY_KEY_ID
 import com.openlattice.postgres.PostgresColumn.DST_ENTITY_SET_ID
@@ -40,13 +40,13 @@ import com.openlattice.postgres.PostgresColumn.SRC_ENTITY_KEY_ID
 import com.openlattice.postgres.PostgresColumn.SRC_ENTITY_SET_ID
 import com.openlattice.postgres.PostgresColumn.VERSION
 import com.openlattice.postgres.PostgresColumn.VERSIONS
-import com.openlattice.postgres.PostgresDatatype
+import com.geekbeast.postgres.PostgresDatatype
 import com.openlattice.postgres.PostgresTable.DATA
 import com.openlattice.postgres.PostgresTable.E
 import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.ResultSetAdapters
-import com.openlattice.postgres.streams.BasePostgresIterable
-import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
+import com.geekbeast.postgres.streams.BasePostgresIterable
+import com.geekbeast.postgres.streams.PreparedStatementHolderSupplier
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import java.sql.PreparedStatement

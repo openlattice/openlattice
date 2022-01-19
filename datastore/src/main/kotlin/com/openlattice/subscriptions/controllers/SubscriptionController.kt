@@ -2,8 +2,8 @@ package com.openlattice.subscriptions.controllers
 
 import com.codahale.metrics.annotation.Timed
 import com.openlattice.authorization.*
-import com.openlattice.controllers.exceptions.BadRequestException
-import com.openlattice.controllers.exceptions.ForbiddenException
+import com.geekbeast.controllers.exceptions.BadRequestException
+import com.geekbeast.controllers.exceptions.ForbiddenException
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.GraphQueryService
 import com.openlattice.graph.NeighborhoodQuery

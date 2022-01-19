@@ -20,9 +20,9 @@
 
 package com.openlattice.organizations.processors;
 
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRemover;
-import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
-import com.openlattice.rhizome.hazelcast.SetProxy;
+import com.geekbeast.rhizome.hazelcast.processors.AbstractRemover;
+import com.geekbeast.hazelcast.DelegatedUUIDSet;
+import com.geekbeast.hazelcast.SetProxy;
 
 import java.util.Map;
 import java.util.UUID;

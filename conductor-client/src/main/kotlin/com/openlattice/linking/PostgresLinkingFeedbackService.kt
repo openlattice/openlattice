@@ -16,8 +16,8 @@ import com.openlattice.linking.mapstores.SECOND_ENTITY_KEY_INDEX
 import com.openlattice.linking.mapstores.SECOND_ENTITY_SET_INDEX
 import com.openlattice.postgres.PostgresTable.LINKING_FEEDBACK
 import com.openlattice.postgres.ResultSetAdapters
-import com.openlattice.postgres.streams.BasePostgresIterable
-import com.openlattice.postgres.streams.StatementHolderSupplier
+import com.geekbeast.postgres.streams.BasePostgresIterable
+import com.geekbeast.postgres.streams.StatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
 import java.util.Optional
 import java.util.UUID

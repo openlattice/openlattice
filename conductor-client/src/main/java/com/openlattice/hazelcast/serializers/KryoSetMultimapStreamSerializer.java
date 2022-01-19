@@ -27,7 +27,7 @@ import com.esotericsoftware.kryo.io.Output;
 import com.google.common.collect.SetMultimap;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
+import com.geekbeast.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import de.javakaffee.kryoserializers.UUIDSerializer;
 import de.javakaffee.kryoserializers.guava.HashMultimapSerializer;
 import de.javakaffee.kryoserializers.guava.ImmutableMultimapSerializer;

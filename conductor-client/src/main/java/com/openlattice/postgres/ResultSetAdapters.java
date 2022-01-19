@@ -20,9 +20,12 @@
 
 package com.openlattice.postgres;
 
-import com.dataloom.mappers.ObjectMappers;
+import com.geekbeast.mappers.mappers.ObjectMappers;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.geekbeast.postgres.IndexType;
+import com.geekbeast.postgres.PostgresArrays;
+import com.geekbeast.postgres.PostgresDatatype;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
@@ -105,7 +108,7 @@ import java.util.stream.Collectors;
 import static com.openlattice.postgres.DataTables.LAST_INDEX;
 import static com.openlattice.postgres.DataTables.LAST_LINK;
 import static com.openlattice.postgres.DataTables.LAST_WRITE;
-import static com.openlattice.postgres.PostgresArrays.getTextArray;
+import static com.geekbeast.postgres.PostgresArrays.getTextArray;
 import static com.openlattice.postgres.PostgresColumn.ACL_KEY_FIELD;
 import static com.openlattice.postgres.PostgresColumn.ALERT_METADATA_FIELD;
 import static com.openlattice.postgres.PostgresColumn.ALERT_TYPE_FIELD;

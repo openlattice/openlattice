@@ -22,8 +22,8 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
-import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
+import com.geekbeast.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
+import com.geekbeast.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.organizations.events.MembersRemovedFromOrganizationEvent
 import org.springframework.stereotype.Component
@@ -39,8 +39,8 @@ class MembersRemovedFromOrganizationEventStreamSerializer
 
     override fun read(input: ObjectDataInput): MembersRemovedFromOrganizationEvent {
         return MembersRemovedFromOrganizationEvent(
-                UUIDStreamSerializerUtils.deserialize(input),
-                SecurablePrincipalListStreamSerializer().read(input)
+            UUIDStreamSerializerUtils.deserialize(input),
+            SecurablePrincipalListStreamSerializer().read(input)
         )
     }
 

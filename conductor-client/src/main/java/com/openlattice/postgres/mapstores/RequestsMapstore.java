@@ -1,9 +1,10 @@
 package com.openlattice.postgres.mapstores;
 
-import static com.openlattice.postgres.PostgresArrays.createTextArray;
-import static com.openlattice.postgres.PostgresArrays.createUuidArray;
+import static com.geekbeast.postgres.PostgresArrays.createTextArray;
+import static com.geekbeast.postgres.PostgresArrays.createUuidArray;
 import static com.openlattice.postgres.PostgresTable.REQUESTS;
 
+import com.geekbeast.postgres.mapstores.AbstractBasePostgresMapstore;
 import com.openlattice.authorization.AceKey;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principal;

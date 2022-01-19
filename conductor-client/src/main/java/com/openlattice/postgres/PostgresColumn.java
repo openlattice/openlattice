@@ -20,31 +20,33 @@
 
 package com.openlattice.postgres;
 
+import com.geekbeast.postgres.PostgresColumnDefinition;
+import com.geekbeast.postgres.PostgresDatatype;
 import com.openlattice.IdConstants;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.Analyzer;
 
-import static com.openlattice.postgres.PostgresDatatype.BIGINT;
-import static com.openlattice.postgres.PostgresDatatype.BIGINT_ARRAY;
-import static com.openlattice.postgres.PostgresDatatype.BOOLEAN;
-import static com.openlattice.postgres.PostgresDatatype.BYTEA;
-import static com.openlattice.postgres.PostgresDatatype.INTEGER;
-import static com.openlattice.postgres.PostgresDatatype.INTEGER_ARRAY;
-import static com.openlattice.postgres.PostgresDatatype.JSONB;
-import static com.openlattice.postgres.PostgresDatatype.TEXT;
-import static com.openlattice.postgres.PostgresDatatype.TEXT_ARRAY;
-import static com.openlattice.postgres.PostgresDatatype.TIMESTAMPTZ;
-import static com.openlattice.postgres.PostgresDatatype.UUID;
-import static com.openlattice.postgres.PostgresDatatype.UUID_ARRAY;
+import static com.geekbeast.postgres.PostgresDatatype.BIGINT;
+import static com.geekbeast.postgres.PostgresDatatype.BIGINT_ARRAY;
+import static com.geekbeast.postgres.PostgresDatatype.BOOLEAN;
+import static com.geekbeast.postgres.PostgresDatatype.BYTEA;
+import static com.geekbeast.postgres.PostgresDatatype.INTEGER;
+import static com.geekbeast.postgres.PostgresDatatype.INTEGER_ARRAY;
+import static com.geekbeast.postgres.PostgresDatatype.JSONB;
+import static com.geekbeast.postgres.PostgresDatatype.TEXT;
+import static com.geekbeast.postgres.PostgresDatatype.TEXT_ARRAY;
+import static com.geekbeast.postgres.PostgresDatatype.TIMESTAMPTZ;
+import static com.geekbeast.postgres.PostgresDatatype.UUID;
+import static com.geekbeast.postgres.PostgresDatatype.UUID_ARRAY;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public final class PostgresColumn {
-    public static final String                   ACL_KEY_FIELD                     = "acl_key";
-    public static final PostgresColumnDefinition ACL_KEY                           =
+    public static final String                   ACL_KEY_FIELD        = "acl_key";
+    public static final PostgresColumnDefinition ACL_KEY              =
             new PostgresColumnDefinition( ACL_KEY_FIELD, UUID_ARRAY );
-    public static final String                   ALERT_METADATA_FIELD              = "alert_metadata";
+    public static final String                   ALERT_METADATA_FIELD = "alert_metadata";
     public static final PostgresColumnDefinition ALERT_METADATA                    =
             new PostgresColumnDefinition( ALERT_METADATA_FIELD, JSONB ).notNull();
     public static final String                   ALERT_TYPE_FIELD                  = "alert_type";

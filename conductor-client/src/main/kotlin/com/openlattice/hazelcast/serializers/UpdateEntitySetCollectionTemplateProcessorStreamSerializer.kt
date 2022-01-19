@@ -2,15 +2,16 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
-import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
+import com.geekbeast.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
+import com.geekbeast.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.collections.processors.UpdateEntitySetCollectionTemplateProcessor
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import org.springframework.stereotype.Component
 import java.util.*
 
 @Component
-class UpdateEntitySetCollectionTemplateProcessorStreamSerializer : SelfRegisteringStreamSerializer<UpdateEntitySetCollectionTemplateProcessor> {
+class UpdateEntitySetCollectionTemplateProcessorStreamSerializer :
+    SelfRegisteringStreamSerializer<UpdateEntitySetCollectionTemplateProcessor> {
     override fun getTypeId(): Int {
         return StreamSerializerTypeIds.UPDATE_ENTITY_SET_COLLECTION_TEMPLATE_PROCESSOR.ordinal
     }

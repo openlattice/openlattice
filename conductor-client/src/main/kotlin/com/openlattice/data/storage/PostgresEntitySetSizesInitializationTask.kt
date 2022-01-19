@@ -30,8 +30,8 @@ import com.openlattice.postgres.PostgresColumn.LINKING_ID
 import com.openlattice.postgres.PostgresColumn.VERSION
 import com.openlattice.postgres.PostgresTable.ENTITY_SETS
 import com.openlattice.postgres.PostgresTable.IDS
-import com.openlattice.tasks.HazelcastInitializationTask
-import com.openlattice.tasks.Task
+import com.geekbeast.tasks.HazelcastInitializationTask
+import com.geekbeast.tasks.Task
 import org.slf4j.LoggerFactory
 
 // todo change name back to "entity_set_counts"

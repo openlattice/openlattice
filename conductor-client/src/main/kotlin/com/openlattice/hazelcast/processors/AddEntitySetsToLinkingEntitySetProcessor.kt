@@ -1,12 +1,12 @@
 package com.openlattice.hazelcast.processors
 
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
+import com.geekbeast.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.edm.EntitySet
 import java.util.UUID
 
 
 class AddEntitySetsToLinkingEntitySetProcessor(val entitySetIds: Set<UUID>) :
-        AbstractRhizomeEntryProcessor<UUID, EntitySet, EntitySet>() {
+    AbstractRhizomeEntryProcessor<UUID, EntitySet, EntitySet>() {
 
     companion object {
         private const val serialVersionUID = 66023847982347L

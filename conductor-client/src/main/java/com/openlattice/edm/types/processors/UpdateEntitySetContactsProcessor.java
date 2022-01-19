@@ -25,7 +25,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import com.openlattice.edm.EntitySet;
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor;
+import com.geekbeast.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor;
 
 public class UpdateEntitySetContactsProcessor extends AbstractRhizomeEntryProcessor<UUID, EntitySet, Object> {
     private static final long serialVersionUID = 4846226537808942435L;

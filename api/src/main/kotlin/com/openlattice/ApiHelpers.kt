@@ -1,10 +1,9 @@
 package com.openlattice
 
-import com.dataloom.mappers.ObjectMappers
+import com.geekbeast.mappers.mappers.ObjectMappers
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.google.common.base.Charsets
 import com.google.common.base.Preconditions
-import com.openlattice.ApiHelpers.Companion.toUtf8Bytes
 import org.slf4j.LoggerFactory
 import java.nio.ByteBuffer
 import java.util.*

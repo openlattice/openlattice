@@ -1,5 +1,7 @@
 package com.openlattice.hazelcast.serializers
 
+import com.geekbeast.hazelcast.serializers.TestableSelfRegisteringStreamSerializer
+import com.geekbeast.serializers.Jdk8StreamSerializers
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.openlattice.hazelcast.StreamSerializerTypeIds
@@ -8,7 +10,8 @@ import org.springframework.stereotype.Component
 import java.time.OffsetDateTime
 
 @Component
-class UpdateSmsInformationLastSyncEntryProcessorStreamSerializer : TestableSelfRegisteringStreamSerializer<UpdateSmsInformationLastSyncEntryProcessor> {
+class UpdateSmsInformationLastSyncEntryProcessorStreamSerializer :
+    TestableSelfRegisteringStreamSerializer<UpdateSmsInformationLastSyncEntryProcessor> {
     override fun generateTestValue(): UpdateSmsInformationLastSyncEntryProcessor {
         return UpdateSmsInformationLastSyncEntryProcessor(OffsetDateTime.now())
     }

@@ -27,7 +27,7 @@ import com.openlattice.graph.query.ComparisonClause;
 import com.openlattice.graph.query.ComparisonClause.ComparisonOp;
 import com.openlattice.graph.query.EntitySetQuery;
 import com.openlattice.mapstores.TestDataFactory;
-import com.openlattice.serializer.AbstractJacksonSerializationTest;
+import com.geekbeast.serializer.serializer.AbstractJacksonSerializationTest;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;

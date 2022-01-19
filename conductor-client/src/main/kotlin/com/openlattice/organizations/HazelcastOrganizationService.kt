@@ -29,7 +29,7 @@ import com.openlattice.organizations.processors.UpdateOrganizationSmsEntitySetIn
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.mapstores.AppConfigMapstore
 import com.openlattice.postgres.mapstores.EntitySetMapstore
-import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
+import com.geekbeast.hazelcast.DelegatedUUIDSet
 import com.openlattice.users.getAppMetadata
 import com.openlattice.users.processors.aggregators.UsersWithConnectionsAggregator
 import org.slf4j.LoggerFactory

@@ -1,6 +1,6 @@
 package com.openlattice.organizations.processors
 
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
+import com.geekbeast.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.organizations.Organization
 import org.slf4j.LoggerFactory
 import java.util.*

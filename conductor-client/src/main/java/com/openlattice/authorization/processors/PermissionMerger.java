@@ -28,7 +28,7 @@ import com.hazelcast.core.Offloadable;
 import com.openlattice.authorization.AceKey;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.securable.SecurableObjectType;
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractMerger;
+import com.geekbeast.rhizome.hazelcast.processors.AbstractMerger;
 import com.openlattice.authorization.AceValue;
 
 import java.time.OffsetDateTime;

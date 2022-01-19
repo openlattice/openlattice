@@ -20,7 +20,8 @@
  */
 package com.openlattice.hazelcast.pods
 
-import com.kryptnostic.rhizome.pods.hazelcast.BaseHazelcastInstanceConfigurationPod
+import com.geekbeast.hazelcast.pods.QueueConfigurer
+import com.geekbeast.rhizome.pods.hazelcast.BaseHazelcastInstanceConfigurationPod
 import com.openlattice.hazelcast.HazelcastQueue
 import com.openlattice.ids.HazelcastIdGenerationService
 import org.springframework.context.annotation.Bean

@@ -1,12 +1,12 @@
 package com.openlattice.hazelcast.serializers.shuttle
 
-import com.dataloom.mappers.ObjectMappers
+import com.geekbeast.mappers.mappers.ObjectMappers
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.hazelcast.InternalTestDataFactory
-import com.openlattice.hazelcast.serializers.StreamSerializers
-import com.openlattice.hazelcast.serializers.TestableSelfRegisteringStreamSerializer
+import com.geekbeast.hazelcast.serializers.StreamSerializers
+import com.geekbeast.hazelcast.serializers.TestableSelfRegisteringStreamSerializer
 import com.openlattice.shuttle.Flight
 import com.openlattice.shuttle.FlightPlanParameters
 import org.springframework.stereotype.Component

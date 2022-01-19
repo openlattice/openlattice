@@ -25,7 +25,7 @@ import java.util.UUID;
 
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.type.PropertyType;
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor;
+import com.geekbeast.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
