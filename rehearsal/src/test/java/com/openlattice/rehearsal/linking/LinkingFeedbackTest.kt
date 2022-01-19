@@ -32,6 +32,7 @@ import com.openlattice.linking.LinkingFeedback
 import com.openlattice.rehearsal.SetupTestData
 import com.openlattice.rehearsal.edm.EdmTestConstants
 import com.openlattice.search.requests.SearchConstraints
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.junit.*
 import org.junit.runners.MethodSorters
 import org.slf4j.LoggerFactory
@@ -44,7 +45,7 @@ import kotlin.random.Random
  *
  * Note: tests need to run in order
  */
-
+@SuppressFBWarnings(value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE","NP_NONNULL_RETURN_VIOLATION"], justification = "Ignore internal kotlin redundant nullchecks")
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 class LinkingFeedbackTest : SetupTestData() {
     companion object {
