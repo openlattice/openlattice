@@ -26,11 +26,6 @@ repositories {
     url 'https://oss.sonatype.org/content/repositories/snapshots'
   }
 
-  // Rhizome things
-  maven {
-    url "https://maven.springframework.org/snapshot"
-  }
-
   maven {
     url = "https://plugins.gradle.org/m2/"
   }
