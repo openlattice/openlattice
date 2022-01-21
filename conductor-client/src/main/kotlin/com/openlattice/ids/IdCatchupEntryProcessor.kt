@@ -2,7 +2,7 @@ package com.openlattice.ids
 
 
 import com.google.common.base.Preconditions.checkNotNull
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
+import com.geekbeast.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.ResultSetAdapters.id

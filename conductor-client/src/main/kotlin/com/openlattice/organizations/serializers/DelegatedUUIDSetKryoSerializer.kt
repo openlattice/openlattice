@@ -4,7 +4,7 @@ import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
-import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
+import com.geekbeast.hazelcast.DelegatedUUIDSet
 import java.util.*
 
 class DelegatedUUIDSetKryoSerializer: Serializer<DelegatedUUIDSet>() {
@@ -19,7 +19,7 @@ class DelegatedUUIDSetKryoSerializer: Serializer<DelegatedUUIDSet>() {
 
     override fun read(kryo: Kryo, input: Input, type: Class<DelegatedUUIDSet>): DelegatedUUIDSet {
         val size = input.readInt()
-        val uuidSet = DelegatedUUIDSet.wrap( HashSet(size ) )
+        val uuidSet = DelegatedUUIDSet.wrap(HashSet(size ) )
         for( i in 1..size ) {
             val uuid = UUID( input.readLong(), input.readLong() )
             uuidSet.add( uuid )

@@ -23,7 +23,7 @@ package com.openlattice.authorization;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.common.collect.ImmutableList;
-import com.openlattice.rhizome.hazelcast.DelegatedUUIDList;
+import com.geekbeast.hazelcast.DelegatedUUIDList;
 
 import java.util.List;
 import java.util.StringJoiner;

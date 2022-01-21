@@ -20,6 +20,8 @@
 
 package com.openlattice.postgres;
 
+import com.geekbeast.postgres.PostgresTableDefinition;
+import com.geekbeast.postgres.PostgresTables;
 import java.lang.reflect.Modifier;
 import java.util.Objects;
 import java.util.stream.Stream;

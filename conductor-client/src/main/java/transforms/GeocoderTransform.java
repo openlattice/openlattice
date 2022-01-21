@@ -1,12 +1,12 @@
 package transforms;
 
-import com.dataloom.mappers.ObjectMappers;
+import com.geekbeast.mappers.mappers.ObjectMappers;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.openlattice.client.RetrofitFactory;
-import com.openlattice.retrofit.RhizomeByteConverterFactory;
-import com.openlattice.retrofit.RhizomeCallAdapterFactory;
-import com.openlattice.retrofit.RhizomeJacksonConverterFactory;
+import com.geekbeast.retrofit.RhizomeByteConverterFactory;
+import com.geekbeast.retrofit.RhizomeCallAdapterFactory;
+import com.geekbeast.retrofit.RhizomeJacksonConverterFactory;
 import com.openlattice.shuttle.transformations.Transformation;
 import com.openlattice.shuttle.util.Constants;
 import retrofit2.Retrofit;

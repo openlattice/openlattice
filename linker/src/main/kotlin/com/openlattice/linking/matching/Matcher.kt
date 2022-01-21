@@ -22,7 +22,7 @@
 package com.openlattice.linking.matching
 
 import com.openlattice.linking.Block
-import com.openlattice.rhizome.hazelcast.DelegatedStringSet
+import com.geekbeast.hazelcast.DelegatedStringSet
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
 import java.util.*
 

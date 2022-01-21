@@ -35,10 +35,10 @@ import com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.authorization.util.getLastAclKeySafely
 import com.openlattice.client.serialization.SerializationConstants.DELETE_TYPE
-import com.openlattice.controllers.exceptions.ForbiddenException
-import com.openlattice.controllers.exceptions.wrappers.BatchException
-import com.openlattice.controllers.exceptions.wrappers.ErrorsDTO
-import com.openlattice.controllers.util.ApiExceptions
+import com.geekbeast.controllers.exceptions.ForbiddenException
+import com.geekbeast.controllers.exceptions.wrappers.BatchException
+import com.geekbeast.controllers.exceptions.wrappers.ErrorsDTO
+import com.geekbeast.controllers.util.ApiExceptions
 import com.openlattice.data.DataDeletionManager
 import com.openlattice.data.DataGraphManager
 import com.openlattice.data.DeleteType

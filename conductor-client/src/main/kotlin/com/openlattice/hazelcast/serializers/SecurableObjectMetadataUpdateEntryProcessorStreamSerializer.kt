@@ -1,5 +1,6 @@
 package com.openlattice.hazelcast.serializers
 
+import com.geekbeast.hazelcast.serializers.TestableSelfRegisteringStreamSerializer
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.openlattice.datasets.SecurableObjectMetadataUpdateEntryProcessor
@@ -8,7 +9,8 @@ import com.openlattice.mapstores.TestDataFactory
 import org.springframework.stereotype.Component
 
 @Component
-class SecurableObjectMetadataUpdateEntryProcessorStreamSerializer : TestableSelfRegisteringStreamSerializer<SecurableObjectMetadataUpdateEntryProcessor> {
+class SecurableObjectMetadataUpdateEntryProcessorStreamSerializer :
+    TestableSelfRegisteringStreamSerializer<SecurableObjectMetadataUpdateEntryProcessor> {
 
     override fun generateTestValue(): SecurableObjectMetadataUpdateEntryProcessor {
         return SecurableObjectMetadataUpdateEntryProcessor(TestDataFactory.securableObjectMetadataUpdate())

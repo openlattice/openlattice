@@ -22,7 +22,8 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
+import com.geekbeast.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
+import com.geekbeast.serializers.Jdk8StreamSerializers
 import com.openlattice.assembler.MaterializedEntitySet
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.organization.OrganizationEntitySetFlag
@@ -54,7 +55,7 @@ class MaterializedEntitySetStreamSerializer : SelfRegisteringStreamSerializer<Ma
             out.writeInt(it.ordinal)
         }
 
-        OffsetDateTimeStreamSerializer.serialize(out, obj.lastRefresh)
+        Jdk8StreamSerializers.AbstractOffsetDateTimeStreamSerializer.serialize(out, obj.lastRefresh)
     }
 
     override fun read(input: ObjectDataInput): MaterializedEntitySet {
@@ -71,7 +72,7 @@ class MaterializedEntitySetStreamSerializer : SelfRegisteringStreamSerializer<Ma
             flags.add(entitySetFlags[input.readInt()])
         }
 
-        val lastRefresh = OffsetDateTimeStreamSerializer.deserialize(input)
+        val lastRefresh = Jdk8StreamSerializers.AbstractOffsetDateTimeStreamSerializer.deserialize(input)
 
 
         return MaterializedEntitySet(key, refreshRate, flags, lastRefresh)

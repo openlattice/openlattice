@@ -24,8 +24,8 @@ import com.openlattice.edm.types.processors.AddDstEntityTypesToAssociationTypePr
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers;
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
+import com.geekbeast.rhizome.hazelcast.serializers.SetStreamSerializers;
+import com.geekbeast.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import java.io.IOException;
 
 public class AddDstEntityTypesToAssociationTypeProcessorStreamSerializer

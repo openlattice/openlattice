@@ -20,13 +20,13 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
+import com.geekbeast.hazelcast.serializers.SetStreamSerializer;
+import com.geekbeast.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.google.common.collect.Sets;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.openlattice.mapstores.TestDataFactory;
-import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
+import com.geekbeast.hazelcast.DelegatedUUIDSet;
 
 import java.io.IOException;
 import java.util.Set;

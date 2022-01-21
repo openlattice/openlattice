@@ -2,13 +2,14 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
+import com.geekbeast.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.assembler.processors.MaterializedEntitySetsRefreshAggregator
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import org.springframework.stereotype.Component
 
 @Component
-class MaterializedEntitySetsRefreshAggregatorStreamSerializer : SelfRegisteringStreamSerializer<MaterializedEntitySetsRefreshAggregator> {
+class MaterializedEntitySetsRefreshAggregatorStreamSerializer :
+    SelfRegisteringStreamSerializer<MaterializedEntitySetsRefreshAggregator> {
     override fun getTypeId(): Int {
         return StreamSerializerTypeIds.MATERIALIZED_ENTITY_SETS_REFRESH_AGGREGATOR.ordinal
     }

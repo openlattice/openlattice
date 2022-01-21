@@ -3,12 +3,12 @@ package com.openlattice.subscriptions
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.openlattice.authorization.Principal
 import com.openlattice.authorization.PrincipalType
-import com.openlattice.postgres.PostgresArrays
+import com.geekbeast.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.SUBSCRIPTIONS
 import com.openlattice.postgres.ResultSetAdapters
-import com.openlattice.postgres.streams.BasePostgresIterable
-import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
+import com.geekbeast.postgres.streams.BasePostgresIterable
+import com.geekbeast.postgres.streams.PreparedStatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
 import java.sql.Connection
 import java.sql.PreparedStatement

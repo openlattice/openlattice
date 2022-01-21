@@ -24,8 +24,8 @@ package com.openlattice.hazelcast.serializers;
 
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.kryptnostic.rhizome.hazelcast.serializers.RhizomeUtils;
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
+import com.geekbeast.rhizome.hazelcast.serializers.RhizomeUtils;
+import com.geekbeast.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.authorization.DelegatedPermissionEnumSet;
 import com.openlattice.authorization.Permission;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;

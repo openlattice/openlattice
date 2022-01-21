@@ -10,7 +10,7 @@ import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.mail.MailServiceClient
 import com.openlattice.organizations.roles.SecurePrincipalsManager
-import com.openlattice.tasks.HazelcastTaskDependencies
+import com.geekbeast.tasks.HazelcastTaskDependencies
 import com.zaxxer.hikari.HikariDataSource
 import java.util.*
 

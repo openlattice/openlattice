@@ -2,9 +2,9 @@ package com.openlattice.linking
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import com.openlattice.postgres.PostgresArrays
+import com.geekbeast.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
-import com.openlattice.postgres.PostgresColumnDefinition
+import com.geekbeast.postgres.PostgresColumnDefinition
 import com.openlattice.postgres.PostgresTable.LINKING_LOG
 import com.zaxxer.hikari.HikariDataSource
 import java.util.*
@@ -57,7 +57,7 @@ class PostgresLinkingLogService(
                     val ekidsArray = PostgresArrays.createTextArray(conn, ekids.stream().map { it.toString() } )
                     ps.setString(1, esid.toString())
                     ps.setArray(2, ekidsArray )
-                    ps.setArray(3, PostgresArrays.createTextArray( conn, listOf( esid.toString() )))
+                    ps.setArray(3, PostgresArrays.createTextArray(conn, listOf(esid.toString() )))
                     ps.setString(4, esid.toString())
                     ps.setArray(5, ekidsArray )
                     ps.setString(6, esid.toString())

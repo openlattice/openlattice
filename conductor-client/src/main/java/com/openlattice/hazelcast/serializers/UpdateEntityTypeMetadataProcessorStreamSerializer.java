@@ -23,7 +23,7 @@ package com.openlattice.hazelcast.serializers;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
+import com.geekbeast.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.edm.types.processors.UpdateEntityTypeMetadataProcessor;
 import java.io.IOException;
 

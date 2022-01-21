@@ -21,7 +21,7 @@ package com.openlattice.authorization;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.openlattice.client.serialization.SerializationConstants;
-import com.openlattice.util.Hashcodes;
+import com.geekbeast.util.Hashcodes;
 
 import java.util.List;
 import java.util.Objects;

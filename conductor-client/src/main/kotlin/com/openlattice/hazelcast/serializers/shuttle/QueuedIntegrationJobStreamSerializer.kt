@@ -2,10 +2,10 @@ package com.openlattice.hazelcast.serializers.shuttle
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
-import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
+import com.geekbeast.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
 import com.openlattice.hazelcast.InternalTestDataFactory
 import com.openlattice.hazelcast.StreamSerializerTypeIds
-import com.openlattice.hazelcast.serializers.TestableSelfRegisteringStreamSerializer
+import com.geekbeast.hazelcast.serializers.TestableSelfRegisteringStreamSerializer
 import com.openlattice.shuttle.QueuedIntegrationJob
 import org.springframework.stereotype.Component
 import java.util.*

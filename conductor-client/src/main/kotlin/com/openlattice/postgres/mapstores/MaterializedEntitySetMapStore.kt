@@ -20,13 +20,14 @@
  */
 package com.openlattice.postgres.mapstores
 
+import com.geekbeast.postgres.mapstores.AbstractBasePostgresMapstore
 import com.google.common.collect.MapMaker
 import com.hazelcast.config.*
 import com.openlattice.assembler.EntitySetAssemblyKey
 import com.openlattice.assembler.MaterializedEntitySet
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organization.OrganizationEntitySetFlag
-import com.openlattice.postgres.PostgresArrays
+import com.geekbeast.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.ORGANIZATION_ID
 import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.ResultSetAdapters

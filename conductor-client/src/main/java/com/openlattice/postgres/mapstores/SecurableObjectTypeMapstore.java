@@ -2,13 +2,14 @@ package com.openlattice.postgres.mapstores;
 
 import static com.openlattice.postgres.PostgresTable.SECURABLE_OBJECTS;
 
+import com.geekbeast.postgres.mapstores.AbstractBasePostgresMapstore;
 import com.hazelcast.config.IndexConfig;
 import com.hazelcast.config.IndexType;
 import com.hazelcast.config.MapConfig;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.hazelcast.HazelcastMap;
-import com.openlattice.postgres.PostgresArrays;
+import com.geekbeast.postgres.PostgresArrays;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.zaxxer.hikari.HikariDataSource;
 import java.sql.PreparedStatement;

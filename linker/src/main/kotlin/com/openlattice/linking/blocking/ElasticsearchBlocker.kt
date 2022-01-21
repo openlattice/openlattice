@@ -32,7 +32,7 @@ import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.linking.*
 import com.openlattice.linking.util.PersonProperties
 import com.openlattice.postgres.mapstores.EntityTypeMapstore
-import com.openlattice.rhizome.hazelcast.DelegatedStringSet
+import com.geekbeast.hazelcast.DelegatedStringSet
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.util.*

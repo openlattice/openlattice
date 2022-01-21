@@ -46,7 +46,7 @@ import com.openlattice.datastore.services.EntitySetManager;
 import com.openlattice.graph.Graph;
 import com.openlattice.graph.core.GraphService;
 import com.openlattice.ids.HazelcastIdGenerationService;
-import com.openlattice.jdbc.DataSourceManager;
+import com.geekbeast.jdbc.DataSourceManager;
 import com.openlattice.linking.BackgroundLinkingService;
 import com.openlattice.linking.DataLoader;
 import com.openlattice.linking.EdmCachingDataLoader;

@@ -20,28 +20,27 @@
 
 package com.openlattice.linking;
 
-import com.dataloom.mappers.ObjectMappers;
-import com.kryptnostic.rhizome.configuration.websockets.BaseRhizomeServer;
-import com.kryptnostic.rhizome.core.RhizomeApplicationServer;
-import com.kryptnostic.rhizome.hazelcast.serializers.RhizomeUtils.Pods;
+import com.geekbeast.mappers.mappers.ObjectMappers;
+import com.geekbeast.rhizome.configuration.websockets.BaseRhizomeServer;
+import com.geekbeast.rhizome.core.RhizomeApplicationServer;
+import com.geekbeast.rhizome.hazelcast.serializers.RhizomeUtils.Pods;
 import com.openlattice.auditing.pods.AuditingConfigurationPod;
-import com.openlattice.auth0.Auth0Pod;
-import com.openlattice.aws.AwsS3Pod;
+import com.geekbeast.auth0.Auth0Pod;
+import com.geekbeast.aws.AwsS3Pod;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.hazelcast.pods.HazelcastQueuePod;
 import com.openlattice.hazelcast.pods.MapstoresPod;
 import com.openlattice.hazelcast.pods.SharedStreamSerializersPod;
 import com.openlattice.ioc.providers.LateInitProvidersPod;
-import com.openlattice.jdbc.JdbcPod;
+import com.geekbeast.jdbc.JdbcPod;
 import com.openlattice.linking.pods.LinkerPostConfigurationServicesPod;
 import com.openlattice.linking.pods.LinkerSecurityPod;
 import com.openlattice.linking.pods.LinkerServicesPod;
 import com.openlattice.linking.pods.LinkerServletsPod;
 import com.openlattice.linking.pods.PlasmaCoupling;
-import com.openlattice.postgres.PostgresPod;
-import com.openlattice.postgres.PostgresTablesPod;
+import com.geekbeast.postgres.PostgresPod;
 import com.openlattice.postgres.pods.ExternalDatabaseConnectionManagerPod;
-import com.openlattice.tasks.pods.TaskSchedulerPod;
+import com.geekbeast.pods.TaskSchedulerPod;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;

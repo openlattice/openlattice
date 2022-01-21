@@ -8,6 +8,7 @@ import com.openlattice.edm.type.EntityType
 import com.openlattice.rehearsal.assertException
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
 import com.openlattice.rehearsal.edm.EdmTestConstants
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.commons.lang3.RandomStringUtils
 import org.junit.Assert
 import org.junit.BeforeClass
@@ -16,6 +17,7 @@ import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.*
 
+@SuppressFBWarnings(value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE","NP_NONNULL_RETURN_VIOLATION"], justification = "Ignore internal kotlin redundant nullchecks")
 class EntitySetsTest : MultipleAuthenticatedUsersBase() {
 
     companion object {

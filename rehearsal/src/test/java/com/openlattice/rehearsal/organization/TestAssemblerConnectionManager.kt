@@ -20,7 +20,7 @@
  */
 package com.openlattice.rehearsal.organization
 
-import com.kryptnostic.rhizome.pods.ConfigurationLoaderPod
+import com.geekbeast.rhizome.pods.ConfigurationLoaderPod
 import com.openlattice.assembler.AssemblerConfiguration
 import com.openlattice.assembler.pods.AssemblerConfigurationPod
 import com.openlattice.postgres.DataTables

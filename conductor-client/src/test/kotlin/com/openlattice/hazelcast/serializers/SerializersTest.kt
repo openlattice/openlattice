@@ -1,10 +1,11 @@
 package com.openlattice.hazelcast.serializers
 
+import com.geekbeast.hazelcast.serializers.TestableSelfRegisteringStreamSerializer
 import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.openlattice.TestServer.Companion.testServer
-import com.openlattice.rhizome.KotlinDelegatedUUIDSet
+import com.geekbeast.rhizome.KotlinDelegatedUUIDSet
 import org.junit.Assert
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -21,7 +22,8 @@ class SerializersTest(val serializer: TestableSelfRegisteringStreamSerializer<An
         @JvmStatic
         @Parameterized.Parameters(name = "{1}")
         fun getSerializers(): Array<Array<Any>> {
-            val serializers: MutableCollection<TestableSelfRegisteringStreamSerializer<*>> = testServer.context.getBeansOfType(TestableSelfRegisteringStreamSerializer::class.java).values
+            val serializers: MutableCollection<TestableSelfRegisteringStreamSerializer<*>> = testServer.context.getBeansOfType(
+                TestableSelfRegisteringStreamSerializer::class.java).values
             // val tds = Mockito.mock(TransporterDatastore::class.java)
             return serializers
                     /*

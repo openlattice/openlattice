@@ -20,8 +20,8 @@
 
 package com.openlattice.scrunchie.search;
 
-import com.dataloom.mappers.ObjectMappers;
-import com.dataloom.streams.StreamUtil;
+import com.geekbeast.mappers.mappers.ObjectMappers;
+import com.geekbeast.streams.StreamUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -45,8 +45,8 @@ import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organizations.Organization;
-import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
-import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
+import com.geekbeast.hazelcast.DelegatedStringSet;
+import com.geekbeast.hazelcast.DelegatedUUIDSet;
 import com.openlattice.search.SortDefinition;
 import com.openlattice.search.requests.Constraint;
 import com.openlattice.search.requests.ConstraintGroup;

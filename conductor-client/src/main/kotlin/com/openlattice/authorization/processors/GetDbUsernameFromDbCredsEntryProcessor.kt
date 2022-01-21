@@ -4,14 +4,14 @@ import com.hazelcast.core.Offloadable
 import com.hazelcast.spi.impl.executionservice.ExecutionService
 import com.openlattice.authorization.AclKey
 import com.openlattice.directory.MaterializedViewAccount
-import com.openlattice.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
+import com.geekbeast.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
 import org.slf4j.LoggerFactory
 
 /**
  * @author Drew Bailey (drew@openlattice.com)
  */
 class GetDbUsernameFromDbCredsEntryProcessor: Offloadable,
-        AbstractReadOnlyRhizomeEntryProcessor<AclKey, MaterializedViewAccount, String>() {
+                                              AbstractReadOnlyRhizomeEntryProcessor<AclKey, MaterializedViewAccount, String>() {
 
     companion object {
         private val logger = LoggerFactory.getLogger(GetDbUsernameFromDbCredsEntryProcessor::class.java)

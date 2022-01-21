@@ -1,6 +1,6 @@
 package com.openlattice.apps.processors
 
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
+import com.geekbeast.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.apps.App
 import com.openlattice.edm.requests.MetadataUpdate
 import java.util.*

@@ -1,7 +1,7 @@
 package com.openlattice.data
 
-import com.kryptnostic.rhizome.configuration.RhizomeConfiguration
-import com.kryptnostic.rhizome.configuration.service.ConfigurationService
+import com.geekbeast.rhizome.configuration.RhizomeConfiguration
+import com.geekbeast.rhizome.configuration.service.ConfigurationService
 import com.openlattice.data.storage.BinaryObjectWithMetadata
 import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.data.storage.LocalBlobDataService

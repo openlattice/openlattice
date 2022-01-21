@@ -30,7 +30,7 @@ import com.openlattice.analysis.requests.FilteredNeighborsRankingAggregation
 import com.openlattice.data.storage.MetadataOption
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.core.NeighborSets
-import com.openlattice.postgres.streams.BasePostgresIterable
+import com.geekbeast.postgres.streams.BasePostgresIterable
 import org.apache.commons.lang3.tuple.Pair
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.nio.ByteBuffer

@@ -21,7 +21,7 @@
 
 package com.openlattice.linking.controllers.util
 
-import com.openlattice.controllers.util.BaseExceptionHandler
+import com.geekbeast.controllers.util.BaseExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 
 @RestControllerAdvice

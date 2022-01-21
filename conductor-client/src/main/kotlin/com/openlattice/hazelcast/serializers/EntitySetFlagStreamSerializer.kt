@@ -1,5 +1,6 @@
 package com.openlattice.hazelcast.serializers
 
+import com.geekbeast.hazelcast.serializers.AbstractEnumSerializer
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.openlattice.edm.set.EntitySetFlag

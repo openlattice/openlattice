@@ -21,9 +21,9 @@
 package com.openlattice.users
 
 import com.hazelcast.scheduledexecutor.StatefulTask
-import com.openlattice.tasks.HazelcastFixedRateTask
-import com.openlattice.tasks.HazelcastTaskDependencies
-import com.openlattice.tasks.Task
+import com.geekbeast.tasks.HazelcastFixedRateTask
+import com.geekbeast.tasks.HazelcastTaskDependencies
+import com.geekbeast.tasks.Task
 import org.slf4j.Logger
 import java.time.Instant
 import java.util.concurrent.TimeUnit
@@ -36,8 +36,8 @@ internal const val LAST_SYNC = "lastSync"
  * @author Drew Bailey (drew@openlattice.com)
  */
 interface Auth0SyncTask: HazelcastFixedRateTask<Auth0SyncTaskDependencies>,
-        HazelcastTaskDependencies,
-        StatefulTask<String, Instant> {
+                         HazelcastTaskDependencies,
+                         StatefulTask<String, Instant> {
 
     val isLocal: Boolean
 

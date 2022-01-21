@@ -22,7 +22,7 @@
 package com.openlattice.users
 
 import com.google.common.util.concurrent.ListeningExecutorService
-import com.openlattice.tasks.HazelcastTaskDependencies
+import com.geekbeast.tasks.HazelcastTaskDependencies
 
 data class Auth0SyncTaskDependencies(
         val users: Auth0SyncService,

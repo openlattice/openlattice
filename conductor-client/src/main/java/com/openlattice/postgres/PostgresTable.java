@@ -20,6 +20,11 @@
 
 package com.openlattice.postgres;
 
+import com.geekbeast.postgres.CitusDistributedTableDefinition;
+import com.geekbeast.postgres.IndexType;
+import com.geekbeast.postgres.PostgresColumnsIndexDefinition;
+import com.geekbeast.postgres.PostgresExpressionIndexDefinition;
+import com.geekbeast.postgres.PostgresTableDefinition;
 import com.geekbeast.rhizome.jobs.PostgresJobsMapStore;
 
 import static com.openlattice.postgres.DataTables.LAST_INDEX;
@@ -43,7 +48,6 @@ import static com.openlattice.postgres.PostgresColumn.CATEGORY;
 import static com.openlattice.postgres.PostgresColumn.CLASS_NAME;
 import static com.openlattice.postgres.PostgresColumn.CLASS_PROPERTIES;
 import static com.openlattice.postgres.PostgresColumn.COLLABORATION_ID;
-import static com.openlattice.postgres.PostgresColumn.COLUMN_NAME;
 import static com.openlattice.postgres.PostgresColumn.CONFIG_ID;
 import static com.openlattice.postgres.PostgresColumn.CONNECTION_TYPE;
 import static com.openlattice.postgres.PostgresColumn.CONTACTS;
@@ -114,7 +118,6 @@ import static com.openlattice.postgres.PostgresColumn.ORGANIZATION_ID;
 import static com.openlattice.postgres.PostgresColumn.ORGANIZATION_IDS;
 import static com.openlattice.postgres.PostgresColumn.PARTITIONS;
 import static com.openlattice.postgres.PostgresColumn.PARTITION_INDEX;
-import static com.openlattice.postgres.PostgresColumn.PERMISSION;
 import static com.openlattice.postgres.PostgresColumn.PHONE_NUMBER;
 import static com.openlattice.postgres.PostgresColumn.PII;
 import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_ID;
@@ -128,7 +131,6 @@ import static com.openlattice.postgres.PostgresColumn.QUERY_ID;
 import static com.openlattice.postgres.PostgresColumn.REASON;
 import static com.openlattice.postgres.PostgresColumn.REFRESH_RATE;
 import static com.openlattice.postgres.PostgresColumn.ROLES;
-import static com.openlattice.postgres.PostgresColumn.ROLE_ID;
 import static com.openlattice.postgres.PostgresColumn.SCHEDULED_DATE;
 import static com.openlattice.postgres.PostgresColumn.SCHEMA;
 import static com.openlattice.postgres.PostgresColumn.SCOPE;
@@ -166,11 +168,11 @@ import static com.openlattice.postgres.PostgresColumn.WAREHOUSE;
  * Tables definitions for all tables used in the OpenLattice platform.
  */
 public final class PostgresTable {
-    public static final PostgresTableDefinition ACL_KEYS                      =
+    public static final PostgresTableDefinition ACL_KEYS =
             new PostgresTableDefinition( "acl_keys" )
                     .addColumns( NAME, SECURABLE_OBJECTID )
                     .primaryKey( NAME );
-    public static final PostgresTableDefinition APPS                          =
+    public static final PostgresTableDefinition APPS     =
             new PostgresTableDefinition( "apps" )
                     .addColumns( ID, NAME, TITLE, DESCRIPTION, ENTITY_TYPE_COLLECTION_ID, URL, ROLES, SETTINGS );
     public static final PostgresTableDefinition APP_CONFIGS                   =

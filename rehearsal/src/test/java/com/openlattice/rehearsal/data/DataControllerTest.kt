@@ -45,6 +45,7 @@ import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
 import com.openlattice.rehearsal.edm.EdmTestConstants
 import com.openlattice.search.requests.EntityNeighborsFilter
 import com.openlattice.search.requests.SearchTerm
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.commons.lang3.RandomStringUtils
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.junit.Assert
@@ -65,7 +66,7 @@ import kotlin.math.abs
 
 private const val numberOfEntries = 10
 private val random = Random()
-
+@SuppressFBWarnings(value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE","NP_NONNULL_RETURN_VIOLATION"], justification = "Ignore internal kotlin redundant nullchecks")
 class DataControllerTest : MultipleAuthenticatedUsersBase() {
     companion object {
         val fqnCache: LoadingCache<UUID, FullQualifiedName> = CacheBuilder.newBuilder()

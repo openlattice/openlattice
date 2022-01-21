@@ -21,6 +21,6 @@
 package com.openlattice.postgres.tasks
 
 import com.openlattice.datastore.services.EdmManager
-import com.openlattice.tasks.HazelcastTaskDependencies
+import com.geekbeast.tasks.HazelcastTaskDependencies
 
 data class PostgresMetaDataPropertiesInitializationDependency(val edmManager: EdmManager) : HazelcastTaskDependencies

@@ -24,8 +24,8 @@ package com.openlattice.hazelcast.serializers;
 
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
+import com.geekbeast.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
+import com.geekbeast.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.openlattice.requests.AclRootRequestDetailsPair;
 import com.openlattice.requests.PermissionsRequestDetails;

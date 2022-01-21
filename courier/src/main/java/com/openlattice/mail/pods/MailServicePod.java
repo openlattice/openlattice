@@ -20,7 +20,7 @@
 
 package com.openlattice.mail.pods;
 
-import com.kryptnostic.rhizome.configuration.service.ConfigurationService;
+import com.geekbeast.rhizome.configuration.service.ConfigurationService;
 import com.openlattice.mail.config.MailServiceConfig;
 import com.openlattice.mail.config.MailServiceRequirements;
 import com.openlattice.mail.services.MailRenderer;

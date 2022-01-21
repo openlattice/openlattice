@@ -15,7 +15,7 @@ import com.openlattice.collections.CollectionsApi.Companion.TEMPLATE_PATH
 import com.openlattice.collections.CollectionsApi.Companion.TYPE_ID
 import com.openlattice.collections.CollectionsApi.Companion.TYPE_ID_PATH
 import com.openlattice.collections.CollectionsManager
-import com.openlattice.controllers.exceptions.ForbiddenException
+import com.geekbeast.controllers.exceptions.ForbiddenException
 import com.openlattice.collections.CollectionTemplateType
 import com.openlattice.collections.EntitySetCollection
 import com.openlattice.collections.EntityTypeCollection

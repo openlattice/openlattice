@@ -1,5 +1,6 @@
 package com.openlattice.organizations
 
+import com.geekbeast.postgres.PostgresTableDefinition
 import com.google.common.base.Preconditions.checkState
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicate
@@ -30,8 +31,8 @@ import com.openlattice.postgres.external.ExternalDatabaseConnectionManager
 import com.openlattice.postgres.external.ExternalDatabasePermissioningService
 import com.openlattice.postgres.external.Schemas.*
 import com.openlattice.postgres.external.dropAllConnectionsToDatabaseSql
-import com.openlattice.postgres.streams.BasePostgresIterable
-import com.openlattice.postgres.streams.StatementHolderSupplier
+import com.geekbeast.postgres.streams.BasePostgresIterable
+import com.geekbeast.postgres.streams.StatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.commons.lang3.NotImplementedException
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -274,11 +275,13 @@ class ExternalDatabaseManagementService(
     }
 
     fun getTableInfoForOrganization(organizationId: UUID): List<TableInfo> {
-        return BasePostgresIterable(StatementHolderSupplier(
+        return BasePostgresIterable(
+            StatementHolderSupplier(
                 externalDbManager.connectToOrg(organizationId),
                 getCurrentTableAndColumnNamesSql(),
                 FETCH_SIZE
-        )) { rs ->
+        )
+        ) { rs ->
             TableInfo(oid(rs), name(rs), schemaName(rs), columnNames(rs))
         }.toList()
     }

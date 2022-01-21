@@ -1,6 +1,6 @@
 package com.openlattice.principals
 
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
+import com.geekbeast.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.AclKeySet
 

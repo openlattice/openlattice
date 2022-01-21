@@ -18,12 +18,12 @@
 
 package com.openlattice.client;
 
-import com.dataloom.mappers.ObjectMappers;
+import com.geekbeast.mappers.mappers.ObjectMappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openlattice.client.serialization.SerializableSupplier;
-import com.openlattice.retrofit.RhizomeByteConverterFactory;
-import com.openlattice.retrofit.RhizomeCallAdapterFactory;
-import com.openlattice.retrofit.RhizomeJacksonConverterFactory;
+import com.geekbeast.retrofit.RhizomeByteConverterFactory;
+import com.geekbeast.retrofit.RhizomeCallAdapterFactory;
+import com.geekbeast.retrofit.RhizomeJacksonConverterFactory;
 
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;

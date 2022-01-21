@@ -1,5 +1,6 @@
 package com.openlattice.hazelcast.serializers
 
+import com.geekbeast.hazelcast.serializers.TestableSelfRegisteringStreamSerializer
 import com.google.common.collect.Lists
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
@@ -15,7 +16,8 @@ import org.springframework.stereotype.Component
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 @Component
-class SecurablePrincipalAccumulatorStreamSerializer : TestableSelfRegisteringStreamSerializer<SecurablePrincipalAccumulator> {
+class SecurablePrincipalAccumulatorStreamSerializer :
+    TestableSelfRegisteringStreamSerializer<SecurablePrincipalAccumulator> {
     override fun generateTestValue(): SecurablePrincipalAccumulator {
         return SecurablePrincipalAccumulator()
     }

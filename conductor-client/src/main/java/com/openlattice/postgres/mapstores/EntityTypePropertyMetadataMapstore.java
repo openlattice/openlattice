@@ -2,6 +2,7 @@ package com.openlattice.postgres.mapstores;
 
 import static com.openlattice.postgres.PostgresTable.ENTITY_TYPE_PROPERTY_METADATA;
 
+import com.geekbeast.postgres.mapstores.AbstractBasePostgresMapstore;
 import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.config.IndexConfig;
 import com.hazelcast.config.IndexType;
@@ -10,7 +11,7 @@ import com.openlattice.edm.type.EntityTypePropertyKey;
 import com.openlattice.edm.type.EntityTypePropertyMetadata;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.mapstores.TestDataFactory;
-import com.openlattice.postgres.PostgresArrays;
+import com.geekbeast.postgres.PostgresArrays;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.zaxxer.hikari.HikariDataSource;
 import java.sql.PreparedStatement;

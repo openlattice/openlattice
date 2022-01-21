@@ -1,7 +1,7 @@
 package com.openlattice.directory
 
 import com.auth0.json.mgmt.users.User
-import com.openlattice.authentication.Auth0Configuration
+import com.geekbeast.authentication.Auth0Configuration
 import com.openlattice.search.Auth0UserSearchFields
 import org.springframework.stereotype.Service
 

@@ -1,9 +1,9 @@
 package com.openlattice.linking
 
-import com.dataloom.mappers.ObjectMappers
+import com.geekbeast.mappers.mappers.ObjectMappers
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.kryptnostic.rhizome.configuration.RhizomeConfiguration
-import com.kryptnostic.rhizome.configuration.service.ConfigurationService
+import com.geekbeast.rhizome.configuration.RhizomeConfiguration
+import com.geekbeast.rhizome.configuration.service.ConfigurationService
 import com.openlattice.postgres.PostgresTable
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
@@ -21,7 +21,9 @@ class PostgresLinkingLogServiceTest {
 
         @JvmStatic
         private val objectMapper: ObjectMapper = ObjectMappers.getJsonMapper()
-        private val hds: HikariDataSource = HikariDataSource(HikariConfig(ConfigurationService.StaticLoader.loadConfiguration(RhizomeConfiguration::class.java)?.postgresConfiguration?.get()?.hikariConfiguration))
+        private val hds: HikariDataSource = HikariDataSource(HikariConfig(
+            ConfigurationService.StaticLoader.loadConfiguration(
+                RhizomeConfiguration::class.java)?.postgresConfiguration?.get()?.hikariConfiguration))
         private var service: PostgresLinkingLogService = PostgresLinkingLogService(hds, objectMapper)
 
 

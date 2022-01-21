@@ -1,5 +1,6 @@
 package com.openlattice.postgres
 
+import com.geekbeast.postgres.*
 import com.google.common.cache.CacheBuilder
 import com.google.common.cache.CacheLoader
 import com.openlattice.IdConstants
@@ -13,7 +14,6 @@ import com.openlattice.postgres.PostgresColumn.ID_VALUE
 import com.openlattice.postgres.PostgresColumn.LAST_PROPAGATE
 import com.openlattice.postgres.PostgresColumn.LAST_TRANSPORT
 import com.openlattice.postgres.PostgresColumn.ORIGIN_ID
-import com.openlattice.postgres.PostgresColumn.PARTITION
 import com.openlattice.postgres.PostgresColumn.PROPERTY_TYPE_ID
 import com.openlattice.postgres.PostgresColumn.VERSION
 import com.openlattice.postgres.PostgresColumn.VERSIONS
@@ -178,8 +178,8 @@ class PostgresDataTables {
 
         @JvmStatic
         fun buildBtreeIndexDefinition(
-                tableDefinition: PostgresTableDefinition,
-                columnDefinition: PostgresColumnDefinition
+            tableDefinition: PostgresTableDefinition,
+            columnDefinition: PostgresColumnDefinition
         ): PostgresIndexDefinition {
             return PostgresColumnsIndexDefinition(tableDefinition, columnDefinition)
                     .name(buildBtreeIndexName(tableDefinition.name, columnDefinition.name))

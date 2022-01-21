@@ -22,8 +22,8 @@
 
 package com.openlattice.edm.schemas.processors;
 
-import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRemover;
+import com.geekbeast.hazelcast.DelegatedStringSet;
+import com.geekbeast.rhizome.hazelcast.processors.AbstractRemover;
 
 public class SchemaRemover extends AbstractRemover<String, DelegatedStringSet, String> {
     private static final long serialVersionUID = 28849285823694547L;

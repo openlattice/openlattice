@@ -1,11 +1,11 @@
 package com.openlattice.search
 
-import com.dataloom.mappers.ObjectMappers
+import com.geekbeast.mappers.mappers.ObjectMappers
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.Principals
 import com.openlattice.organizations.roles.SecurePrincipalsManager
-import com.openlattice.postgres.PostgresArrays
+import com.geekbeast.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.ACL_KEY
 import com.openlattice.postgres.PostgresColumn.ALERT_METADATA
 import com.openlattice.postgres.PostgresColumn.ALERT_TYPE
@@ -16,8 +16,8 @@ import com.openlattice.postgres.PostgresColumn.LAST_READ
 import com.openlattice.postgres.PostgresColumn.SEARCH_CONSTRAINTS
 import com.openlattice.postgres.PostgresTable.PERSISTENT_SEARCHES
 import com.openlattice.postgres.ResultSetAdapters
-import com.openlattice.postgres.streams.BasePostgresIterable
-import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
+import com.geekbeast.postgres.streams.BasePostgresIterable
+import com.geekbeast.postgres.streams.PreparedStatementHolderSupplier
 import com.openlattice.search.requests.PersistentSearch
 import com.openlattice.search.requests.SearchConstraints
 import com.zaxxer.hikari.HikariDataSource

@@ -20,7 +20,7 @@
 
 package com.openlattice.edm;
 
-import com.openlattice.postgres.PostgresDatatype;
+import com.geekbeast.postgres.PostgresDatatype;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.slf4j.Logger;

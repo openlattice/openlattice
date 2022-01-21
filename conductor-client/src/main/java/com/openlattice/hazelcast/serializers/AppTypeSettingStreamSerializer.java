@@ -20,14 +20,14 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.dataloom.mappers.ObjectMappers;
+import com.geekbeast.mappers.mappers.ObjectMappers;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Maps;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
+import com.geekbeast.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
+import com.geekbeast.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.apps.AppTypeSetting;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;

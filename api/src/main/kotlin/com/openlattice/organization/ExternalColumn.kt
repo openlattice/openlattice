@@ -6,7 +6,7 @@ import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.securable.AbstractSecurableObject
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.client.serialization.SerializationConstants
-import com.openlattice.postgres.PostgresDatatype
+import com.geekbeast.postgres.PostgresDatatype
 import java.util.*
 
 /**
@@ -24,27 +24,27 @@ import java.util.*
  */
 
 class ExternalColumn(
-        @JsonProperty(SerializationConstants.ID_FIELD) id: Optional<UUID>,
-        @JsonProperty(SerializationConstants.NAME_FIELD) var name: String,
-        @JsonProperty(SerializationConstants.TITLE_FIELD) title: String,
-        @JsonProperty(SerializationConstants.DESCRIPTION_FIELD) description: Optional<String>,
-        @JsonProperty(SerializationConstants.TABLE_ID) var tableId: UUID,
-        @JsonProperty(SerializationConstants.ORGANIZATION_ID) var organizationId: UUID,
-        @JsonProperty(SerializationConstants.DATATYPE_FIELD) var dataType: PostgresDatatype,
-        @JsonProperty(SerializationConstants.PRIMARY_KEY) var primaryKey: Boolean,
-        @JsonProperty(SerializationConstants.ORDINAL_POSITION) var ordinalPosition: Int
+    @JsonProperty(SerializationConstants.ID_FIELD) id: Optional<UUID>,
+    @JsonProperty(SerializationConstants.NAME_FIELD) var name: String,
+    @JsonProperty(SerializationConstants.TITLE_FIELD) title: String,
+    @JsonProperty(SerializationConstants.DESCRIPTION_FIELD) description: Optional<String>,
+    @JsonProperty(SerializationConstants.TABLE_ID) var tableId: UUID,
+    @JsonProperty(SerializationConstants.ORGANIZATION_ID) var organizationId: UUID,
+    @JsonProperty(SerializationConstants.DATATYPE_FIELD) var dataType: PostgresDatatype,
+    @JsonProperty(SerializationConstants.PRIMARY_KEY) var primaryKey: Boolean,
+    @JsonProperty(SerializationConstants.ORDINAL_POSITION) var ordinalPosition: Int
 ) : AbstractSecurableObject(id, title, description) {
 
     constructor(
-            id: UUID,
-            name: String,
-            title: String,
-            description: Optional<String>,
-            tableId: UUID,
-            organizationId: UUID,
-            dataType: PostgresDatatype,
-            primaryKey: Boolean,
-            ordinalPosition: Int
+        id: UUID,
+        name: String,
+        title: String,
+        description: Optional<String>,
+        tableId: UUID,
+        organizationId: UUID,
+        dataType: PostgresDatatype,
+        primaryKey: Boolean,
+        ordinalPosition: Int
     ) : this(Optional.of(id), name, title, description, tableId, organizationId, dataType, primaryKey, ordinalPosition)
 
     @JsonIgnore

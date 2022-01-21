@@ -30,7 +30,7 @@ import java.util.UUID;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 import com.openlattice.authorization.securable.AbstractSchemaAssociatedSecurableType;
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor;
+import com.geekbeast.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;

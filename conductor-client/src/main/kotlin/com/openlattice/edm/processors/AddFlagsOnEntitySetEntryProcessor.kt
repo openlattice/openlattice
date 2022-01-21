@@ -1,6 +1,6 @@
 package com.openlattice.edm.processors
 
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
+import com.geekbeast.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
 import java.util.*

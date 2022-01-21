@@ -23,7 +23,7 @@ package com.openlattice.edm;
 
 import com.openlattice.authorization.HzAuthzTest;
 import com.openlattice.mapstores.TestDataFactory;
-import com.openlattice.postgres.PostgresTableManager;
+import com.geekbeast.postgres.PostgresTableManager;
 import org.junit.Ignore;
 import org.junit.Test;
 

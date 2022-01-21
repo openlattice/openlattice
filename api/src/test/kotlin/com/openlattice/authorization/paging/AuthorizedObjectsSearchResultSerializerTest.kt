@@ -1,7 +1,7 @@
 package com.openlattice.authorization.paging
 
 import com.openlattice.authorization.AclKey
-import com.openlattice.serializer.AbstractJacksonSerializationTest
+import com.geekbeast.serializer.serializer.AbstractJacksonSerializationTest
 import java.util.UUID
 
 class AuthorizedObjectsSearchResultSerializerTest : AbstractJacksonSerializationTest<AuthorizedObjectsSearchResult>() {

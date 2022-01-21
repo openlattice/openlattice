@@ -5,7 +5,7 @@ import com.esotericsoftware.kryo.Serializer;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 import com.openlattice.conductor.rpc.SearchWithConstraintsLambda;
-import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
+import com.geekbeast.hazelcast.DelegatedUUIDSet;
 import com.openlattice.search.requests.SearchConstraints;
 
 import java.util.*;

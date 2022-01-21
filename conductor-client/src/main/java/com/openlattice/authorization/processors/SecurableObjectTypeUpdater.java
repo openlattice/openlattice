@@ -23,7 +23,7 @@ package com.openlattice.authorization.processors;
 import com.hazelcast.core.Offloadable;
 import com.openlattice.authorization.AceKey;
 import com.openlattice.authorization.securable.SecurableObjectType;
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor;
+import com.geekbeast.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor;
 import com.openlattice.authorization.AceValue;
 import java.util.Map.Entry;
 

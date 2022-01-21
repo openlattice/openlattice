@@ -1,7 +1,7 @@
 package com.openlattice.edm.processors
 
 import com.openlattice.edm.type.PropertyType
-import com.openlattice.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
+import com.geekbeast.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.util.*
 

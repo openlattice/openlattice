@@ -1,6 +1,6 @@
 package com.openlattice.edm.types.processors;
 
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor;
+import com.geekbeast.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.type.EntityTypePropertyKey;
 import com.openlattice.edm.type.EntityTypePropertyMetadata;

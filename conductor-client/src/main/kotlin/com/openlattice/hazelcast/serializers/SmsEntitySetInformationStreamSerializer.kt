@@ -2,9 +2,10 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
-import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers
-import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
+import com.geekbeast.rhizome.hazelcast.serializers.SetStreamSerializers
+import com.geekbeast.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
+import com.geekbeast.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
+import com.geekbeast.serializers.Jdk8StreamSerializers
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.notifications.sms.SmsEntitySetInformation
 import org.springframework.stereotype.Component
@@ -39,7 +40,7 @@ class SmsEntitySetInformationStreamSerializer : SelfRegisteringStreamSerializer<
             UUIDStreamSerializerUtils.serialize(out, obj.organizationId)
             SetStreamSerializers.fastUUIDSetSerialize(out, obj.entitySetIds)
             SetStreamSerializers.fastOrderedStringSetSerializeAsArray(out, obj.tags)
-            OffsetDateTimeStreamSerializer.serialize(out, obj.lastSync)
+            Jdk8StreamSerializers.AbstractOffsetDateTimeStreamSerializer.serialize(out, obj.lastSync)
         }
 
         @JvmStatic
@@ -48,7 +49,7 @@ class SmsEntitySetInformationStreamSerializer : SelfRegisteringStreamSerializer<
             val organizationId = UUIDStreamSerializerUtils.deserialize(input)
             val entitySetIds = SetStreamSerializers.fastUUIDSetDeserialize(input)
             val tags = SetStreamSerializers.fastOrderedStringSetDeserializeFromArray(input)
-            val lastSync = OffsetDateTimeStreamSerializer.deserialize(input)
+            val lastSync = Jdk8StreamSerializers.AbstractOffsetDateTimeStreamSerializer.deserialize(input)
 
             return SmsEntitySetInformation(
                     phoneNumber,

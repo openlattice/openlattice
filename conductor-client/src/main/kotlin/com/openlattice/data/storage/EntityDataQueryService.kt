@@ -4,7 +4,7 @@ import com.codahale.metrics.annotation.Timed
 import com.openlattice.analysis.requests.Filter
 import com.openlattice.data.*
 import com.openlattice.edm.type.PropertyType
-import com.openlattice.postgres.streams.BasePostgresIterable
+import com.geekbeast.postgres.streams.BasePostgresIterable
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.nio.ByteBuffer

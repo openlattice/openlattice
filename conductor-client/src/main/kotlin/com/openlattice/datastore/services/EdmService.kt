@@ -9,7 +9,7 @@ import com.hazelcast.query.Predicates
 import com.openlattice.assembler.events.MaterializedEntitySetEdmChangeEvent
 import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
-import com.openlattice.controllers.exceptions.TypeExistsException
+import com.geekbeast.controllers.exceptions.TypeExistsException
 import com.openlattice.datasets.DataSetService
 import com.openlattice.datasets.SecurableObjectMetadata
 import com.openlattice.edm.EntityDataModel

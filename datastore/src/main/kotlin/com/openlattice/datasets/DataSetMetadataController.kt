@@ -7,7 +7,7 @@ import com.openlattice.auditing.AuditingManager
 import com.openlattice.authorization.*
 import com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION
 import com.openlattice.authorization.securable.SecurableObjectType
-import com.openlattice.controllers.exceptions.ResourceNotFoundException
+import com.geekbeast.controllers.exceptions.ResourceNotFoundException
 import com.openlattice.data.DataDeletionManager
 import com.openlattice.data.DataGraphManager
 import com.openlattice.datasets.DataSetMetadataApi.Companion.COLUMNS_PATH

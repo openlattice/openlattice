@@ -20,6 +20,8 @@
 
 package com.openlattice.hazelcast.serializers;
 
+import com.geekbeast.hazelcast.serializers.TestableSelfRegisteringStreamSerializer;
+import com.geekbeast.serializers.Jdk8StreamSerializers;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.openlattice.authorization.AceValue;
@@ -48,14 +50,14 @@ public class AceValueStreamSerializer implements TestableSelfRegisteringStreamSe
     public void write( ObjectDataOutput out, AceValue object ) throws IOException {
         DelegatedPermissionEnumSetStreamSerializer.serialize( out, object.getPermissions() );
         serialize( out, object.getSecurableObjectType() );
-        OffsetDateTimeStreamSerializer.serialize( out, object.getExpirationDate() );
+        Jdk8StreamSerializers.AbstractOffsetDateTimeStreamSerializer.serialize( out, object.getExpirationDate() );
     }
 
     @Override
     public AceValue read( ObjectDataInput in ) throws IOException {
         EnumSet<Permission> permissions = DelegatedPermissionEnumSetStreamSerializer.deserialize( in );
         SecurableObjectType objectType = deserialize( in );
-        OffsetDateTime expirationDate = OffsetDateTimeStreamSerializer.deserialize( in );
+        OffsetDateTime expirationDate = Jdk8StreamSerializers.AbstractOffsetDateTimeStreamSerializer.deserialize( in );
 
         return new AceValue( permissions, objectType, expirationDate );
     }

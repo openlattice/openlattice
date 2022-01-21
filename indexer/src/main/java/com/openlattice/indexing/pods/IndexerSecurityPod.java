@@ -21,7 +21,7 @@
 
 package com.openlattice.indexing.pods;
 
-import com.openlattice.auth0.Auth0SecurityPod;
+import com.geekbeast.auth0.Auth0SecurityPod;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;

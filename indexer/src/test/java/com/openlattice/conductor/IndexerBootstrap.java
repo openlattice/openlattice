@@ -22,11 +22,11 @@
 package com.openlattice.conductor;
 
 import com.geekbeast.rhizome.NetworkUtils;
-import com.kryptnostic.rhizome.configuration.ConfigurationConstants;
+import com.geekbeast.rhizome.configuration.ConfigurationConstants;
 import com.openlattice.auditing.AuditingProfiles;
 import com.openlattice.datastore.constants.DatastoreProfiles;
 import com.openlattice.indexing.Indexer;
-import com.openlattice.postgres.PostgresPod;
+import com.geekbeast.postgres.PostgresPod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

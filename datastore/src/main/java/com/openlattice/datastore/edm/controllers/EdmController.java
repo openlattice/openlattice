@@ -36,7 +36,7 @@ import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.AuthorizingComponent;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.controllers.exceptions.BadRequestException;
+import com.geekbeast.controllers.exceptions.BadRequestException;
 import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.data.requests.FileType;
 import com.openlattice.datastore.services.EdmManager;

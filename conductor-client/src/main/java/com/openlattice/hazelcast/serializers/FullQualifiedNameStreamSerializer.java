@@ -25,7 +25,7 @@ package com.openlattice.hazelcast.serializers;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
+import com.geekbeast.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import java.io.IOException;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.springframework.stereotype.Component;

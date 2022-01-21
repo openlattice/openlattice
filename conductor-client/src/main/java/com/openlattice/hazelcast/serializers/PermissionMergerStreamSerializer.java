@@ -22,10 +22,11 @@
 
 package com.openlattice.hazelcast.serializers;
 
+import com.geekbeast.serializers.Jdk8StreamSerializers;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
+import com.geekbeast.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.processors.PermissionMerger;
 import com.openlattice.authorization.securable.SecurableObjectType;
@@ -50,13 +51,13 @@ public class PermissionMergerStreamSerializer implements SelfRegisteringStreamSe
             ObjectDataOutput out, PermissionMerger object ) throws IOException {
         serialize( out, object.getBackingCollection() );
         AceValueStreamSerializer.serialize( out, object.getSecurableObjectType() );
-        OffsetDateTimeStreamSerializer.serialize(out, object.getExpirationDate());
+        Jdk8StreamSerializers.AbstractOffsetDateTimeStreamSerializer.serialize(out, object.getExpirationDate());
     }
 
     @Override public PermissionMerger read( ObjectDataInput in ) throws IOException {
         EnumSet<Permission> ps = deserialize( in );
         SecurableObjectType securableObjectType = AceValueStreamSerializer.deserialize( in );
-        OffsetDateTime expirationDate = OffsetDateTimeStreamSerializer.deserialize( in );
+        OffsetDateTime expirationDate = Jdk8StreamSerializers.AbstractOffsetDateTimeStreamSerializer.deserialize( in );
         return new PermissionMerger( ps, securableObjectType, expirationDate );
     }
 

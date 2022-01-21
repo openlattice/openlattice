@@ -22,8 +22,8 @@
 package com.openlattice.auditing
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.kryptnostic.rhizome.configuration.annotation.ReloadableConfiguration
-import com.openlattice.aws.AwsS3ClientConfiguration
+import com.geekbeast.rhizome.configuration.configuration.annotation.ReloadableConfiguration
+import com.geekbeast.aws.AwsS3ClientConfiguration
 import java.util.*
 
 /**

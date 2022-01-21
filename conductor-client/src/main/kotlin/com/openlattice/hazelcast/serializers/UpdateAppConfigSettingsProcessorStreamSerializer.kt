@@ -2,14 +2,15 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
-import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
+import com.geekbeast.rhizome.hazelcast.serializers.SetStreamSerializers
+import com.geekbeast.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.apps.processors.UpdateAppConfigSettingsProcessor
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import org.springframework.stereotype.Component
 
 @Component
-class UpdateAppConfigSettingsProcessorStreamSerializer : SelfRegisteringStreamSerializer<UpdateAppConfigSettingsProcessor> {
+class UpdateAppConfigSettingsProcessorStreamSerializer :
+    SelfRegisteringStreamSerializer<UpdateAppConfigSettingsProcessor> {
 
     override fun getTypeId(): Int {
         return StreamSerializerTypeIds.UPDATE_APP_CONFIG_SETTINGS_PROCESSOR.ordinal
