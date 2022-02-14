@@ -273,7 +273,7 @@ class HazelcastPrincipalService(
         return principalTrees[parent]?.contains(child) ?: false
     }
 
-    private fun getAllUsersWithPrincipal(aclKey: AclKey): List<SecurablePrincipal> {
+    override fun getAllUsersWithPrincipal(aclKey: AclKey): Collection<SecurablePrincipal> {
         return getAllPrincipalsWithPrincipal(aclKey).filter { it.principalType == PrincipalType.USER }
     }
 
