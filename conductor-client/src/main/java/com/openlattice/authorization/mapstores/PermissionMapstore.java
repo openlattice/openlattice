@@ -139,10 +139,6 @@ public class PermissionMapstore extends AbstractBasePostgresMapstore<AceKey, Ace
         return selectQuery( true );
     }
 
-    @Override protected String buildSelectInQuery() {
-        return selectInQuery( ImmutableList.of(), keyColumns(), batchSize );
-    }
-
     @Override public MapConfig getMapConfig() {
         return super
                 .getMapConfig()
