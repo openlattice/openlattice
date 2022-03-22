@@ -24,6 +24,7 @@ import com.auth0.client.mgmt.ManagementAPI;
 import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.geekbeast.auth0.Auth0TokenProvider;
+import com.geekbeast.auth0.ManagementApiProvider;
 import com.geekbeast.auth0.RefreshingAuth0TokenProvider;
 import com.geekbeast.authentication.Auth0Configuration;
 import com.geekbeast.hazelcast.HazelcastClientProvider;
@@ -442,6 +443,11 @@ public class ConductorServicesPod {
     }
 
     @Bean
+    public ManagementApiProvider managementApiProvider() {
+        return new ManagementApiProvider( auth0TokenProvider(), auth0Configuration );
+    }
+
+    @Bean
     public UserListingService userListingService() {
         if ( auth0Configuration.getManagementApiUrl().contains( Auth0Configuration.NO_SYNC_URL ) ) {
             return new LocalUserListingService( auth0Configuration );
@@ -449,7 +455,7 @@ public class ConductorServicesPod {
 
         var auth0Token = auth0TokenProvider().getToken();
         return new Auth0UserListingService(
-                new ManagementAPI( auth0Configuration.getDomain(), auth0Token ),
+                managementApiProvider(),
                 new Auth0ApiExtension( auth0Configuration.getDomain(), auth0Token )
         );
     }
