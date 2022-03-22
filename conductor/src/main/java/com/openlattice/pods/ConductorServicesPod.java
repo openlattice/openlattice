@@ -24,7 +24,7 @@ import com.auth0.client.mgmt.ManagementAPI;
 import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.geekbeast.auth0.Auth0TokenProvider;
-import com.geekbeast.auth0.AwsAuth0TokenProvider;
+import com.geekbeast.auth0.RefreshingAuth0TokenProvider;
 import com.geekbeast.authentication.Auth0Configuration;
 import com.geekbeast.hazelcast.HazelcastClientProvider;
 import com.geekbeast.jdbc.DataSourceManager;
@@ -433,7 +433,7 @@ public class ConductorServicesPod {
 
     @Bean
     public Auth0TokenProvider auth0TokenProvider() {
-        return new AwsAuth0TokenProvider( auth0Configuration );
+        return new RefreshingAuth0TokenProvider( auth0Configuration );
     }
 
     @Bean
