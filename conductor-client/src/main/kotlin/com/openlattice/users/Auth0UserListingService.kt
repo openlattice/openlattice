@@ -23,6 +23,7 @@ package com.openlattice.users
 
 import com.auth0.client.mgmt.ManagementAPI
 import com.auth0.json.mgmt.users.User
+import com.geekbeast.auth0.ManagementApiProvider
 import com.geekbeast.mappers.mappers.ObjectMappers
 import com.geekbeast.util.ExponentialBackoff
 import com.geekbeast.util.attempt
@@ -46,7 +47,8 @@ const val MAX_RETRY_COUNT = 22
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 class Auth0UserListingService(
-        private val managementApi: ManagementAPI, private val auth0ApiExtension: Auth0ApiExtension
+        private val managementApiProvider: ManagementApiProvider,
+        private val auth0ApiExtension: Auth0ApiExtension
 ) : UserListingService {
 
     companion object {
@@ -110,7 +112,7 @@ class Auth0UserListingService(
      * [to] (inclusive) as a sequence.
      */
     override fun getUpdatedUsers(from: Instant, to: Instant): Sequence<User> {
-        return Auth0UserListingResult(managementApi, from, to).asSequence()
+        return Auth0UserListingResult(managementApiProvider.getInstance(), from, to).asSequence()
     }
 }
 

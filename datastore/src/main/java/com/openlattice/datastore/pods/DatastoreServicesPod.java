@@ -46,7 +46,7 @@ import com.openlattice.auditing.AuditingProfiles;
 import com.openlattice.auditing.LocalAuditingService;
 import com.openlattice.auditing.S3AuditingService;
 import com.geekbeast.auth0.Auth0Pod;
-import com.geekbeast.auth0.AwsAuth0TokenProvider;
+import com.geekbeast.auth0.RefreshingAuth0TokenProvider;
 import com.geekbeast.authentication.Auth0Configuration;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.mapstores.ResolvedPrincipalTreesMapLoader;
@@ -529,8 +529,8 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    public AwsAuth0TokenProvider auth0TokenProvider() {
-        return new AwsAuth0TokenProvider( auth0Configuration );
+    public RefreshingAuth0TokenProvider auth0TokenProvider() {
+        return new RefreshingAuth0TokenProvider( auth0Configuration );
     }
 
     @Bean
