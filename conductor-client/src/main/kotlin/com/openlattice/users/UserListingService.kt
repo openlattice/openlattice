@@ -39,4 +39,9 @@ interface UserListingService {
      * as a sequence.
      */
     fun getUpdatedUsers(from: Instant, to: Instant) : Sequence<User>
+
+    /**
+     * Retrieves a single user by id
+     */
+    fun getUser( userId: String ) : User
 }

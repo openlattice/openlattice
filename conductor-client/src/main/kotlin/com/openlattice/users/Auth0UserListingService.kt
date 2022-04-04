@@ -21,7 +21,6 @@
 
 package com.openlattice.users
 
-import com.auth0.client.mgmt.ManagementAPI
 import com.auth0.json.mgmt.users.User
 import com.geekbeast.auth0.ManagementApiProvider
 import com.geekbeast.mappers.mappers.ObjectMappers
@@ -47,8 +46,8 @@ const val MAX_RETRY_COUNT = 22
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 class Auth0UserListingService(
-        private val managementApiProvider: ManagementApiProvider,
-        private val auth0ApiExtension: Auth0ApiExtension
+    private val managementApiProvider: ManagementApiProvider,
+    private val auth0ApiExtension: Auth0ApiExtension
 ) : UserListingService {
 
     companion object {
@@ -90,7 +89,8 @@ class Auth0UserListingService(
         val downloadUrl = exportJobResult.location.get()
 
         try {
-            val mapper = ObjectMappers.getMapper(ObjectMappers.Mapper.valueOf(exportJobResult.format.name.toUpperCase()))
+            val mapper =
+                ObjectMappers.getMapper(ObjectMappers.Mapper.valueOf(exportJobResult.format.name.toUpperCase()))
 
             val connection = downloadUrl.openConnection()
             connection.setRequestProperty("Accept-Encoding", "gzip")
@@ -100,9 +100,10 @@ class Auth0UserListingService(
 
             // export json format has a line by line user object format
             // if at any point we have too many users, we might have to download the file
-            return buffered.lines().map { line -> mapper.readValue(line, User::class.java) }.collect(Collectors.toList())
+            return buffered.lines().map { line -> mapper.readValue(line, User::class.java) }
+                .collect(Collectors.toList())
         } catch (e: Exception) {
-            logger.error("Couldn't read list of users from download url $downloadUrl.",e)
+            logger.error("Couldn't read list of users from download url $downloadUrl.", e)
             throw e
         }
     }
@@ -112,20 +113,24 @@ class Auth0UserListingService(
      * [to] (inclusive) as a sequence.
      */
     override fun getUpdatedUsers(from: Instant, to: Instant): Sequence<User> {
-        return Auth0UserListingResult(managementApiProvider.getInstance(), from, to).asSequence()
+        return Auth0UserListingResult(managementApiProvider, from, to).asSequence()
+    }
+
+    override fun getUser(userId: String): User {
+        return getUser(managementApiProvider.getInstance(), userId)
     }
 }
 
 class Auth0UserListingResult(
-        private val managementApi: ManagementAPI, private val from: Instant, private val to: Instant
+    private val managementApiProvider: ManagementApiProvider, private val from: Instant, private val to: Instant
 ) : Iterable<User> {
     override fun iterator(): Iterator<User> {
-        return Auth0UserListingIterator(managementApi, from, to)
+        return Auth0UserListingIterator(managementApiProvider, from, to)
     }
 }
 
 class Auth0UserListingIterator(
-        private val managementApi: ManagementAPI, private val from: Instant, private val to: Instant
+    private val managementApiProvider: ManagementApiProvider, private val from: Instant, private val to: Instant
 ) : Iterator<User> {
     companion object {
         private val logger = LoggerFactory.getLogger(Auth0UserListingIterator::class.java)
@@ -154,8 +159,11 @@ class Auth0UserListingIterator(
 
     private fun getNextPage(): List<User> {
         return try {
-            val nextPage = getUpdatedUsersPage(managementApi, from, to, page++, DEFAULT_PAGE_SIZE).items
-                    ?: listOf()
+            val nextPage = getUpdatedUsersPage(
+                managementApiProvider.getInstance(),
+                from,
+                to, page++, DEFAULT_PAGE_SIZE
+            ).items ?: listOf()
             logger.info("Loaded page {} of {} auth0 users", page - 1, nextPage.size)
             nextPage
         } catch (ex: Exception) {

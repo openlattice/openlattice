@@ -38,6 +38,7 @@ import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.search.Auth0UserSearchFields;
 import com.openlattice.users.Auth0SyncService;
 import com.openlattice.users.Auth0UtilsKt;
+import com.openlattice.users.UserListingService;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.*;
@@ -71,9 +72,6 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
     private AuthorizationManager authorizations;
 
     @Inject
-    private ManagementAPI managementApi;
-
-    @Inject
     private Auth0SyncService syncService;
 
     @Inject
@@ -81,6 +79,9 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
 
     @Inject
     private Assembler assembler;
+
+    @Inject
+    private UserListingService userListingService;
 
     @Timed
     @Override
@@ -176,9 +177,9 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
         Principal principal = checkNotNull( Principals.getCurrentUser() );
 
         try {
-            final var user = Auth0UtilsKt.getUser( managementApi, principal.getId() );
+            final var user = userListingService.getUser( principal.getId() );
             syncService.syncUser( user );
-        } catch ( IllegalArgumentException | Auth0Exception e ) {
+        } catch ( IllegalArgumentException e ) {
             throw new BadCredentialsException( "Unable to retrieve user profile information from auth0", e );
         }
         return null;
