@@ -24,6 +24,7 @@ package com.openlattice.datastore.pods;
 import com.auth0.client.mgmt.ManagementAPI;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.health.HealthCheckRegistry;
+import com.geekbeast.auth0.ManagementApiProvider;
 import com.geekbeast.mappers.mappers.ObjectMappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.geekbeast.hazelcast.HazelcastClientProvider;
@@ -125,6 +126,10 @@ import com.geekbeast.tasks.PostConstructInitializerTaskDependencies.PostConstruc
 import com.openlattice.twilio.TwilioConfiguration;
 import com.openlattice.twilio.pods.TwilioConfigurationPod;
 import com.openlattice.users.Auth0SyncService;
+import com.openlattice.users.Auth0UserListingService;
+import com.openlattice.users.LocalUserListingService;
+import com.openlattice.users.UserListingService;
+import com.openlattice.users.export.Auth0ApiExtension;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import javax.annotation.PostConstruct;
@@ -245,8 +250,8 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    public ManagementAPI managementAPI() {
-        return new ManagementAPI( auth0Configuration.getDomain(), auth0TokenProvider().getToken() );
+    public ManagementApiProvider managementApiProvider() {
+        return new ManagementApiProvider(  auth0TokenProvider() , auth0Configuration);
     }
 
     @Bean
@@ -443,6 +448,20 @@ public class DatastoreServicesPod {
     public UserCredentialSyncTask userCredentialSyncTask() {
         return new UserCredentialSyncTask();
     }
+
+    @Bean
+    public UserListingService userListingService() {
+        if ( auth0Configuration.getManagementApiUrl().contains( Auth0Configuration.NO_SYNC_URL ) ) {
+            return new LocalUserListingService( auth0Configuration );
+        }
+
+        var auth0Token = auth0TokenProvider().getToken();
+        return new Auth0UserListingService(
+                managementApiProvider(),
+                new Auth0ApiExtension( auth0Configuration.getDomain(), auth0Token )
+        );
+    }
+
 
     @Bean
     public UserDirectoryService userDirectoryService() {
