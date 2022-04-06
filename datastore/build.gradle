@@ -232,7 +232,8 @@ jar {
         }
     }
 }
-
+//def rhizomeFile = configurations.runtimeClasspath.files.find { it.getName().startsWith("rhizome") && !it.getName().contains("client") }
+//println "Rhizome file = " + rhizomeFile.getName()
 startScripts {
-    classpath = files(jar.archiveFile.get().asFile, configurations.runtimeClasspath.files.find { it.getName().startsWith("rhizome") } && !it.getName().contains("client"))
+    classpath = files(jar.archiveFile.get().asFile) + classpath.filter { it.getName().startsWith("rhizome") && !it.getName().contains("client") }
 }
