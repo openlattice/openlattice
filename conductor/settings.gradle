@@ -20,9 +20,7 @@
 
 pluginManagement {
     repositories {
-        maven {
-            url 'https://artifactory.openlattice.com/artifactory/gradle-release/'
-        }
+
     }
 }
 

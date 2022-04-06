@@ -28,9 +28,9 @@ plugins {
     id "maven-publish"
     id "signing"
     id 'com.github.spotbugs' version '5.0.4'
-    id 'org.jetbrains.kotlin.jvm'
-    id 'org.jetbrains.kotlin.plugin.spring'
-    id 'com.github.jk1.dependency-license-report'
+    id 'org.jetbrains.kotlin.jvm' version '1.6.10'
+    id 'org.jetbrains.kotlin.plugin.spring' version '1.6.10'
+    id 'com.github.jk1.dependency-license-report' version '2.0'
 }
 
 description = "Conductor Server"
@@ -46,7 +46,6 @@ ext.connectionUrl = 'scm:git:https://github.com/openlattice/conductor.git'
 ext.developerConnectionUrl = 'scm:git:https://github.com/openlattice/conductor.git'
 
 apply from: "../gradles/openlattice.gradle"
-apply plugin: 'kotlin'
 
 def CONDUCTOR_XMS = "$System.env.CONDUCTOR_XMS"
 def CONDUCTOR_XMX = "$System.env.CONDUCTOR_XMX"
