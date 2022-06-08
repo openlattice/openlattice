@@ -71,8 +71,13 @@ tasks.withType(Tar){
   compression = Compression.GZIP
 }
 
-apply from: "https://raw.githubusercontent.com/openlattice/openlattice/main/gradles/repos.gradle"
-apply from: "https://raw.githubusercontent.com/openlattice/openlattice/main/gradles/publish.gradle"
+if( project.hasProperty('developmentMode') && project.developmentMode ) {
+    apply from: "../gradles/publish.gradle"
+    apply from: "../gradles/repos.gradle"
+} else {
+    apply from: "https://raw.githubusercontent.com/openlattice/openlattice/main/gradles/repos.gradle"
+    apply from: "https://raw.githubusercontent.com/openlattice/openlattice/main/gradles/publish.gradle"
+}
 
 //Run jacoco after tests.
 if( project.hasProperty('projectName') && project.hasProperty('scmUrl')  ) {
