@@ -1,26 +1,4 @@
 repositories {
-  //Hit our releases
-  maven {
-    url 'https://artifactory.openlattice.com/artifactory/libs-release/'
-  }
-  
-  maven {
-    url 'https://artifactory.openlattice.com/artifactory/gradle-release/'
-  }
-  
-  maven {
-    url 'https://artifactory.openlattice.com/artifactory/gradle-plugins/'
-  }
-  
-  maven {
-    url 'https://artifactory.openlattice.com/artifactory/jcenter/'
-  }
-
-  //Hit our snapshots
-  maven {
-    url 'https://artifactory.openlattice.com/artifactory/libs-snapshot/'
-  }
-
   // Hit sonatype snapshots
   maven {
     url 'https://oss.sonatype.org/content/repositories/snapshots'
