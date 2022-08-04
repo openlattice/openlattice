@@ -252,5 +252,5 @@ jar {
 }
 
 startScripts {
-    classpath = files(jar.archiveFile.get().asFile)
+    classpath = files(jar.archiveFile.get().asFile) + classpath.filter { it.getName().startsWith("rhizome") && !it.getName().contains("client") }
 }

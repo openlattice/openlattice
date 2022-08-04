@@ -27,9 +27,9 @@ plugins {
     id 'checkstyle'
     id 'maven-publish'
     id 'signing'
-    id 'com.github.spotbugs'
-    id 'org.jetbrains.kotlin.jvm'
-    id 'org.jetbrains.kotlin.plugin.spring'
+    id 'com.github.spotbugs' version '5.0.4'
+    id 'org.jetbrains.kotlin.jvm' version '1.6.10'
+    id 'org.jetbrains.kotlin.plugin.spring' version '1.6.10'
 }
 
 description = "Datastore"
@@ -77,15 +77,15 @@ if (GC == 'null' || GC == null || GC == "") {
 println "Using java args for running ${projectName}: Xms=" + DS_XMS + ",Xmx=" + DS_XMX + " -server"
 
 applicationDefaultJvmArgs = [DS_XMS, DS_XMX, "-server", GC, PARALLEL]
-applicationDefaultJvmArgs += [ "--add-modules", "java.base",
-                               "--add-modules", "java.se",
-                               "--add-exports","java.base/jdk.internal.ref=ALL-UNNAMED",
-                               "--add-opens","java.base/java.lang=ALL-UNNAMED",
-                               "--add-opens","java.base/java.nio=ALL-UNNAMED",
-                               "--add-opens","java.base/sun.nio.ch=ALL-UNNAMED",
-                               "--add-opens","java.management/sun.management=ALL-UNNAMED",
-                               "--add-opens", "jdk.management/com.ibm.lang.management.internal=ALL-UNNAMED",
-                               "--add-opens","jdk.management/com.sun.management.internal=ALL-UNNAMED"]
+applicationDefaultJvmArgs += ["--add-modules", "java.base",
+                              "--add-modules", "java.se",
+                              "--add-exports", "java.base/jdk.internal.ref=ALL-UNNAMED",
+                              "--add-opens", "java.base/java.lang=ALL-UNNAMED",
+                              "--add-opens", "java.base/java.nio=ALL-UNNAMED",
+                              "--add-opens", "java.base/sun.nio.ch=ALL-UNNAMED",
+                              "--add-opens", "java.management/sun.management=ALL-UNNAMED",
+                              "--add-opens", "jdk.management/com.ibm.lang.management.internal=ALL-UNNAMED",
+                              "--add-opens", "jdk.management/com.sun.management.internal=ALL-UNNAMED"]
 
 sourceCompatibility = JavaVersion.VERSION_11
 targetCompatibility = JavaVersion.VERSION_11
@@ -142,7 +142,7 @@ configurations {
 }
 
 test {
-  ignoreFailures = true
+    ignoreFailures = true
 }
 
 ext.odata_version = '4.2.0'
@@ -159,7 +159,7 @@ dependencies {
 
     testImplementation "com.openlattice:conductor:${conductor_version}"
 
-    if( project.hasProperty('developmentMode') && project.developmentMode ) {
+    if (project.hasProperty('developmentMode') && project.developmentMode) {
         testImplementation(project(path: ":api", configuration: "tests"))
         testImplementation(project(path: ":rhizome", configuration: "tests"))
         testImplementation(project(path: ":rhizome-client", configuration: "tests"))
@@ -198,21 +198,21 @@ eclipse {
 }
 
 tasks.withType(JavaCompile) {
-    options.compilerArgs+= ["--add-modules", "java.base",
-                            "--add-modules", "java.se",
-                            "--add-exports","java.base/jdk.internal.ref=ALL-UNNAMED"]
+    options.compilerArgs += ["--add-modules", "java.base",
+                             "--add-modules", "java.se",
+                             "--add-exports", "java.base/jdk.internal.ref=ALL-UNNAMED"]
 }
 
 tasks.withType(Test) {
     jvmArgs += ["--add-modules", "java.base",
                 "--add-modules", "java.se",
-                "--add-exports","java.base/jdk.internal.ref=ALL-UNNAMED",
-                "--add-opens","java.base/java.lang=ALL-UNNAMED",
-                "--add-opens","java.base/java.nio=ALL-UNNAMED",
-                "--add-opens","java.base/sun.nio.ch=ALL-UNNAMED",
-                "--add-opens","java.management/sun.management=ALL-UNNAMED",
+                "--add-exports", "java.base/jdk.internal.ref=ALL-UNNAMED",
+                "--add-opens", "java.base/java.lang=ALL-UNNAMED",
+                "--add-opens", "java.base/java.nio=ALL-UNNAMED",
+                "--add-opens", "java.base/sun.nio.ch=ALL-UNNAMED",
+                "--add-opens", "java.management/sun.management=ALL-UNNAMED",
                 "--add-opens", "jdk.management/com.ibm.lang.management.internal=ALL-UNNAMED",
-                "--add-opens","jdk.management/com.sun.management.internal=ALL-UNNAMED"]
+                "--add-opens", "jdk.management/com.sun.management.internal=ALL-UNNAMED"]
 }
 
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
@@ -225,14 +225,15 @@ tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
 jar {
     doFirst {
         manifest {
-            attributes (
+            attributes(
                     "Class-Path": configurations.runtimeClasspath.files.collect { it.getName() }.join(" "),
                     "Main-Class": mainClassName
             )
         }
     }
 }
-
+//def rhizomeFile = configurations.runtimeClasspath.files.find { it.getName().startsWith("rhizome") && !it.getName().contains("client") }
+//println "Rhizome file = " + rhizomeFile.getName()
 startScripts {
-    classpath = files(jar.archiveFile.get().asFile)
+    classpath = files(jar.archiveFile.get().asFile) + classpath.filter { it.getName().startsWith("rhizome") && !it.getName().contains("client") }
 }

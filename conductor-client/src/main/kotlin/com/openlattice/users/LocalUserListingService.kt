@@ -74,5 +74,9 @@ class LocalUserListingService(auth0Configuration: Auth0Configuration) : UserList
         return users.values.asSequence()
     }
 
+    override fun getUser(userId: String): User {
+        return users.getValue(userId)
+    }
+
 }
 
