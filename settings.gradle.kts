@@ -11,8 +11,6 @@ pluginManagement {
         id("com.github.jk1.dependency-license-report")  version "1.16" apply false
     }
     repositories {
-        maven(url = "https://artifactory.openlattice.com/artifactory/gradle-release/")
-        maven(url = "https://artifactory.openlattice.com/artifactory/gradle-plugins/")
         maven(url = "https://plugins.gradle.org/m2/")
         mavenCentral()
     }
